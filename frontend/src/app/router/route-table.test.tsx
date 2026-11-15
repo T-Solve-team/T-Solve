@@ -101,7 +101,7 @@ describe('route map', () => {
     expect(named).toHaveLength(8);
   });
 
-  // Built screens are covered by their feature's page tests (wiki 11.1/11.2: KAN-170, BUG-220).
+  // Built screens are covered by their feature's page tests (wiki 11.1/11.2: KAN-170, BUG-255).
   it.each([
     ['2.1', 'Workspace Setup', '/workspace-setup', 'ADMIN'],
     ['11.4', 'Upload Documents', '/wiki/upload', 'KNOWLEDGE_MANAGER'],

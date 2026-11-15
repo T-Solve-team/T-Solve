@@ -202,7 +202,7 @@ class WikiTrashServiceImplTest {
     }
 
     @Test
-    void resolvesAuditSpaceBeforeRemovingDocument_AC_005_8_AC_005_11_BUG_233() {
+    void resolvesAuditSpaceBeforeRemovingDocument_AC_005_8_AC_005_11_BUG_279() {
         deleted();
         doAnswer(call -> {
                     when(search.findDocumentSpace(id)).thenReturn(Optional.empty());
@@ -275,7 +275,7 @@ class WikiTrashServiceImplTest {
     }
 
     @Test
-    void mapsOnlyPublishedTitleConstraintAndSchedulesNothingOnConflict_AC_005_17_BUG_234() {
+    void mapsOnlyPublishedTitleConstraintAndSchedulesNothingOnConflict_AC_005_17_BUG_280() {
         deleted();
         var failure = new DataIntegrityViolationException(
                 "duplicate", new ConstraintViolationException("duplicate", null, "uq_wiki_document_published_title"));

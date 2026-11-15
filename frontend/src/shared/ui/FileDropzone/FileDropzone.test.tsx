@@ -10,7 +10,7 @@ function fileInput(): HTMLInputElement {
 }
 
 describe('FileDropzone', () => {
-  it('hands the whole selection to onAdd once and keeps no list of its own (BUG-247)', async () => {
+  it('hands the whole selection to onAdd once and keeps no list of its own (BUG-276)', async () => {
     const onAdd = vi.fn<(files: File[]) => void>();
     renderWithProviders(
       <FileDropzone label="Files" accept=".pdf,.docx" hint="PDF or DOCX." onAdd={onAdd} />,
@@ -25,7 +25,7 @@ describe('FileDropzone', () => {
     expect(screen.queryByText('a.pdf')).not.toBeInTheDocument();
   });
 
-  it('accepts nothing while disabled (BUG-247)', async () => {
+  it('accepts nothing while disabled (BUG-276)', async () => {
     const onAdd = vi.fn<(files: File[]) => void>();
     renderWithProviders(
       <FileDropzone label="Files" accept=".pdf" hint="PDF." disabled onAdd={onAdd} />,

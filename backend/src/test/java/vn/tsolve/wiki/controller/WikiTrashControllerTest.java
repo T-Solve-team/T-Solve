@@ -111,7 +111,7 @@ class WikiTrashControllerTest {
     @ParameterizedTest
     @ValueSource(strings = {"TRASH", "RESTORE", "PERMANENT"})
     @WithTSolveUser
-    void preservesVisibilitySensitiveErrorsForNonManagers_AC_005_9_AC_005_10_BUG_234(String operation)
+    void preservesVisibilitySensitiveErrorsForNonManagers_AC_005_9_AC_005_10_BUG_280(String operation)
             throws Exception {
         stubFailure(operation, new AccessDeniedException("MSG08"));
         mvc.perform(request(operation).with(csrf()))

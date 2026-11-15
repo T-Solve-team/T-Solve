@@ -24,7 +24,7 @@ Commit reviewed: `a20ae6c2` (KAN-164). The reviewer read the code with `git show
 
 **AC-006.14 (flagged by the Task 10 review): now met.** A non-manager, or any 403 from the settings call, gets `<Result status="403" title="403" subTitle={msg('MSG08')} />`. This is the same markup as `app/pages/ForbiddenPage`, so it looks the same as the app's no-permission page. Features may not import `app/` (eslint boundary zone), so copying the markup is the only option that does not touch `src/app` or `src/shared`.
 
-No `src/app` or `src/shared` edits, no banned raw antd (`Tag`/`Table`/`Modal`/`Upload`/`message`), no new `eslint-disable`, all messages from the catalog. BUG-238 (a test-only timing issue) is logged with its test. No critical or major findings.
+No `src/app` or `src/shared` edits, no banned raw antd (`Tag`/`Table`/`Modal`/`Upload`/`message`), no new `eslint-disable`, all messages from the catalog. BUG-284 (a test-only timing issue) is logged with its test. No critical or major findings.
 
 ## Criteria
 
@@ -50,7 +50,7 @@ Minor only (they do not fail the task):
 2. `frontend/src/features/wiki/mocks/handlers.ts:415`: minor. The mock revoke answers 403 MSG08 for a permission of a Space the user does not manage, but the backend answers 404 MSG04 (AC-006.7). Fix: return `problem(404, 'MSG04')` when `managerError` fails.
 3. `frontend/src/features/wiki/pages/SpaceSettingsPage.tsx:29`: minor. This copies `ForbiddenPage`'s markup, so a change to the app's 403 page will not reach this screen. Fix: move `ForbiddenPage` into `shared/ui` with the FE Lead's review, then use it here. The AC-006.14 tests (`:291`) assert only the MSG08 text, not the 403 result.
 4. `frontend/src/features/wiki/components/GrantAccessModal.tsx:13`: minor. After a 404 MSG04 from a stale candidate list, the candidates are not refetched, so Save fails again with the same selection. Fix: invalidate the candidates query in `onError`.
-5. `docs/bug-log.md:251`: minor. The BUG-238 row says "Task 12 (uncommitted)" in the commit column. Fix: replace it with `a20ae6c2`.
+5. `docs/bug-log.md:251`: minor. The BUG-284 row says "Task 12 (uncommitted)" in the commit column. Fix: replace it with `a20ae6c2`.
 
 ## Assumptions made
 - "Show the no-permission page with MSG08" (AC-006.14) is met by rendering the same 403 `Result` as `ForbiddenPage`, with the URL unchanged. Open judgment call: the user may want a shared component instead (issue 3).

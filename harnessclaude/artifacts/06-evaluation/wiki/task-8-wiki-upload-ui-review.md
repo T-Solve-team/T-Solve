@@ -40,7 +40,7 @@ The plan (tasks.md, "AntD `Upload`") conflicts with the team rule, and the team 
 | Functionality | pass | AC-004.18 to AC-004.23 behave as written |
 | Completeness | pass | All six ACs have named tests, including the error paths and the guard against a double publish |
 | Correctness | fail | A locked team rule is bypassed (issue 1). The reviewer ran no tests |
-| Integration | pass | Uses the generated `useExtractWikiUploads` and `usePublishWikiDocuments`. Metadata goes as the JSON string part the backend accepts (BUG-229) |
+| Integration | pass | Uses the generated `useExtractWikiUploads` and `usePublishWikiDocuments`. Metadata goes as the JSON string part the backend accepts (BUG-272) |
 
 ## Traceability
 ```

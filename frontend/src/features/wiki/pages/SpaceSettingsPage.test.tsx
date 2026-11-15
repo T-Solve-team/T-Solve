@@ -68,7 +68,7 @@ async function openGrant() {
 }
 
 describe('SpaceSettingsPage permissions', () => {
-  it('AC-006.12 AC-006.13 grants and revokes through stateful mocks and offers the revoked Department again (BUG-238)', async () => {
+  it('AC-006.12 AC-006.13 grants and revokes through stateful mocks and offers the revoked Department again (BUG-284)', async () => {
     server.resetHandlers();
     const { user, dialog } = await openGrant();
     expect(within(dialog).getByRole('button', { name: 'Save' })).toBeDisabled();

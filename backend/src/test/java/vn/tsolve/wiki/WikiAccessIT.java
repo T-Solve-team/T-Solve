@@ -210,7 +210,7 @@ class WikiAccessIT {
     }
 
     @Test
-    void grantsProjectDepartmentViewWithoutPermissionAndRechecksEligibility_AC_001_1_AC_001_2_BUG_214() {
+    void grantsProjectDepartmentViewWithoutPermissionAndRechecksEligibility_AC_001_1_AC_001_2_BUG_249() {
         long home = department("Home");
         jdbc.update("UPDATE app_user SET department_id = ? WHERE id = ?", home, userId);
         UUID project = jdbc.queryForObject(

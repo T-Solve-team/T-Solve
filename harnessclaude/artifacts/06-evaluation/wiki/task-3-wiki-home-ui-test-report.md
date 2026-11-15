@@ -13,7 +13,7 @@ The dispatcher told the reviewer not to run `npm` or any test: memory is tight a
 
 | Suite | Result | Source |
 |-------|--------|--------|
-| `WikiHomePage.test.tsx`, `WikiDocumentPage.test.tsx` | not run; the commit message and BUG-221 say the wiki suite passed (20 tests, Node 24) | commit `9c72f9bd`, `docs/bug-log.md` |
+| `WikiHomePage.test.tsx`, `WikiDocumentPage.test.tsx` | not run; the commit message and BUG-256 say the wiki suite passed (20 tests, Node 24) | commit `9c72f9bd`, `docs/bug-log.md` |
 | `route-table.test.tsx` | not run | — |
 | `format:check`, `lint`, `typecheck`, `build`, `generate:api` diff | not run | — |
 

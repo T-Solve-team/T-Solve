@@ -45,7 +45,7 @@ Task 5 owns AC-003.13 to AC-003.16. AC-002.21 is also covered in `WikiHomePage.t
 ## Assumptions made
 - **A1.** AC-003.16 says "ask for confirmation" but the SRS gives no message for it. The reviewer accepted a danger popup titled "Delete" that shows the folder name. It is built on `FormModal` rather than `ConfirmDialog`, so that MSG87 can appear inside it. Ask the user whether this confirmation needs its own message.
 - **A2.** AC-003.13 is read as requiring only that level-3 folders, the folder itself and its sub-tree are hidden. A parent that would push a deep sub-tree past level 3 is still offered, and the server answers MSG86 (AC-003.5). This is treated as compliant.
-- **A3.** Tests were not run (dispatcher instruction). The feature status was not changed. The caller sets `passing` once the frontend checks are green, or `fixing` if they are not. BUG-223 (Wiki Home test timing, still Open, logged in Task 4) may make `npm run test` fail now and then.
+- **A3.** Tests were not run (dispatcher instruction). The feature status was not changed. The caller sets `passing` once the frontend checks are green, or `fixing` if they are not. BUG-262 (Wiki Home test timing, still Open, logged in Task 4) may make `npm run test` fail now and then.
 
 ## Test Report
 See `task-5-wiki-folder-ui-test-report.md`.
