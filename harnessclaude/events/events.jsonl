@@ -1733,3 +1733,11 @@
 {"ts":"2026-11-15T03:39:19.690Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication-contract","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-15T03:39:20.043Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-15T03:39:20.375Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication-buttons","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-15T04:06:28.249Z","type":"feature-status","module":"ticket-repository","feature":"ticket-decision-table","from":null,"to":"pending"}
+{"ts":"2026-11-15T04:06:28.716Z","type":"feature-status","module":"ticket-repository","feature":"drop-legacy-solution-tables","from":null,"to":"pending"}
+{"ts":"2026-11-15T04:15:25.133Z","type":"spec-approved","module":"ticket-repository","specHash":"67ed1ed4b39cb1337c764e9c67ff67a57ffb8b512448017e299b118bb688a4ad"}
+{"ts":"2026-11-15T04:55:13.555Z","type":"feature-status","module":"ticket-repository","feature":"ticket-decision-table","from":"pending","to":"in-progress"}
+{"ts":"2026-11-15T04:55:14.007Z","type":"feature-status","module":"ticket-repository","feature":"ticket-decision-table","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-15T04:55:14.458Z","type":"feature-status","module":"ticket-repository","feature":"drop-legacy-solution-tables","from":"pending","to":"in-progress"}
+{"ts":"2026-11-15T04:55:14.882Z","type":"feature-status","module":"ticket-repository","feature":"drop-legacy-solution-tables","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-15T05:09:52.827Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"8df363cacc0817b64bf93e432b413b571e869f1e"}
