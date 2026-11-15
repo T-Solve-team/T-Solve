@@ -68,6 +68,12 @@ class TextExtractorTest {
     }
 
     @Test
+    void stripsNulThatPdfBoxEmitsForUnmappedGlyphs_BUG_292() {
+        assertThat(TextExtractor.readable("Wiki\u0000 guide\u0000")).isEqualTo("Wiki guide");
+        assertThat(TextExtractor.readable("\u0000 \u0000")).isEmpty();
+    }
+
+    @Test
     void rejectsFalseMagicAndDisallowedExtensions_AC_004_4() throws IOException {
         for (String name : new String[] {"fake.pdf", "guide.txt", "guide.docx", "guide"}) {
             byte[] bytes = name.equals("fake.pdf") ? fixture(name) : fixture("guide.pdf");

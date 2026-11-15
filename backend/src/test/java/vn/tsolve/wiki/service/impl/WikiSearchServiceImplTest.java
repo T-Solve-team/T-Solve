@@ -74,6 +74,17 @@ class WikiSearchServiceImplTest {
     }
 
     @Test
+    void rejectsNulInQueryAsBadRequest_BUG_290() {
+        assertThatThrownBy(() -> service.search(user, "repair\u0000guide"))
+                .isInstanceOfSatisfying(FieldMessageCodeException.class, error -> {
+                    assertThat(error.getCode()).isEqualTo("MSG06");
+                    assertThat(error.getField()).isEqualTo("q");
+                    assertThat(error.getStatus()).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
+                });
+        verifyNoInteractions(embeddings, repository);
+    }
+
+    @Test
     void acceptsTwoHundredCharactersAndSqlLikeText_AC_002_7_AC_002_9() {
         String query = "a".repeat(200);
         when(embeddings.embed(any())).thenThrow(new IllegalStateException("offline"));

@@ -40,6 +40,10 @@ public class WikiSearchServiceImpl implements WikiSearchService {
             throw new FieldMessageCodeException(
                     HttpStatus.BAD_REQUEST, "MSG02", Map.of("field_name", "q", "max_length", 200), "q");
         }
+        // PostgreSQL text rejects NUL; without this check websearch_to_tsquery answers 500 (BUG-290).
+        if (query.indexOf('\0') >= 0) {
+            throw new FieldMessageCodeException(HttpStatus.BAD_REQUEST, "MSG06", Map.of("field_name", "q"), "q");
+        }
         String text = query.strip();
         String vector = null;
         // Embedding is outside the repository's read transaction; a failed AI call still permits keyword search.

@@ -49,7 +49,7 @@ async function openFolder(action = 'New folder', name = 'Guides') {
   } else {
     const row = within(tree).getByText(name).closest('[role="treeitem"]');
     if (!(row instanceof HTMLElement)) throw new Error('Folder row missing');
-    await user.click(within(row).getByRole('button', { name: action }));
+    await user.click(within(row).getByRole('button', { name: `${action} ${name}` }));
   }
   const dialog = await screen.findByRole('dialog', { name: 'Folder' });
   return { ...view, user, dialog, name: within(dialog).getByRole('textbox', { name: 'Name' }) };
@@ -187,7 +187,11 @@ describe('FolderModal', () => {
       );
       const item = row.closest('[role="treeitem"]');
       if (!(item instanceof HTMLElement)) throw new Error('Folder row missing');
-      await user.click(within(item).getByRole('button', { name: 'Move' }));
+      await user.click(
+        within(item).getByRole('button', {
+          name: `Move ${action === 'Rename' ? 'Connections' : 'Network'}`,
+        }),
+      );
       const reopened = await screen.findByRole('dialog', { name: 'Folder' });
       expect(within(reopened).getByRole('textbox', { name: 'Name' })).toHaveValue(
         action === 'Rename' ? 'Connections' : 'Network',
@@ -258,7 +262,7 @@ describe('FolderModal', () => {
     const tree = await screen.findByRole('tree', { name: 'Folders' }, { timeout: 5000 });
     const row = within(tree).getByText('Guides').closest('[role="treeitem"]');
     if (!(row instanceof HTMLElement)) throw new Error('Folder row missing');
-    await user.click(within(row).getByRole('button', { name: 'Delete' }));
+    await user.click(within(row).getByRole('button', { name: 'Delete Guides' }));
     const dialog = await screen.findByRole('dialog', { name: 'Delete' });
     expect(within(dialog).getByText('Guides')).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
@@ -311,7 +315,7 @@ describe('FolderModal', () => {
       const text = await within(tree).findByText(label);
       const row = text.closest('[role="treeitem"]');
       if (!(row instanceof HTMLElement)) throw new Error('Folder row missing');
-      await user.click(within(row).getByRole('button', { name: action }));
+      await user.click(within(row).getByRole('button', { name: `${action} ${label}` }));
       return screen.findByRole('dialog', { name: action === 'Delete' ? 'Delete' : 'Folder' });
     }
     const rename = await openAction('Operations', 'Rename');
