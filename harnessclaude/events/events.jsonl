@@ -1780,3 +1780,5 @@
 {"ts":"2026-11-14T22:35:22.792Z","type":"spec-approved","module":"tracker","specHash":"759e03700d56dd4b265645102759f62c4481efebcb09002021309582464e13d8"}
 {"ts":"2026-11-14T22:34:54.110Z","type":"spec-approved","module":"workspace","specHash":"1deeffb98454aa06eb6588d0dd6bfb8e50d069df60973cf47ba85cbfa192e2ad"}
 {"ts":"2026-11-15T06:53:14.357Z","type":"quick-opened","what":"Route-table test still expects the built Wiki screens 11.4 and 11.7 as placeholders (BUG-285)","files":["frontend/src/app/router/route-table.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-11-15T07:34:49.889Z","type":"quick-closed","what":"Route-table test still expects the built Wiki screens 11.4 and 11.7 as placeholders (BUG-285)","files":["frontend/src/app/router/route-table.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-11-15T07:34:58.614Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"3cdb351ecab619c99e3ab7a1c844a0d1ee96975e"}
