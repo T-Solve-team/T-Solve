@@ -130,6 +130,41 @@ public class TicketDecisionServiceImpl implements TicketDecisionService {
         return count;
     }
 
+    @Override
+    @Transactional
+    public int unpublish(UUID reviewerId, Set<UUID> managedProjectIds, List<UUID> ticketIds) {
+        return changePublication(reviewerId, managedProjectIds, ticketIds, TicketStatus.UNPUBLISHED);
+    }
+
+    @Override
+    @Transactional
+    public int republish(UUID reviewerId, Set<UUID> managedProjectIds, List<UUID> ticketIds) {
+        return changePublication(reviewerId, managedProjectIds, ticketIds, TicketStatus.PUBLISHED);
+    }
+
+    private int changePublication(UUID reviewerId, Set<UUID> managedProjectIds, List<UUID> ticketIds, TicketStatus to) {
+        Objects.requireNonNull(reviewerId, "Verified reviewer is required");
+        Set<UUID> ids = validatedIds(ticketIds);
+        List<Ticket> batch = tickets.lockForReview(ids);
+        validateScope(batch, ids.size(), managedProjectIds);
+        boolean unpublish = to == TicketStatus.UNPUBLISHED;
+        // Pending review may also move to Published, so the transition table alone would let re-publish skip a review.
+        TicketStatus from = unpublish ? TicketStatus.PUBLISHED : TicketStatus.UNPUBLISHED;
+        if (batch.stream().anyMatch(ticket -> ticket.getStatus() != from)) {
+            throw new BusinessRuleException("MSG06", Map.of());
+        }
+        Instant now = clock.instant();
+        transitions.move(batch, to, now);
+        decisions.saveAll(batch.stream()
+                .map(ticket -> new ReviewDecisionRecord(
+                        ticket.getId(), reviewerId, unpublish ? "UNPUBLISH" : "REPUBLISH", null, now))
+                .toList());
+        for (Ticket ticket : batch) {
+            audit.record(unpublish ? AuditAction.UNPUBLISH : AuditAction.PUBLISH, "TICKET", ticket.getId());
+        }
+        return batch.size();
+    }
+
     private static Set<UUID> validatedIds(List<UUID> ticketIds) {
         if (ticketIds == null || ticketIds.isEmpty() || ticketIds.size() > MAX_TICKETS) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);

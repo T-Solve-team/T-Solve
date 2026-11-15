@@ -1726,3 +1726,16 @@
 {"ts":"2026-11-14T22:34:54.110Z","type":"spec-approved","module":"workspace","specHash":"1deeffb98454aa06eb6588d0dd6bfb8e50d069df60973cf47ba85cbfa192e2ad"}
 {"ts":"2026-11-15T03:32:50.961Z","type":"spec-approved","module":"search","specHash":"ea3611c6542726949a5423ff15d884002a9fe5bd58aecd2cdd74a5a54c409100"}
 {"ts":"2026-11-15T04:24:54.627Z","type":"spec-approved","module":"search","specHash":"3f2e96d2455d3b9ffc1d97763b318211cfd97cdc01ebcad65f7e8988044d55b6"}
+{"ts":"2026-11-15T02:31:23.461Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication-contract","from":"pending","to":"in-progress"}
+{"ts":"2026-11-15T02:34:23.013Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication","from":"pending","to":"in-progress"}
+{"ts":"2026-11-15T02:37:36.057Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication-buttons","from":"pending","to":"in-progress"}
+{"ts":"2026-11-15T03:37:28.038Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"ce4dad25d3dc2c59ab31b9e5de45086a9e1ba162"}
+{"ts":"2026-11-15T03:37:36.350Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"da60828421c34da55e79c9bb683eb1d59d67357a"}
+{"ts":"2026-11-15T03:38:58.350Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"1315800b25a6d8ae25b83242ca4aa56a296486e2"}
+{"ts":"2026-11-15T03:39:19.690Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication-contract","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-15T03:39:20.043Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-15T03:39:20.375Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication-buttons","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-15T04:47:31.786Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication-contract","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T04:47:32.371Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T04:47:32.995Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication-buttons","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T04:52:59.621Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"92b1e9d6bc17b9cb8b8dadf49139a9af763c68cf"}

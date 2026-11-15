@@ -58,4 +58,5 @@
     <include file="changes/034-project-audit-member-change.sql" relativeToChangelogFile="true"/>
     <include file="changes/035-workspace-info.sql" relativeToChangelogFile="true"/>
     <include file="changes/036-project-done-statuses.sql" relativeToChangelogFile="true"/>
+    <include file="changes/037-review-decision-publication.sql" relativeToChangelogFile="true"/>
 </databaseChangeLog>
