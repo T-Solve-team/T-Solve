@@ -193,13 +193,13 @@
         "wiki-permissions-api": "pending",
         "wiki-permissions-ui": "pending"
       },
-      "lastUpdated": "2026-11-15T05:58:28.995Z",
+      "lastUpdated": "2026-11-15T05:58:55.270Z",
       "branch": "feat/wiki",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "186f3b38ff677b97644a1e42cf77f0837be6767b"
+        "default": "e3eb9e775fb837a8087a5ccbc98327adba517271"
       }
     },
     "ticket-repository": {
