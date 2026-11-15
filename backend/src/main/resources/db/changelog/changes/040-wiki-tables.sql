@@ -44,7 +44,9 @@ CREATE TABLE wiki_document (
     deleted_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL,
-    search_vector TSVECTOR GENERATED ALWAYS AS (to_tsvector('simple', title || ' ' || content)) STORED
+    -- A tsvector is capped at 1 MB; distinct ASCII words take ~1.7 bytes per character, Vietnamese up to ~3x that,
+    -- so only the first 200 000 characters are keyword-indexed (BUG-291). Passage embeddings cover the full text.
+    search_vector TSVECTOR GENERATED ALWAYS AS (to_tsvector('simple', left(title || ' ' || content, 200000))) STORED
 );
 CREATE UNIQUE INDEX uq_wiki_document_published_title
     ON wiki_document (space_id, COALESCE(folder_id, '00000000-0000-0000-0000-000000000000'::uuid), LOWER(title))
