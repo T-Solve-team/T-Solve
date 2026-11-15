@@ -1463,3 +1463,6 @@
 {"ts":"2026-11-14T20:59:31.157Z","type":"feature-status","module":"wiki","feature":"wiki-trash-ui","from":"pending","to":"in-progress"}
 {"ts":"2026-11-14T21:16:17.125Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"9fe4cb5ddff98bcd24898634c80064068cbd93ae"}
 {"ts":"2026-11-14T21:16:17.421Z","type":"feature-status","module":"wiki","feature":"wiki-trash-ui","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T21:16:19.338Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-api","from":"pending","to":"in-progress"}
+{"ts":"2026-11-15T01:50:45.400Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"93423f09078cfeebcbe89b6f0382608bcba5acee"}
+{"ts":"2026-11-15T01:50:45.757Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-api","from":"in-progress","to":"evaluating"}
