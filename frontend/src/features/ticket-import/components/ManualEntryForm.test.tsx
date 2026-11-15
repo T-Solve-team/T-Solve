@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import dayjs from 'dayjs';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
+import { MOCK_USERS } from '@/mocks/session';
 import type { ImportDraftSummary, ManualDraftResponse, ManualEntryRequest } from '@/shared/api';
 import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
@@ -153,6 +154,28 @@ describe('ManualEntryForm', () => {
     expect(cell).toHaveClass('ant-picker-cell-disabled');
   });
 
+  it('AC-006.12 offers no managed Project that is not Active (BUG-216)', async () => {
+    const pm = MOCK_USERS.pm;
+    const removed = {
+      projectId: '00000000-0000-4000-8000-000000000301',
+      jiraProjectKey: 'ITOLD',
+      departmentId: '00000000-0000-4000-8000-0000000000d1',
+      departmentName: 'IT',
+      roleInProject: 'PROJECT_MANAGER' as const,
+      projectStatus: 'REMOVED' as const,
+    };
+    server.use(
+      http.get('*/api/v1/me', () =>
+        HttpResponse.json({ ...pm, projects: [...pm.projects, removed] }),
+      ),
+    );
+    const { user } = await openManualTab();
+
+    await user.click(screen.getByRole('combobox', { name: 'Project' }));
+    expect(await screen.findByTitle('ITSUP · IT')).toBeInTheDocument();
+    expect(screen.queryByTitle('ITOLD · IT')).not.toBeInTheDocument();
+  });
+
   it('AC-006.1 Save sends the entry and its files, shows MSG32 and empties the form', async () => {
     const sent = captureSends();
     const { user } = await openManualTab();
@@ -196,10 +219,9 @@ describe('ManualEntryForm', () => {
     expect(sent).toHaveLength(0);
   });
 
+  // Two tests, not one: together they ran close to the 15 s limit on a loaded machine (BUG-213).
   it('AC-006.12 checks the Evidence type and size before sending (MSG34)', async () => {
-    const sent = captureSends();
     const { user } = await openManualTab({ applyAccept: false });
-    await fillRequired(user);
 
     await user.upload(evidenceInput(), evidence('setup.exe'));
     expect(await screen.findByText(msg('MSG34', { file_name: 'setup.exe' }))).toBeInTheDocument();
@@ -210,6 +232,15 @@ describe('ManualEntryForm', () => {
     expect(await screen.findByText('ten.pdf')).toBeInTheDocument();
     expect(screen.queryByText(msg('MSG34', { file_name: 'ten.pdf' }))).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Remove ten.pdf' }));
+    expect(screen.queryByText('ten.pdf')).not.toBeInTheDocument();
+  });
+
+  it('AC-006.12 sends only the Evidence files that passed the check', async () => {
+    const sent = captureSends();
+    const { user } = await openManualTab({ applyAccept: false });
+    await fillRequired(user);
+
+    await user.upload(evidenceInput(), evidence('setup.exe'));
     // an upper-case extension is fine
     await user.upload(evidenceInput(), evidence('SHOT.PNG'));
 
