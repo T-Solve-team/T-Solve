@@ -27,7 +27,7 @@ const TYPE_LABELS: Record<ImportSource, string> = {
 export function DraftsList({ onOpenManual }: { onOpenManual: (previewId: number) => void }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const projects = useManagedProjectOptions();
+  const projects = useManagedProjectOptions({ anyStatus: true });
   const drafts = useListImportDrafts();
   const [toDelete, setToDelete] = useState<ImportDraftSummary | null>(null);
 

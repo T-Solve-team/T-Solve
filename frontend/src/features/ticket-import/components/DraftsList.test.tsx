@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { server } from '@/mocks/server';
+import { MOCK_USERS } from '@/mocks/session';
 import { problem } from '@/shared/api/mocks';
 import { formatDateTime } from '@/shared/lib';
 import { msg } from '@/shared/messages';
@@ -76,6 +77,43 @@ describe('DraftsList', () => {
 
     expect(within(table).queryByText(unmanaged)).not.toBeInTheDocument();
     expect(within(table).getAllByRole('button', { name: /^Open Draft/ })).toHaveLength(1);
+  });
+
+  it('AC-004.2 keeps a Draft of a REMOVED Project the user still manages (BUG-217)', async () => {
+    const pm = MOCK_USERS.pm;
+    const removed = {
+      projectId: '00000000-0000-4000-8000-000000000301',
+      jiraProjectKey: 'ITOLD',
+      departmentId: '00000000-0000-4000-8000-0000000000d1',
+      departmentName: 'IT',
+      roleInProject: 'PROJECT_MANAGER' as const,
+      projectStatus: 'REMOVED' as const,
+    };
+    server.use(
+      http.get('*/api/v1/me', () => Response.json({ ...pm, projects: [...pm.projects, removed] })),
+      http.get('*/api/v1/imports/drafts', () =>
+        Response.json([
+          {
+            previewId: 900,
+            source: 'JIRA_IMPORT',
+            projectId: '00000000-0000-4000-8000-000000000101',
+            rowCount: 3,
+            savedAt: '2026-10-16T02:30:00Z',
+          },
+          {
+            previewId: 902,
+            source: 'MANUAL',
+            projectId: removed.projectId,
+            rowCount: 1,
+            savedAt: '2026-10-17T02:30:00Z',
+          },
+        ]),
+      ),
+    );
+    const { table } = await openDrafts();
+
+    expect(within(table).getByText('ITOLD · IT')).toBeInTheDocument();
+    expect(within(table).getAllByRole('button', { name: /^Delete Draft/ })).toHaveLength(2);
   });
 
   it('AC-007.3 lists a Manual Draft with type Manual and 1 row beside the other Drafts', async () => {
