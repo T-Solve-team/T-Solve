@@ -10,4 +10,7 @@ public record ProjectMembership(
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED) String departmentName,
 
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED, enumAsRef = true)
-        ProjectRole roleInProject) {}
+        ProjectRole roleInProject,
+
+        @Schema(requiredMode = Schema.RequiredMode.REQUIRED, enumAsRef = true)
+        ProjectStatus projectStatus) {}

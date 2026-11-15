@@ -32,6 +32,7 @@ import vn.tsolve.common.session.dto.CurrentUserResponse;
 import vn.tsolve.common.session.dto.DepartmentRef;
 import vn.tsolve.common.session.dto.ProjectMembership;
 import vn.tsolve.common.session.dto.ProjectRole;
+import vn.tsolve.common.session.dto.ProjectStatus;
 import vn.tsolve.common.session.dto.SpaceRef;
 import vn.tsolve.common.session.dto.UserSummaryResponse;
 import vn.tsolve.common.session.service.SessionService;
@@ -62,7 +63,12 @@ class SessionControllerTest {
                         department,
                         List.of(department),
                         List.of(new ProjectMembership(
-                                PROJECT_ID, "KAN", DEPARTMENT_ID, "Engineering", ProjectRole.PROJECT_MANAGER)),
+                                PROJECT_ID,
+                                "KAN",
+                                DEPARTMENT_ID,
+                                "Engineering",
+                                ProjectRole.PROJECT_MANAGER,
+                                ProjectStatus.ACTIVE)),
                         List.of(new SpaceRef(SPACE_ID, "Engineering wiki")),
                         true));
 
@@ -83,6 +89,7 @@ class SessionControllerTest {
                 .andExpect(jsonPath("$.projects[0].departmentId").value(DEPARTMENT_ID.toString()))
                 .andExpect(jsonPath("$.projects[0].departmentName").value("Engineering"))
                 .andExpect(jsonPath("$.projects[0].roleInProject").value("PROJECT_MANAGER"))
+                .andExpect(jsonPath("$.projects[0].projectStatus").value("ACTIVE"))
                 .andExpect(jsonPath("$.managedSpaces[0].spaceId").value(SPACE_ID.toString()))
                 .andExpect(jsonPath("$.managedSpaces[0].name").value("Engineering wiki"))
                 .andExpect(jsonPath("$.workspaceReady").value(true));

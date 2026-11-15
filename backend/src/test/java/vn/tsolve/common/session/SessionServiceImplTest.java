@@ -26,6 +26,7 @@ import vn.tsolve.common.session.dto.CurrentUserResponse;
 import vn.tsolve.common.session.dto.DepartmentRef;
 import vn.tsolve.common.session.dto.ProjectMembership;
 import vn.tsolve.common.session.dto.ProjectRole;
+import vn.tsolve.common.session.dto.ProjectStatus;
 import vn.tsolve.common.session.dto.SpaceRef;
 import vn.tsolve.common.session.lookup.DepartmentLookup;
 import vn.tsolve.common.session.lookup.ManagedSpaceLookup;
@@ -98,7 +99,28 @@ class SessionServiceImplTest {
 
     private static ProjectMembership projectIn(DepartmentRef department, String key) {
         return new ProjectMembership(
-                UUID.randomUUID(), key, department.departmentId(), department.name(), ProjectRole.MEMBER);
+                UUID.randomUUID(),
+                key,
+                department.departmentId(),
+                department.name(),
+                ProjectRole.MEMBER,
+                ProjectStatus.ACTIVE);
+    }
+
+    @Test
+    void givesEachProjectTheStatusTheLookupReturns_AC_003_8() {
+        allLookupsPresent();
+        DepartmentRef it = new DepartmentRef(UUID.randomUUID(), "IT");
+        ProjectMembership active = projectIn(it, "ITSUP");
+        ProjectMembership removed = new ProjectMembership(
+                UUID.randomUUID(), "ITOLD", it.departmentId(), "IT", ProjectRole.MEMBER, ProjectStatus.REMOVED);
+        when(projectLookup.findProjects(USER_ID)).thenReturn(List.of(active, removed));
+
+        CurrentUserResponse me = service.getMe();
+
+        assertThat(me.projects())
+                .extracting(ProjectMembership::projectStatus)
+                .containsExactly(ProjectStatus.ACTIVE, ProjectStatus.REMOVED);
     }
 
     @Test

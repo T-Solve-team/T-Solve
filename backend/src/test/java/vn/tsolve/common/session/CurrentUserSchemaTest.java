@@ -30,7 +30,12 @@ class CurrentUserSchemaTest {
         assertThat(required("UserSummary")).containsExactlyInAnyOrder("id", "fullName", "email");
         assertThat(required("ProjectMembership"))
                 .containsExactlyInAnyOrder(
-                        "projectId", "jiraProjectKey", "departmentId", "departmentName", "roleInProject");
+                        "projectId",
+                        "jiraProjectKey",
+                        "departmentId",
+                        "departmentName",
+                        "roleInProject",
+                        "projectStatus");
         assertThat(required("DepartmentRef")).containsExactlyInAnyOrder("departmentId", "name");
         assertThat(required("SpaceRef")).containsExactlyInAnyOrder("spaceId", "name");
         // Nullable must survive serialisation: the written schema is what `api:pull` reads.
@@ -66,6 +71,16 @@ class CurrentUserSchemaTest {
                         .at("/properties/roleInProject/$ref")
                         .asText())
                 .isEqualTo("#/components/schemas/ProjectRole");
+    }
+
+    @Test
+    void projectStatusMatchesTheContract_AC_003_8() {
+        assertThat(written("ProjectMembership")
+                        .at("/properties/projectStatus/$ref")
+                        .asText())
+                .isEqualTo("#/components/schemas/ProjectStatus");
+        assertThat(enumValues(property("ProjectMembership", "projectStatus"), "ProjectStatus"))
+                .containsExactlyInAnyOrder("ACTIVE", "REMOVED");
     }
 
     private JsonNode written(String schemaName) {
