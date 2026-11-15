@@ -38,4 +38,6 @@ export interface ManualTicketRequest {
    * @nullable
    */
   draftId?: number | null;
+  /** @nullable */
+  keepEvidenceIds?: string[] | null;
 }

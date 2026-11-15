@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -21,6 +22,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.WithTSolveUser;
+import vn.tsolve.common.session.lookup.WorkspaceStatusLookup;
 
 /** Full application: GET /api/v1/me through the real security chains (review finding 4). */
 @SpringBootTest
@@ -67,6 +69,12 @@ class SessionMeIT {
     @Autowired
     private MockMvc mvc;
 
+    // @WithTSolveUser skips the web session filter, so no Workspace is bound to the thread and the real lookup
+    // (WorkspaceStatusLookupImpl, KAN-119) would throw. This IT is about the /me shape, not the Workspace state
+    // (BUG-242).
+    @MockBean
+    private WorkspaceStatusLookup workspaceStatus;
+
     @Test
     void answers401Msg07WithoutASession_AC_003_5() throws Exception {
         mvc.perform(get("/api/v1/me"))
@@ -77,7 +85,7 @@ class SessionMeIT {
 
     @Test
     @WithTSolveUser
-    void answers200WithTheCurrentUserForAnEmployee_AC_003_1() throws Exception {
+    void answers200WithTheCurrentUserForAnEmployee_AC_003_1_BUG_242() throws Exception {
         mvc.perform(get("/api/v1/me"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.user.email").exists())

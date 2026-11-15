@@ -50,6 +50,8 @@ Master registry of all artifacts in this workspace.
 | — | design | jira-app | draft | artifacts/04-plans/jira-app/design.md |
 | — | design | jira-app | draft | artifacts/04-plans/jira-app/iteration-1/design.md |
 | — | tasks | jira-app | draft | artifacts/04-plans/jira-app/iteration-1/tasks.md |
+| — | design | jira-app | draft | artifacts/04-plans/jira-app/iteration-2/design.md |
+| — | tasks | jira-app | draft | artifacts/04-plans/jira-app/iteration-2/tasks.md |
 | — | module | dashboard-audit | draft | artifacts/03-modules/dashboard-audit/module.md |
 | — | module | platform | draft | artifacts/03-modules/platform/module.md |
 | — | module | platform-console | cancelled | artifacts/03-modules/platform-console/module.md |
@@ -198,6 +200,7 @@ Master registry of all artifacts in this workspace.
 | — | test-report | dashboard-audit | pass | artifacts/06-evaluation/dashboard-audit/task-1-audit-log-test-report.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-16-viewable-spaces.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-17-21-my-solutions.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-19-my-solutions-backend.md |
 | — | module | tracker | draft | artifacts/03-modules/tracker/module.md |
 | — | spec | tracker | draft | artifacts/03-modules/tracker/spec.md |
 | — | design | tracker | draft | artifacts/04-plans/tracker/design.md |
@@ -265,6 +268,10 @@ Master registry of all artifacts in this workspace.
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-26a-web-session.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-26b-user-role.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-30a-jira-link-sign-in.md |
+| — | spec | project-integration | draft | artifacts/03-modules/project-integration/spec.md |
+| — | design | project-integration | draft | artifacts/04-plans/project-integration/design.md |
+| — | design | project-integration | draft | artifacts/04-plans/project-integration/iteration-1/design.md |
+| — | tasks | project-integration | draft | artifacts/04-plans/project-integration/iteration-1/tasks.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-30b-jira-link-record.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-30b-jira-link-record-review.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-29a-operator-sign-in.md |

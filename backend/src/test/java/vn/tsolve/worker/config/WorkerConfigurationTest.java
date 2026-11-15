@@ -1,19 +1,39 @@
 package vn.tsolve.worker.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
+import jakarta.validation.Validation;
+import java.time.Clock;
+import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
+import javax.sql.DataSource;
+import liquibase.integration.spring.SpringLiquibase;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import vn.tsolve.worker.service.EmailOutboxService;
 import vn.tsolve.worker.service.TenantJobService;
 import vn.tsolve.worker.service.WorkerTenantService;
 import vn.tsolve.worker.service.mock.MockWorkerTenantService;
 
 class WorkerConfigurationTest {
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
-            .withUserConfiguration(WorkerConfiguration.class, WorkerMockConfiguration.class);
+            .withUserConfiguration(
+                    WorkerConfiguration.class, WorkerMockConfiguration.class, EmailOutboxConfiguration.class);
 
     @Test
     void registersNeitherWorkerNorMockByDefault_AC_002_12_AC_002_14() {
@@ -22,6 +42,10 @@ class WorkerConfigurationTest {
             assertThat(context).doesNotHaveBean(JobRunrRuntime.class);
             assertThat(context).doesNotHaveBean(TenantJobService.class);
             assertThat(context).doesNotHaveBean(WorkerTenantService.class);
+            assertThat(context).doesNotHaveBean(EmailOutboxService.class);
+            assertThat(context).doesNotHaveBean(EmailOutboxProperties.class);
+            assertThat(context).doesNotHaveBean("workerClock");
+            assertThat(context).doesNotHaveBean("jobsLiquibase");
         });
     }
 
@@ -30,6 +54,7 @@ class WorkerConfigurationTest {
         runner.withUserConfiguration(PropertyScan.class).run(context -> {
             assertThat(context).hasNotFailed();
             assertThat(context).doesNotHaveBean(WorkerProperties.class);
+            assertThat(context).doesNotHaveBean(EmailOutboxProperties.class);
         });
     }
 
@@ -82,5 +107,178 @@ class WorkerConfigurationTest {
                     assertThat(context).hasFailed();
                     assertThat(context.getStartupFailure()).hasStackTraceContaining("jdbcUrl");
                 });
+    }
+
+    @Test
+    @DisplayName("AC-004.1 AC-004.3 AC-002.13 enabled outbox preserves tenant Liquibase and private Jobs pool")
+    void enablesOutboxWithoutReplacingTenantMigration() {
+        var jobs = mock(DataSource.class);
+        var business = mock(DataSource.class);
+        var runtime = mock(JobRunrRuntime.class);
+        when(runtime.jobsDataSource()).thenReturn(jobs);
+        new ApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(LiquibaseAutoConfiguration.class))
+                .withUserConfiguration(EmailOutboxConfiguration.class, SkipMigration.class)
+                .withBean(JobRunrRuntime.class, () -> runtime)
+                .withBean(WorkerTenantService.class, () -> mock(WorkerTenantService.class))
+                .withBean("dataSource", DataSource.class, () -> business)
+                .withPropertyValues(
+                        "tsolve.worker.enabled=true",
+                        "spring.liquibase.change-log=classpath:db/changelog/db.changelog-master.xml")
+                .run(context -> {
+                    assertThat(context).hasNotFailed().hasSingleBean(EmailOutboxService.class);
+                    assertThat(context).doesNotHaveBean(Clock.class);
+                    assertThat(context.getBeansOfType(DataSource.class)).containsOnlyKeys("dataSource");
+                    assertThat(context.getBean("liquibase", SpringLiquibase.class)
+                                    .getDataSource())
+                            .isSameAs(business);
+                    assertThat(context.getBean("jobsLiquibase", SpringLiquibase.class)
+                                    .getDataSource())
+                            .isSameAs(jobs);
+                    var properties = context.getBean(EmailOutboxProperties.class);
+                    assertThat(properties.interval()).isEqualTo(java.time.Duration.ofSeconds(30));
+                    assertThat(properties.backoff())
+                            .containsExactly(java.time.Duration.ofMinutes(5), java.time.Duration.ofMinutes(15));
+                    assertThat(properties.lease()).isEqualTo(java.time.Duration.ofMinutes(5));
+                    assertThat(properties.batchSize()).isEqualTo(20);
+                    assertThat(properties.retention()).isEqualTo(java.time.Duration.ofDays(30));
+                });
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @EnableConfigurationProperties(EmailOutboxProperties.class)
+    static class OutboxPropertiesConfiguration {}
+
+    @Test
+    void leavesTheApplicationClockTheOnlyClockBean_BUG_240() {
+        var applicationClock = Clock.systemDefaultZone();
+        var jobs = mock(DataSource.class);
+        var runtime = mock(JobRunrRuntime.class);
+        when(runtime.jobsDataSource()).thenReturn(jobs);
+        new ApplicationContextRunner()
+                .withUserConfiguration(EmailOutboxConfiguration.class, SkipMigration.class)
+                .withBean(JobRunrRuntime.class, () -> runtime)
+                .withBean(WorkerTenantService.class, () -> mock(WorkerTenantService.class))
+                .withBean("clock", Clock.class, () -> applicationClock)
+                .withPropertyValues("tsolve.worker.enabled=true")
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    // AuditLogServiceImpl asks for ObjectProvider<Clock>.getIfAvailable(): with two Clock beans it
+                    // throws NoUniqueBeanDefinitionException and the worker profile does not start.
+                    assertThat(context.getBeanProvider(Clock.class).getIfAvailable(Clock::systemUTC))
+                            .isSameAs(applicationClock);
+                });
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"5m", "5m,15m,30m"})
+    void rejectsBackoffWithoutExactlyTwoWaits_BUG_217(String backoff) {
+        new ApplicationContextRunner()
+                .withUserConfiguration(OutboxPropertiesConfiguration.class)
+                .withPropertyValues("tsolve.worker.enabled=true", "tsolve.worker.email.backoff=" + backoff)
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure()).hasStackTraceContaining("backoff");
+                });
+    }
+
+    @Test
+    void rejectsNullOrEmptyBackoff_BUG_217() {
+        try (var factory = Validation.buildDefaultValidatorFactory()) {
+            var validator = factory.getValidator();
+            for (List<Duration> backoff : java.util.Arrays.<List<Duration>>asList(null, List.of())) {
+                var properties = new EmailOutboxProperties(
+                        Duration.ofSeconds(30), backoff, Duration.ofMinutes(5), 20, Duration.ofDays(30));
+                assertThat(validator.validate(properties)).anySatisfy(violation -> assertThat(
+                                violation.getPropertyPath().toString())
+                        .isEqualTo("backoff"));
+            }
+        }
+    }
+
+    @Test
+    void jobsPoolFailsFastWithAShortConfigurableConnectionTimeout_BUG_164_BUG_226() {
+        var defaults = new ApplicationContextRunner()
+                .withUserConfiguration(PropertyOnly.class)
+                .withPropertyValues(
+                        "tsolve.worker.enabled=true",
+                        "tsolve.worker.jdbc-url=jdbc:postgresql://localhost/jobs",
+                        "tsolve.worker.username=u",
+                        "tsolve.worker.password=p");
+        defaults.run(context -> assertThat(JobRunrRuntime.poolConfig(context.getBean(WorkerProperties.class))
+                        .getConnectionTimeout())
+                .isEqualTo(3000));
+        defaults.withPropertyValues("tsolve.worker.connection-timeout=2s")
+                .run(context -> assertThat(JobRunrRuntime.poolConfig(context.getBean(WorkerProperties.class))
+                                .getConnectionTimeout())
+                        .isEqualTo(2000));
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @EnableConfigurationProperties(WorkerProperties.class)
+    static class PropertyOnly {}
+
+    @ParameterizedTest
+    @ValueSource(strings = {"interval=0s", "interval=-1s", "lease=0s", "lease=-5m", "retention=0d", "retention=-1d"})
+    void rejectsZeroOrNegativeDurationsAtStartup_BUG_227(String setting) {
+        new ApplicationContextRunner()
+                .withUserConfiguration(OutboxPropertiesConfiguration.class)
+                .withPropertyValues("tsolve.worker.enabled=true", "tsolve.worker.email." + setting)
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure())
+                            .hasStackTraceContaining(
+                                    "tsolve.worker.email." + setting.substring(0, setting.indexOf('=')))
+                            .hasStackTraceContaining("must be greater than zero");
+                });
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"200s", "199s"})
+    void rejectsALeaseThatDoesNotOutlastAFullBatchOfSlowSends_BUG_227(String lease) {
+        // 20 rows x (5 s connect + 5 s write) = 200 s: the lease must be strictly longer.
+        new ApplicationContextRunner()
+                .withUserConfiguration(OutboxPropertiesConfiguration.class, EmailOutboxLeaseCheck.class)
+                .withPropertyValues("tsolve.worker.enabled=true", "tsolve.worker.email.lease=" + lease)
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure())
+                            .hasStackTraceContaining("tsolve.worker.email.lease")
+                            .hasStackTraceContaining("batch-size");
+                });
+    }
+
+    @Test
+    void acceptsTheDefaultLeaseAndFollowsTheConfiguredSmtpTimeouts_BUG_227() {
+        var base = new ApplicationContextRunner()
+                .withUserConfiguration(OutboxPropertiesConfiguration.class, EmailOutboxLeaseCheck.class)
+                .withPropertyValues("tsolve.worker.enabled=true");
+        base.run(context -> assertThat(context).hasNotFailed());
+        base.withPropertyValues(
+                        "spring.mail.properties[mail.smtp.connectiontimeout]=20000",
+                        "spring.mail.properties[mail.smtp.writetimeout]=20000")
+                .run(context -> assertThat(context).hasFailed());
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    static class SkipMigration {
+        @Bean
+        static BeanPostProcessor skipMigration() {
+            return new BeanPostProcessor() {
+                @Override
+                public Object postProcessBeforeInitialization(Object bean, String name) {
+                    if (bean instanceof SpringLiquibase liquibase) {
+                        var migration = spy(liquibase);
+                        try {
+                            doNothing().when(migration).afterPropertiesSet();
+                        } catch (liquibase.exception.LiquibaseException failure) {
+                            throw new IllegalStateException(failure);
+                        }
+                        return migration;
+                    }
+                    return bean;
+                }
+            };
+        }
     }
 }
