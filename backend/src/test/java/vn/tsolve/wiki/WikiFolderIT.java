@@ -2,6 +2,8 @@ package vn.tsolve.wiki;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManagerFactory;
@@ -103,6 +105,41 @@ class WikiFolderIT extends WikiReadTestSupport {
                 .isZero();
         assertAudit(child.folderId(), "DELETE", "Child", root.folderId());
         assertThat(auditCount()).isEqualTo(5);
+    }
+
+    @Test
+    void recountsCommittedDocumentsAfterRestrictRollsBack_AC_003_9_AC_003_12_BUG_243() {
+        WikiFolder folder = create("Upload destination", null);
+        UUID documentId = document(space, folder.folderId(), "Upload", "DEPARTMENT", "PENDING", "Text");
+        WikiDocumentRepository realDocuments = context.getBean(WikiDocumentRepository.class);
+        WikiDocumentRepository documents = mock(WikiDocumentRepository.class);
+        // Model the count observed before an upload commits, then use the real database for the fresh count.
+        doReturn(0L)
+                .doAnswer(call -> realDocuments.countByFolderId(folder.folderId()))
+                .when(documents)
+                .countByFolderId(folder.folderId());
+        WikiFolderService deleting = new WikiFolderServiceImpl(
+                context.getBean(FolderRepository.class),
+                documents,
+                context.getBean(AccessRepository.class),
+                context.getBean(AuditService.class),
+                Mappers.getMapper(WikiFolderMapper.class),
+                context.getBean(JpaTransactionManager.class));
+        int before = auditCount();
+        assertThatThrownBy(() -> deleting.delete(user, folder.folderId()))
+                .isInstanceOfSatisfying(BusinessRuleException.class, error -> {
+                    assertThat(error.getCode()).isEqualTo("MSG87");
+                    assertThat(error.getParams())
+                            .containsEntry("folder_count", 0L)
+                            .containsEntry("document_count", 1L);
+                });
+        assertThat(jdbc.queryForObject(
+                        "SELECT count(*) FROM folder WHERE folder_id = ?", Integer.class, folder.folderId()))
+                .isEqualTo(1);
+        assertThat(jdbc.queryForObject(
+                        "SELECT count(*) FROM wiki_document WHERE wiki_document_id = ?", Integer.class, documentId))
+                .isEqualTo(1);
+        assertThat(auditCount()).isEqualTo(before);
     }
 
     @Test
@@ -352,9 +389,10 @@ class WikiFolderIT extends WikiReadTestSupport {
                 FolderRepository folders,
                 WikiDocumentRepository documents,
                 AccessRepository access,
-                AuditService audit) {
+                AuditService audit,
+                JpaTransactionManager transactionManager) {
             return new WikiFolderServiceImpl(
-                    folders, documents, access, audit, Mappers.getMapper(WikiFolderMapper.class));
+                    folders, documents, access, audit, Mappers.getMapper(WikiFolderMapper.class), transactionManager);
         }
     }
 }

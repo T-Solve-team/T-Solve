@@ -228,6 +228,45 @@ describe('FolderModal', () => {
     },
   );
 
+  it.each(['New folder', 'Move'])(
+    'AC-003.15 clears MSG86 when the parent changes in %s and preserves Name (BUG-245)',
+    async (action) => {
+      const submitted = vi.fn(() => problem(400, 'MSG86'));
+      server.use(
+        http.post('*/api/v1/wiki/spaces/:spaceId/folders', submitted),
+        http.put('*/api/v1/wiki/folders/:folderId', submitted),
+      );
+      const { user, dialog, name } = await openFolder(action);
+      await user.clear(name);
+      await user.paste('Keep this name');
+      await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+      expect(await within(dialog).findByText(msg('MSG86'))).toBeInTheDocument();
+      const choices = await parentChoices(user, dialog);
+      await user.click(choices.getByText('Procedures'));
+      await waitFor(() => expect(within(dialog).queryByText(msg('MSG86'))).not.toBeInTheDocument());
+      expect(name).toHaveValue('Keep this name');
+      expect(screen.getByRole('dialog')).toBe(dialog);
+      expect(submitted).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('AC-003.16 keeps the folder name and cancel behavior when extracting DeleteFolderModal (BUG-244)', async () => {
+    const user = userEvent.setup();
+    const submitted = vi.fn(() => new Response(null, { status: 204 }));
+    server.use(http.delete('*/api/v1/wiki/folders/:folderId', submitted));
+    renderApp(`${paths.wikiHome}?space=${SPACE}`, { role: 'KNOWLEDGE_MANAGER' });
+    const tree = await screen.findByRole('tree', { name: 'Folders' }, { timeout: 5000 });
+    const row = within(tree).getByText('Guides').closest('[role="treeitem"]');
+    if (!(row instanceof HTMLElement)) throw new Error('Folder row missing');
+    await user.click(within(row).getByRole('button', { name: 'Delete' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Delete' });
+    expect(within(dialog).getByText('Guides')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(submitted).not.toHaveBeenCalled();
+    expect(within(tree).getByText('Guides')).toBeInTheDocument();
+  });
+
   it('AC-003.15 disables Save and prevents duplicate submissions while pending', async () => {
     let release = () => {};
     const pending = new Promise<void>((resolve) => {
