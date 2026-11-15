@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mapstruct.factory.Mappers;
+import org.mockito.AdditionalAnswers;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -103,6 +104,16 @@ class WikiTrashIT extends WikiReadTestSupport {
     @AfterEach
     void signOut() {
         SecurityContextHolder.clearContext();
+    }
+
+    /** The repository mock delegates to the real one; an interface mock has no real method to call (BUG-286). */
+    private static Object callReal(org.mockito.invocation.InvocationOnMock call) throws Exception {
+        var real = context.getBean("wikiDocumentRepository", WikiDocumentRepository.class);
+        try {
+            return call.getMethod().invoke(real, call.getArguments());
+        } catch (java.lang.reflect.InvocationTargetException failure) {
+            throw failure.getCause() instanceof Exception cause ? cause : failure;
+        }
     }
 
     @Test
@@ -331,7 +342,7 @@ class WikiTrashIT extends WikiReadTestSupport {
         service.trash(user, second);
         CyclicBarrier probed = new CyclicBarrier(2);
         doAnswer(call -> {
-                    boolean taken = (boolean) call.callRealMethod();
+                    boolean taken = (boolean) callReal(call);
                     if (!taken) probed.await(10, TimeUnit.SECONDS);
                     return taken;
                 })
@@ -362,7 +373,7 @@ class WikiTrashIT extends WikiReadTestSupport {
         UUID id = document(space, null, "Guide", "DEPARTMENT", "PENDING", "Text");
         service.trash(user, id);
         doAnswer(call -> {
-                    boolean taken = (boolean) call.callRealMethod();
+                    boolean taken = (boolean) callReal(call);
                     if (!taken) {
                         try (var executor = Executors.newSingleThreadExecutor()) {
                             executor.submit(() -> document(space, null, "GUIDE", "DEPARTMENT", "PENDING", "Upload"))
@@ -470,7 +481,8 @@ class WikiTrashIT extends WikiReadTestSupport {
 
         @Bean
         WikiDocumentRepository trashDocuments(@Qualifier("wikiDocumentRepository") WikiDocumentRepository repository) {
-            return spy(repository);
+            // BUG-286: spy() cannot wrap the Spring Data JDK proxy; a delegating mock can.
+            return mock(WikiDocumentRepository.class, AdditionalAnswers.delegatesTo(repository));
         }
 
         @Bean

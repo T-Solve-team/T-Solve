@@ -13,6 +13,8 @@ public final class TicketReviewView {
 
     public record Project(UUID projectId, String name) {}
 
+    public record Department(UUID id, String name) {}
+
     public record ProjectAccess(Project project, UUID departmentId, boolean managed) {}
 
     public record QueueRow(
@@ -95,6 +97,9 @@ public final class TicketReviewView {
             String title,
             String description,
             Project project,
+            Department department,
+            LocalDate resolvedDate,
+            String sourceLink,
             String source,
             String status,
             UUID authorId,

@@ -52,6 +52,12 @@
     <include file="changes/028-workspace-department-name-lower-unique.sql" relativeToChangelogFile="true"/>
     <include file="changes/029-identity-jira-account-links.sql" relativeToChangelogFile="true"/>
     <include file="changes/030-dashboard-period-indexes.sql" relativeToChangelogFile="true"/>
-    <include file="changes/031-wiki-tables.sql" relativeToChangelogFile="true"/>
-    <include file="changes/032-wiki-audit-folder-change.sql" relativeToChangelogFile="true"/>
+    <include file="changes/031-manual-entry-evidence.sql" relativeToChangelogFile="true"/>
+    <include file="changes/032-ticket-import-batch-date-range.sql" relativeToChangelogFile="true"/>
+    <include file="changes/033-jira-app-solution-draft.sql" relativeToChangelogFile="true"/>
+    <include file="changes/034-project-audit-member-change.sql" relativeToChangelogFile="true"/>
+    <include file="changes/035-workspace-info.sql" relativeToChangelogFile="true"/>
+    <include file="changes/036-project-done-statuses.sql" relativeToChangelogFile="true"/>
+    <include file="changes/037-wiki-tables.sql" relativeToChangelogFile="true"/>
+    <include file="changes/038-wiki-audit-folder-change.sql" relativeToChangelogFile="true"/>
 </databaseChangeLog>
