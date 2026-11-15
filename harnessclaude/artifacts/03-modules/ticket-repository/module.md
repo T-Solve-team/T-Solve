@@ -44,6 +44,15 @@ paths:
   - backend/src/test/java/vn/tsolve/review/ReviewDecisionApiIT.java
   - frontend/src/features/review/components/ReviewTicketContent.tsx
   - frontend/src/features/review/components/ReviewTicketDetail.tsx
+  - backend/src/main/java/vn/tsolve/analytics/repository/DashboardRepository.java
+  - backend/src/test/java/vn/tsolve/analytics/DashboardOutcomesIT.java
+  - backend/src/test/java/vn/tsolve/review/**
+  - backend/src/test/java/vn/tsolve/search/embedding/TicketEmbeddingIT.java
+  - backend/src/test/java/vn/tsolve/search/list/repository/TicketListRepositoryIT.java
+  - backend/src/test/java/vn/tsolve/search/query/repository/TicketRankingRepositoryIT.java
+  - backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationIT.java
+  - backend/src/test/java/vn/tsolve/ticket/**
+  - README.md
 ---
 
 # Module: ticket-repository
@@ -83,3 +92,5 @@ Ticket Import & Repository (UC-20–25), plus the backend of Solution Authoring 
 - KAN-135 (STORY-008) extends Ticket Detail code owned by `ticket-review` (spec D29): `ReviewReadController`,
   `ReviewTicketContent`, `ReviewTicketDetail` and `ReviewDecisionApiIT` are listed in `paths` for that reason; the
   `ticket/` files it touches are already covered by `backend/src/main/java/vn/tsolve/ticket/**`.
+- KAN-137 (STORY-010) renames the decision tables that `ticket-review`, `dashboard-audit`, `search` and `worker`
+  tests and `DashboardRepository` name; those files are listed in `paths` for that reason.

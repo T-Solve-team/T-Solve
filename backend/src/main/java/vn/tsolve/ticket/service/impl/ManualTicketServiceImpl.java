@@ -39,8 +39,8 @@ import vn.tsolve.ticket.entity.ImportPreview;
 import vn.tsolve.ticket.entity.ImportPreviewEvidence;
 import vn.tsolve.ticket.entity.ImportPreviewRow;
 import vn.tsolve.ticket.entity.Ticket;
+import vn.tsolve.ticket.entity.TicketDecision;
 import vn.tsolve.ticket.entity.TicketEvidence;
-import vn.tsolve.ticket.entity.TicketReviewDecision;
 import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.event.TicketsPublishedEvent;
 import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
@@ -48,9 +48,9 @@ import vn.tsolve.ticket.repository.ImportBatchRepository;
 import vn.tsolve.ticket.repository.ImportPreviewEvidenceRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRowRepository;
+import vn.tsolve.ticket.repository.TicketDecisionRepository;
 import vn.tsolve.ticket.repository.TicketEvidenceRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
-import vn.tsolve.ticket.repository.TicketReviewDecisionRepository;
 import vn.tsolve.ticket.service.ManualTicketService;
 import vn.tsolve.ticket.service.ProjectAccess;
 import vn.tsolve.ticket.service.impl.EvidenceFiles.StoredEvidence;
@@ -70,7 +70,7 @@ public class ManualTicketServiceImpl implements ManualTicketService {
     private final ImportPreviewRepository previews;
     private final ImportPreviewRowRepository previewRows;
     private final TicketRepository tickets;
-    private final TicketReviewDecisionRepository decisions;
+    private final TicketDecisionRepository decisions;
     private final ImportBatchRepository batches;
     private final ProjectAccess projects;
     private final ApplicationEventPublisher events;
@@ -87,7 +87,7 @@ public class ManualTicketServiceImpl implements ManualTicketService {
             ImportPreviewRepository previews,
             ImportPreviewRowRepository previewRows,
             TicketRepository tickets,
-            TicketReviewDecisionRepository decisions,
+            TicketDecisionRepository decisions,
             ImportBatchRepository batches,
             ProjectAccess projects,
             ApplicationEventPublisher events,
@@ -170,7 +170,7 @@ public class ManualTicketServiceImpl implements ManualTicketService {
             }
             throw e;
         }
-        decisions.save(TicketReviewDecision.approve(ticket.getId(), owner));
+        decisions.save(TicketDecision.approvedByImport(ticket.getId(), owner));
         for (ImportPreviewEvidence file : kept) {
             evidence.save(TicketEvidence.of(
                     ticket.getId(), file.getFileName(), file.getFileType(), file.getFileSize(), file.getStorageKey()));

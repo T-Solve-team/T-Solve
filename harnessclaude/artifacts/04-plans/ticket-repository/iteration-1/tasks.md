@@ -471,9 +471,9 @@ error invalidate the detail, Ticket List and Review History queries. `ReviewTick
 **Story:** STORY-010
 **Feature:** ticket-decision-table
 **Description:** KAN-137, master design "Change 2026-11-15 (2)" (data model, changeset steps 1–2, code, reads).
-Preconditions (risk review): the `dashboard-audit` spec is approved again (design E6); the pull requests
-of this module that were open on 2026-11-15 (#234, #235, #236, #241) are merged; the work is
-one pull request of its own from an up-to-date `main`. New changeset renames `review_decision` to
+Preconditions (risk review): `DashboardRepository.java` and `DashboardOutcomesIT.java` are listed in this module's
+`paths` (design E6); #234, #235, #236 and #241 are merged (done); the work follows #248 (KAN-136, changeset 037, merged)
+and is one pull request of its own. New changeset renames `review_decision` to
 `ticket_decision`, copies the import decisions in with `CASE decision WHEN 'APPROVE' THEN 'APPROVED' ELSE decision
 END` (an unknown value must fail on the CHECK) and drops `ticket_import_decision` (AC-010.1,
 AC-010.2, AC-010.6). One entity `TicketDecision` and one `TicketDecisionRepository`; imports write
@@ -501,7 +501,9 @@ grep `backend/src` for `review_decision`, `ticket_import_decision`, `ReviewDecis
   (`ReviewDecisionApiIT`, `ReviewExpiryIT`, `ReviewHistoryApiIT`, `ReviewQueueEventsIT`, `ReviewStorageIT`,
   `SendBackApiIT`, `TicketDecisionIT`), `analytics/DashboardOutcomesIT.java`, `search/embedding/TicketEmbeddingIT.java`,
   `search/list/repository/TicketListRepositoryIT.java`, `search/query/repository/TicketRankingRepositoryIT.java`,
-  `worker/service/impl/ReviewNotificationIT.java`
+  `worker/service/impl/ReviewNotificationIT.java`, and from KAN-134–KAN-136 `TT/controller/ImportHistoryControllerIT.java`,
+  `TicketPublicationIT.java`, `TT/service/impl/ImportHistoryDateRangeIT.java`, `ManualTicketEvidenceTest.java`,
+  `TicketDetailVisibilityTest.java`, `TicketPublicationTest.java`
 **Dependencies:** none
 **Estimated size:** large
 

@@ -75,7 +75,7 @@ class ImportHistoryControllerIT {
 
     @BeforeEach
     void seedMemberships() {
-        jdbc.execute("delete from ticket_import_decision");
+        jdbc.execute("delete from ticket_decision");
         jdbc.execute("delete from ticket");
         jdbc.execute("delete from import_batch");
         jdbc.execute("delete from import_preview");
