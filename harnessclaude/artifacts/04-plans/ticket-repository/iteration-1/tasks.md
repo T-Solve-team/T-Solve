@@ -1,7 +1,7 @@
 ---
 module: ticket-repository
 date: 2026-11-07
-total_tasks: 17
+total_tasks: 19
 owner: Dev
 ---
 
@@ -259,3 +259,60 @@ each field with the input kept (AC-006.14).
 - Test: `ManualEntryForm.test.tsx` (AC-006.9, AC-006.11, AC-006.14 — test names cite the ids)
 **Dependencies:** Task 14 (Tasks 15–16 only for a live run)
 **Estimated size:** medium
+
+## Task 18: One `ticket_decision` table
+
+**Story:** STORY-007
+**Feature:** ticket-decision-table
+**Description:** KAN-137, master design "Change 2026-11-15" (data model, changeset steps 1–2, code, reads).
+Preconditions (risk review): the `dashboard-audit` spec is approved again (design E6); the open pull requests
+of this module (#234, #235, #236, #241) are merged, or their authors agree to rebase onto this change; the work is
+one pull request of its own from an up-to-date `main`. New changeset renames `review_decision` to
+`ticket_decision`, copies the import decisions in with `CASE decision WHEN 'APPROVE' THEN 'APPROVED' ELSE decision
+END` (an unknown value must fail on the CHECK) and drops `ticket_import_decision` (AC-007.1,
+AC-007.2, AC-007.6). One entity `TicketDecision` and one `TicketDecisionRepository`; imports write
+`approvedByImport` (AC-007.3), review writes the reviewer id (AC-007.4). Review History, the writer's email and the
+dashboard `decisions` query also require `ticket.source = 'SOLUTION_FORM'` (AC-007.5). After rebasing on `main`,
+grep `backend/src` for `review_decision`, `ticket_import_decision`, `ReviewDecisionRecord` and
+`TicketReviewDecision`: only applied changesets may still name them (design E2).
+**Files:**
+- Create: `backend/src/main/resources/db/changelog/changes/NNN-ticket-decision.sql` (next free number),
+  `T/entity/TicketDecision.java`, `T/repository/TicketDecisionRepository.java`
+- Delete: `T/entity/ReviewDecisionRecord.java`, `T/entity/TicketReviewDecision.java`, `T/entity/ReviewDecision.java`,
+  `T/repository/ReviewDecisionRecordRepository.java`, `T/repository/TicketReviewDecisionRepository.java`
+- Modify: `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `T/repository/TicketRepository.java`,
+  `T/service/impl/ImportConfirmServiceImpl.java`, `T/service/impl/ManualTicketServiceImpl.java`,
+  `T/service/impl/TicketDecisionServiceImpl.java`, `T/service/impl/TicketReviewReadServiceImpl.java`,
+  `T/service/impl/ReviewNotificationServiceImpl.java`, `T/event/ReviewFeedbackDecidedEvent.java` (javadoc),
+  `backend/src/main/java/vn/tsolve/analytics/repository/DashboardRepository.java`
+- Test: new `TT/repository/TicketDecisionMigrationIT.java` (AC-007.1; AC-007.2 seeded review and import rows keep
+  ticket, time, feedback, id / reviewer id / sign-in name, import value APPROVED; AC-007.6 both rejections) and
+  `TT/repository/TicketDecisionReadsIT.java` (AC-007.4 through `TicketDecisionService`; AC-007.5: Review History,
+  writer email and dashboard figures with one import decision present); AC-007.3 in
+  `TT/service/impl/ImportConfirmIT.java`, `JiraFinishIT.java` and `TT/controller/ManualTicketControllerIT.java`.
+- Test (table and type names only): `TT/service/impl/ImportConfirmServiceImplTest.java`, `JiraFinishTest.java`,
+  `ManualTicketDraftTest.java`, `ManualTicketServiceImplTest.java`, `backend/src/test/java/vn/tsolve/review/**`
+  (`ReviewDecisionApiIT`, `ReviewExpiryIT`, `ReviewHistoryApiIT`, `ReviewQueueEventsIT`, `ReviewStorageIT`,
+  `SendBackApiIT`, `TicketDecisionIT`), `analytics/DashboardOutcomesIT.java`, `search/embedding/TicketEmbeddingIT.java`,
+  `search/list/repository/TicketListRepositoryIT.java`, `search/query/repository/TicketRankingRepositoryIT.java`,
+  `worker/service/impl/ReviewNotificationIT.java`
+**Dependencies:** none
+**Estimated size:** large
+
+## Task 19: Drop the unused Solution tables and the `knowledge` package
+
+**Story:** STORY-007
+**Feature:** drop-legacy-solution-tables
+**Description:** Master design "Change 2026-11-15" (changeset step 3, dead code). A second new changeset drops
+`solution_source`, `solution_approval`, `reuse_record`, `solution` and `resolved_ticket_snapshot` without `CASCADE`;
+the package `vn.tsolve.knowledge` is deleted, so nothing answers under `/api/solutions` (AC-007.7). README's four
+`/api/solutions` rows go. Before merge, the pull request records the row counts of the five tables in each deployed
+database (risk review): the drop cannot be undone.
+**Files:**
+- Create: `backend/src/main/resources/db/changelog/changes/NNN-drop-legacy-solution-tables.sql` (next free number)
+- Delete: `backend/src/main/java/vn/tsolve/knowledge/**` (6 files)
+- Modify: `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `README.md` (shared file)
+- Test: extend `TT/repository/TicketDecisionMigrationIT.java` (AC-007.7: none of the five tables exists; no handler
+  mapping starts with `/api/solutions`)
+**Dependencies:** Task 18 (same test class and changelog order)
+**Estimated size:** small

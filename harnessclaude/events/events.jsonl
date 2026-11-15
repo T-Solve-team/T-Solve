@@ -1542,3 +1542,6 @@
 {"ts":"2026-11-14T17:39:51.397Z","type":"feature-status","module":"jira-app","feature":"panel-published","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-14T19:29:32.410Z","type":"spec-approved","module":"jira-app","specHash":"4f83401b7f2bd389c55664c7973bd1e9fd965bdc1c996983bb30f736d4960f73"}
 {"ts":"2026-11-14T19:29:32.653Z","type":"spec-approved","module":"ticket-review","specHash":"3f421d9a0442923749a9a9bcb8dec1ede3da9f59556abc5afd02c28bd93c6b48"}
+{"ts":"2026-11-14T20:30:16.423Z","type":"spec-approved","module":"ticket-repository","specHash":"2e5537589b8a4ab312736fd3269acbe82c964a935274bdeb5d4041a5d4e76a12"}
+{"ts":"2026-11-14T20:30:21.434Z","type":"feature-status","module":"ticket-repository","feature":"ticket-decision-table","from":null,"to":"pending"}
+{"ts":"2026-11-14T20:30:21.721Z","type":"feature-status","module":"ticket-repository","feature":"drop-legacy-solution-tables","from":null,"to":"pending"}

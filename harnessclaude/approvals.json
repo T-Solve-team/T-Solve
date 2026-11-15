@@ -1159,8 +1159,8 @@
     }
   },
   "ticket-repository": {
-    "specHash": "0dc5471df359acf501a0e65be78bd01eb9bc569958b2ad2f0c20300610900277",
-    "approvedAt": "2026-11-13T21:19:18.066Z",
+    "specHash": "2e5537589b8a4ab312736fd3269acbe82c964a935274bdeb5d4041a5d4e76a12",
+    "approvedAt": "2026-11-14T20:30:16.410Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager pulls issues for an Active Project they manage with a valid date range, THE system SHALL read from Jira the issues of the Project's Jira project whose resolution date falls within the range (both dates included, Vietnam time), skip every issue whose Jira key is already a Ticket ID, keep at most 100 issues ordered by resolution date oldest first, and create an Import Preview of source Jira with one row per kept issue, numbered from 1 in that order, each with the result Needs Solution.",
@@ -1222,7 +1222,14 @@
       "AC-006.11": "WHEN the Project Manager reopens a Manual Draft from the Drafts list, THE system SHALL return its Project and every field as saved, and THE web app SHALL show them on the Manual entry tab.",
       "AC-006.12": "WHEN a manual entry reopened from a Draft is saved successfully, THE system SHALL delete that Draft in the same transaction; IF the save is rejected, THEN THE system SHALL keep the Draft unchanged.",
       "AC-006.13": "IF a request names a Manual Draft that belongs to another user, does not exist or is not a Manual Draft, THEN THE system SHALL reject it with HTTP 404 (MSG04); Delete of a Manual Draft works as AC-004.4 and AC-004.5.",
-      "AC-006.14": "WHEN a save or Save as draft is rejected, THE web app SHALL show each message next to its field and keep everything the Project Manager entered; WHEN a save succeeds, THE web app SHALL show MSG32 and clear the form."
+      "AC-006.14": "WHEN a save or Save as draft is rejected, THE web app SHALL show each message next to its field and keep everything the Project Manager entered; WHEN a save succeeds, THE web app SHALL show MSG32 and clear the form.",
+      "AC-007.1": "WHEN the database schema is migrated, THE system SHALL have a  table and SHALL have no  table and no  table.",
+      "AC-007.2": "WHEN the migration runs on a database that holds import decisions and review decisions, THE system SHALL copy every one of them into  with its Ticket, decision time and feedback text unchanged; a review decision SHALL keep its id, its reviewer's user id and its decision value, and an import decision SHALL keep its reviewer's sign-in name and SHALL have the decision value APPROVED.",
+      "AC-007.3": "WHEN a CSV import, a Jira import or a manual entry publishes a Ticket, THE system SHALL record its approve decision (AC-003.1, AC-006.1) as one row of  with the decision value APPROVED and the caller's sign-in name as reviewer.",
+      "AC-007.4": "WHEN a review Approve, Reject, Request changes or Send back is saved, THE system SHALL record it as one row of  per Ticket with the reviewer's user id.",
+      "AC-007.5": "WHEN Review History, the feedback shown to the writer, the writer's review email or the dashboard's outcome figures are read, THE system SHALL use only the decisions on Tickets of source Solution Form, so that the approve decision of an import is listed in none of them and an imported Ticket is counted once in the dashboard figures (D18, D22).",
+      "AC-007.6": "IF a decision is saved with neither a reviewer user id nor a reviewer sign-in name, or with a decision value other than APPROVED, REJECTED, CHANGES_REQUESTED or SEND_BACK, THEN THE database SHALL reject the row.",
+      "AC-007.7": "WHEN the database schema is migrated, THE system SHALL have no , , ,  or  table, and THE system SHALL expose no endpoint under ."
     }
   },
   "jira-app": {
