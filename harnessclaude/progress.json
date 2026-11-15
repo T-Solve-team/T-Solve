@@ -251,17 +251,17 @@
         "import-history-page": "pending",
         "ticket-detail-scope": "pending",
         "ticket-detail-page": "pending",
-        "ticket-publication-contract": "pending",
-        "ticket-publication": "pending",
-        "ticket-publication-buttons": "pending"
+        "ticket-publication-contract": "evaluating",
+        "ticket-publication": "evaluating",
+        "ticket-publication-buttons": "evaluating"
       },
-      "lastUpdated": "2026-11-14T20:12:07.950Z",
+      "lastUpdated": "2026-11-15T03:39:20.373Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "d6975188e0f34008e0b4bd331a04f4df9a5beeea"
+        "default": "1315800b25a6d8ae25b83242ca4aa56a296486e2"
       }
     },
     "search": {

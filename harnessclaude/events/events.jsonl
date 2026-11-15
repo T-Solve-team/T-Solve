@@ -1724,3 +1724,12 @@
 {"ts":"2026-11-14T22:35:22.434Z","type":"spec-approved","module":"project-integration","specHash":"550d07281b77e1ea39217e0f4180b1938ed94d6feaa567e664ab31868ea6413a"}
 {"ts":"2026-11-14T22:35:22.792Z","type":"spec-approved","module":"tracker","specHash":"759e03700d56dd4b265645102759f62c4481efebcb09002021309582464e13d8"}
 {"ts":"2026-11-14T22:34:54.110Z","type":"spec-approved","module":"workspace","specHash":"1deeffb98454aa06eb6588d0dd6bfb8e50d069df60973cf47ba85cbfa192e2ad"}
+{"ts":"2026-11-15T02:31:23.461Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication-contract","from":"pending","to":"in-progress"}
+{"ts":"2026-11-15T02:34:23.013Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication","from":"pending","to":"in-progress"}
+{"ts":"2026-11-15T02:37:36.057Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication-buttons","from":"pending","to":"in-progress"}
+{"ts":"2026-11-15T03:37:28.038Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"ce4dad25d3dc2c59ab31b9e5de45086a9e1ba162"}
+{"ts":"2026-11-15T03:37:36.350Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"da60828421c34da55e79c9bb683eb1d59d67357a"}
+{"ts":"2026-11-15T03:38:58.350Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"1315800b25a6d8ae25b83242ca4aa56a296486e2"}
+{"ts":"2026-11-15T03:39:19.690Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication-contract","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-15T03:39:20.043Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-15T03:39:20.375Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication-buttons","from":"in-progress","to":"evaluating"}
