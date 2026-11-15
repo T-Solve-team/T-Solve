@@ -1833,3 +1833,4 @@
 {"ts":"2026-11-15T13:55:14.043Z","type":"feature-status","module":"wiki","feature":"wiki-trash-detail","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-15T13:57:37.973Z","type":"module-status","module":"wiki","from":"completed","to":"planned"}
 {"ts":"2026-11-15T13:57:39.493Z","type":"module-status","module":"wiki","from":"planned","to":"implementing"}
+{"ts":"2026-11-15T19:10:09.117Z","type":"feature-status","module":"wiki","feature":"wiki-trash-detail","from":"evaluating","to":"passing"}

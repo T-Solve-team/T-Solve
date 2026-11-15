@@ -219,9 +219,9 @@
         "wiki-trash-ui": "passing",
         "wiki-permissions-api": "passing",
         "wiki-permissions-ui": "passing",
-        "wiki-trash-detail": "evaluating"
+        "wiki-trash-detail": "passing"
       },
-      "lastUpdated": "2026-11-15T13:57:39.491Z",
+      "lastUpdated": "2026-11-15T19:10:09.115Z",
       "branch": "feat/wiki",
       "repos": [
         "default"
