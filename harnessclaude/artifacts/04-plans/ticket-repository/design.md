@@ -455,3 +455,116 @@ backend  review.ReviewDecisionController ──▶ ticket.TicketDecisionService.
 - Decided in planning: invalidation uses the generated `getGetReviewTicketDetailQueryKey(ticketId)`, the root of `getGetTicketsQueryKey()` and `getGetReviewHistoryQueryKey()`, as `useReviewDecisions.ts` does (builder check).
 - Decided in planning: the tests of AC-009.8 / AC-009.9 assert the refetched status on screen (the MSW override answers Unpublished / Published on the second read), not only the invalidation (builder check).
 - Decided in planning: the changeset takes the next free number after rebasing on `main`; its rollback restores the four values of changeset 024 (builder check).
+
+## Change 2026-11-15 (2): One decision table, unused Solution tables removed (KAN-137, STORY-010)
+
+Scope is D38: the `ticket` table is already one, so the change is the decision tables and the dead tables. No endpoint,
+screen or message changes; the OpenAPI file and the web app are not touched.
+
+**Data model.** `ticket_decision` — every decision on a Ticket, never updated:
+
+| Column | Type | From |
+|---|---|---|
+| `ticket_decision_id` | UUID PK, default `gen_random_uuid()` | `review_decision.review_decision_id` (ids kept) |
+| `ticket_id` | UUID NOT NULL → `ticket (ticket_id)` | both |
+| `reviewer_id` | UUID NULL → `app_user (id)` | `review_decision.project_manager_id` |
+| `reviewer` | VARCHAR(150) NULL | `ticket_import_decision.reviewer` (sign-in name) |
+| `decision` | VARCHAR(20) NOT NULL, CHECK in APPROVED, REJECTED, CHANGES_REQUESTED, SEND_BACK, UNPUBLISH, REPUBLISH | both; import `APPROVE` becomes `APPROVED` |
+| `feedback` | TEXT NULL | `review_decision.reason_or_comment`, `ticket_import_decision.reason` |
+| `decided_at` | TIMESTAMPTZ NOT NULL | both |
+
+`CHECK (reviewer_id IS NOT NULL OR reviewer IS NOT NULL)` (D40, AC-010.6). Indexes on `ticket_id` and `decided_at`
+(the two that `review_decision` has, renamed).
+
+**Two new changesets** (D41; one logical change each), with the next free numbers (038 and 039 today: 037 is `review-decision-publication` of KAN-136), included last
+in `db.changelog-master.xml`.
+
+`NNN-ticket-decision.sql`:
+1. `ALTER TABLE review_decision RENAME TO ticket_decision`, then rename its columns, constraint and two indexes (the CHECK that changeset 037 widened to UNPUBLISH and REPUBLISH keeps
+   both values),
+   drop NOT NULL on `reviewer_id`, add `reviewer` and the reviewer CHECK. Renaming keeps every review row, its id and
+   its foreign keys with no copy.
+2. `INSERT INTO ticket_decision (ticket_id, reviewer, decision, feedback, decided_at) SELECT ticket_id, reviewer,
+   CASE decision WHEN 'APPROVE' THEN 'APPROVED' ELSE decision END, reason, decided_at FROM ticket_import_decision`
+   — a value the CHECK does not allow fails the changeset instead of being relabelled (risk review) — then
+   `DROP TABLE ticket_import_decision` (its sequence goes with it).
+
+`NNN-drop-legacy-solution-tables.sql`:
+3. `DROP TABLE solution_source, solution_approval, reuse_record, solution, resolved_ticket_snapshot` (D42). No
+   `CASCADE`: if anything else still references them the changeset must fail, not silently drop it.
+
+No `--rollback`: a drop cannot be undone from the changeset; a dev database is reset, any other is restored from its
+backup (`backend/AGENTS.md` §7, fix forward).
+
+**Code.** One entity `TicketDecision` (`T/entity/TicketDecision.java`) replaces `ReviewDecisionRecord` and
+`TicketReviewDecision`: the fields above, the `Decision` enum of `ReviewDecisionRecord`, the existing review
+constructor, and `static TicketDecision approvedByImport(UUID ticketId, String reviewer)` (sets `decidedAt` to now).
+The id is a UUID made by Hibernate, so the batched insert of an import Finish stays batched without a sequence.
+One repository `TicketDecisionRepository` (the renamed `ReviewDecisionRecordRepository`, native queries moved to the
+new table and column names). `ReviewDecision` (enum with only `APPROVE`) and `TicketReviewDecisionRepository` are
+deleted. Writers change only the type they build: `ImportConfirmServiceImpl`, `ManualTicketServiceImpl`
+(`approvedByImport`), `TicketDecisionServiceImpl` (review constructor, and the unpublish / re-publish rows of Task 27). `ReviewFeedbackDecidedEvent` keeps carrying
+decision ids — they are the same ids.
+
+**Reads stay review-only (D39, D43).** Each read that means "review decisions" also requires
+`ticket.source = 'SOLUTION_FORM'`: the two Review History queries and their count, `findWriterNotification`, and the
+`decisions` part of `DashboardRepository.findOutcomeCounts` (its `imports` part already takes
+`t.source <> 'SOLUTION_FORM'`, so an imported Ticket is counted once). `TicketRepository.findJiraFeedback` and
+`findJiraRejection` already have that filter; only the entity name changes.
+
+**Dead code.** Delete the package `vn.tsolve.knowledge` (6 files: `Solution`, `SolutionController` at
+`/api/solutions`, `SolutionRepository`, `SolutionRequest`, `SolutionService`, `SolutionStatus`). Nothing imports it
+and it has no test; the web app and the Jira App do not call `/api/solutions`.
+
+**Decided in planning (builder check).**
+- A migration test follows `review/ReviewStorageIT`, which already seeds rows before a changeset and checks them after.
+- Tests of other modules that name the old tables in SQL (`TRUNCATE ticket_import_decision`, inserts into
+  `review_decision`) are updated in the same task; they assert nothing new.
+- `evidence` and the `workspace` table of changeset 001 are left as they are (D38; `workspace` is not named in KAN-137).
+
+**Edge cases & risks.**
+
+| # | Case | Severity | Handling |
+|---|---|---|---|
+| E1 | A database holds import decisions whose Ticket was deleted | Low | Not possible: `ticket_import_decision.ticket_id` has a foreign key to `ticket` (changeset 008). |
+| E2 | Another branch adds a changeset or a query that still names `review_decision` or `ticket_import_decision` and merges later | High | Task 29 greps `backend/src` for both names after rebasing on `main`, before the commit; the PR text names the rename for reviewers. |
+| E3 | The dashboard double-counts imports after the merge | High | AC-010.5 test: one imported Ticket and one approved Solution Form Ticket give `approved = 2`. |
+| E4 | Review History or the writer's email picks up an import row | High | AC-010.5 tests on both queries with an import decision present. |
+| E5 | A view, trigger or function references a dropped or renamed table | Medium | Drops without `CASCADE` fail loudly; the migration test runs every changeset on an empty PostgreSQL and on a seeded one. |
+| E6 | The `dashboard-audit` spec is "changed since approval", so the code gate blocks `analytics/repository/DashboardRepository.java` | Medium | Its owner approves that spec again before Task 29 starts; Task 29 names it as a precondition. |
+| E7 | Rows written by old code against the new schema during a deploy | Low | One deployable (modular monolith): schema and code ship together. |
+
+## Risk Review — 2026-11-15 — Verdict: CAUTION
+
+Scope: "Change 2026-11-15 (2)" (KAN-137, STORY-010) — a schema change on existing data in every Workspace database.
+Checked against the code on `main` (14c3de0) and the open pull requests of that day.
+
+Agreements (four or more personas):
+- Renaming `review_decision` beats creating a table and copying: ids, foreign keys, indexes, grants and any later row
+  policy stay on the table, and only the import rows move.
+- The drops are safe in code: nothing but the `knowledge` package reads the five tables, no foreign key points into
+  them from outside changeset 001, and no view, trigger or function names any table of this change.
+- The real risk is merge order, not the SQL: four pull requests of this module were open (#234, #235, #236, #241); all four are merged now, so the rename starts from their code.
+- AC-010.5 is the one place where behavior could change by accident; its tests are not optional.
+
+| Topic | Architect | Security | Performance | User | Devil's advocate | Resolution |
+|-------|-----------|----------|-------------|------|------------------|------------|
+| One table for two kinds of decision | Fits the one ticket model; `reviewer_id` / `reviewer` is a small wart, the CHECK keeps it honest | No new exposure: no API returns `reviewer`; Review History joins `app_user` on `reviewer_id` | Import rows (up to 100 per Finish) now sit in the table Review History scans | Nothing visible changes | Two tables work today; the gain is only tidiness | Keep. The source filter (D43) plus the existing `decided_at` index is enough at this size; `ponytail:` a partial index `WHERE reviewer_id IS NOT NULL` if Review History slows |
+| Telling review rows from import rows by the Ticket's source (D43) | No extra column; relies on "an imported Ticket is never reviewed" | — | One more predicate on a join that already exists | — | UC-25 unpublish / re-publish (KAN-136, PR #241) records a decision on a Ticket of any source; the filter hides those rows from Review History | Keep D43. KAN-136 stores UNPUBLISH and REPUBLISH rows (STORY-009, D35) and they stay out of Review History; if the `ticket-review` Change lists them, it adds a column then |
+| Hard-coded `'APPROVED'` for copied import rows | — | — | — | — | The column has no CHECK; a value other than `APPROVE` would be relabelled silently | Design change: copy with `CASE decision WHEN 'APPROVE' THEN 'APPROVED' ELSE decision END`, so an unknown value hits the CHECK and the changeset fails |
+| Dropping five tables for good | Dead since the ticket model replaced them | Removes `/api/solutions`, which any signed-in user could call (`/api/**` is only authenticated) and which ignores Project scope | — | README still documents `/api/solutions` | A deployed database may hold rows made through that endpoint; a drop cannot be undone | Keep the drop (user decision, AC-010.7). Task 30 records the row counts of the deployed databases in the pull request and updates README |
+| One changeset run on every Workspace database at startup | Matches `architecture.md` (tenant changelog, applied per database) | Runs as the owner user as every changeset does | `RENAME` and `DROP` take a short exclusive lock; the copy is one `INSERT … SELECT` of at most one row per imported Ticket | A failed changeset stops the app from starting for that database | — | Liquibase runs each formatted-SQL changeset in one transaction and PostgreSQL DDL is transactional: a failure leaves the database as it was. The migration test runs on an empty and on a seeded database |
+| Renaming the entity to `TicketDecision` | The name must say what the table is | — | — | — | Keeping `ReviewDecisionRecord` would touch fewer files and conflict less with open pull requests | Rename, but land Task 29 after #234–#236 and #241 (all merged) in one pull request of its own |
+
+| Risk | Severity | Mitigation | Task |
+|------|----------|------------|------|
+| An open pull request adds a changeset or a query naming `review_decision`, `ticket_import_decision`, `ReviewDecisionRecord` or `TicketReviewDecision`, or takes changeset number 038/039 | High | Task 29 starts from an up-to-date `main` after the open pull requests of this module merge (or their authors agree to rebase); number chosen at that moment; grep before the commit; the pull request text names the rename | 18 |
+| Dashboard figures or Review History change after the merge (AC-010.5) | High | Tests with an import decision present for Review History, the writer's email and the dashboard figures | 18 |
+| An import decision with an unexpected value is relabelled as APPROVED | Medium | `CASE` mapping; the CHECK rejects the rest and the changeset rolls back | 18 |
+| `dashboard-audit` code is locked (spec changed since approval), and Task 29 edits its `DashboardRepository` | Medium | Its spec is approved again first (precondition of Task 29) | 18 |
+| Rows in the dropped tables of a deployed database are lost | Medium | Row counts of each deployed database recorded in the pull request before merge; the regular backup is the way back | 19 |
+| README documents endpoints that no longer exist | Low | README's `/api/solutions` rows removed | 19 |
+| An unpublish / re-publish decision on an imported Ticket is hidden from Review History by the source filter | Low | Answered by D43 (user decision 2026-11-15): the rows are kept in `ticket_decision` with the six decision values; listing them is the `ticket-review` Change of D35; nothing to build here | — |
+
+No STOP condition: no auth bypass or data exposure is added (one unscoped endpoint is removed), the change fits the
+architecture, the cost is small, and the assumptions were checked in the code.

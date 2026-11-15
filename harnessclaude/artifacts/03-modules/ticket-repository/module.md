@@ -13,6 +13,7 @@ paths:
   - backend/src/test/java/vn/tsolve/ticket/jira/**
   - backend/src/test/java/vn/tsolve/ticket/**/TicketStatus*
   - backend/src/test/java/vn/tsolve/ticket/**/Manual*
+  - backend/src/test/java/vn/tsolve/ticket/**/TicketDecision*
   - backend/src/test/java/vn/tsolve/ticket/**/TicketPublication*
   - backend/src/main/java/vn/tsolve/review/controller/ReviewDecisionController.java
   - backend/src/main/java/vn/tsolve/knowledge/**
@@ -35,6 +36,7 @@ paths:
   - backend/src/main/java/vn/tsolve/project/service/**
   - backend/src/main/resources/application.yml
   - .env.example
+  - README.md
   - backend/src/test/java/vn/tsolve/ticket/**/ImportHistory*
   - backend/src/test/java/vn/tsolve/ticket/**/TicketDetail*
   - frontend/src/features/ticket-import/pages/ImportHistory*
@@ -77,7 +79,7 @@ Ticket Import & Repository (UC-20–25), plus the backend of Solution Authoring 
 ## Related Artifacts
 - Spec: `artifacts/03-modules/ticket-repository/spec.md` (written when the module is planned)
 - Map: `artifacts/03-modules/module-map.md`
-- Stories: KAN-29 (epic), KAN-31, KAN-45, KAN-132…137
+- Stories: KAN-29 (epic), KAN-31, KAN-45, KAN-132…137 (KAN-137 = STORY-010)
 - KAN-135 (STORY-008) extends Ticket Detail code owned by `ticket-review` (spec D29): `ReviewReadController`,
   `ReviewTicketContent`, `ReviewTicketDetail` and `ReviewDecisionApiIT` are listed in `paths` for that reason; the
   `ticket/` files it touches are already covered by `backend/src/main/java/vn/tsolve/ticket/**`.

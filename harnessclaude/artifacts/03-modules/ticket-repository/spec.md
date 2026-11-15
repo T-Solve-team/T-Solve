@@ -15,7 +15,9 @@ UC-22, screen 5.1 Manual entry tab, MSG31, MSG34, MSG41, MSG72, with Evidence th
 `platform` STORY-007, KAN-96), and **KAN-134 View import history**
 (STORY-007, UC-23, screen 5.4, MSG04, MSG08, MSG39) and **KAN-135 View ticket detail** (STORY-008, UC-24, GBR-02,
 screen 5.5, MSG04, MSG06, MSG08) and **KAN-136 Unpublish / re-publish a
-ticket** (STORY-009, UC-25, GBR-11, screen 5.5 Ticket Detail, MSG21–MSG24).
+ticket** (STORY-009, UC-25, GBR-11, screen 5.5 Ticket Detail, MSG21–MSG24) and **KAN-137 Unify the ticket model in code**
+(STORY-010: one `ticket_decision` table for import and review decisions, and the unused Solution tables of changeset 001
+removed).
 CSV import (UC-21) lives in `import-ticket-list`; the Solution Form submission (UC-19) is added later through
 Change Mode.
 
@@ -37,6 +39,7 @@ is one row of such a preview.
 | 2026-11-14 | STORY-006 | Evidence of manual entry: new AC-006.15–AC-006.22, decisions D17–D21; D13 reworded (Evidence no longer deferred); the save and Save as draft requests become multipart (Interface Contracts); Evidence leaves Out of Scope | File storage (KAN-96, #193) is on `main`; the user asked for Evidence on 2026-11-14 |
 | 2026-11-14 | STORY-007, STORY-008 | New STORY-007 (KAN-134, UC-23 Import History): AC-007.1–AC-007.10; new STORY-008 (KAN-135, UC-24 Ticket Detail): AC-008.1–AC-008.10; decisions D22–D32; Import History and Ticket Detail leave Out of Scope, their excluded parts are listed there; Interface Contracts gain `GET /imports/history` and the extended `GET /tickets/{ticketId}` | KAN-134, KAN-135; user decisions 2026-11-14 |
 | 2026-11-15 | STORY-009 | New STORY-009 (KAN-136, UC-25 unpublish / re-publish): AC-009.1–AC-009.10, decisions D33–D37; unpublish / re-publish leaves Out of Scope | KAN-136; user decisions 2026-11-15 |
+| 2026-11-15 | STORY-010 | New STORY-010 (KAN-137): AC-010.1–AC-010.7, decisions D38–D43; "Required from other modules" names `ticket_decision`; its decision values include UNPUBLISH and REPUBLISH of STORY-009 (AC-010.2, AC-010.4, AC-010.6, D43) | KAN-137: two decision tables and the unused Solution tables of changeset 001 are left from before the ticket model was one; user decisions 2026-11-15. Written first as STORY-007 and D17–D22 beside #241 (KAN-136), which merged first and took those numbers; renumbered when this branch was merged with `main`, and the UNPUBLISH / REPUBLISH values added (user decision 2026-11-15) |
 
 ## Decisions taken while planning (2026-11-07, with the user)
 | # | Question | Decision |
@@ -78,6 +81,12 @@ is one row of such a preview.
 | D35 | Review History and audit log (UC-25 postcondition) | This module stores one review decision (UNPUBLISH or REPUBLISH) and one audit entry per ticket. Showing these decisions in the Review History list is a Change of `ticket-review` (user decision 2026-11-15). |
 | D36 | Where the endpoints live | `POST /api/v1/reviews/unpublish` and `POST /api/v1/reviews/republish`, next to send-back in `ReviewDecisionController`, with the same request (`ticketIds`, 1–500) and answer (`count`); the rule lives in `TicketDecisionService` of this module. The managed Projects of the caller come from `review`, as for every review decision (user decision 2026-11-15). |
 | D37 | Tickets of a Removed Project (GBR-21) | Not supported yet: "manages the Project" means what it means for Approve, Reject and Send back today — Active Projects only — so such a request answers 403 (MSG08). GBR-21 for Removed Projects is fixed once for all decisions in `ticket-review` (user decision 2026-11-15). |
+| D38 | Scope of KAN-137 (written 25/10; the `ticket` table is already one) | One `ticket_decision` table replaces `ticket_import_decision` and `review_decision`; the unused tables of changeset 001 and the `knowledge` package go. The Solution stays in the columns of `ticket` (no `ticket_solution`), `evidence` keeps its name, and no `notification` table is added: each would change `search`, `chatbot`, `triage`, `ticket-review` and `dashboard-audit` without changing any behavior (user decision 2026-11-15). |
+| D39 | Do the approve decisions of imports show in Review History once the tables are one | No. Review History, the writer's feedback, the writer's email and the dashboard figures stay as they are: only decisions on Solution Form Tickets (user decision 2026-11-15). |
+| D40 | Who made a decision: review stores a user id, import stores the sign-in name | `ticket_decision` keeps both: `reviewer_id` (user id, review decisions) and `reviewer` (sign-in name, import decisions); a row has at least one of them. No row loses its reviewer in the move (user decision 2026-11-15). |
+| D41 | "Renumber changesets 002 / 003" of KAN-137 | Not done. An applied changeset is never edited (`backend/AGENTS.md` §7); the change is one new changeset after the latest one. |
+| D42 | `reuse_record` (changeset 001; not named in KAN-137) | Dropped with the others: it has a foreign key to `solution` and no code reads or writes it. |
+| D43 | How a read tells a review decision from an import decision in the one table | By the Ticket's source: a review decision is a decision on a Ticket of source Solution Form (an imported Ticket is never reviewed, AC-005.2). No extra column. The decision values UNPUBLISH and REPUBLISH (STORY-009) are rows of the same table; Review History does not list them (D35), and listing them is the `ticket-review` Change of D35 (user decision 2026-11-15). |
 
 ## Requirements
 
@@ -90,6 +99,7 @@ is one row of such a preview.
 6. A Project Manager reads the history of the imports of the Projects they manage, newest first, filtered by Project, source and date (UC-23).
 7. A Ticket Resolver or Project Manager opens the detail of a ticket they may see under GBR-02, with its Department, resolved date and link to its source (UC-24).
 8. A Project Manager takes a Published ticket of a Project they manage out of use (Unpublish) and brings an Unpublished one back (Re-publish) from the Ticket Detail; no new review happens (UC-25, GBR-11).
+9. Every decision on a Ticket — the approve decision of an import and each review decision — is kept in one place, and the database holds no table that nothing uses (KAN-137).
 
 ### Non-Functional
 1. A pull of 100 issues with their comments returns the Import Preview within 60 seconds.
@@ -235,6 +245,17 @@ is one row of such a preview.
 
 The events of these changes are AC-005.4 and AC-005.5. That an Unpublished ticket is not returned by Search, AI Solution Suggestion and the Knowledge Chatbot, and that a re-published one is, are `search` AC-007.1, AC-010.3 and AC-011.3 (D34).
 
+### STORY-010: One decision table, no unused Solution tables (KAN-137)
+- As a developer, I want every decision on a Ticket in one table and the unused tables gone, so that import and review share one ticket model and nobody builds on a table that nothing uses.
+- Acceptance:
+  - AC-010.1: WHEN the database schema is migrated, THE system SHALL have a `ticket_decision` table and SHALL have no `ticket_import_decision` table and no `review_decision` table.
+  - AC-010.2: WHEN the migration runs on a database that holds import decisions and review decisions, THE system SHALL copy every one of them into `ticket_decision` with its Ticket, decision time and feedback text unchanged; a review decision SHALL keep its id, its reviewer's user id and its decision value (including UNPUBLISH and REPUBLISH), and an import decision SHALL keep its reviewer's sign-in name and SHALL have the decision value APPROVED.
+  - AC-010.3: WHEN a CSV import, a Jira import or a manual entry publishes a Ticket, THE system SHALL record its approve decision (AC-003.1, AC-006.1) as one row of `ticket_decision` with the decision value APPROVED and the caller's sign-in name as reviewer.
+  - AC-010.4: WHEN a review Approve, Reject, Request changes, Send back, Unpublish or Re-publish is saved, THE system SHALL record it as one row of `ticket_decision` per Ticket with the reviewer's user id.
+  - AC-010.5: WHEN Review History, the feedback shown to the writer, the writer's review email or the dashboard's outcome figures are read, THE system SHALL use only the decisions on Tickets of source Solution Form, so that the approve decision of an import is listed in none of them and an imported Ticket is counted once in the dashboard figures (D39, D43).
+  - AC-010.6: IF a decision is saved with neither a reviewer user id nor a reviewer sign-in name, or with a decision value other than APPROVED, REJECTED, CHANGES_REQUESTED, SEND_BACK, UNPUBLISH or REPUBLISH, THEN THE database SHALL reject the row.
+  - AC-010.7: WHEN the database schema is migrated, THE system SHALL have no `solution`, `solution_source`, `solution_approval`, `resolved_ticket_snapshot` or `reuse_record` table, and THE system SHALL expose no endpoint under `/api/solutions`.
+
 ## Out of Scope
 - CSV import (UC-21) — `import-ticket-list`; Drafts of a CSV import (GBR-26, UC-21 step 7b) are a later Change there.
 - Downloading or previewing Evidence (Ticket Detail, UC-24).
@@ -251,6 +272,7 @@ The events of these changes are AC-005.4 and AC-005.5. That an Unpublished ticke
 - Search indexing of new tickets — `search` consumes the "tickets published" event. An Unpublished ticket leaves search, AI Solution Suggestion and the chatbot through their Published filter (D34); deleting its vector on the "tickets unpublished" event is not done.
 - The Solution Form submission (UC-19): STORY-005 gives it the transition step and the events only.
 - Unpublish / re-publish of several tickets at once from a list, and a reason for the decision: UC-25 has neither.
+- From KAN-137 as written on 25/10 (D38, D41): a separate `ticket_solution` table, renaming `evidence` to `ticket_evidence`, a `notification` table, and renumbering applied changesets.
 - Unpublish / re-publish of the tickets of a Removed Project (GBR-21, D37) and showing these decisions in the Review History list (D35) — `ticket-review`.
 
 ## Interface Contracts
@@ -297,12 +319,12 @@ Rejections of the new endpoints: MSG01, MSG39 → 400 · MSG04 on pull → 404 �
 
 ### Required from other modules
 - `project` (existing code, owned by `project-integration` later): the Project's Jira project key, through `ProjectService`.
-- `import-ticket-list` (PR #110, `vn.tsolve.ticket`): `ProjectAccess`, the `ticket`, `ticket_import_decision`, `import_batch`, `import_preview` and `import_preview_row` tables, the preview endpoints and screens, and `TicketsPublishedEvent`, extended by this module.
+- `import-ticket-list` (PR #110, `vn.tsolve.ticket`): `ProjectAccess`, the `ticket`, `ticket_decision` (STORY-010; `ticket_import_decision` before it), `import_batch`, `import_preview` and `import_preview_row` tables, the preview endpoints and screens, and `TicketsPublishedEvent`, extended by this module.
 - `workspace` (later): the stored Jira service account behind `JiraIssueSource` (D2).
 - `identity` (KAN-118): `ScopeAccessService.canAccessDepartment(accountId, departmentId)` for Ticket Detail (D28).
 - `ticket-review`: the Ticket Detail endpoint, its controller, service, DTO and web components, extended here (D29).
 - `project-integration`: the `project` and `project_membership` tables (Department of a Project, its Project Managers).
-- `ticket-review` (`vn.tsolve.review`): `ReviewDecisionController` and its `ReviewWorkspaceAccess` (the caller's managed Projects), the `review_decision` table, and the Ticket Detail screen (`ReviewTicketDetail`) the buttons of STORY-009 sit above.
+- `ticket-review` (`vn.tsolve.review`): `ReviewDecisionController` and its `ReviewWorkspaceAccess` (the caller's managed Projects), the `ticket_decision` table (STORY-010; `review_decision` before it), and the Ticket Detail screen (`ReviewTicketDetail`) the buttons of STORY-009 sit above.
 - `search`: returns only Published tickets (D34).
 
 ## Definition of Done

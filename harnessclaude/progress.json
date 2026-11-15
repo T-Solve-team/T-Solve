@@ -253,9 +253,11 @@
         "ticket-detail-page": "pending",
         "ticket-publication-contract": "passing",
         "ticket-publication": "passing",
-        "ticket-publication-buttons": "passing"
+        "ticket-publication-buttons": "passing",
+        "ticket-decision-table": "pending",
+        "drop-legacy-solution-tables": "pending"
       },
-      "lastUpdated": "2026-11-15T04:52:59.617Z",
+      "lastUpdated": "2026-11-15T06:14:01.271Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
