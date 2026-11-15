@@ -89,7 +89,7 @@ class TicketListRepositoryIT {
     @BeforeEach
     void seed() {
         ticketSequence = 0;
-        jdbc.execute("TRUNCATE ticket_import_decision, ticket, project, department, app_user CASCADE");
+        jdbc.execute("TRUNCATE ticket_decision, ticket, project, department, app_user CASCADE");
         jdbc.update(
                 "INSERT INTO app_user(id,email,full_name,status,created_at) VALUES (?,?,?,'ACTIVE',now())",
                 USER.id(),

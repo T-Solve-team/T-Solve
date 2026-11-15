@@ -114,7 +114,7 @@ class ImportHistoryDateRangeIT {
 
     @BeforeEach
     void cleanDatabase() {
-        jdbc.execute("delete from ticket_import_decision");
+        jdbc.execute("delete from ticket_decision");
         jdbc.execute("delete from ticket");
         jdbc.execute("delete from import_batch");
         jdbc.execute("delete from import_preview");
@@ -128,7 +128,7 @@ class ImportHistoryDateRangeIT {
 
     @AfterEach
     void removeFailureTrigger() {
-        jdbc.execute("drop trigger if exists import_history_fail on ticket_import_decision");
+        jdbc.execute("drop trigger if exists import_history_fail on ticket_decision");
         jdbc.execute("drop function if exists import_history_fail()");
     }
 
@@ -160,7 +160,7 @@ class ImportHistoryDateRangeIT {
     private void failFinish() {
         jdbc.execute("create function import_history_fail() returns trigger language plpgsql as "
                 + "$$ begin raise exception 'forced failure'; end $$");
-        jdbc.execute("create trigger import_history_fail before insert on ticket_import_decision "
+        jdbc.execute("create trigger import_history_fail before insert on ticket_decision "
                 + "for each row execute function import_history_fail()");
     }
 

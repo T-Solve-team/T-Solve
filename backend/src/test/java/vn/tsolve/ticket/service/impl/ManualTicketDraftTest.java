@@ -51,9 +51,9 @@ import vn.tsolve.ticket.repository.ImportBatchRepository;
 import vn.tsolve.ticket.repository.ImportPreviewEvidenceRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRowRepository;
+import vn.tsolve.ticket.repository.TicketDecisionRepository;
 import vn.tsolve.ticket.repository.TicketEvidenceRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
-import vn.tsolve.ticket.repository.TicketReviewDecisionRepository;
 import vn.tsolve.ticket.service.ProjectAccess;
 
 /** Manual entry Drafts (STORY-006, AC-006.9–AC-006.13). */
@@ -69,7 +69,7 @@ class ManualTicketDraftTest {
     final ImportPreviewRepository previews = mock(ImportPreviewRepository.class);
     final ImportPreviewRowRepository previewRows = mock(ImportPreviewRowRepository.class);
     final TicketRepository tickets = mock(TicketRepository.class);
-    final TicketReviewDecisionRepository decisions = mock(TicketReviewDecisionRepository.class);
+    final TicketDecisionRepository decisions = mock(TicketDecisionRepository.class);
     final ImportBatchRepository batches = mock(ImportBatchRepository.class);
     final ProjectAccess projects = mock(ProjectAccess.class);
 

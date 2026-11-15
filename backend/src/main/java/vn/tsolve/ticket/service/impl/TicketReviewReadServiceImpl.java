@@ -42,8 +42,8 @@ import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.entity.TicketStatus;
 import vn.tsolve.ticket.exception.InvalidReviewHistoryFilterException;
 import vn.tsolve.ticket.mapper.TicketReviewMapper;
-import vn.tsolve.ticket.repository.ReviewDecisionRecordRepository;
-import vn.tsolve.ticket.repository.ReviewDecisionRecordRepository.HistoryRow;
+import vn.tsolve.ticket.repository.TicketDecisionRepository;
+import vn.tsolve.ticket.repository.TicketDecisionRepository.HistoryRow;
 import vn.tsolve.ticket.repository.TicketEvidenceRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
 import vn.tsolve.ticket.service.TicketReviewReadService;
@@ -63,7 +63,7 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
     private static final Instant NO_LOWER_BOUND = Instant.parse("1970-01-01T00:00:00Z");
     private static final Instant NO_UPPER_BOUND = Instant.parse("9999-01-01T00:00:00Z");
 
-    /** Contract decision value → stored review_decision.decision. Other contract values have no stored rows. */
+    /** Contract decision value → stored ticket_decision.decision. Other contract values have no stored rows. */
     private static final Map<String, String> STORED_DECISION = Map.of(
             "APPROVE",
             "APPROVED",
@@ -78,14 +78,14 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
 
     private final TicketRepository tickets;
     private final TicketEvidenceRepository evidence;
-    private final ReviewDecisionRecordRepository decisions;
+    private final TicketDecisionRepository decisions;
     private final TicketReviewMapper mapper;
     private final ScopeAccessService scopeAccess;
 
     public TicketReviewReadServiceImpl(
             TicketRepository tickets,
             TicketEvidenceRepository evidence,
-            ReviewDecisionRecordRepository decisions,
+            TicketDecisionRepository decisions,
             TicketReviewMapper mapper,
             ScopeAccessService scopeAccess) {
         this.tickets = tickets;

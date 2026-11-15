@@ -254,7 +254,7 @@ class ReviewQueueEventsIT {
 
     @Test
     void decisionMovingTicketOutOfPendingReviewSendsQueueChanged_AC_012_2() throws Exception {
-        // review_decision.project_manager_id references app_user, so the deciding manager must exist.
+        // ticket_decision.reviewer_id references app_user, so the deciding manager must exist.
         TwoTenantDatabases.tenantA()
                 .update(
                         "insert into app_user (id, email, status, created_at) values (?, 'events-manager@example.test', 'ACTIVE', now()) on conflict (id) do nothing",
@@ -484,7 +484,7 @@ class ReviewQueueEventsIT {
     }
 
     private void clean(UUID ticket) {
-        TwoTenantDatabases.tenantA().update("delete from review_decision where ticket_id = ?", ticket);
+        TwoTenantDatabases.tenantA().update("delete from ticket_decision where ticket_id = ?", ticket);
         TwoTenantDatabases.tenantA().update("delete from ticket where ticket_id = ?", ticket);
     }
 

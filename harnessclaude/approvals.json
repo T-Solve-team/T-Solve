@@ -1172,8 +1172,8 @@
     }
   },
   "ticket-repository": {
-    "specHash": "461b76a6d73409b58cc2709baf755808f6ee40a61bffe102fb759d8dc930b7cc",
-    "approvedAt": "2026-11-14T21:35:39.662Z",
+    "specHash": "67ed1ed4b39cb1337c764e9c67ff67a57ffb8b512448017e299b118bb688a4ad",
+    "approvedAt": "2026-11-15T04:15:25.121Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager pulls issues for an Active Project they manage with a valid date range, THE system SHALL read from Jira the issues of the Project's Jira project whose resolution date falls within the range (both dates included, Vietnam time), skip every issue whose Jira key is already a Ticket ID, keep at most 100 issues ordered by resolution date oldest first, and create an Import Preview of source Jira with one row per kept issue, numbered from 1 in that order, each with the result Needs Solution.",
@@ -1273,7 +1273,14 @@
       "AC-009.7": "IF the request names no Ticket, more than 500 Tickets, or the same Ticket twice, THEN THE system SHALL reject it with HTTP 400 and change no Ticket.",
       "AC-009.8": "WHILE the Ticket Detail shows a Published Ticket of a Project the user is Project Manager of, THE web app SHALL show an Unpublish button; WHEN the user clicks it, THE web app SHALL ask MSG21, and on confirmation send the unpublish request, show MSG22 and show the Ticket as Unpublished; on cancel it SHALL send nothing.",
       "AC-009.9": "WHILE the Ticket Detail shows an Unpublished Ticket of a Project the user is Project Manager of, THE web app SHALL show a Re-publish button; WHEN the user clicks it, THE web app SHALL ask MSG23, and on confirmation send the re-publish request, show MSG24 and show the Ticket as Published; on cancel it SHALL send nothing.",
-      "AC-009.10": "IF the unpublish or re-publish request is rejected, THEN THE web app SHALL show the message of the error (MSG06 when it names none) and reload the Ticket Detail."
+      "AC-009.10": "IF the unpublish or re-publish request is rejected, THEN THE web app SHALL show the message of the error (MSG06 when it names none) and reload the Ticket Detail.",
+      "AC-010.1": "WHEN the database schema is migrated, THE system SHALL have a  table and SHALL have no  table and no  table.",
+      "AC-010.2": "WHEN the migration runs on a database that holds import decisions and review decisions, THE system SHALL copy every one of them into  with its Ticket, decision time and feedback text unchanged; a review decision SHALL keep its id, its reviewer's user id and its decision value, and an import decision SHALL keep its reviewer's sign-in name and SHALL have the decision value APPROVED.",
+      "AC-010.3": "WHEN a CSV import, a Jira import or a manual entry publishes a Ticket, THE system SHALL record its approve decision (AC-003.1, AC-006.1) as one row of  with the decision value APPROVED and the caller's sign-in name as reviewer.",
+      "AC-010.4": "WHEN a review Approve, Reject, Request changes or Send back, or an Unpublish or Re-publish (STORY-009), is saved, THE system SHALL record it as one row of  per Ticket with the reviewer's user id.",
+      "AC-010.5": "WHEN Review History, the feedback shown to the writer, the writer's review email or the dashboard's outcome figures are read, THE system SHALL use only the decisions on Tickets of source Solution Form, so that the approve decision of an import is listed in none of them and an imported Ticket is counted once in the dashboard figures (D39, D43).",
+      "AC-010.6": "IF a decision is saved with neither a reviewer user id nor a reviewer sign-in name, or with a decision value other than APPROVED, REJECTED, CHANGES_REQUESTED, SEND_BACK, UNPUBLISH or REPUBLISH, THEN THE database SHALL reject the row.",
+      "AC-010.7": "WHEN the database schema is migrated, THE system SHALL have no , , ,  or  table, and THE system SHALL expose no endpoint under ."
     }
   },
   "jira-app": {

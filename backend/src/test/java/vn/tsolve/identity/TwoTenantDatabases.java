@@ -71,6 +71,12 @@ public class TwoTenantDatabases {
         return new JdbcTemplate(TENANT_B);
     }
 
+    /** A new database on the shared server with no changeset applied, for a migration test (no extra container). */
+    public static DataSource emptyDatabase(String name) {
+        createDatabase(name);
+        return pool(name);
+    }
+
     private static String url(String database) {
         return "jdbc:postgresql://" + SERVER.getHost() + ":" + SERVER.getMappedPort(5432) + "/" + database;
     }

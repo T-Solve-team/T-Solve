@@ -86,7 +86,7 @@ class TicketPublicationIT {
     }
 
     @Test
-    void unpublishThenRepublishStoresDecisionsAndAudit_AC_009_1_AC_009_2() throws Exception {
+    void unpublishThenRepublishStoresDecisionsAndAudit_AC_009_1_AC_009_2_AC_010_4() throws Exception {
         UUID first = ticket(project, "PUBLISHED");
         UUID second = ticket(project, "PUBLISHED");
         db.update(
@@ -114,10 +114,10 @@ class TicketPublicationIT {
         assertThat(audits(first)).containsExactlyInAnyOrder("UNPUBLISH", "PUBLISH");
         assertThat(kept(first)).isEqualTo(before);
         assertThat(db.queryForMap(
-                        "select project_manager_id, reason_or_comment from review_decision where ticket_id = ? and decision = 'REPUBLISH'",
+                        "select reviewer_id, feedback from ticket_decision where ticket_id = ? and decision = 'REPUBLISH'",
                         first))
-                .containsEntry("project_manager_id", MANAGER_ID)
-                .containsEntry("reason_or_comment", null);
+                .containsEntry("reviewer_id", MANAGER_ID)
+                .containsEntry("feedback", null);
         // No writer email for these decisions (design P9).
         assertThat(events.stream(ReviewFeedbackDecidedEvent.class)).isEmpty();
     }
@@ -206,7 +206,7 @@ class TicketPublicationIT {
 
     private List<String> decisions(UUID id) {
         return db.queryForList(
-                "select decision from review_decision where ticket_id = ? order by decided_at", String.class, id);
+                "select decision from ticket_decision where ticket_id = ? order by decided_at", String.class, id);
     }
 
     private List<String> audits(UUID id) {

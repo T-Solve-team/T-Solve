@@ -82,7 +82,7 @@ class ReviewExpiryIT {
 
     @BeforeEach
     void seed() {
-        jdbc.update("delete from review_decision");
+        jdbc.update("delete from ticket_decision");
         jdbc.update("delete from evidence");
         jdbc.update("delete from ticket");
         long active = jdbc.queryForObject(
@@ -149,19 +149,19 @@ class ReviewExpiryIT {
                 UUID.class,
                 UUID.randomUUID() + "@example.test");
         jdbc.update(
-                "insert into review_decision(ticket_id, project_manager_id, decision, reason_or_comment) values (?, ?, 'CHANGES_REQUESTED', 'Earlier review')",
+                "insert into ticket_decision(ticket_id, reviewer_id, decision, feedback) values (?, ?, 'CHANGES_REQUESTED', 'Earlier review')",
                 expired,
                 reviewer);
         var content = content(expired);
         var evidence = jdbc.queryForList("select * from evidence where ticket_id = ?", expired);
-        var decisions = jdbc.queryForList("select * from review_decision order by review_decision_id");
+        var decisions = jdbc.queryForList("select * from ticket_decision order by ticket_decision_id");
         var audit = jdbc.queryForList("select * from audit_log_entry");
         expiry.expireOverdue(TODAY);
         assertThat(excluded.stream().map(this::row).toList()).isEqualTo(beforeExcluded);
         assertThat(content(expired)).isEqualTo(content);
         assertThat(jdbc.queryForList("select * from evidence where ticket_id = ?", expired))
                 .isEqualTo(evidence);
-        assertThat(jdbc.queryForList("select * from review_decision order by review_decision_id"))
+        assertThat(jdbc.queryForList("select * from ticket_decision order by ticket_decision_id"))
                 .isEqualTo(decisions);
         assertThat(jdbc.queryForList("select * from audit_log_entry")).isEqualTo(audit);
         var all = jdbc.queryForList("select * from ticket order by ticket_id");

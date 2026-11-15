@@ -131,11 +131,9 @@ class TicketEmbeddingIT {
 
     @BeforeEach
     void seed() {
-        jdbc.execute(
-                "TRUNCATE ticket_import_decision, ticket, import_batch, import_preview, project, department CASCADE");
+        jdbc.execute("TRUNCATE ticket_decision, ticket, import_batch, import_preview, project, department CASCADE");
         jdbc.update("INSERT INTO department (department_id, name) VALUES (1, 'Embedding IT')");
-        jdbc.update(
-                """
+        jdbc.update("""
                 INSERT INTO project (project_id, public_id, department_id, jira_project_key)
                 VALUES (1, '14400000-0000-0000-0000-000000000001', 1, 'EMBED')
                 """);
