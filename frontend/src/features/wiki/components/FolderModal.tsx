@@ -89,6 +89,7 @@ export function FolderModal({ spaceId, folders, folderId, onClose }: FolderModal
         initialValue={folder?.parentId ?? ''}
       >
         <TreeSelect
+          onChange={() => mutation.reset()}
           treeData={[{ value: '', title: 'Top level', children: children(null) }]}
           treeDefaultExpandAll
           virtual={false}
