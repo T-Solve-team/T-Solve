@@ -18,6 +18,7 @@ owner: BA
 | 2026-11-06 | STORY-010 (new) | New STORY-010: the in-process `SolutionRetrieval` service the `chatbot` module calls for the Solutions nearest to a query vector, over every Published ticket of the Workspace with an ACTIVE Department (no Department scope, chatbot Requirement 2). Terms gain **Workspace Solution**; Interface Contracts gain the service; Definition of Done covers STORY-010. No other criterion changes | Plan of the chatbot backend (KAN-179): `backend/AGENTS.md` lets `chatbot` use search only through a `service/` interface, never its tables |
 | 2026-11-07 | STORY-011 (new) | New STORY-011: `SolutionRetrieval.nearestInProjectDepartment`, the in-process retrieval the `triage` module calls for the Published tickets of the Department that owns a Project, nearest to a query vector, with the ticket's `public_id`. Terms gain **Department Solution**; Interface Contracts gain the method and `RetrievedTicketSolution`; the KAN-38 Out of Scope line now excludes only Wiki retrieval; Definition of Done covers STORY-011. No other criterion changes | Plan of the AI Solution Suggestion backend (triage STORY-005, KAN-47): sources are the Published tickets of the issue's Department (user, 07/11); `triage` may use search only through a `service/` interface |
 | 2026-11-08 | STORY-011 | AC-011.1, AC-011.3 and the Interface Contract: `projectId` is the Project's `public_id` (`UUID`), not its internal id; AC-011.4 also rejects a null `projectId` | Review of Task 20 (attempt 1): after main's changeset 019 (KAN-22), the only Project id `triage` holds is `suggestion_result.project_id`, a UUID referencing `project.public_id`, and no service maps it to the internal id; `backend/AGENTS.md` makes a reference a `UUID` (user, 08/11) |
+| 2026-11-15 | STORY-006 | AC-006.2 and AC-006.12 reworded, new AC-006.13: search now has its own `VisibleScope` implementation, `MembershipVisibleScope`, which reads membership from the Workspace database (the user's Department `app_user.department_id`, the Projects the user manages, and the user's own tickets as writer). It is the default bean, so `NoVisibleScope` is removed. `DevAllVisibleScope` stays only when `SEARCH_DEV_SCOPE=all`. Out of Scope, Interface Contracts and Required from other modules follow | User, 15/11 (KAN-340): the local demo must show Department isolation; reading membership the way the Dashboard already does (`DashboardRepository.findUserDepartment`) instead of waiting for identity/project-integration |
 
 ## Requirements
 
@@ -248,9 +249,14 @@ Used by STORY-005 to STORY-009:
     either `PUBLISHED` in one of the user's Departments, or in another status and written by the user
     (`ticket.writer` equals the visible scope's writer) or in a Project the user manages (UC-27).
   - AC-006.2: THE backend SHALL take the user's Departments, managed Projects and writer only from the port
-    `VisibleScope`; WHILE no module provides it and `SEARCH_DEV_SCOPE` is not `all`, THE stand-in `NoVisibleScope`
-    SHALL answer no Department, no Project and no writer, so that every list, search and suggestion of STORY-006 to
-    STORY-009 is empty and every Feedback answers 404.
+    `VisibleScope`; WHILE `SEARCH_DEV_SCOPE` is not `all`, THE implementation `MembershipVisibleScope` SHALL answer,
+    from the Workspace database of the request: as Departments, the user's Department (`app_user.department_id`)
+    when it has status `ACTIVE`; as managed Projects, every Project in which the user is Project Manager; and as
+    writer, the `ticket.writer` value of the user's own tickets.
+  - AC-006.13: IF the user has no Department, manages no Project and has no writer value, THEN `MembershipVisibleScope`
+    SHALL answer an empty scope, so that every list, search and suggestion of STORY-006 to STORY-009 is empty for
+    that user and every Feedback answers 404 (fail closed); a user SHALL never see a `PUBLISHED` ticket of a
+    Department other than their own unless it is in a Project they manage.
   - AC-006.3: WHEN no page, size or sort is given, THE backend SHALL return page 0 of 20 rows sorted by `updatedAt`
     descending; THE sort keys `sourceTicketId`, `title`, `project`, `reviewDueDate` and `updatedAt` SHALL sort in the
     asked direction, with the internal ticket id descending as the last tie-breaker.
@@ -277,11 +283,11 @@ Used by STORY-005 to STORY-009:
     `workspaceId` SHALL change nothing in the answer.
 
   - AC-006.11: WHERE `SEARCH_DEV_SCOPE` is exactly `all` (local demo only), THE backend SHALL use the dev stand-in
-    `DevAllVisibleScope` instead of `NoVisibleScope`: every user's Departments SHALL be every Department with status
+    `DevAllVisibleScope` instead of `MembershipVisibleScope`: every user's Departments SHALL be every Department with status
     `ACTIVE`, the managed Projects every Project, and the writer none; THE backend SHALL log one warning at startup
     that the dev scope is on.
   - AC-006.12: IF `SEARCH_DEV_SCOPE` is unset, empty or any other value than `all`, THEN THE backend SHALL use
-    `NoVisibleScope` (AC-006.2) and SHALL not create `DevAllVisibleScope`, so that the default fails closed.
+    `MembershipVisibleScope` (AC-006.2) and SHALL not create `DevAllVisibleScope`.
 
 ### STORY-007: Search Published tickets on the backend
 - As a Ticket Resolver or Project Manager, I want my query ranked by meaning over the Published tickets of my
@@ -397,10 +403,9 @@ Used by STORY-005 to STORY-009:
     row and log no Solution text.
 
 ## Out of Scope
-- The membership behind `VisibleScope` (which Departments a user belongs to, which Projects they manage, which
-  `ticket.writer` value is theirs): `identity` and `project-integration` implement the port; until then the
-  fail-closed stand-in answers nothing (AC-006.2); the dev stand-in of AC-006.11 is for a local demo only and is never
-  set in a deployed environment.
+- Editing the membership behind `VisibleScope` (which Department a user belongs to, who manages a Project): owned by
+  `identity` and `project-integration`; search only reads it (AC-006.2). The dev stand-in of AC-006.11 is for a local
+  demo only and is never set in a deployed environment.
 - Privacy of `search_log` (user, 06/11): no retention period yet; it is decided with the dashboard (KAN-150) by
   Hải Anh with the BA. Until then only Admin may read the table (no API of this module returns it), and the
   application log never holds the query (AC-007.9).
@@ -552,7 +557,8 @@ public interface VisibleScope {
     /** Internal ids; writer is the ticket.writer value of the user's own tickets, empty when unknown. */
     record Scope(Set<Long> departmentIds, Set<Long> managedProjectIds, Optional<String> writer) {}
 }
-// vn.tsolve.search.scope.service.impl.NoVisibleScope: answers empty sets and no writer (fail closed; the default)
+// vn.tsolve.search.scope.service.impl.MembershipVisibleScope: the default; reads the user's Department, managed
+//   Projects and writer value from the Workspace database (AC-006.2, AC-006.13)
 // vn.tsolve.search.scope.service.impl.DevAllVisibleScope: only when SEARCH_DEV_SCOPE=all (local demo; AC-006.11)
 ```
 
@@ -594,8 +600,8 @@ public record RetrievedTicketSolution(
   published inside the import transaction.
 - `ai` (done): `vn.tsolve.ai.client.EmbeddingClient` (bge-m3, 1024 dimensions) and `AiUnavailableException` on a
   failure or timeout (`AI_EMBED_TIMEOUT`).
-- `identity` / `project-integration` (later): an implementation of `VisibleScope`; the session principal
-  `TSolveUser` (its `id` is `app_user.id`).
+- `identity` / `project-integration`: the membership data `MembershipVisibleScope` reads (`app_user.department_id`,
+  the Project Manager membership of a Project); the session principal `TSolveUser` (its `id` is `app_user.id`).
 - `project-integration` / `workspace`: the `project` and `department` tables of changeset `002` (search adds only
   `public_id`); the session `departments` of the web app carry `department.public_id` as `departmentId`.
 - `ticket-review` (later): the review due date; until then `reviewDueDate` is null (AC-006.7).
