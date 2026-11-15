@@ -1025,6 +1025,75 @@ paths:
           $ref: '#/components/responses/Problem'
         '409':
           $ref: '#/components/responses/Problem'
+  /api/v1/reviews/unpublish:
+    post:
+      tags: [review]
+      operationId: unpublishTickets
+      summary: Unpublishes Published tickets (UC-25, MSG22).
+      description: |
+        Validate and authorize the entire unique 1–500 UUID batch in the signed-in Workspace. Only PUBLISHED tickets
+        of Projects the caller manages are eligible. Atomically set UNPUBLISHED, store one UNPUBLISH review decision
+        per ticket with the caller, the time and no reason, and record one UNPUBLISH audit entry per ticket. Invalid
+        shapes return 400, a missing Workspace ticket returns 404 MSG04, an unmanaged Project returns 403 MSG08, and
+        a ticket that is not Published returns 409 MSG06; every refused batch leaves all tickets unchanged.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveTicketsRequest'
+      responses:
+        '200':
+          description: Unpublished.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewDecisionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /api/v1/reviews/republish:
+    post:
+      tags: [review]
+      operationId: republishTickets
+      summary: Re-publishes Unpublished tickets without a new review (UC-25, MSG24).
+      description: |
+        Validate and authorize the entire unique 1–500 UUID batch in the signed-in Workspace. Only UNPUBLISHED tickets
+        of Projects the caller manages are eligible. Atomically set PUBLISHED, leaving Solution, Evidence, feedback
+        and review due date unchanged, store one REPUBLISH review decision per ticket with the caller, the time and
+        no reason, and record one PUBLISH audit entry per ticket. Invalid shapes return 400, a missing Workspace
+        ticket returns 404 MSG04, an unmanaged Project returns 403 MSG08, and a ticket that is not Unpublished
+        returns 409 MSG06; every refused batch leaves all tickets unchanged.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveTicketsRequest'
+      responses:
+        '200':
+          description: Re-published.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewDecisionResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
   /api/v1/review-queue:
     get:
       tags: [review]
