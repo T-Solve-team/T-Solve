@@ -212,15 +212,15 @@
         "wiki-home-ui": "passing",
         "wiki-folder-api": "passing",
         "wiki-folder-ui": "passing",
-        "wiki-upload-api": "evaluating",
-        "wiki-indexing": "evaluating",
-        "wiki-upload-ui": "evaluating",
-        "wiki-trash-api": "evaluating",
-        "wiki-trash-ui": "evaluating",
-        "wiki-permissions-api": "evaluating",
-        "wiki-permissions-ui": "evaluating"
+        "wiki-upload-api": "passing",
+        "wiki-indexing": "passing",
+        "wiki-upload-ui": "passing",
+        "wiki-trash-api": "passing",
+        "wiki-trash-ui": "passing",
+        "wiki-permissions-api": "passing",
+        "wiki-permissions-ui": "passing"
       },
-      "lastUpdated": "2026-11-15T07:34:58.611Z",
+      "lastUpdated": "2026-11-15T11:18:21.079Z",
       "branch": "feat/wiki",
       "repos": [
         "default"

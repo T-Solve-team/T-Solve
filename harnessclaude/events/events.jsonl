@@ -1782,3 +1782,14 @@
 {"ts":"2026-11-15T06:53:14.357Z","type":"quick-opened","what":"Route-table test still expects the built Wiki screens 11.4 and 11.7 as placeholders (BUG-285)","files":["frontend/src/app/router/route-table.test.tsx","docs/bug-log.md"]}
 {"ts":"2026-11-15T07:34:49.889Z","type":"quick-closed","what":"Route-table test still expects the built Wiki screens 11.4 and 11.7 as placeholders (BUG-285)","files":["frontend/src/app/router/route-table.test.tsx","docs/bug-log.md"]}
 {"ts":"2026-11-15T07:34:58.614Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"3cdb351ecab619c99e3ab7a1c844a0d1ee96975e"}
+{"ts":"2026-11-15T10:09:43.404Z","type":"feature-status","module":"wiki","feature":"wiki-upload-ui","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T10:09:43.715Z","type":"feature-status","module":"wiki","feature":"wiki-trash-ui","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T10:09:44.014Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-ui","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T10:19:45.606Z","type":"feature-status","module":"wiki","feature":"wiki-upload-api","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-15T10:19:45.912Z","type":"feature-status","module":"wiki","feature":"wiki-trash-api","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-15T11:18:19.113Z","type":"feature-status","module":"wiki","feature":"wiki-upload-api","from":"fixing","to":"evaluating"}
+{"ts":"2026-11-15T11:18:19.519Z","type":"feature-status","module":"wiki","feature":"wiki-trash-api","from":"fixing","to":"evaluating"}
+{"ts":"2026-11-15T11:18:19.876Z","type":"feature-status","module":"wiki","feature":"wiki-upload-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T11:18:20.286Z","type":"feature-status","module":"wiki","feature":"wiki-trash-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T11:18:20.700Z","type":"feature-status","module":"wiki","feature":"wiki-indexing","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T11:18:21.081Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-api","from":"evaluating","to":"passing"}
