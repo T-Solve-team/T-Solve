@@ -1741,3 +1741,7 @@
 {"ts":"2026-11-15T04:55:14.458Z","type":"feature-status","module":"ticket-repository","feature":"drop-legacy-solution-tables","from":"pending","to":"in-progress"}
 {"ts":"2026-11-15T04:55:14.882Z","type":"feature-status","module":"ticket-repository","feature":"drop-legacy-solution-tables","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-15T05:09:52.827Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"8df363cacc0817b64bf93e432b413b571e869f1e"}
+{"ts":"2026-11-15T04:47:31.786Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication-contract","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T04:47:32.371Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T04:47:32.995Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication-buttons","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T04:52:59.621Z","type":"commit-recorded","module":"ticket-repository","repo":"default","sha":"92b1e9d6bc17b9cb8b8dadf49139a9af763c68cf"}

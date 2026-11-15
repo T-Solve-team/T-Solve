@@ -251,9 +251,9 @@
         "import-history-page": "pending",
         "ticket-detail-scope": "pending",
         "ticket-detail-page": "pending",
-        "ticket-publication-contract": "evaluating",
-        "ticket-publication": "evaluating",
-        "ticket-publication-buttons": "evaluating",
+        "ticket-publication-contract": "passing",
+        "ticket-publication": "passing",
+        "ticket-publication-buttons": "passing",
         "ticket-decision-table": "evaluating",
         "drop-legacy-solution-tables": "evaluating"
       },

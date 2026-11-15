@@ -161,7 +161,7 @@ class TicketPublicationIT {
         assertThat(statusOf(mine)).isEqualTo("PUBLISHED");
 
         // D37: a Project that is no longer Active is not managed, as for every review decision.
-        db.update("update project set status = 'INACTIVE' where public_id = ?", project);
+        db.update("update project set status = 'REMOVED' where public_id = ?", project);
         call("unpublish", body(List.of(mine)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("MSG08"));
