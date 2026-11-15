@@ -26,3 +26,14 @@ none
 
 ### Next up
 Task 28
+
+## Session 2026-11-15 (after review attempt 1)
+
+### Working on: ticket-publication — informational review findings
+- `TicketPublicationIT` (D37 case): Project status `REMOVED` instead of `INACTIVE`, which is not a `ProjectStatus` value.
+- Changeset 037 rollback: deletes `UNPUBLISH` / `REPUBLISH` rows before restoring the four-value check. Replayed changeset + rollback on a throwaway pgvector:pg16 container: ok.
+- Verify: `TicketPublicationTest` 15/15, `TicketPublicationIT` + `ReviewStorageIT` 10/10, Spotless check: BUILD SUCCESS.
+- Commit: default@92b1e9d
+
+### Next up
+the design vs frontend guideline 01 question (Task 28) is open for the user / FE Lead
