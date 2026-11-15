@@ -89,7 +89,7 @@ class TicketListRepositoryIT {
     @BeforeEach
     void seed() {
         ticketSequence = 0;
-        jdbc.execute("TRUNCATE ticket_import_decision, ticket, project, department CASCADE");
+        jdbc.execute("TRUNCATE ticket_decision, ticket, project, department CASCADE");
         department = department("IT", "ACTIVE", departmentPublicId);
         long other = department("HR", "ACTIVE", otherPublicId);
         long deleted = department("OLD", "DELETED", UUID.randomUUID());
@@ -204,17 +204,10 @@ class TicketListRepositoryIT {
     }
 
     private void ticket(UUID projectId, String key, String status, String writer, String title) {
-        jdbc.update(
-                """
+        jdbc.update("""
                 INSERT INTO ticket(ticket_id, source_ticket_id, project_id, source, status, title, writer,
                     symptoms, root_cause, resolution_steps, scope, updated_at)
                 VALUES (?,?,?,'CSV',?,?,?,'Symptoms','Root cause','Resolution','Scope', '2026-11-01T00:00:00Z')
-                """,
-                new UUID(0, ++ticketSequence),
-                key,
-                projectId,
-                status,
-                title,
-                writer);
+                """, new UUID(0, ++ticketSequence), key, projectId, status, title, writer);
     }
 }

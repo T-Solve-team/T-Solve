@@ -172,7 +172,7 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
 
     @Query("""
             select new vn.tsolve.ticket.dto.TicketReviewView$Feedback(d.reviewerId, d.feedback)
-            from Ticket t, ReviewDecisionRecord d
+            from Ticket t, TicketDecision d
             where t.id = d.ticketId and t.projectId = :projectId and t.writerId = :writerId
                 and t.ticketId = :issueKey and t.source = SOLUTION_FORM and t.status = CHANGES_REQUESTED
                 and d.decision = 'CHANGES_REQUESTED'
@@ -187,7 +187,7 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
     /** The Reject decisions of the writer's Rejected Solution Form ticket of this issue, latest first (AC-009.13). */
     @Query("""
             select new vn.tsolve.ticket.dto.TicketReviewView$Feedback(d.reviewerId, d.feedback)
-            from Ticket t, ReviewDecisionRecord d
+            from Ticket t, TicketDecision d
             where t.id = d.ticketId and t.projectId = :projectId and t.writerId = :writerId
                 and t.ticketId = :issueKey and t.source = SOLUTION_FORM and t.status = REJECTED
                 and d.decision = 'REJECTED'

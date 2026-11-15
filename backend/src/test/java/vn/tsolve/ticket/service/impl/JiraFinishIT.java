@@ -91,7 +91,7 @@ class JiraFinishIT {
 
     @BeforeEach
     void cleanDatabase() {
-        jdbc.execute("delete from ticket_import_decision");
+        jdbc.execute("delete from ticket_decision");
         jdbc.execute("delete from ticket");
         jdbc.execute("delete from import_batch");
         jdbc.execute("delete from import_preview");

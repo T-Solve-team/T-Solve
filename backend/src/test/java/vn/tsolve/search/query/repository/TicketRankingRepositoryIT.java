@@ -86,7 +86,7 @@ class TicketRankingRepositoryIT {
 
     @BeforeEach
     void seed() {
-        jdbc.execute("TRUNCATE ticket_import_decision, ticket, project, department CASCADE");
+        jdbc.execute("TRUNCATE ticket_decision, ticket, project, department CASCADE");
         ticketSequence = 0;
         department = department("IT", "ACTIVE", departmentPublicId);
         project = project(department, "ITSUP");

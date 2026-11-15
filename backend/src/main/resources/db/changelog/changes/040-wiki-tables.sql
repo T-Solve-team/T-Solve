@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset wiki:037-wiki-tables
+--changeset wiki:040-wiki-tables
 CREATE TABLE space_permission (
     space_permission_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     space_id BIGINT NOT NULL REFERENCES space (space_id),
