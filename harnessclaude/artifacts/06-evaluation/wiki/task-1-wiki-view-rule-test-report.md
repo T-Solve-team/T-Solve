@@ -16,7 +16,7 @@ The dispatcher told the reviewer not to run `mvn`, because the orchestrator runs
 | `vn.tsolve.wiki.service.impl.WikiPortsTest` | 7 run, 0 failed | surefire-reports, 21:59 (attempt 1) |
 | `vn.tsolve.triage.service.impl.SuggestionGeneratorTest` | 11 run, 0 failed | surefire-reports, 21:59 (attempt 1) |
 | `vn.tsolve.triage.service.impl.SuggestionResultServiceImplTest` | 14 run, 0 failed | surefire-reports, 21:59 (attempt 1) |
-| `vn.tsolve.wiki.WikiAccessIT` (now with the BUG_214 case) | pending: the orchestrator's Docker run | — |
+| `vn.tsolve.wiki.WikiAccessIT` (now with the BUG_249 case) | pending: the orchestrator's Docker run | — |
 | `mvn spotless:check` | pending: part of the same `mvn verify` | — |
 
 Traceability (`bun harnessclaude/hooks/sdd.ts trace wiki STORY-001`): 11/11 acceptance criteria have a test.

@@ -43,7 +43,7 @@ function mockTrash() {
 }
 
 describe('TrashTable in Space Settings', () => {
-  it('AC-005.14 mocks conceal trashed documents and reject trash actions by viewers (BUG-237)', async () => {
+  it('AC-005.14 mocks conceal trashed documents and reject trash actions by viewers (BUG-283)', async () => {
     const view = renderApp(trashPath, { role: 'KNOWLEDGE_MANAGER' });
     await screen.findByText(msg('MSG04'), {}, { timeout: 5000 });
     await waitFor(() => expect(view.queryClient.isFetching()).toBe(0));
@@ -178,7 +178,7 @@ describe('TrashTable in Space Settings', () => {
   });
 
   it.each([false, true])(
-    'AC-005.15 restores and refreshes trash, showing MSG84 as information only when renamed=%s (BUG-236)',
+    'AC-005.15 restores and refreshes trash, showing MSG84 as information only when renamed=%s (BUG-282)',
     async (renamed) => {
       const mock = mockTrash();
       const restore = vi.fn();
@@ -251,7 +251,7 @@ describe('TrashTable in Space Settings', () => {
     await waitFor(() => expect(view.queryClient.isFetching()).toBe(0));
   });
 
-  it('AC-005.16 asks MSG103, cancels without a request, then deletes once and refreshes with MSG05 (BUG-235)', async () => {
+  it('AC-005.16 asks MSG103, cancels without a request, then deletes once and refreshes with MSG05 (BUG-281)', async () => {
     const mock = mockTrash();
     const remove = vi.fn();
     let release = () => {};

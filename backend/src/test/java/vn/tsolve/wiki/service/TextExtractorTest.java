@@ -28,7 +28,7 @@ class TextExtractorTest {
     }
 
     @Test
-    void scannedFixtureContainsAnImageAndNoText_AC_004_2_BUG_231() throws IOException {
+    void scannedFixtureContainsAnImageAndNoText_AC_004_2_BUG_274() throws IOException {
         try (var document = Loader.loadPDF(fixture("image-only.pdf"))) {
             assertThat(document.getPage(0).getResources().getXObjectNames()).isNotEmpty();
         }

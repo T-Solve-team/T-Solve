@@ -96,7 +96,7 @@ class WikiUploadControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.KNOWLEDGE_MANAGER)
-    void acceptsJsonMetadataSentAsAFormStringByGeneratedClient_AC_004_6_BUG_229() throws Exception {
+    void acceptsJsonMetadataSentAsAFormStringByGeneratedClient_AC_004_6_BUG_272() throws Exception {
         String metadata = "{\"documents\":[{\"title\":\"Guide\",\"visibility\":\"DEPARTMENT\"}]}";
         when(uploads.publish(any(), any(), any(), any()))
                 .thenReturn(List.of(new WikiDocumentRef(UUID.randomUUID(), "Guide")));
@@ -113,7 +113,7 @@ class WikiUploadControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.KNOWLEDGE_MANAGER)
-    void mapsMissingPartsAndOversizeWithContractCodes_AC_004_3_AC_004_5_AC_004_10_BUG_226() throws Exception {
+    void mapsMissingPartsAndOversizeWithContractCodes_AC_004_3_AC_004_5_AC_004_10_BUG_269() throws Exception {
         when(uploads.extract(any(), any(), any()))
                 .thenThrow(new FieldMessageCodeException(
                         HttpStatus.BAD_REQUEST, "MSG01", Map.of("field_name", "files"), "files"));

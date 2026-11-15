@@ -84,7 +84,7 @@ class WikiDocumentControllerTest {
 
     @Test
     @WithTSolveUser
-    void mapsMissingAndOverlengthQueryFieldErrors_AC_002_9_BUG_218() throws Exception {
+    void mapsMissingAndOverlengthQueryFieldErrors_AC_002_9_BUG_253() throws Exception {
         doThrow(new FieldMessageCodeException(HttpStatus.BAD_REQUEST, "MSG01", Map.of("field_name", "q"), "q"))
                 .when(search)
                 .search(any(), eq(null));

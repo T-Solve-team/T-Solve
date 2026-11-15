@@ -124,7 +124,7 @@ class WikiFolderServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
-    void mapsOnlySiblingNameConstraintToFieldConflict_AC_003_4_AC_003_12_BUG_222(boolean update) {
+    void mapsOnlySiblingNameConstraintToFieldConflict_AC_003_4_AC_003_12_BUG_261(boolean update) {
         var duplicate = new DataIntegrityViolationException(
                 "duplicate", new ConstraintViolationException("duplicate", null, "uq_folder_parent_name"));
         doThrow(duplicate).when(folders).saveAndFlush(any());
@@ -140,7 +140,7 @@ class WikiFolderServiceImplTest {
     }
 
     @Test
-    void doesNotMislabelUnrelatedDatabaseFailure_AC_003_4_BUG_222() {
+    void doesNotMislabelUnrelatedDatabaseFailure_AC_003_4_BUG_261() {
         var failure = new DataIntegrityViolationException("other constraint");
         doThrow(failure).when(folders).saveAndFlush(any());
         assertThatThrownBy(() -> service.create(user, space, new CreateWikiFolderRequest("Guides", null)))
@@ -251,7 +251,7 @@ class WikiFolderServiceImplTest {
     }
 
     @Test
-    void rejectsNonmanagerBeforeTakingSpaceLock_AC_003_10_BUG_242() {
+    void rejectsNonmanagerBeforeTakingSpaceLock_AC_003_10_BUG_265() {
         when(access.managesSpace(user, 42)).thenReturn(false);
         assertThatThrownBy(() -> service.create(user, space, new CreateWikiFolderRequest("Guides", null)))
                 .isInstanceOf(AccessDeniedException.class);
@@ -264,7 +264,7 @@ class WikiFolderServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"wiki_document_folder_id_fkey", "folder_parent_id_fkey"})
-    void recountsAfterDeleteReferenceConflict_AC_003_9_AC_003_12_BUG_243(String constraint) {
+    void recountsAfterDeleteReferenceConflict_AC_003_9_AC_003_12_BUG_266(String constraint) {
         when(folders.countByParentId(id)).thenReturn(0L, 2L);
         when(documents.countByFolderId(id)).thenReturn(0L, 3L);
         doThrow(new DataIntegrityViolationException(
@@ -288,7 +288,7 @@ class WikiFolderServiceImplTest {
     }
 
     @Test
-    void preservesUnrelatedDeleteIntegrityFailure_BUG_243() {
+    void preservesUnrelatedDeleteIntegrityFailure_BUG_266() {
         var failure = new DataIntegrityViolationException(
                 "other", new ConstraintViolationException("other", null, "unrelated_fkey"));
         doThrow(failure).when(folders).flush();

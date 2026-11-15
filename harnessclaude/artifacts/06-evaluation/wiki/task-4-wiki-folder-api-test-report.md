@@ -13,7 +13,7 @@ The dispatcher told the reviewer not to run `mvn`, `npm` or any test, because me
 
 | Suite | Result | Source |
 |-------|--------|--------|
-| `WikiFolderServiceImplTest` | not run by the reviewer | The BUG-222 row says all 79 wiki unit and controller tests pass |
+| `WikiFolderServiceImplTest` | not run by the reviewer | The BUG-261 row says all 79 wiki unit and controller tests pass |
 | `WikiFolderControllerTest` | not run by the reviewer | same |
 | `WikiFolderIT` (Testcontainers) | pending: the orchestrator's Docker run | — |
 | `audit-filters.test.ts` | not run by the reviewer | The commit message says the frontend checks pass |

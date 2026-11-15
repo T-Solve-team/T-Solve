@@ -128,7 +128,7 @@ class ReviewStorageIT {
     }
 
     @Test
-    void upgradesADatabaseAlreadyRunningReviewWithoutReapplyingStorage_BUG_140_BUG_246(@TempDir Path temporary)
+    void upgradesADatabaseAlreadyRunningReviewWithoutReapplyingStorage_BUG_140_BUG_260(@TempDir Path temporary)
             throws Exception {
         String master;
         try (var input = getClass().getClassLoader().getResourceAsStream("db/changelog/db.changelog-master.xml")) {
