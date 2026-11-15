@@ -82,6 +82,16 @@ class WikiPermissionIT extends WikiReadTestSupport {
     }
 
     @Test
+    void omitsADemotedOrDeactivatedManagerFromTheHeader_AC_006_1_BUG_294() {
+        var repository = context.getBean(WikiPermissionRepository.class);
+        jdbc.update("DELETE FROM user_role WHERE user_id = ? AND role = 'KNOWLEDGE_MANAGER'", user);
+        assertThat(repository.getSettings(space).knowledgeManager()).isNull();
+        jdbc.update("INSERT INTO user_role(user_id, role, assigned_at) VALUES (?, 'KNOWLEDGE_MANAGER', now())", user);
+        jdbc.update("UPDATE app_user SET status = 'DEACTIVATED' WHERE id = ?", user);
+        assertThat(repository.getSettings(space).knowledgeManager()).isNull();
+    }
+
+    @Test
     void returnsSortedPermissionsWithLockedOwnDepartmentAndInactiveUsers_AC_006_1() {
         long alpha = department("Alpha");
         UUID zed = account("Zed", null);

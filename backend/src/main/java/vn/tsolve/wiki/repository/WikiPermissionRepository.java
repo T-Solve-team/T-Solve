@@ -38,7 +38,8 @@ public class WikiPermissionRepository {
                        km.full_name AS knowledge_manager
                 FROM space s JOIN department d ON d.department_id = s.department_id
                 LEFT JOIN space_manager sm ON sm.space_id = s.space_id
-                LEFT JOIN app_user km ON km.id = sm.user_id
+                LEFT JOIN app_user km ON km.id = sm.user_id AND km.status = 'ACTIVE'
+                    AND EXISTS (SELECT 1 FROM user_role r WHERE r.user_id = km.id AND r.role = 'KNOWLEDGE_MANAGER')
                 WHERE s.space_id = :spaceId
                 """,
                 Map.of("spaceId", spaceId),
