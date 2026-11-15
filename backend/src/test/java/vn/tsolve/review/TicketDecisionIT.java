@@ -83,7 +83,7 @@ class TicketDecisionIT {
     @BeforeEach
     void seedReviewer() {
         afterCommit.published.clear();
-        jdbc.update("delete from review_decision");
+        jdbc.update("delete from ticket_decision");
         jdbc.update("delete from evidence");
         jdbc.update("delete from ticket");
         jdbc.update("delete from app_user");
@@ -113,7 +113,7 @@ class TicketDecisionIT {
 
     @ParameterizedTest
     @EnumSource(Action.class)
-    void commitsDecisionsAndPreservesTicketContent_AC_009_4_AC_009_5_AC_009_6_AC_009_8(Action action) {
+    void commitsDecisionsAndPreservesTicketContent_AC_009_4_AC_009_5_AC_009_6_AC_009_8_AC_010_4(Action action) {
         UUID first = ticket("TEST-1", 10, "PENDING_REVIEW", reviewerId);
         UUID second = ticket("TEST-2", 10, "PENDING_REVIEW", null);
         jdbc.update(
@@ -137,11 +137,11 @@ class TicketDecisionIT {
                     .containsEntry("rejection_reason", action == Action.REJECTED ? feedback : null)
                     .containsEntry("change_request_comment", action == Action.CHANGES_REQUESTED ? feedback : null);
             assertThat(jdbc.queryForMap(
-                            "select project_manager_id, decision, reason_or_comment, decided_at from review_decision where ticket_id = ?",
+                            "select reviewer_id, decision, feedback, decided_at from ticket_decision where ticket_id = ?",
                             ticketId))
-                    .containsEntry("project_manager_id", reviewerId)
+                    .containsEntry("reviewer_id", reviewerId)
                     .containsEntry("decision", action.name())
-                    .containsEntry("reason_or_comment", feedback)
+                    .containsEntry("feedback", feedback)
                     .hasEntrySatisfying("decided_at", value -> assertThat(value).isNotNull());
         }
         assertThat(jdbc.queryForObject("select file_name from evidence where ticket_id = ?", String.class, first))
@@ -276,7 +276,7 @@ class TicketDecisionIT {
     }
 
     private int decisionCount() {
-        return jdbc.queryForObject("select count(*) from review_decision", Integer.class);
+        return jdbc.queryForObject("select count(*) from ticket_decision", Integer.class);
     }
 
     /** Receives TicketsPublishedEvent only after the decision commits, as the real listeners do (AC-005.4). */

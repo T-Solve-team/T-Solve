@@ -109,6 +109,19 @@ class DashboardOutcomesIT {
     }
 
     @Test
+    void countsAnImportedTicketOnceWithItsApproveDecisionInTheOneTable_AC_010_5() {
+        UUID reviewed = insertTicket(app, false, "SOLUTION_FORM", "PUBLISHED", OLD);
+        insertDecision(reviewed, "APPROVED", START);
+        UUID imported = insertTicket(app, false, "CSV", "PUBLISHED", START);
+        jdbc.update("""
+                insert into ticket_decision (ticket_id, reviewer, decision, decided_at)
+                values (?, 'pm-signin', 'APPROVED', ?)
+                """, imported, Timestamp.from(Instant.parse(START)));
+
+        assertThat(dashboard(Role.ADMIN, null, null).outcomes().approved()).isEqualTo(2);
+    }
+
+    @Test
     void restrictsDecisionsImportsAndCurrentStatusesToDepartmentAndProject_AC_004_8() {
         seedOutcomes();
         var department = dashboard(Role.ADMIN, alpha, null).outcomes();
@@ -302,7 +315,7 @@ class DashboardOutcomesIT {
 
     private void insertDecision(UUID ticket, String decision, String decidedAt) {
         jdbc.update("""
-                insert into review_decision (review_decision_id, ticket_id, project_manager_id, decision, decided_at)
+                insert into ticket_decision (ticket_decision_id, ticket_id, reviewer_id, decision, decided_at)
                 values (?, ?, ?, ?, ?)
                 """, UUID.randomUUID(), ticket, manager, decision, Timestamp.from(Instant.parse(decidedAt)));
     }

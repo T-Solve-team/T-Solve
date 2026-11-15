@@ -207,7 +207,7 @@ class ReviewDecisionApiIT {
         assertThat(ticketStatus(db, ticket)).isEqualTo("PENDING_REVIEW");
         inAcme("approve", body(publicId, "")).andExpect(status().isOk());
         assertThat(ticketStatus(db, ticket)).isEqualTo("PUBLISHED");
-        assertThat(db.queryForObject("select count(*) from review_decision where ticket_id = ?", Integer.class, ticket))
+        assertThat(db.queryForObject("select count(*) from ticket_decision where ticket_id = ?", Integer.class, ticket))
                 .isEqualTo(1);
     }
 
@@ -310,7 +310,7 @@ class ReviewDecisionApiIT {
         UUID ticket = pending(own, MANAGED_PROJECT);
         own.update("update ticket set source_ticket_id = 'OPS-301', writer_id = ? where ticket_id = ?", WRITER, ticket);
         own.update(
-                "insert into review_decision (ticket_id, project_manager_id, decision, reason_or_comment, decided_at) values (?, ?, 'CHANGES_REQUESTED', 'Explain the workaround', now() - interval '1 day')",
+                "insert into ticket_decision (ticket_id, reviewer_id, decision, feedback, decided_at) values (?, ?, 'CHANGES_REQUESTED', 'Explain the workaround', now() - interval '1 day')",
                 ticket,
                 OTHER_WRITER);
         inAcme("request-changes", body(ticket, ",\"comment\":\"Explain the workaround\""))
@@ -337,7 +337,7 @@ class ReviewDecisionApiIT {
                 WRITER,
                 betaTicket);
         beta.update(
-                "insert into review_decision (ticket_id, project_manager_id, decision, reason_or_comment) values (?, ?, 'CHANGES_REQUESTED', 'Beta only')",
+                "insert into ticket_decision (ticket_id, reviewer_id, decision, feedback) values (?, ?, 'CHANGES_REQUESTED', 'Beta only')",
                 betaTicket,
                 OTHER_WRITER);
         jiraFeedback("beta-jira", "jira-writer", "OPS-301")
@@ -346,7 +346,7 @@ class ReviewDecisionApiIT {
                 .andExpect(jsonPath("$.feedback.params.comment").value("Beta only"));
         assertThat(ticketStatus(own, ticket)).isEqualTo("CHANGES_REQUESTED");
         assertThat(own.queryForObject(
-                        "select count(*) from review_decision where ticket_id = ?", Integer.class, ticket))
+                        "select count(*) from ticket_decision where ticket_id = ?", Integer.class, ticket))
                 .isEqualTo(2);
         for (String state : List.of("PENDING_REVIEW", "PUBLISHED", "REJECTED", "EXPIRED")) {
             own.update("update ticket set status = ? where ticket_id = ?", state, ticket);
@@ -448,10 +448,9 @@ class ReviewDecisionApiIT {
                 .andExpect(jsonPath("$.count").value(1));
 
         assertThat(ticketStatus(tenant, id)).isEqualTo(expectedStatus);
-        assertThat(tenant.queryForMap(
-                        "select decision, project_manager_id from review_decision where ticket_id = ?", id))
+        assertThat(tenant.queryForMap("select decision, reviewer_id from ticket_decision where ticket_id = ?", id))
                 .containsEntry("decision", expectedDecision)
-                .containsEntry("project_manager_id", MANAGER);
+                .containsEntry("reviewer_id", MANAGER);
     }
 
     @Test
