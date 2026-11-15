@@ -1466,3 +1466,6 @@
 {"ts":"2026-11-14T21:16:19.338Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-api","from":"pending","to":"in-progress"}
 {"ts":"2026-11-15T01:50:45.400Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"93423f09078cfeebcbe89b6f0382608bcba5acee"}
 {"ts":"2026-11-15T01:50:45.757Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-api","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-15T01:50:56.276Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-ui","from":"pending","to":"in-progress"}
+{"ts":"2026-11-15T02:07:08.974Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"a20ae6c20439042cd1cef818b4a1337d6f7afd9e"}
+{"ts":"2026-11-15T02:07:09.253Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-ui","from":"in-progress","to":"evaluating"}
