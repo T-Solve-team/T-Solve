@@ -89,7 +89,12 @@ class TicketListRepositoryIT {
     @BeforeEach
     void seed() {
         ticketSequence = 0;
-        jdbc.execute("TRUNCATE ticket_import_decision, ticket, project, department CASCADE");
+        jdbc.execute("TRUNCATE ticket_import_decision, ticket, project, department, app_user CASCADE");
+        jdbc.update(
+                "INSERT INTO app_user(id,email,full_name,status,created_at) VALUES (?,?,?,'ACTIVE',now())",
+                USER.id(),
+                USER.email(),
+                USER.fullName());
         department = department("IT", "ACTIVE", departmentPublicId);
         long other = department("HR", "ACTIVE", otherPublicId);
         long deleted = department("OLD", "DELETED", UUID.randomUUID());
@@ -107,7 +112,7 @@ class TicketListRepositoryIT {
         ticket(project(deleted, "OLD"), "OLD-1", "REJECTED", "writer", "Deleted Department");
         ticket(UUID.randomUUID(), "ORPHAN-1", "PUBLISHED", "writer", "No Project");
         when(scope.of(any()))
-                .thenReturn(new VisibleScope.Scope(Set.of(department), Set.of(managedProject), Optional.of("writer")));
+                .thenReturn(new VisibleScope.Scope(Set.of(department), Set.of(managedProject), Optional.of(USER.id())));
     }
 
     @Test
@@ -206,15 +211,16 @@ class TicketListRepositoryIT {
     private void ticket(UUID projectId, String key, String status, String writer, String title) {
         jdbc.update(
                 """
-                INSERT INTO ticket(ticket_id, source_ticket_id, project_id, source, status, title, writer,
+                INSERT INTO ticket(ticket_id, source_ticket_id, project_id, source, status, title, writer, writer_id,
                     symptoms, root_cause, resolution_steps, scope, updated_at)
-                VALUES (?,?,?,'CSV',?,?,?,'Symptoms','Root cause','Resolution','Scope', '2026-11-01T00:00:00Z')
+                VALUES (?,?,?,'CSV',?,?,?,?,'Symptoms','Root cause','Resolution','Scope', '2026-11-01T00:00:00Z')
                 """,
                 new UUID(0, ++ticketSequence),
                 key,
                 projectId,
                 status,
                 title,
-                writer);
+                writer,
+                "writer".equals(writer) ? USER.id() : null);
     }
 }

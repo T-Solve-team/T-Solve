@@ -41,7 +41,7 @@ class TicketListServiceImplTest {
 
     @BeforeEach
     void scope() {
-        when(visibleScope.of(user)).thenReturn(new VisibleScope.Scope(Set.of(1L), Set.of(7L), Optional.of("writer")));
+        when(visibleScope.of(user)).thenReturn(new VisibleScope.Scope(Set.of(1L), Set.of(7L), Optional.of(user.id())));
     }
 
     @Test

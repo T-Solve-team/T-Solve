@@ -7,6 +7,8 @@ import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -89,8 +91,8 @@ class MembershipVisibleScopeIT {
     @Test
     void userWithoutDepartmentMembershipOrTicketsSeesNothing_AC_006_13() {
         var user = user("No Department", null);
-        assertThat(tenants.runIn(TwoTenantDatabases.ACME, () -> scope.of(user).isEmpty()))
-                .isTrue();
+        assertThat(tenants.runIn(TwoTenantDatabases.ACME, () -> scope.of(user).departmentIds()))
+                .isEmpty();
         assertThat(visible(user)).isEmpty();
     }
 
@@ -117,10 +119,37 @@ class MembershipVisibleScopeIT {
     @Test
     void writerSeesOwnPendingTicketAcrossDepartments_AC_006_2() {
         var user = user("Solution Writer", null);
-        ticket(hrProject, "OWN-1", "PENDING_REVIEW", user.fullName(), user.id());
-        assertThat(tenants.runIn(TwoTenantDatabases.ACME, () -> scope.of(user).writer()))
-                .contains(user.fullName());
+        ticket(hrProject, "OWN-1", "PENDING_REVIEW", "Imported author text", user.id());
+        assertThat(tenants.runIn(TwoTenantDatabases.ACME, () -> scope.of(user).writerId()))
+                .contains(user.id());
         assertThat(visible(user)).containsExactly("OWN-1");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"REMOVED", "INACTIVE"})
+    void managedRemovedProjectIsNotManaged_AC_006_2(String status) {
+        var user = user("Manager", null);
+        jdbc.update(
+                "INSERT INTO project_membership(user_id,project_id,role_in_project) VALUES (?,?,'PROJECT_MANAGER')",
+                user.id(),
+                hrProject);
+        jdbc.update("UPDATE project SET status = ? WHERE public_id = ?", status, hrProject);
+
+        assertThat(tenants.runIn(TwoTenantDatabases.ACME, () -> scope.of(user).managedProjectIds()))
+                .isEmpty();
+        assertThat(visible(user)).isEmpty();
+    }
+
+    @Test
+    void sameNameUsersDoNotShareTickets_AC_006_2() {
+        var first = user("Same Name", null);
+        var second = user("Same Name", null);
+        ticket(hrProject, "FIRST-1", "PENDING_REVIEW", first.fullName(), first.id());
+        ticket(hrProject, "SECOND-1", "PENDING_REVIEW", second.fullName(), second.id());
+        ticket(hrProject, "IMPORTED-1", "PENDING_REVIEW", first.fullName(), null);
+
+        assertThat(visible(first)).containsExactly("FIRST-1");
+        assertThat(visible(second)).containsExactly("SECOND-1");
     }
 
     @Test
@@ -136,8 +165,10 @@ class MembershipVisibleScopeIT {
     @Test
     void readsMembershipOnlyFromBoundWorkspace_AC_006_2_AC_006_13() {
         var user = user("Tenant A Resolver", itDepartment);
-        assertThat(tenants.runIn(TwoTenantDatabases.BETA, () -> scope.of(user).isEmpty()))
-                .isTrue();
+        var result = tenants.runIn(TwoTenantDatabases.BETA, () -> scope.of(user));
+        assertThat(result.departmentIds()).isEmpty();
+        assertThat(result.managedProjectIds()).isEmpty();
+        assertThat(result.writerId()).contains(user.id());
     }
 
     private List<String> visible(TSolveUser user) {

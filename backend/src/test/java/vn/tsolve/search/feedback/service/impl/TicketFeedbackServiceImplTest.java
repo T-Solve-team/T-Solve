@@ -67,8 +67,8 @@ class TicketFeedbackServiceImplTest {
                 switch (scenario) {
                     case "empty" -> VisibleScope.Scope.empty();
                     case "managedOnly" -> new VisibleScope.Scope(Set.of(), Set.of(7L), Optional.empty());
-                    case "writerOnly" -> new VisibleScope.Scope(Set.of(), Set.of(), Optional.of("resolver"));
-                    default -> new VisibleScope.Scope(Set.of(1L), Set.of(7L), Optional.of("resolver"));
+                    case "writerOnly" -> new VisibleScope.Scope(Set.of(), Set.of(), Optional.of(user.id()));
+                    default -> new VisibleScope.Scope(Set.of(1L), Set.of(7L), Optional.of(user.id()));
                 };
         when(visibleScope.of(user)).thenReturn(scope);
         if (!"empty".equals(scenario)) {

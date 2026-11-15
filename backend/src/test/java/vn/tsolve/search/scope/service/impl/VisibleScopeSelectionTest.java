@@ -54,7 +54,7 @@ class VisibleScopeSelectionTest {
             var scope = context.getBean(VisibleScope.class).of(null);
             assertThat(scope.departmentIds()).containsExactly(1L);
             assertThat(scope.managedProjectIds()).containsExactlyInAnyOrder(7L, 9L);
-            assertThat(scope.writer()).isEmpty();
+            assertThat(scope.writerId()).isEmpty();
         });
     }
 }

@@ -40,7 +40,7 @@ class TicketSuggestionServiceImplTest {
     private final TicketSuggestionServiceImpl service = new TicketSuggestionServiceImpl(visibleScope, ranking, logs);
     private final TSolveUser user =
             new TSolveUser(UUID.randomUUID(), "writer@example.test", "Writer", Set.of(Role.TICKET_RESOLVER));
-    private final VisibleScope.Scope scope = new VisibleScope.Scope(Set.of(7L), Set.of(9L), Optional.of("Writer"));
+    private final VisibleScope.Scope scope = new VisibleScope.Scope(Set.of(7L), Set.of(9L), Optional.of(user.id()));
     private final PageRequest pageRequest = PageRequest.of(0, 5);
     private final RankFilter noFilter = new RankFilter(null, null, null, null);
 

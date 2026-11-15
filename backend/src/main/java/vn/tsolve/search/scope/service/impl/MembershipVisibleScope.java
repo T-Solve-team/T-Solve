@@ -1,5 +1,6 @@
 package vn.tsolve.search.scope.service.impl;
 
+import java.util.Optional;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,8 +21,6 @@ public class MembershipVisibleScope implements VisibleScope {
     @Transactional(readOnly = true)
     public Scope of(TSolveUser user) {
         return new Scope(
-                repository.activeDepartments(user.id()),
-                repository.managedProjects(user.id()),
-                repository.writer(user.fullName()));
+                repository.activeDepartments(user.id()), repository.managedProjects(user.id()), Optional.of(user.id()));
     }
 }

@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -54,7 +55,7 @@ class TicketRankingServiceImplTest {
         var result = service.rank("query", "query", filter, Scope.empty(), paging);
         assertThat(result.page()).isEmpty();
         assertThat(result.isFallback()).isFalse();
-        service.rank("query", "query", filter, new Scope(Set.of(), Set.of(1L), Optional.of("writer")), paging);
+        service.rank("query", "query", filter, new Scope(Set.of(), Set.of(1L), Optional.of(UUID.randomUUID())), paging);
         verifyNoInteractions(embeddings, repository, mapper);
     }
 
