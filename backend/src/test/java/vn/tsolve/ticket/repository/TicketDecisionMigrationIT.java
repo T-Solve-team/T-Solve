@@ -15,11 +15,17 @@ import liquibase.database.jvm.JdbcConnection;
 import liquibase.resource.ClassLoaderResourceAccessor;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
+import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.util.ClassUtils;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import vn.tsolve.identity.TwoTenantDatabases;
 
-/** KAN-137: changeset 038 on a database that already holds review and import decisions. */
+/** KAN-137: changesets 038 and 039 on a database that already holds review and import decisions. */
 class TicketDecisionMigrationIT {
 
     private static final String CHANGELOG = "db/changelog/db.changelog-master.xml";
@@ -130,5 +136,27 @@ class TicketDecisionMigrationIT {
                     value);
         }
         jdbc.update("delete from ticket_decision where reviewer = 'pm'");
+    }
+
+    @Test
+    void hasNoLegacySolutionTableAndNoSolutionsEndpoint_AC_010_7() throws Exception {
+        assertThat(tables(
+                        "solution", "solution_source", "solution_approval", "resolved_ticket_snapshot", "reuse_record"))
+                .isZero();
+        var scanner = new ClassPathScanningCandidateComponentProvider(false);
+        scanner.addIncludeFilter(new AnnotationTypeFilter(RestController.class));
+        for (var candidate : scanner.findCandidateComponents("vn.tsolve")) {
+            Class<?> controller = ClassUtils.forName(candidate.getBeanClassName(), null);
+            var mapping = AnnotatedElementUtils.findMergedAnnotation(controller, RequestMapping.class);
+            if (mapping != null) {
+                assertThat(mapping.path()).noneMatch(path -> path.startsWith("/api/solutions"));
+            }
+            for (var method : controller.getDeclaredMethods()) {
+                var methodMapping = AnnotatedElementUtils.findMergedAnnotation(method, RequestMapping.class);
+                if (methodMapping != null) {
+                    assertThat(methodMapping.path()).noneMatch(path -> path.startsWith("/api/solutions"));
+                }
+            }
+        }
     }
 }
