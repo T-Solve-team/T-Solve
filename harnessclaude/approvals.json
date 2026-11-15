@@ -711,8 +711,8 @@
     }
   },
   "search": {
-    "specHash": "ea3611c6542726949a5423ff15d884002a9fe5bd58aecd2cdd74a5a54c409100",
-    "approvedAt": "2026-11-15T03:32:50.954Z",
+    "specHash": "3f2e96d2455d3b9ffc1d97763b318211cfd97cdc01ebcad65f7e8988044d55b6",
+    "approvedAt": "2026-11-15T04:24:54.618Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Ticket Resolver or Project Manager opens , THE web app SHALL show 6.2 Ticket List",
@@ -769,8 +769,8 @@
       "AC-005.8": "IF an id of the event names no ticket, or a ticket that is no longer , THEN THE backend SHALL",
       "AC-005.9": "IF the embedding of a ticket id fails 3 times in a row, THEN THE catch-up job SHALL skip that id until the",
       "AC-006.1": "WHEN a user holding TICKET_RESOLVER or PROJECT_MANAGER calls , THE backend SHALL",
-      "AC-006.2": "THE backend SHALL take the user's Departments, managed Projects and writer only from the port",
-      "AC-006.13": "IF the user has no Department, manages no Project and has no writer value, THEN",
+      "AC-006.2": "THE backend SHALL take the user's Departments, managed Projects and writer id only from the port",
+      "AC-006.13": "IF the user has no Department and manages no Project, THEN  SHALL answer no",
       "AC-006.3": "WHEN no page, size or sort is given, THE backend SHALL return page 0 of 20 rows sorted by",
       "AC-006.4": "WHEN , ,  or  is given, THE backend SHALL combine them with AND",
       "AC-006.5": "THE backend SHALL return each row's ,  and  as",

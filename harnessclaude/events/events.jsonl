@@ -1725,4 +1725,4 @@
 {"ts":"2026-11-14T22:35:22.792Z","type":"spec-approved","module":"tracker","specHash":"759e03700d56dd4b265645102759f62c4481efebcb09002021309582464e13d8"}
 {"ts":"2026-11-14T22:34:54.110Z","type":"spec-approved","module":"workspace","specHash":"1deeffb98454aa06eb6588d0dd6bfb8e50d069df60973cf47ba85cbfa192e2ad"}
 {"ts":"2026-11-15T03:32:50.961Z","type":"spec-approved","module":"search","specHash":"ea3611c6542726949a5423ff15d884002a9fe5bd58aecd2cdd74a5a54c409100"}
-{"ts":"2026-11-15T03:33:16.235Z","type":"quick-opened","what":"BUG-244: review email link built from the site origin (KAN-341)","files":["backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java","backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuerTest.java","docs/bug-log.md"]}
+{"ts":"2026-11-15T04:24:54.627Z","type":"spec-approved","module":"search","specHash":"3f2e96d2455d3b9ffc1d97763b318211cfd97cdc01ebcad65f7e8988044d55b6"}
