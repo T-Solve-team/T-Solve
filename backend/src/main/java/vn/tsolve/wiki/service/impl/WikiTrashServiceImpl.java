@@ -7,7 +7,9 @@ import java.util.UUID;
 import org.hibernate.exception.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.lang.Nullable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,7 +36,7 @@ public class WikiTrashServiceImpl implements WikiTrashService {
     private final WikiDocumentRepository documents;
     private final AccessRepository access;
     private final WikiSearchRepository search;
-    private final FileStorage storage;
+    private final ObjectProvider<FileStorage> storage;
     private final AuditService audit;
     private final TenantJobService jobs;
 
@@ -42,9 +44,9 @@ public class WikiTrashServiceImpl implements WikiTrashService {
             WikiDocumentRepository documents,
             AccessRepository access,
             WikiSearchRepository search,
-            FileStorage storage,
+            ObjectProvider<FileStorage> storage,
             AuditService audit,
-            TenantJobService jobs) {
+            @Nullable TenantJobService jobs) {
         this.documents = documents;
         this.access = access;
         this.search = search;
@@ -98,7 +100,12 @@ public class WikiTrashServiceImpl implements WikiTrashService {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    jobs.enqueue("wiki-index", documentId);
+                    if (jobs == null) {
+                        log.warn(
+                                "Worker is disabled; restored Wiki document {} stays waiting for indexing", documentId);
+                    } else {
+                        jobs.enqueue("wiki-index", documentId);
+                    }
                 }
             });
         }
@@ -116,7 +123,9 @@ public class WikiTrashServiceImpl implements WikiTrashService {
             @Override
             public void afterCommit() {
                 try {
-                    storage.delete(key);
+                    FileStorage files = storage.getIfAvailable();
+                    if (files == null) throw new IllegalStateException("Object storage is not configured");
+                    files.delete(key);
                 } catch (RuntimeException failure) {
                     log.warn("Could not remove permanently deleted Wiki file key={}", key);
                 }

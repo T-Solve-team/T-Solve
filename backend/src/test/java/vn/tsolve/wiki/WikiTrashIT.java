@@ -489,7 +489,7 @@ class WikiTrashIT extends WikiReadTestSupport {
         WikiTrashService trashService(
                 @Qualifier("trashDocuments") WikiDocumentRepository documents,
                 AccessRepository access,
-                FileStorage storage,
+                ObjectProvider<FileStorage> storage,
                 AuditService audit,
                 TenantJobService jobs) {
             return new WikiTrashServiceImpl(
@@ -507,7 +507,7 @@ class WikiTrashIT extends WikiReadTestSupport {
                 @Qualifier("wikiDocumentRepository") WikiDocumentRepository documents,
                 FolderRepository folders,
                 AccessRepository access,
-                FileStorage storage,
+                ObjectProvider<FileStorage> storage,
                 AuditService audit,
                 TenantJobService jobs,
                 PlatformTransactionManager transactions,

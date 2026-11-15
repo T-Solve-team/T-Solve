@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.lang.Nullable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -42,6 +43,7 @@ import vn.tsolve.wiki.dto.WikiDocumentRef;
 import vn.tsolve.wiki.dto.WikiPublishMetadata;
 import vn.tsolve.wiki.dto.WikiUploadPreview;
 import vn.tsolve.wiki.entity.WikiDocument;
+import vn.tsolve.wiki.exception.WikiStorageUnavailableException;
 import vn.tsolve.wiki.mapper.WikiDocumentMapper;
 import vn.tsolve.wiki.repository.AccessRepository;
 import vn.tsolve.wiki.repository.FolderRepository;
@@ -60,7 +62,7 @@ public class WikiUploadServiceImpl implements WikiUploadService {
     private final AccessRepository access;
     private final WikiSearchRepository spaces;
     private final TextExtractor extractor;
-    private final FileStorage storage;
+    private final ObjectProvider<FileStorage> storage;
     private final AuditService audit;
     private final TenantJobService jobs;
     private final TransactionTemplate transaction;
@@ -74,9 +76,9 @@ public class WikiUploadServiceImpl implements WikiUploadService {
             AccessRepository access,
             WikiSearchRepository spaces,
             TextExtractor extractor,
-            FileStorage storage,
+            ObjectProvider<FileStorage> storage,
             AuditService audit,
-            TenantJobService jobs,
+            @Nullable TenantJobService jobs,
             PlatformTransactionManager transactions,
             ObjectProvider<TenantContext> tenantContext,
             WikiDocumentMapper mapper,
@@ -132,7 +134,7 @@ public class WikiUploadServiceImpl implements WikiUploadService {
         try {
             for (Upload upload : uploads) {
                 try (var input = new ByteArrayInputStream(upload.bytes())) {
-                    stored.add(storage.store(input).key());
+                    stored.add(storage().store(input).key());
                 }
             }
             return transaction.execute(status -> {
@@ -167,7 +169,7 @@ public class WikiUploadServiceImpl implements WikiUploadService {
                     public void afterCommit() {
                         // An enqueue failure cannot roll back committed rows or delete their original files.
                         committed.set(true);
-                        for (WikiDocumentRef document : result) jobs.enqueue("wiki-index", document.documentId());
+                        for (WikiDocumentRef document : result) enqueue(document.documentId());
                     }
                 });
                 return List.copyOf(result);
@@ -189,18 +191,19 @@ public class WikiUploadServiceImpl implements WikiUploadService {
         }
         WikiDocument document =
                 documents.findById(documentId).orElseThrow(() -> new NotFoundException("MSG110", Map.of()));
+        FileStorage files = storage();
         String key = document.getFileKey();
         TenantContext context = tenantContext.getIfAvailable();
         UUID workspace = context == null ? null : context.requireWorkspaceId();
         return new WikiDocumentFile(
                 document.getFileName(), document.getContentType(), document.getFileSize(), output -> {
-                    if (context == null) transfer(key, output);
+                    if (context == null) transfer(files, key, output);
                     else {
                         try {
                             // MVC writes on another thread; restore the request's Workspace before FileStorage.read.
                             context.runIn(workspace, () -> {
                                 try {
-                                    transfer(key, output);
+                                    transfer(files, key, output);
                                 } catch (IOException failure) {
                                     throw new UncheckedIOException(failure);
                                 }
@@ -212,10 +215,26 @@ public class WikiUploadServiceImpl implements WikiUploadService {
                 });
     }
 
-    private void transfer(String key, OutputStream output) throws IOException {
-        try (var input = storage.read(key)) {
+    private static void transfer(FileStorage files, String key, OutputStream output) throws IOException {
+        try (var input = files.read(key)) {
             input.transferTo(output);
         }
+    }
+
+    private void enqueue(UUID documentId) {
+        if (jobs == null) {
+            log.warn("Worker is disabled; Wiki document {} stays waiting for indexing", documentId);
+            return;
+        }
+        jobs.enqueue("wiki-index", documentId);
+    }
+
+    private FileStorage storage() {
+        FileStorage files = storage.getIfAvailable();
+        if (files == null) {
+            throw new WikiStorageUnavailableException();
+        }
+        return files;
     }
 
     private long requireManager(UUID userId, UUID spaceId) {
@@ -328,7 +347,7 @@ public class WikiUploadServiceImpl implements WikiUploadService {
     private void cleanup(List<String> keys) {
         for (String key : keys) {
             try {
-                storage.delete(key);
+                storage().delete(key);
             } catch (RuntimeException failure) {
                 log.warn("Could not remove failed Wiki upload key={}", key);
             }

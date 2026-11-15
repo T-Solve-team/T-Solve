@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -30,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mapstruct.factory.Mappers;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.access.AccessDeniedException;
@@ -43,6 +45,7 @@ import vn.tsolve.common.audit.AuditAction;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.CodedException;
 import vn.tsolve.common.tenant.TenantContext;
+import vn.tsolve.platform.service.FileStorage;
 import vn.tsolve.wiki.InMemoryFileStorage;
 import vn.tsolve.wiki.dto.WikiDocumentRef;
 import vn.tsolve.wiki.dto.WikiPublishMetadata;
@@ -73,7 +76,7 @@ class WikiUploadServiceImplTest {
             access,
             spaces,
             new TextExtractor(),
-            storage,
+            files(storage),
             audit,
             jobs,
             transactions,
@@ -163,7 +166,7 @@ class WikiUploadServiceImplTest {
                 access,
                 spaces,
                 parser,
-                storage,
+                files(storage),
                 audit,
                 jobs,
                 transactions,
@@ -388,6 +391,38 @@ class WikiUploadServiceImplTest {
         assertThat(storage.closedReads).isEqualTo(2);
         when(access.findAvailableDocuments(user, List.of(id))).thenReturn(Set.of());
         assertCode(() -> service.download(user, id), "MSG110", null);
+    }
+
+    @Test
+    void answersMsg06WithoutWritesWhenStorageIsNotConfigured_BUG_288() {
+        var unconfigured = new WikiUploadServiceImpl(
+                documents,
+                folders,
+                access,
+                spaces,
+                new TextExtractor(),
+                new StaticListableBeanFactory().getBeanProvider(FileStorage.class),
+                audit,
+                jobs,
+                transactions,
+                new StaticListableBeanFactory().getBeanProvider(TenantContext.class),
+                Mappers.getMapper(WikiDocumentMapper.class),
+                new ObjectMapper());
+
+        assertCode(
+                () -> unconfigured.publish(
+                        user,
+                        space,
+                        List.of(file("guide.pdf", "guide.pdf")),
+                        new ObjectMapper().writeValueAsString(metadata("Guide"))),
+                "MSG06",
+                null);
+        verify(documents, never()).saveAndFlush(any());
+        verifyNoInteractions(audit, jobs);
+    }
+
+    private static ObjectProvider<FileStorage> files(FileStorage storage) {
+        return new StaticListableBeanFactory(Map.of("storage", storage)).getBeanProvider(FileStorage.class);
     }
 
     private List<WikiDocumentRef> publish(

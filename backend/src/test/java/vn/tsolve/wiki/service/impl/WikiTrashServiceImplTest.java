@@ -29,6 +29,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -55,8 +56,13 @@ class WikiTrashServiceImplTest {
     private final FileStorage storage = mock(FileStorage.class);
     private final AuditService audit = mock(AuditService.class);
     private final TenantJobService jobs = mock(TenantJobService.class);
-    private final WikiTrashServiceImpl service =
-            new WikiTrashServiceImpl(documents, access, search, storage, audit, jobs);
+    private final WikiTrashServiceImpl service = new WikiTrashServiceImpl(
+            documents,
+            access,
+            search,
+            new StaticListableBeanFactory(Map.of("storage", storage)).getBeanProvider(FileStorage.class),
+            audit,
+            jobs);
     private final UUID user = UUID.randomUUID();
     private final UUID space = UUID.randomUUID();
     private final UUID id = UUID.randomUUID();

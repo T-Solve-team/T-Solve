@@ -50,6 +50,7 @@ import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.common.tenant.TenantContext;
 import vn.tsolve.platform.dto.StoredFile;
+import vn.tsolve.platform.service.FileStorage;
 import vn.tsolve.wiki.dto.WikiDocumentRef;
 import vn.tsolve.wiki.dto.WikiPublishMetadata;
 import vn.tsolve.wiki.entity.WikiDocument.Visibility;
@@ -400,7 +401,7 @@ class WikiUploadIT extends WikiReadTestSupport {
                 FolderRepository folders,
                 AccessRepository access,
                 WikiSearchRepository search,
-                TestStorage storage,
+                ObjectProvider<FileStorage> storage,
                 AuditService audit,
                 TenantJobService jobs,
                 PlatformTransactionManager transactions,
