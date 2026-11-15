@@ -32,4 +32,7 @@ public interface TicketReviewReadService {
 
     /** Current change request for the verified writer and issue in an already bound Workspace. */
     Optional<Feedback> jiraFeedback(UUID projectId, UUID writerId, String issueKey);
+
+    /** Latest Reject reason for the verified writer's Rejected ticket of this issue (AC-009.13). */
+    Optional<Feedback> jiraRejection(UUID projectId, UUID writerId, String issueKey);
 }

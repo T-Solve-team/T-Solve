@@ -2,6 +2,7 @@ package vn.tsolve.tracker.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -9,12 +10,14 @@ import java.util.function.Supplier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import vn.tsolve.tracker.dto.JiraAccount;
+import vn.tsolve.tracker.dto.TrackerStatus;
 import vn.tsolve.tracker.exception.JiraRejectedException;
 import vn.tsolve.tracker.exception.JiraUnavailableException;
 
@@ -40,8 +43,37 @@ public class JiraClient implements TicketTrackerClient {
         this.builder = RestClient.builder().requestFactory(factory);
     }
 
-    JiraClient(RestClient.Builder builder) {
+    /** For tests: a builder bound to a mock server. */
+    public JiraClient(RestClient.Builder builder) {
         this.builder = builder;
+    }
+
+    @Override
+    public void checkServiceAccount(JiraAccount account) {
+        RestClient http = http(account);
+        ResponseEntity<Void> me =
+                call(() -> http.get().uri("/rest/api/3/myself").retrieve().toBodilessEntity());
+        if (me.getStatusCode().value() != 200) {
+            throw new JiraRejectedException(me.getStatusCode().value());
+        }
+        ResponseEntity<JsonNode> response = call(() -> http.get()
+                .uri("/rest/api/3/mypermissions?permissions=BROWSE_PROJECTS,CREATE_ISSUES,MODIFY_REPORTER")
+                .retrieve()
+                .toEntity(JsonNode.class));
+        if (response.getStatusCode().value() != 200) {
+            throw new JiraRejectedException(response.getStatusCode().value());
+        }
+        JsonNode permissions = response.getBody();
+        for (String permission : List.of("BROWSE_PROJECTS", "CREATE_ISSUES", "MODIFY_REPORTER")) {
+            if (permissions == null
+                    || !permissions
+                            .path("permissions")
+                            .path(permission)
+                            .path("havePermission")
+                            .booleanValue()) {
+                throw new JiraRejectedException(403);
+            }
+        }
     }
 
     @Override
@@ -79,6 +111,57 @@ public class JiraClient implements TicketTrackerClient {
         return Optional.empty();
     }
 
+    @Override
+    public Optional<String> findProject(JiraAccount account, String projectKey) {
+        try {
+            JsonNode project = call(() -> http(account)
+                    .get()
+                    .uri("/rest/api/3/project/{projectKey}", projectKey)
+                    .retrieve()
+                    .body(JsonNode.class));
+            return Optional.of(requiredString(project, "key"));
+        } catch (JiraRejectedException e) {
+            if (e.getStatus() == 404) {
+                return Optional.empty();
+            }
+            throw e;
+        }
+    }
+
+    @Override
+    public List<TrackerStatus> projectStatuses(JiraAccount account, String projectKey) {
+        JsonNode issueTypes = call(() -> http(account)
+                .get()
+                .uri("/rest/api/3/project/{projectKey}/statuses", projectKey)
+                .retrieve()
+                .body(JsonNode.class));
+        if (issueTypes == null || !issueTypes.isArray()) {
+            throw new JiraUnavailableException(0);
+        }
+        List<TrackerStatus> statuses = new ArrayList<>();
+        for (JsonNode issueType : issueTypes) {
+            JsonNode issueStatuses = issueType.path("statuses");
+            if (!issueStatuses.isArray()) {
+                throw new JiraUnavailableException(0);
+            }
+            for (JsonNode status : issueStatuses) {
+                String id = requiredString(status, "id");
+                String name = requiredString(status, "name");
+                boolean done =
+                        "done".equals(status.path("statusCategory").path("key").asText());
+                statuses.add(new TrackerStatus(id, name, done));
+            }
+        }
+        return List.copyOf(statuses);
+    }
+
+    private static String requiredString(JsonNode node, String field) {
+        if (node == null || !node.path(field).isTextual()) {
+            throw new JiraUnavailableException(0);
+        }
+        return requiredText(node, field);
+    }
+
     // An answer Jira should never give: treated as unavailable so the job retries rather than acting on it.
     private static String requiredText(JsonNode node, String field) {
         String value = node == null ? "" : node.path(field).asText("");
@@ -107,6 +190,9 @@ public class JiraClient implements TicketTrackerClient {
             throw new JiraRejectedException(status);
         } catch (RestClientException e) {
             // No answer: connection refused, timeout, unreadable body.
+            throw new JiraUnavailableException(0);
+        } catch (IllegalArgumentException e) {
+            // A malformed site URL, credential or response header leaves no usable answer.
             throw new JiraUnavailableException(0);
         }
     }
