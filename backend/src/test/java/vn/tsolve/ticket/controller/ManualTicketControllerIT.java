@@ -97,7 +97,7 @@ class ManualTicketControllerIT {
 
     @BeforeEach
     void cleanDatabase() {
-        jdbc.execute("delete from ticket_import_decision");
+        jdbc.execute("delete from ticket_decision");
         jdbc.execute("delete from ticket");
         jdbc.execute("delete from import_batch");
         jdbc.execute("delete from import_preview");
@@ -151,7 +151,7 @@ class ManualTicketControllerIT {
     }
 
     @Test
-    void AC_006_1_savesAPublishedManualTicketWithItsBatchAndDecision() throws Exception {
+    void AC_006_1_AC_010_3_savesAPublishedManualTicketWithItsBatchAndDecision() throws Exception {
         postAs(PM, "/api/v1/imports/manual", body(PROJECT, " ITSUP-9 ", "Login fails"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.created").value(1))
@@ -180,9 +180,9 @@ class ManualTicketControllerIT {
                 .containsEntry("error_count", 0)
                 .containsEntry("removed_count", 0)
                 .containsEntry("performed_by", PM.getName());
-        assertThat(jdbc.queryForMap("select reviewer, decision from ticket_import_decision"))
+        assertThat(jdbc.queryForMap("select reviewer, decision from ticket_decision"))
                 .containsEntry("reviewer", PM.getName())
-                .containsEntry("decision", "APPROVE");
+                .containsEntry("decision", "APPROVED");
     }
 
     @Test

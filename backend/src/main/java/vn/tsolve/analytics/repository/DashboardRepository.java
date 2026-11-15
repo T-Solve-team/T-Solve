@@ -126,11 +126,11 @@ public class DashboardRepository {
         String decisions = """
                 select (r.decided_at at time zone 'Asia/Ho_Chi_Minh')::date as day,
                     p.project_id, p.public_id, p.jira_project_key, r.decision
-                from review_decision r join ticket t on t.ticket_id = r.ticket_id
+                from ticket_decision r join ticket t on t.ticket_id = r.ticket_id
                 """
                 + TICKET_SCOPE_JOINS
                 + " where r.decided_at >= :start and r.decided_at < :end"
-                + " and r.decision in ('APPROVED', 'REJECTED', 'CHANGES_REQUESTED')"
+                + " and t.source = 'SOLUTION_FORM' and r.decision in ('APPROVED', 'REJECTED', 'CHANGES_REQUESTED')"
                 + filter;
         String imports = """
                 select (t.created_at at time zone 'Asia/Ho_Chi_Minh')::date as day,
