@@ -218,15 +218,16 @@
         "wiki-trash-api": "evaluating",
         "wiki-trash-ui": "evaluating",
         "wiki-permissions-api": "pending",
-        "wiki-permissions-ui": "pending"
+        "wiki-permissions-ui": "pending",
+        "wiki-trash-detail": "evaluating"
       },
-      "lastUpdated": "2026-11-15T05:58:55.270Z",
+      "lastUpdated": "2026-11-15T13:55:14.041Z",
       "branch": "feat/wiki",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "e3eb9e775fb837a8087a5ccbc98327adba517271"
+        "default": "38d16367f63e4f1ea3b8e79cc57d4a6a6f1b5829"
       }
     },
     "ticket-repository": {
