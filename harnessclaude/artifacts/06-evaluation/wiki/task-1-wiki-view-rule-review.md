@@ -15,7 +15,7 @@ iteration: 1
 This attempt 2 is reviewed against the approved spec version c47a3ede. In that version, AC-001.1 now grants View when one of the user's Departments (AC-001.2) is the Space's Department. Attempt 1 failed on two findings, and both are addressed.
 
 - **Issue 1 (attempt 1) is fixed.** `AccessSql.VIEWABLE_SPACE` (`AccessRepository.java:74-95`) now matches `s.department_id IN (u.department_id UNION <Ticket Resolver MEMBER Project Departments>)`, character for character as in the updated master design.
-  - The new IT `grantsProjectDepartmentViewWithoutPermissionAndRechecksEligibility_AC_001_1_AC_001_2_BUG_214` (`WikiAccessIT.java:209`) creates no permission row.
+  - The new IT `grantsProjectDepartmentViewWithoutPermissionAndRechecksEligibility_AC_001_1_AC_001_2_BUG_249` (`WikiAccessIT.java:209`) creates no permission row.
   - It asserts that View is denied without the role and granted with it. It checks the Space lookup and the document port, then removes the role, switches the membership from MEMBER to PROJECT_MANAGER, and deletes the Department.
   - Each of those assertions would fail if the new path were missing or too broad.
 - **Issue 2 (attempt 1), the IT run, is still pending.** The orchestrator's Docker-backed `mvn verify` is running. This verdict is **pass on the condition that `WikiAccessIT` and the whole `mvn verify` (including `spotless:check`) are green**. If either is red, the verdict becomes fail, with the failing test as the finding.
@@ -39,11 +39,11 @@ The attempt-1 checks still hold: no injection, fail-closed handling, Company-wid
 ```
 trace wiki (STORY-001): 11/11 acceptance criteria have a test
 ```
-AC-001.1 and AC-001.2 also have `WikiAccessIT.grantsProjectDepartmentViewWithoutPermissionAndRechecksEligibility_AC_001_1_AC_001_2_BUG_214`.
+AC-001.1 and AC-001.2 also have `WikiAccessIT.grantsProjectDepartmentViewWithoutPermissionAndRechecksEligibility_AC_001_1_AC_001_2_BUG_249`.
 
 ## Issues
-1. **Minor.** `docs/bug-log.md:227-230`: BUG-214 to BUG-217 leave **Owner** blank ("Owner to be confirmed"). The log's own step 3 says to state whose bug it is. Fix: fill in Owner, for example the KAN-170 assignee for BUG-214 to BUG-216.
-2. **Minor.** `docs/bug-log.md:230`: BUG-217 (Docker-backed `*Test` classes in identity and security) has nothing to do with wiki. Logging it is right ("log every bug"). Committing it inside the wiki feature commit mixes in an unrelated change. Fix: put that row in the harness or docs commit, or in its own commit.
+1. **Minor.** `docs/bug-log.md:227-230`: BUG-249 to BUG-252 leave **Owner** blank ("Owner to be confirmed"). The log's own step 3 says to state whose bug it is. Fix: fill in Owner, for example the KAN-170 assignee for BUG-249 to BUG-251.
+2. **Minor.** `docs/bug-log.md:230`: BUG-252 (Docker-backed `*Test` classes in identity and security) has nothing to do with wiki. Logging it is right ("log every bug"). Committing it inside the wiki feature commit mixes in an unrelated change. Fix: put that row in the harness or docs commit, or in its own commit.
 
 ## Assumptions made
 - **A1 (resolved).** The user chose the reading of Functional requirement 2 and identity AC-011.5. The spec was changed and approved (Changelog row 2026-11-14, c47a3ede).
