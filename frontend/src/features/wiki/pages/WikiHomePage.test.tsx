@@ -251,7 +251,7 @@ describe('WikiHomePage', () => {
       const tree = screen.getByRole('tree', { name: 'Folders' });
       const row = within(tree).getByText('Network').closest('[role="treeitem"]');
       if (!(row instanceof HTMLElement)) throw new Error('Folder row missing');
-      await user.click(within(row).getByRole('button', { name: action }));
+      await user.click(within(row).getByRole('button', { name: `${action} Network` }));
       const dialog = await screen.findByRole('dialog', { name: 'Folder' });
       expect(within(dialog).getByRole('textbox', { name: 'Name' })).toHaveValue('Network');
       expect(new URLSearchParams(router.state.location.search).get('folder')).toBe(FOLDER);
@@ -269,14 +269,14 @@ describe('WikiHomePage', () => {
       }),
     );
     const { user, router } = await openHome(`?space=${IT}&folder=${CHILD}`);
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: 'Delete Network' }));
     let dialog = await screen.findByRole('dialog', { name: 'Delete' });
     expect(dialog).toHaveTextContent('Network');
     expect(deleted).not.toHaveBeenCalled();
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(deleted).not.toHaveBeenCalled();
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: 'Delete Network' }));
     dialog = await screen.findByRole('dialog', { name: 'Delete' });
     await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
     expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
@@ -298,7 +298,7 @@ describe('WikiHomePage', () => {
     const { user } = await openHome();
     const row = screen.getByText('Network').closest('[role="treeitem"]');
     if (!(row instanceof HTMLElement)) throw new Error('Folder row missing');
-    await user.click(within(row).getByRole('button', { name: 'Delete' }));
+    await user.click(within(row).getByRole('button', { name: 'Delete Network' }));
     const dialog = await screen.findByRole('dialog', { name: 'Delete' });
     await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
     expect(

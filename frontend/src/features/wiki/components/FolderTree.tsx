@@ -30,6 +30,7 @@ export function FolderTree({ folders, folderId, onSelect, managedSpaceId }: Fold
                     key={label}
                     type="text"
                     size="small"
+                    aria-label={`${label} ${folder.name}`}
                     danger={label === 'Delete'}
                     onClick={() =>
                       setAction({

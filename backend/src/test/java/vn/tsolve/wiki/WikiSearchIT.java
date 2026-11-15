@@ -43,6 +43,17 @@ class WikiSearchIT extends WikiReadTestSupport {
     }
 
     @Test
+    void storesTextBeyondTheTsvectorLimitAndStillFindsItsStart_BUG_291() {
+        // ~1.9 MB of distinct words: indexed whole, the tsvector would exceed PostgreSQL's 1 MB cap.
+        StringBuilder text = new StringBuilder("repair");
+        for (int i = 0; text.length() < 1_900_000; i++) text.append(" w").append(Integer.toString(i, 36));
+        UUID id = document(space, null, "Large", "DEPARTMENT", "PENDING", text.toString());
+        assertThat(search(true, 0.55).search(user, "repair"))
+                .extracting(WikiDocumentSummary::documentId)
+                .containsExactly(id);
+    }
+
+    @Test
     void breaksEqualScoresByTitleAndCapsAtFifty_AC_002_7() {
         for (int i = 54; i >= 0; i--)
             document(space, null, String.format("Guide %02d", i), "DEPARTMENT", "PENDING", "repair");

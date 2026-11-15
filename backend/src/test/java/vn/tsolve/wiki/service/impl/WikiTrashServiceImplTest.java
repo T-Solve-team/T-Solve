@@ -112,7 +112,8 @@ class WikiTrashServiceImplTest {
                 "Text",
                 "guide.pdf",
                 42,
-                false);
+                false,
+                true);
         var browse = new WikiBrowseServiceImpl(search);
         when(search.findDocument(user, id)).thenReturn(Optional.empty());
         when(search.findTrashedDocument(user, id)).thenReturn(Optional.of(detail));

@@ -144,6 +144,7 @@ class WikiTrashIT extends WikiReadTestSupport {
                 .isEmpty();
         assertMissing(() -> context.getBean(WikiUploadService.class).download(user, id));
         assertThat(browse.getDocument(user, id).canDelete()).isFalse();
+        assertThat(browse.getDocument(user, id).inTrash()).isTrue();
         assertThat(browse.getDocument(user, id).content()).isEqualTo("Guide content");
         assertThat(chunkCount(id)).isEqualTo(1);
         assertThat(service.restore(user, id).renamed()).isFalse();

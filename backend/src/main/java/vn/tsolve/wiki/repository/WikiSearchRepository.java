@@ -77,7 +77,7 @@ public class WikiSearchRepository {
     }
 
     public Optional<WikiDocumentDetail> findTrashedDocument(UUID userId, UUID documentId) {
-        return findDocument(userId, documentId, "w.status = 'DELETED' AND " + AccessSql.MANAGES_SPACE, "false");
+        return findDocument(userId, documentId, "w.status = 'DELETED' AND " + AccessSql.MANAGES_SPACE, "false", true);
     }
 
     public Optional<SpaceAccess> findSpace(UUID userId, UUID spaceId) {
@@ -131,11 +131,12 @@ public class WikiSearchRepository {
     }
 
     public Optional<WikiDocumentDetail> findDocument(UUID userId, UUID documentId) {
-        return findDocument(userId, documentId, AccessSql.VIEWABLE_DOCUMENT, "(" + AccessSql.MANAGES_SPACE + ")");
+        return findDocument(
+                userId, documentId, AccessSql.VIEWABLE_DOCUMENT, "(" + AccessSql.MANAGES_SPACE + ")", false);
     }
 
     private Optional<WikiDocumentDetail> findDocument(
-            UUID userId, UUID documentId, String predicate, String canDelete) {
+            UUID userId, UUID documentId, String predicate, String canDelete, boolean inTrash) {
         return jdbc
                 .query(
                         "SELECT " + SUMMARY_COLUMNS + ", w.content, w.file_name, w.file_size, "
@@ -157,7 +158,8 @@ public class WikiSearchRepository {
                                     row.getString("content"),
                                     row.getString("file_name"),
                                     row.getLong("file_size"),
-                                    row.getBoolean("can_delete"));
+                                    row.getBoolean("can_delete"),
+                                    inTrash);
                         })
                 .stream()
                 .findFirst();

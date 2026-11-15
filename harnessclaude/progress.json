@@ -218,15 +218,16 @@
         "wiki-trash-api": "passing",
         "wiki-trash-ui": "passing",
         "wiki-permissions-api": "passing",
-        "wiki-permissions-ui": "passing"
+        "wiki-permissions-ui": "passing",
+        "wiki-trash-detail": "evaluating"
       },
-      "lastUpdated": "2026-11-15T11:23:00.911Z",
+      "lastUpdated": "2026-11-15T13:55:14.041Z",
       "branch": "feat/wiki",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "3cdb351ecab619c99e3ab7a1c844a0d1ee96975e"
+        "default": "38d16367f63e4f1ea3b8e79cc57d4a6a6f1b5829"
       }
     },
     "ticket-repository": {
