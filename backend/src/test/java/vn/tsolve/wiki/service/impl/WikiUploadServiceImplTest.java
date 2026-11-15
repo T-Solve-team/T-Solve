@@ -139,7 +139,7 @@ class WikiUploadServiceImplTest {
     }
 
     @Test
-    void treatsMultipartReadFailureAsUnreadable_AC_004_2_AC_004_9_BUG_227() throws IOException {
+    void treatsMultipartReadFailureAsUnreadable_AC_004_2_AC_004_9_BUG_270() throws IOException {
         var broken = mock(MultipartFile.class);
         when(broken.getOriginalFilename()).thenReturn("broken.pdf");
         when(broken.getInputStream()).thenThrow(new IOException("Cannot read"));
@@ -282,7 +282,7 @@ class WikiUploadServiceImplTest {
                 "{\"documents\":[null]}",
                 "{\"documents\":[{\"title\":\"Guide\",\"visibility\":\"PUBLIC\"}]}"
             })
-    void rejectsInvalidJsonMetadataWithoutWrites_AC_004_10_AC_004_11_BUG_229(String metadata) throws IOException {
+    void rejectsInvalidJsonMetadataWithoutWrites_AC_004_10_AC_004_11_BUG_272(String metadata) throws IOException {
         assertCode(
                 () -> service.publish(user, space, List.of(file("guide.pdf", "guide.pdf")), metadata),
                 "MSG01",

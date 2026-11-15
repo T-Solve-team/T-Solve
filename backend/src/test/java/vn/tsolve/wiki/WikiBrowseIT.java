@@ -15,7 +15,7 @@ import vn.tsolve.wiki.dto.WikiSpace;
 
 class WikiBrowseIT extends WikiReadTestSupport {
     @Test
-    void listsOnlyViewableSpacesByNameAndComputesManagerAccess_AC_002_1_BUG_239() {
+    void listsOnlyViewableSpacesByNameAndComputesManagerAccess_AC_002_1_BUG_257() {
         manager();
         long alpha = space(department("Alpha"), "Alpha Wiki");
         space(department("Other"), "Other Wiki");

@@ -28,7 +28,7 @@ Verified by reading:
   - a parser error
   - text that is only whitespace
   - POI's zip-bomb exception
-  - a multipart read error (BUG-227)
+  - a multipart read error (BUG-270)
 
   At publish they answer MSG90 (AC-004.9).
 - **Metadata (AC-004.7, AC-004.10):** missing metadata, invalid JSON, or a row count that differs from the file count answers MSG01 on `metadata`. A blank title answers MSG01 and a title over 200 characters answers MSG02 with `max_length` 200, both on `documents[i].title`.
@@ -48,7 +48,7 @@ Verified by reading:
   - The response sends `X-Content-Type-Options: nosniff`.
   - The stream is closed with try-with-resources, and the Workspace context is bound again on the async MVC thread.
 - **Dependencies:** `pdfbox` 3.0.4 and `poi-ooxml` 5.3.0 match design W3 (3.0.x and 5.3.x).
-- **Contract and scope:** the contract is in `tsolve-api.yaml` together with the generated client. No scope creep found. Bug-log rows BUG-226 to BUG-232 are recorded.
+- **Contract and scope:** the contract is in `tsolve-api.yaml` together with the generated client. No scope creep found. Bug-log rows BUG-269 to BUG-275 are recorded.
 
 ## Criteria
 
@@ -57,7 +57,7 @@ Verified by reading:
 | Functionality | pass | All Task 6 ACs are implemented as written |
 | Completeness | pass | Every Task 6 AC is named in at least one test. The IT covers: rollback when the 2nd audit write fails, a storage failure, a race of two uploads with the same title, and download under the view rule |
 | Correctness | pass (conditional) | Not run by the reviewer. The IT waits for the orchestrator's Docker run |
-| Integration | pass | The `wiki-index` handler type matches Task 7. The generated client matches the multipart contract, and metadata sent as a string is accepted (BUG-229) |
+| Integration | pass | The `wiki-index` handler type matches Task 7. The generated client matches the multipart contract, and metadata sent as a string is accepted (BUG-272) |
 
 ## Traceability
 ```

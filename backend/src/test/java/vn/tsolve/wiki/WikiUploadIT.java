@@ -118,7 +118,7 @@ class WikiUploadIT extends WikiReadTestSupport {
     }
 
     @Test
-    void publishesBatchWithFolderOriginalFilesAuditAndJobsAfterCommit_AC_004_6_AC_004_12_AC_004_13_AC_002_12_BUG_228()
+    void publishesBatchWithFolderOriginalFilesAuditAndJobsAfterCommit_AC_004_6_AC_004_12_AC_004_13_AC_002_12_BUG_271()
             throws Exception {
         UUID folder = folder(space, null, "Guides", 1);
         var files = List.of(file("guide.pdf"), file("guide.docx"));
@@ -210,7 +210,7 @@ class WikiUploadIT extends WikiReadTestSupport {
     }
 
     @Test
-    void removesEarlierObjectsWhenStorageFails_AC_004_11_BUG_230() throws IOException {
+    void removesEarlierObjectsWhenStorageFails_AC_004_11_BUG_273() throws IOException {
         jdbc.update("""
                 INSERT INTO audit_log_entry(actor_id, actor_email, action, target_type, target_id, created_at)
                 VALUES (?, 'previous@example.test', 'PUBLISH', 'WIKI_DOCUMENT', ?, now())
