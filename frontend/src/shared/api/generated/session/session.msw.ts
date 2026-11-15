@@ -11,7 +11,7 @@ import { faker } from '@faker-js/faker';
 import { HttpResponse, http } from 'msw';
 import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'msw';
 
-import { ProjectRole, Role } from '../model';
+import { ProjectRole, ProjectStatus, Role } from '../model';
 import type {
   CurrentUser,
   JiraLinkConfirmRequest,
@@ -49,6 +49,7 @@ export const getGetMeResponseMock = (
       departmentId: faker.string.uuid(),
       departmentName: faker.string.alpha({ length: { min: 10, max: 20 } }),
       roleInProject: faker.helpers.arrayElement(Object.values(ProjectRole)),
+      projectStatus: faker.helpers.arrayElement(Object.values(ProjectStatus)),
     }),
   ),
   managedSpaces: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(

@@ -1,5 +1,6 @@
 import {
   ProjectRole,
+  ProjectStatus,
   Role,
   UserAccountStatus,
   type CurrentUser,
@@ -193,6 +194,7 @@ export function resolveMockSession(actor: DevUserId, baseline: CurrentUser): Cur
         departmentId: project.department.departmentId,
         departmentName: project.department.name,
         roleInProject: project.managerId === id ? ProjectRole.PROJECT_MANAGER : ProjectRole.MEMBER,
+        projectStatus: ProjectStatus.ACTIVE,
       })),
   ].filter(
     (project) =>

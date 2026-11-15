@@ -54,6 +54,7 @@ const UUID_USER: CurrentUser = {
       departmentId: DEPARTMENT_IT,
       departmentName: 'IT',
       roleInProject: 'PROJECT_MANAGER',
+      projectStatus: 'ACTIVE',
     },
     {
       projectId: PROJECT_P_LOOKALIKE,
@@ -61,6 +62,7 @@ const UUID_USER: CurrentUser = {
       departmentId: DEPARTMENT_IT,
       departmentName: 'IT',
       roleInProject: 'MEMBER',
+      projectStatus: 'ACTIVE',
     },
   ],
   managedSpaces: [{ spaceId: SPACE_IT, name: 'IT Space' }],

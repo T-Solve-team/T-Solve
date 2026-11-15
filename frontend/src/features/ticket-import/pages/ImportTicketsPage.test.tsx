@@ -78,6 +78,7 @@ describe('ImportTicketsPage', () => {
       departmentId: '00000000-0000-4000-8000-0000000000d2',
       departmentName: 'HR',
       roleInProject: 'MEMBER' as const,
+      projectStatus: 'ACTIVE' as const,
     };
     signInAs({ ...PM, projects: [...PM.projects, hrMember] });
     const { user } = await openImport();

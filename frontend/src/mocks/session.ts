@@ -38,10 +38,12 @@ const HRHELP = {
 const managed = (project: typeof ITSUP): ProjectMembership => ({
   ...project,
   roleInProject: 'PROJECT_MANAGER',
+  projectStatus: 'ACTIVE',
 });
 const member = (project: typeof ITSUP): ProjectMembership => ({
   ...project,
   roleInProject: 'MEMBER',
+  projectStatus: 'ACTIVE',
 });
 
 const NOBODY_ELSE = { department: null, departments: [], projects: [], managedSpaces: [] };

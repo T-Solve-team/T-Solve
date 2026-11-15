@@ -1,5 +1,6 @@
 import type { CurrentUser } from '@/shared/api';
 import { ROLE_LABELS, ROLES, toSession } from '@/shared/auth';
+import { MOCK_USERS } from '@/mocks/session';
 
 const USER_ID = '00000000-0000-4000-8000-000000000001';
 const DEPARTMENT_ID = '00000000-0000-4000-8000-0000000000d1';
@@ -67,6 +68,7 @@ describe('session roles', () => {
           departmentId: DEPARTMENT_ID,
           departmentName: 'IT',
           roleInProject: 'MEMBER',
+          projectStatus: 'ACTIVE',
         },
       ],
       managedSpaces: [{ spaceId: SPACE_ID, name: 'IT Space' }],
@@ -81,5 +83,33 @@ describe('session roles', () => {
     expect(session.projects[0]?.projectId).toBe(PROJECT_ID);
     expect(session.projects[0]?.departmentId).toBe(DEPARTMENT_ID);
     expect(session.managedSpaces[0]?.spaceId).toBe(SPACE_ID);
+  });
+});
+
+describe('session Project status', () => {
+  it('AC-001.9 keeps the projectStatus of each Project as /me gives it', () => {
+    const project = {
+      projectId: PROJECT_ID,
+      jiraProjectKey: 'ITSUP',
+      departmentId: DEPARTMENT_ID,
+      departmentName: 'IT',
+      roleInProject: 'PROJECT_MANAGER' as const,
+    };
+    const session = toSession({
+      ...fromServer,
+      projects: [
+        { ...project, projectStatus: 'ACTIVE' },
+        { ...project, projectId: SPACE_ID, projectStatus: 'REMOVED' },
+      ],
+    });
+
+    expect(session.projects.map((p) => p.projectStatus)).toEqual(['ACTIVE', 'REMOVED']);
+  });
+
+  it('AC-001.9 gives every fixture user Project a projectStatus', () => {
+    const projects = Object.values(MOCK_USERS).flatMap((user) => user.projects);
+
+    expect(projects.length).toBeGreaterThan(0);
+    for (const project of projects) expect(['ACTIVE', 'REMOVED']).toContain(project.projectStatus);
   });
 });

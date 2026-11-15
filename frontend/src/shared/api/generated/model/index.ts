@@ -106,6 +106,7 @@ export * from './projectHandoverOption';
 export * from './projectMembership';
 export * from './projectRef';
 export * from './projectRole';
+export * from './projectStatus';
 export * from './rejectTicketsRequest';
 export * from './removeRowsRequest';
 export * from './requestChangesRequest';

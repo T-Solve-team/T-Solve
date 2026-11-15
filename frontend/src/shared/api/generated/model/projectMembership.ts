@@ -7,6 +7,7 @@
  * OpenAPI spec version: 0.1.0-stub
  */
 import type { ProjectRole } from './projectRole';
+import type { ProjectStatus } from './projectStatus';
 
 export interface ProjectMembership {
   projectId: string;
@@ -14,4 +15,5 @@ export interface ProjectMembership {
   departmentId: string;
   departmentName: string;
   roleInProject: ProjectRole;
+  projectStatus: ProjectStatus;
 }

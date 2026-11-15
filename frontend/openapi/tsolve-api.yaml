@@ -2163,6 +2163,10 @@ components:
       type: string
       description: The user's role inside one Project.
       enum: [PROJECT_MANAGER, MEMBER]
+    ProjectStatus:
+      type: string
+      description: A Project's status; a Project is never deleted, only REMOVED. Only an ACTIVE one takes imports.
+      enum: [ACTIVE, REMOVED]
     TicketSource:
       type: string
       enum: [SOLUTION_FORM, JIRA_IMPORT, CSV, MANUAL]
@@ -2180,7 +2184,7 @@ components:
           format: email
     ProjectMembership:
       type: object
-      required: [projectId, jiraProjectKey, departmentId, departmentName, roleInProject]
+      required: [projectId, jiraProjectKey, departmentId, departmentName, roleInProject, projectStatus]
       properties:
         projectId:
           type: string
@@ -2194,6 +2198,8 @@ components:
           type: string
         roleInProject:
           $ref: '#/components/schemas/ProjectRole'
+        projectStatus:
+          $ref: '#/components/schemas/ProjectStatus'
     DepartmentRef:
       type: object
       required: [departmentId, name]
