@@ -155,6 +155,41 @@ describe('WikiHomePage', () => {
     expect(screen.getByRole('tree', { name: 'Folders' })).toHaveTextContent('Guides');
   });
 
+  it('AC-002.17 clears a foreign or missing folder on 404 and shows the selected Space root (BUG-241)', async () => {
+    const requestedFolders: (string | null)[] = [];
+    server.use(
+      http.get('*/api/v1/wiki/spaces/:spaceId/documents', ({ request }) => {
+        const folder = new URL(request.url).searchParams.get('folderId');
+        requestedFolders.push(folder);
+        if (folder) return problem(404, 'MSG04');
+      }),
+      getListWikiDocumentsMockHandler([
+        { ...document, title: 'Root guide', folderId: null, folderName: null },
+      ]),
+    );
+    const { router, queryClient } = await openHome(`?space=${IT}&folder=${HR}&q=VPN`);
+    await waitFor(() =>
+      expect(new URLSearchParams(router.state.location.search).has('folder')).toBe(false),
+    );
+    const params = new URLSearchParams(router.state.location.search);
+    expect(params.get('space')).toBe(IT);
+    expect(params.get('q')).toBe('VPN');
+    const table = await screen.findByRole('table', { name: 'Documents' });
+    expect(await within(table).findByRole('link', { name: 'Root guide' })).toBeInTheDocument();
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    expect(requestedFolders).toEqual([HR, null]);
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
+    await act(() => router.navigate(`${paths.wikiHome}?space=${IT}&q=previous`));
+    await act(() => router.navigate(`${paths.wikiHome}?space=${IT}&folder=${HR}&q=VPN`));
+    await waitFor(() =>
+      expect(new URLSearchParams(router.state.location.search).has('folder')).toBe(false),
+    );
+    await act(() => router.navigate(-1));
+    expect(new URLSearchParams(router.state.location.search).get('q')).toBe('previous');
+    expect(new URLSearchParams(router.state.location.search).has('folder')).toBe(false);
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+  });
+
   it('AC-002.18 blocks overlong and blank searches, validates below Search, and sends valid text unchanged', async () => {
     const queries: string[] = [];
     server.use(
