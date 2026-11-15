@@ -5,8 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router';
 import { ApiError, useListWikiFolders, useListWikiSpaces } from '@/shared/api';
 import { msg } from '@/shared/messages';
 import { paths } from '@/shared/routing';
-import { AppForm, ErrorState, FormField, LoadingState } from '@/shared/ui';
-import { WikiFileUpload } from '../components/WikiFileUpload';
+import { AppForm, ErrorState, FileDropzone, FormField, LoadingState } from '@/shared/ui';
 import { WikiUploadTable, type WikiUploadRow } from '../components/WikiUploadTable';
 import { useWikiUpload } from '../hooks/useWikiUpload';
 
@@ -92,7 +91,13 @@ export function UploadDocumentsPage() {
           const mapped = error.fieldErrors.flatMap((fieldError) => {
             const match = /^documents\[(\d+)\]\.title$/.exec(fieldError.field);
             return match?.[1] && rows[Number(match[1])]
-              ? [{ index: Number(match[1]), text: msg(fieldError.code, fieldError.params) }]
+              ? [
+                  {
+                    index: Number(match[1]),
+                    // The server names the field by its path (documents[0].title); show the label.
+                    text: msg(fieldError.code, { ...fieldError.params, field_name: 'Title' }),
+                  },
+                ]
               : [];
           });
           setRows((current) =>
@@ -165,7 +170,13 @@ export function UploadDocumentsPage() {
             />
           </FormField>
         </Space>
-        <WikiFileUpload isBusy={isBusy} onAdd={addFiles} />
+        <FileDropzone
+          label="Files"
+          accept=".pdf,.docx"
+          hint="PDF or DOCX, up to 10 files, at most 10 MB each."
+          disabled={isBusy}
+          onAdd={addFiles}
+        />
         {errors.map((error) => (
           <Alert key={error} type="error" showIcon title={error} />
         ))}

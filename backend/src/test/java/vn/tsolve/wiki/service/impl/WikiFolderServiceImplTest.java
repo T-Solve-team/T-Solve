@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -25,6 +26,8 @@ import org.mockito.Mockito;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 import vn.tsolve.common.audit.AuditAction;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.BusinessRuleException;
@@ -43,8 +46,9 @@ class WikiFolderServiceImplTest {
     private final WikiDocumentRepository documents = Mockito.mock(WikiDocumentRepository.class);
     private final AccessRepository access = Mockito.mock(AccessRepository.class);
     private final AuditService audit = Mockito.mock(AuditService.class);
-    private final WikiFolderServiceImpl service =
-            new WikiFolderServiceImpl(folders, documents, access, audit, Mappers.getMapper(WikiFolderMapper.class));
+    private final PlatformTransactionManager transactions = Mockito.mock(PlatformTransactionManager.class);
+    private final WikiFolderServiceImpl service = new WikiFolderServiceImpl(
+            folders, documents, access, audit, Mappers.getMapper(WikiFolderMapper.class), transactions);
     private final UUID user = UUID.randomUUID();
     private final UUID space = UUID.randomUUID();
     private final UUID id = UUID.randomUUID();
@@ -53,6 +57,8 @@ class WikiFolderServiceImplTest {
     @BeforeEach
     void setup() {
         folder = folder(id, null, "Guides", 1);
+        when(transactions.getTransaction(any())).thenAnswer(call -> new SimpleTransactionStatus());
+        when(access.findActiveSpace(space)).thenReturn(Optional.of(42L));
         when(access.lockActiveSpace(space)).thenReturn(Optional.of(42L));
         when(access.managesSpace(user, 42)).thenReturn(true);
         when(access.findFolderSpace(id)).thenReturn(Optional.of(space));
@@ -242,6 +248,52 @@ class WikiFolderServiceImplTest {
                 .isInstanceOf(AccessDeniedException.class);
         assertThatThrownBy(() -> service.delete(user, id)).isInstanceOf(AccessDeniedException.class);
         verifyNoInteractions(documents, folders, audit);
+    }
+
+    @Test
+    void rejectsNonmanagerBeforeTakingSpaceLock_AC_003_10_BUG_242() {
+        when(access.managesSpace(user, 42)).thenReturn(false);
+        assertThatThrownBy(() -> service.create(user, space, new CreateWikiFolderRequest("Guides", null)))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> service.update(user, id, new UpdateWikiFolderRequest("Guides", null)))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> service.delete(user, id)).isInstanceOf(AccessDeniedException.class);
+        verify(access, never()).lockActiveSpace(any());
+        verifyNoInteractions(documents, folders, audit);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"wiki_document_folder_id_fkey", "folder_parent_id_fkey"})
+    void recountsAfterDeleteReferenceConflict_AC_003_9_AC_003_12_BUG_243(String constraint) {
+        when(folders.countByParentId(id)).thenReturn(0L, 2L);
+        when(documents.countByFolderId(id)).thenReturn(0L, 3L);
+        doThrow(new DataIntegrityViolationException(
+                        "reference", new ConstraintViolationException("reference", null, constraint)))
+                .when(folders)
+                .flush();
+        assertThatThrownBy(() -> service.delete(user, id))
+                .isInstanceOfSatisfying(BusinessRuleException.class, error -> {
+                    assertThat(error.getCode()).isEqualTo("MSG87");
+                    assertThat(error.getParams())
+                            .containsExactlyInAnyOrderEntriesOf(Map.of("folder_count", 2L, "document_count", 3L));
+                });
+        var order = inOrder(folders, documents, transactions);
+        order.verify(folders).countByParentId(id);
+        order.verify(documents).countByFolderId(id);
+        order.verify(folders).flush();
+        order.verify(transactions).rollback(any());
+        order.verify(folders).countByParentId(id);
+        order.verify(documents).countByFolderId(id);
+        verifyNoInteractions(audit);
+    }
+
+    @Test
+    void preservesUnrelatedDeleteIntegrityFailure_BUG_243() {
+        var failure = new DataIntegrityViolationException(
+                "other", new ConstraintViolationException("other", null, "unrelated_fkey"));
+        doThrow(failure).when(folders).flush();
+        assertThatThrownBy(() -> service.delete(user, id)).isSameAs(failure);
+        verifyNoInteractions(audit);
     }
 
     @Test

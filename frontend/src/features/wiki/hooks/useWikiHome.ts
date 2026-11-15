@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useSearchParams } from 'react-router';
 import {
   useListCompanyWideDocuments,
@@ -23,6 +24,25 @@ export function useWikiHome() {
   const documents = useListWikiDocuments(spaceId, { folderId }, { query: { enabled: canBrowse } });
   const isSearching = q.trim() !== '' && q.length <= WIKI_QUERY_MAX;
   const results = useSearchWikiDocuments({ q }, { query: { enabled: isSearching } });
+
+  useEffect(() => {
+    if (
+      !canBrowse ||
+      !folderId ||
+      documents.error?.status !== 404 ||
+      documents.error.code !== 'MSG04'
+    )
+      return;
+    // Replace the stale link so Back does not return to the missing folder.
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.delete('folder');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [canBrowse, folderId, documents.error, setParams]);
 
   function selectFolder(nextFolderId: string | undefined) {
     setParams((current) => {

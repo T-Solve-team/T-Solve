@@ -15,13 +15,20 @@ import vn.tsolve.wiki.dto.WikiSpace;
 
 class WikiBrowseIT extends WikiReadTestSupport {
     @Test
-    void listsOnlyViewableSpacesByNameAndComputesManagerAccess_AC_002_1() {
+    void listsOnlyViewableSpacesByNameAndComputesManagerAccess_AC_002_1_BUG_239() {
         manager();
-        long alpha = space(department, "Alpha Wiki");
+        long alpha = space(department("Alpha"), "Alpha Wiki");
         space(department("Other"), "Other Wiki");
         assertThat(browse.listSpaces(user))
+                .containsExactly(new WikiSpace(spaceId, "Support Wiki", "Support", "KNOWLEDGE_MANAGER"));
+        jdbc.update(
+                "INSERT INTO space_permission(space_id, user_id, granted_by, granted_at) VALUES (?, ?, ?, now())",
+                alpha,
+                user,
+                user);
+        assertThat(browse.listSpaces(user))
                 .containsExactly(
-                        new WikiSpace(publicId(alpha), "Alpha Wiki", "Support", "VIEW"),
+                        new WikiSpace(publicId(alpha), "Alpha Wiki", "Alpha", "VIEW"),
                         new WikiSpace(spaceId, "Support Wiki", "Support", "KNOWLEDGE_MANAGER"));
         jdbc.update("DELETE FROM user_role WHERE user_id = ?", user);
         assertThat(browse.listSpaces(user).get(1).accessLevel()).isEqualTo("VIEW");

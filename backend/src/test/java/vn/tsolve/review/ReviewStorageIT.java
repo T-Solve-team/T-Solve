@@ -128,7 +128,7 @@ class ReviewStorageIT {
     }
 
     @Test
-    void upgradesADatabaseAlreadyRunningReviewWithoutReapplyingStorage_BUG_140(@TempDir Path temporary)
+    void upgradesADatabaseAlreadyRunningReviewWithoutReapplyingStorage_BUG_140_BUG_246(@TempDir Path temporary)
             throws Exception {
         String master;
         try (var input = getClass().getClassLoader().getResourceAsStream("db/changelog/db.changelog-master.xml")) {
@@ -140,7 +140,7 @@ class ReviewStorageIT {
         master = master.replaceAll(
                 "(?m)^.*<include file=\"changes/(?:0\\d\\d-search|0\\d\\d-review-search|0\\d\\d-chatbot|011-ticket-import"
                         + "|017-project-membership|019-tracker-suggestion-uuid-keys|0\\d\\d-review-queue-notify|023-identity-one-project-manager|024-review-send-back-decision"
-                        + "|030-dashboard-period-indexes).*\n",
+                        + "|03\\d-).*\n",
                 "");
         Path oldMaster = temporary.resolve("db/changelog/review-before-project-uuid.xml");
         Files.createDirectories(oldMaster.getParent());

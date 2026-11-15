@@ -9,7 +9,10 @@ import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import vn.tsolve.common.audit.AuditAction;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.BusinessRuleException;
@@ -33,18 +36,21 @@ public class WikiFolderServiceImpl implements WikiFolderService {
     private final AccessRepository access;
     private final AuditService audit;
     private final WikiFolderMapper mapper;
+    private final TransactionTemplate transaction;
 
     public WikiFolderServiceImpl(
             FolderRepository folders,
             WikiDocumentRepository documents,
             AccessRepository access,
             AuditService audit,
-            WikiFolderMapper mapper) {
+            WikiFolderMapper mapper,
+            PlatformTransactionManager transactionManager) {
         this.folders = folders;
         this.documents = documents;
         this.access = access;
         this.audit = audit;
         this.mapper = mapper;
+        this.transaction = new TransactionTemplate(transactionManager);
     }
 
     @Override
@@ -85,7 +91,30 @@ public class WikiFolderServiceImpl implements WikiFolderService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void delete(UUID userId, UUID folderId) {
+        try {
+            transaction.executeWithoutResult(status -> deleteFolder(userId, folderId));
+        } catch (DataIntegrityViolationException failure) {
+            for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
+                if (cause instanceof ConstraintViolationException constraint
+                        && ("wiki_document_folder_id_fkey".equals(constraint.getConstraintName())
+                                || "folder_parent_id_fkey".equals(constraint.getConstraintName()))) {
+                    // PostgreSQL aborts the failed transaction; recount only after its rollback.
+                    throw transaction.execute(status -> new BusinessRuleException(
+                            "MSG87",
+                            Map.of(
+                                    "folder_count",
+                                    folders.countByParentId(folderId),
+                                    "document_count",
+                                    documents.countByFolderId(folderId))));
+                }
+            }
+            throw failure;
+        }
+    }
+
+    private void deleteFolder(UUID userId, UUID folderId) {
         UUID spaceId = findSpace(folderId);
         requireManager(userId, spaceId);
         Folder folder = findFolder(folderId);
@@ -101,10 +130,10 @@ public class WikiFolderServiceImpl implements WikiFolderService {
     }
 
     private long requireManager(UUID userId, UUID spaceId) {
-        // Serialize this Space's tree mutations so concurrent moves cannot invalidate depth or cycle checks.
-        long internalId = access.lockActiveSpace(spaceId).orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
+        long internalId = access.findActiveSpace(spaceId).orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
         if (!access.managesSpace(userId, internalId)) throw new AccessDeniedException("MSG08");
-        return internalId;
+        // Serialize this Space's tree mutations only after checking management access.
+        return access.lockActiveSpace(spaceId).orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
     }
 
     private UUID findSpace(UUID folderId) {

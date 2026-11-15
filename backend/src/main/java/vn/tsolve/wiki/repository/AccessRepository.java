@@ -12,6 +12,11 @@ import vn.tsolve.wiki.entity.WikiDocument;
 
 public interface AccessRepository extends Repository<WikiDocument, UUID> {
     @Query(
+            value = "SELECT s.space_id FROM space s WHERE s.public_id = :spaceId AND " + AccessSql.ACTIVE_SPACE,
+            nativeQuery = true)
+    Optional<Long> findActiveSpace(@Param("spaceId") UUID spaceId);
+
+    @Query(
             value = "SELECT s.space_id FROM space s WHERE s.public_id = :spaceId AND " + AccessSql.ACTIVE_SPACE
                     + " FOR UPDATE OF s",
             nativeQuery = true)
