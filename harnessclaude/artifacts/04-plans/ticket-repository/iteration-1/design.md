@@ -16,5 +16,12 @@ Change 2026-11-13 (KAN-132, STORY-005, Task 13): the ticket status model — mas
 
 Change 2026-11-14 (KAN-133, STORY-006, Tasks 14–17): manual entry — master design section "Change 2026-11-14".
 
-Change 2026-11-15 (KAN-137, STORY-007, Tasks 18–19): one decision table and the unused Solution tables removed —
-master design section "Change 2026-11-15".
+Change 2026-11-14 (2) (KAN-133, Evidence, Tasks 18–20): master design section "Change 2026-11-14 (2)".
+
+Change 2026-11-14 (KAN-134 STORY-007, KAN-135 STORY-008, Tasks 21–25): Import History and Ticket Detail — master
+design section "Change 2026-11-14: Import History and Ticket Detail".
+
+Change 2026-11-15 (KAN-136, STORY-009, Tasks 26–28): unpublish / re-publish — master design section "Change 2026-11-15".
+
+Change 2026-11-15 (2) (KAN-137, STORY-010, Tasks 29–30): one decision table and the unused Solution tables removed —
+master design section "Change 2026-11-15 (2)".

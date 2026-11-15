@@ -153,28 +153,55 @@
       }
     },
     "workspace": {
-      "status": "implementing",
-      "currentPhase": "implement",
+      "status": "evaluating",
+      "currentPhase": "evaluate",
       "features": {
         "create-department-api": "passing",
         "create-department-screen": "passing",
+        "workspace-store": "passing",
+        "tracker-account-check": "passing",
+        "jira-site-linker": "passing",
+        "workspace-setup-api": "passing",
+        "workspace-update-api": "passing",
+        "workspace-service-account": "passing",
+        "workspace-setup-screen": "passing",
+        "workspace-settings-screen": "passing",
         "rename-department-api": "passing",
         "rename-department-screen": "passing"
       },
-      "lastUpdated": "2026-11-11T21:17:40.264Z",
+      "lastUpdated": "2026-11-12T19:46:35.915Z",
       "branch": "feat/workspace",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "8a667e27d39a1c4deb80389d9383c07870abb9bb"
+        "default": "dcdc6063c3134ae17f645c18adb7ebcbf836dd16"
       }
     },
     "project-integration": {
-      "status": "decomposed",
-      "currentPhase": "decompose",
-      "features": {},
-      "lastUpdated": "2026-10-22T14:21:22.778Z"
+      "status": "implementing",
+      "currentPhase": "implement",
+      "features": {
+        "project-members-api": "passing",
+        "project-members-tab": "passing",
+        "project-member-remove-api": "passing",
+        "project-member-remove-tab": "passing",
+        "project-done-statuses-schema": "passing",
+        "project-connection-test": "passing",
+        "project-create": "passing",
+        "project-reconnect": "passing",
+        "project-list": "passing",
+        "jira-integration-projects-table": "passing",
+        "jira-integration-add-project": "passing"
+      },
+      "lastUpdated": "2026-11-14T07:40:19.466Z",
+      "branch": "feat/KAN-128-project-integration-add-ticket-resolver",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "df750d443b8a988893ec5c35560ba3b86df9b221"
+      }
     },
     "wiki": {
       "status": "planned",
@@ -216,16 +243,27 @@
         "manual-ticket-create": "passing",
         "manual-ticket-drafts": "passing",
         "manual-entry-tab": "passing",
+        "manual-evidence-contract": "passing",
+        "manual-evidence-backend": "passing",
+        "manual-evidence-tab": "passing",
+        "import-batch-date-range": "pending",
+        "import-history-api": "pending",
+        "import-history-page": "pending",
+        "ticket-detail-scope": "pending",
+        "ticket-detail-page": "pending",
+        "ticket-publication-contract": "passing",
+        "ticket-publication": "passing",
+        "ticket-publication-buttons": "passing",
         "ticket-decision-table": "pending",
         "drop-legacy-solution-tables": "pending"
       },
-      "lastUpdated": "2026-11-14T20:30:21.719Z",
+      "lastUpdated": "2026-11-15T06:14:01.271Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "d6975188e0f34008e0b4bd331a04f4df9a5beeea"
+        "default": "92b1e9d6bc17b9cb8b8dadf49139a9af763c68cf"
       }
     },
     "search": {
@@ -471,15 +509,16 @@
         "suggestion-job": "passing",
         "suggestion-job-worker": "passing",
         "suggestion-uuid-keys": "evaluating",
-        "suggestion-comment": "passing"
+        "suggestion-comment": "passing",
+        "jira-project-read": "passing"
       },
-      "lastUpdated": "2026-11-07T16:53:12.227Z",
+      "lastUpdated": "2026-11-13T09:41:30.891Z",
       "branch": "feat/tracker",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "c8c32eaeede691bd09f0a1e87a669488d3bbb7b5"
+        "default": "1ac3c6051b2742a4e4a4326b437cd4eccc7a95ae"
       }
     },
     "ticket-review": {

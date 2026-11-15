@@ -144,7 +144,8 @@ public class JiraImportServiceImpl implements JiraImportService {
         } catch (JiraUnavailableException e) {
             log.warn("Jira pull failed project={} jiraKey={} reason={}", projectId, key, e.getReason());
             try {
-                recorder.recordJiraFailed(projectId, user, JiraUnavailableException.class.getSimpleName() + " MSG50");
+                recorder.recordJiraFailed(
+                        projectId, user, from, to, JiraUnavailableException.class.getSimpleName() + " MSG50");
             } catch (RuntimeException recordError) {
                 // never let a recording problem hide the MSG50 answer (BUG-192)
                 log.error(

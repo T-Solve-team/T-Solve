@@ -20,7 +20,9 @@ public class ReviewDecisionRecord {
         APPROVED,
         REJECTED,
         CHANGES_REQUESTED,
-        SEND_BACK
+        SEND_BACK,
+        UNPUBLISH,
+        REPUBLISH
     }
 
     @Id

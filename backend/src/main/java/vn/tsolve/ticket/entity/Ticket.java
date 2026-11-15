@@ -52,6 +52,9 @@ public class Ticket {
     @Column(name = "resolved_date")
     private LocalDate resolvedDate;
 
+    @Column(name = "source_link", length = 500, updatable = false)
+    private String sourceLink;
+
     @Column(nullable = false, columnDefinition = "text")
     private String symptoms;
 
@@ -111,6 +114,21 @@ public class Ticket {
             String writer,
             LocalDate resolvedDate,
             Solution solution) {
+        return imported(
+                ticketId, projectId, source, importBatchId, title, description, writer, resolvedDate, null, solution);
+    }
+
+    public static Ticket imported(
+            String ticketId,
+            UUID projectId,
+            TicketSource source,
+            Long importBatchId,
+            String title,
+            String description,
+            String writer,
+            LocalDate resolvedDate,
+            String sourceLink,
+            Solution solution) {
         Ticket t = new Ticket();
         t.ticketId = ticketId;
         t.projectId = projectId;
@@ -121,6 +139,7 @@ public class Ticket {
         t.description = description;
         t.writer = writer;
         t.resolvedDate = resolvedDate;
+        t.sourceLink = sourceLink;
         t.symptoms = solution.symptoms();
         t.rootCause = solution.rootCause();
         t.resolutionSteps = solution.resolutionSteps();
@@ -237,6 +256,10 @@ public class Ticket {
 
     public LocalDate getResolvedDate() {
         return resolvedDate;
+    }
+
+    public String getSourceLink() {
+        return sourceLink;
     }
 
     public Solution getSolution() {
