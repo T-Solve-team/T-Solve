@@ -22,3 +22,6 @@ Change 2026-11-14 (KAN-134 STORY-007, KAN-135 STORY-008, Tasks 21–25): Import 
 design section "Change 2026-11-14: Import History and Ticket Detail".
 
 Change 2026-11-15 (KAN-136, STORY-009, Tasks 26–28): unpublish / re-publish — master design section "Change 2026-11-15".
+
+Change 2026-11-15 (2) (KAN-137, STORY-010, Tasks 29–30): one decision table and the unused Solution tables removed —
+master design section "Change 2026-11-15 (2)".
