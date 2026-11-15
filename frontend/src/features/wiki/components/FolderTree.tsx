@@ -1,8 +1,7 @@
-import { Button, Form, Space, Tree, Typography, type TreeDataNode } from 'antd';
-import { useRef, useState } from 'react';
+import { Button, Space, Tree, type TreeDataNode } from 'antd';
+import { useState } from 'react';
 import type { WikiFolder } from '@/shared/api';
-import { ErrorState, FormModal } from '@/shared/ui';
-import { useWikiFolderMutations } from '../hooks/useWikiFolderMutations';
+import { DeleteFolderModal } from './DeleteFolderModal';
 import { FolderModal } from './FolderModal';
 
 type FolderTreeProps = {
@@ -82,54 +81,5 @@ export function FolderTree({ folders, folderId, onSelect, managedSpaceId }: Fold
         />
       )}
     </>
-  );
-}
-
-function DeleteFolderModal({
-  spaceId,
-  folder,
-  onClose,
-  onDeleted,
-}: {
-  spaceId: string;
-  folder: WikiFolder;
-  onClose: () => void;
-  onDeleted: () => void;
-}) {
-  const [form] = Form.useForm();
-  const { remove } = useWikiFolderMutations(spaceId);
-  const submitting = useRef(false);
-  return (
-    <FormModal
-      isOpen
-      title="Delete"
-      kind="danger"
-      form={form}
-      okText="Delete"
-      isOkDanger
-      isSubmitting={remove.isPending}
-      onCancel={() => {
-        if (!submitting.current) onClose();
-      }}
-      onSubmit={() => {
-        if (submitting.current) return;
-        submitting.current = true;
-        remove.mutate(
-          { folderId: folder.folderId },
-          {
-            onSuccess: () => {
-              onDeleted();
-              onClose();
-            },
-            onSettled: () => {
-              submitting.current = false;
-            },
-          },
-        );
-      }}
-    >
-      <Typography.Text>{folder.name}</Typography.Text>
-      {remove.error && <ErrorState error={remove.error} />}
-    </FormModal>
   );
 }

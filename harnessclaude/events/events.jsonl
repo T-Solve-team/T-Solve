@@ -1469,3 +1469,17 @@
 {"ts":"2026-11-15T01:50:56.276Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-ui","from":"pending","to":"in-progress"}
 {"ts":"2026-11-15T02:07:08.974Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"a20ae6c20439042cd1cef818b4a1337d6f7afd9e"}
 {"ts":"2026-11-15T02:07:09.253Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-ui","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-15T02:46:48.884Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"b3519408bcd08aee4aeed87f198b4cdb611d7d8f"}
+{"ts":"2026-11-15T04:51:38.289Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"2f212b192f81c70a677b3fda692127f0759fd9f8"}
+{"ts":"2026-11-15T05:30:10.750Z","type":"quick-opened","what":"ReviewStorageIT old-DB build skips wiki changesets that need pgvector (BUG-246)","files":["backend/src/test/java/vn/tsolve/review/ReviewStorageIT.java","docs/bug-log.md"]}
+{"ts":"2026-11-15T05:32:04.703Z","type":"quick-closed","what":"ReviewStorageIT old-DB build skips wiki changesets that need pgvector (BUG-246)","files":["backend/src/test/java/vn/tsolve/review/ReviewStorageIT.java","docs/bug-log.md"]}
+{"ts":"2026-11-15T05:36:05.042Z","type":"feature-status","module":"wiki","feature":"wiki-view-rule","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T05:36:05.352Z","type":"feature-status","module":"wiki","feature":"wiki-browse-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T05:36:05.666Z","type":"feature-status","module":"wiki","feature":"wiki-home-ui","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T05:36:05.984Z","type":"feature-status","module":"wiki","feature":"wiki-folder-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T05:36:06.281Z","type":"feature-status","module":"wiki","feature":"wiki-folder-ui","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T05:36:50.034Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"4055c9bfa1ce8c0d8aa70f1b7455381bf31b9a5a"}
+{"ts":"2026-11-15T05:39:50.465Z","type":"feature-status","module":"wiki","feature":"wiki-upload-ui","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-15T05:58:28.716Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"186f3b38ff677b97644a1e42cf77f0837be6767b"}
+{"ts":"2026-11-15T05:58:28.996Z","type":"feature-status","module":"wiki","feature":"wiki-upload-ui","from":"fixing","to":"evaluating"}
+{"ts":"2026-11-15T05:58:55.273Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"e3eb9e775fb837a8087a5ccbc98327adba517271"}

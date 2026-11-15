@@ -253,7 +253,7 @@ describe('UploadDocumentsPage', () => {
   });
 
   it.each(['MSG84', 'MSG01', 'MSG02'] as const)(
-    'AC-004.22 keeps every row and shows %s on the affected title',
+    'AC-004.22 keeps every row and shows %s on the affected title as "Title" (BUG-248)',
     async (code) => {
       server.use(
         http.post('*/api/v1/wiki/spaces/:spaceId/documents', () =>
@@ -262,7 +262,7 @@ describe('UploadDocumentsPage', () => {
               {
                 field: 'documents[0].title',
                 code,
-                params: { field_name: 'Title', max_length: 200 },
+                params: { field_name: 'documents[0].title', max_length: 200 },
               },
             ],
           }),
