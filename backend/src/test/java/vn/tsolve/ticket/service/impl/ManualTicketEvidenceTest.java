@@ -53,9 +53,9 @@ import vn.tsolve.ticket.repository.ImportBatchRepository;
 import vn.tsolve.ticket.repository.ImportPreviewEvidenceRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRowRepository;
+import vn.tsolve.ticket.repository.TicketDecisionRepository;
 import vn.tsolve.ticket.repository.TicketEvidenceRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
-import vn.tsolve.ticket.repository.TicketReviewDecisionRepository;
 import vn.tsolve.ticket.service.ProjectAccess;
 
 /** Evidence lifecycle, including real Spring transaction synchronization without a database. */
@@ -78,7 +78,7 @@ class ManualTicketEvidenceTest {
             previews,
             rows,
             tickets,
-            mock(TicketReviewDecisionRepository.class),
+            mock(TicketDecisionRepository.class),
             batches,
             projects,
             mock(ApplicationEventPublisher.class),

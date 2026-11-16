@@ -183,8 +183,15 @@ class SuggestionGeneratorTest {
     }
 
     @Test
-    void standInWikiReturnsNoDocument_AC_005_12() {
-        assertThat(new NoWikiSources().nearest(VECTOR, 0, 5)).isEmpty();
+    void generatesFromTicketsWhenWikiReturnsNoDocument_AC_005_12() {
+        when(tickets.nearestInProjectDepartment(any(), any(), anyDouble(), anyInt()))
+                .thenReturn(List.of(ticket(0.9)));
+
+        IssueSuggestion suggestion =
+                generator.suggest(PROJECT, "VPN drops", null).orElseThrow();
+
+        assertThat(suggestion.sources()).hasSize(1).allMatch(source -> source.type()
+                .equals("TICKET"));
     }
 
     @Test

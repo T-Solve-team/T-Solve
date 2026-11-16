@@ -1,6 +1,12 @@
-import { dateRange, vietnamToday } from './audit-filters';
+import { ACTION_LABELS, dateRange, isAuditAction, vietnamToday } from './audit-filters';
 
 describe('audit date filters', () => {
+  it('AC-003.17 labels folder changes and accepts them as an action filter', () => {
+    const action = 'FOLDER_CHANGE';
+    expect(isAuditAction(action)).toBe(true);
+    if (isAuditAction(action)) expect(ACTION_LABELS[action]).toBe('Folder change');
+  });
+
   it('AC-001.14 leaves dates unrestricted when both are absent', () => {
     expect(dateRange(null, null)).toEqual({ valid: true });
   });

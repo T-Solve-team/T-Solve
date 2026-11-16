@@ -26,7 +26,7 @@ import vn.tsolve.ticket.entity.ImportPreviewRow;
 import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
 import vn.tsolve.ticket.entity.Ticket;
-import vn.tsolve.ticket.entity.TicketReviewDecision;
+import vn.tsolve.ticket.entity.TicketDecision;
 import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.event.TicketsPublishedEvent;
 import vn.tsolve.ticket.exception.ImportFailedException;
@@ -37,8 +37,8 @@ import vn.tsolve.ticket.exception.RowsNotReadyException;
 import vn.tsolve.ticket.repository.ImportBatchRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRowRepository;
+import vn.tsolve.ticket.repository.TicketDecisionRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
-import vn.tsolve.ticket.repository.TicketReviewDecisionRepository;
 import vn.tsolve.ticket.service.ImportConfirmService;
 import vn.tsolve.ticket.service.ProjectAccess;
 
@@ -59,7 +59,7 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
     private final ImportPreviewRepository previews;
     private final ImportPreviewRowRepository previewRows;
     private final TicketRepository tickets;
-    private final TicketReviewDecisionRepository decisions;
+    private final TicketDecisionRepository decisions;
     private final ImportBatchRepository batches;
     private final ImportBatchRecorder recorder;
     private final ProjectAccess projects;
@@ -71,7 +71,7 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
             ImportPreviewRepository previews,
             ImportPreviewRowRepository previewRows,
             TicketRepository tickets,
-            TicketReviewDecisionRepository decisions,
+            TicketDecisionRepository decisions,
             ImportBatchRepository batches,
             ImportBatchRecorder recorder,
             ProjectAccess projects,
@@ -104,14 +104,22 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
                 .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
         long errorRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.ERROR);
         long removedRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.REMOVED);
-        // first, so a file with only Needs Solution rows answers MSG_NEW_4, not MSG30 (design, edge case 47)
-        requireRowsReady(preview, errorRows);
-        requireRowsToImport(
-                preview,
-                previewRows
-                        .findByIdPreviewIdAndStatus(previewId, PreviewRowStatus.VALID)
-                        .isEmpty(),
-                errorRows);
+        try {
+            // first, so a file with only Needs Solution rows answers MSG_NEW_4, not MSG30 (design, edge case 47)
+            requireRowsReady(preview, errorRows);
+            requireRowsToImport(
+                    preview,
+                    previewRows
+                            .findByIdPreviewIdAndStatus(previewId, PreviewRowStatus.VALID)
+                            .isEmpty(),
+                    errorRows);
+        } catch (NothingToImportException | RowsNotReadyException e) {
+            // a Confirm that committed after the first read deleted the preview with its rows: 404 (BUG-292)
+            if (previews.findByIdAndOwner(previewId, user).isEmpty()) {
+                throw new NotFoundException("Import preview " + previewId);
+            }
+            throw e;
+        }
         // rejected before anything starts, so no Import Batch is recorded (design B1, E1): MSG40 first, then 403
         if (!projects.isActive(preview.getProjectId())) {
             throw new ProjectNotActiveException();
@@ -271,7 +279,7 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
                 toImport.stream().map(r -> toTicket(r, preview, batch.getId())).toList());
         List<UUID> ticketIds = saved.stream().map(Ticket::getId).toList();
         decisions.saveAll(ticketIds.stream()
-                .map(id -> TicketReviewDecision.approve(id, user))
+                .map(id -> TicketDecision.approvedByImport(id, user))
                 .toList());
         // a Draft is the preview itself, so this also deletes the Draft (AC-003.10)
         previews.deleteById(preview.getId());

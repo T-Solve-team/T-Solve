@@ -46,17 +46,16 @@ import vn.tsolve.ticket.entity.ImportPreview;
 import vn.tsolve.ticket.entity.ImportPreviewRow;
 import vn.tsolve.ticket.entity.ImportType;
 import vn.tsolve.ticket.entity.PreviewRowStatus;
-import vn.tsolve.ticket.entity.ReviewDecision;
 import vn.tsolve.ticket.entity.Ticket;
-import vn.tsolve.ticket.entity.TicketReviewDecision;
+import vn.tsolve.ticket.entity.TicketDecision;
 import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.entity.TicketStatus;
 import vn.tsolve.ticket.event.TicketsPublishedEvent;
 import vn.tsolve.ticket.repository.ImportBatchRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRowRepository;
+import vn.tsolve.ticket.repository.TicketDecisionRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
-import vn.tsolve.ticket.repository.TicketReviewDecisionRepository;
 import vn.tsolve.ticket.service.ProjectAccess;
 
 class ImportConfirmServiceImplTest {
@@ -68,7 +67,7 @@ class ImportConfirmServiceImplTest {
     private final ImportPreviewRepository previews = mock(ImportPreviewRepository.class);
     private final ImportPreviewRowRepository rows = mock(ImportPreviewRowRepository.class);
     private final TicketRepository tickets = mock(TicketRepository.class);
-    private final TicketReviewDecisionRepository decisions = mock(TicketReviewDecisionRepository.class);
+    private final TicketDecisionRepository decisions = mock(TicketDecisionRepository.class);
     private final ImportBatchRepository batches = mock(ImportBatchRepository.class);
     private final ImportBatchRecorder recorder = mock(ImportBatchRecorder.class);
     private final ProjectAccess projects = mock(ProjectAccess.class);
@@ -186,13 +185,13 @@ class ImportConfirmServiceImplTest {
     void recordsAnApproveDecisionByTheProjectManagerPerTicket_AC_004_2() {
         service.confirm(PM, PREVIEW);
 
-        ArgumentCaptor<List<TicketReviewDecision>> captor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<TicketDecision>> captor = ArgumentCaptor.forClass(List.class);
         verify(decisions).saveAll(captor.capture());
         assertThat(captor.getValue())
-                .extracting(TicketReviewDecision::getTicketId)
+                .extracting(TicketDecision::getTicketId)
                 .containsExactly(new UUID(0, 101), new UUID(0, 102));
         assertThat(captor.getValue())
-                .allMatch(d -> d.getReviewer().equals(PM) && d.getDecision() == ReviewDecision.APPROVE);
+                .allMatch(d -> d.getReviewer().equals(PM) && d.getDecision() == TicketDecision.Decision.APPROVED);
     }
 
     @Test
@@ -466,5 +465,16 @@ class ImportConfirmServiceImplTest {
 
         assertThat(result.created()).isEqualTo(2);
         verify(rows, never()).countByIdPreviewIdAndStatus(PREVIEW, PreviewRowStatus.NEEDS_SOLUTION);
+    }
+
+    @Test
+    void aConfirmThatCommitsBetweenTheReadsOfASecondConfirmMakesIt404_BUG_292() {
+        // the first Confirm commits after the second read the preview: its rows and the preview are gone
+        ImportPreview preview = previews.findByIdAndOwner(PREVIEW, PM).orElseThrow();
+        when(previews.findByIdAndOwner(PREVIEW, PM)).thenReturn(Optional.of(preview), Optional.empty());
+        when(rows.findByIdPreviewIdAndStatus(PREVIEW, PreviewRowStatus.VALID)).thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.confirm(PM, PREVIEW)).isInstanceOf(NotFoundException.class);
+        verify(recorder, never()).recordFailed(any(), any(), anyString());
     }
 }

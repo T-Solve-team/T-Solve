@@ -176,7 +176,7 @@ class ReviewNotificationIT {
         reset(outbox);
         jobsJdbc.update("delete from email_outbox");
         when(sites.siteHost(WORKSPACE)).thenReturn(Optional.of("acme.example.test"));
-        jdbc.update("delete from review_decision");
+        jdbc.update("delete from ticket_decision");
         jdbc.update("delete from evidence");
         jdbc.update("delete from ticket");
         jdbc.update("delete from app_user");
@@ -288,6 +288,22 @@ class ReviewNotificationIT {
     }
 
     @Test
+    void emailsNoWriterForTheApproveDecisionOfAnImportedTicket_AC_010_5() {
+        UUID manual = jdbc.queryForObject("""
+                insert into ticket (source_ticket_id, project_id, source, status, writer_id, title, symptoms,
+                                    root_cause, resolution_steps, scope)
+                values ('ITS-MANUAL', ?, 'MANUAL', 'PUBLISHED', ?, 'Login fails', 'Error', 'Token', 'Restart', 'Users')
+                returning ticket_id
+                """, UUID.class, PROJECT, writerId);
+        UUID decision = jdbc.queryForObject("""
+                insert into ticket_decision (ticket_id, reviewer, decision, feedback)
+                values (?, 'pm-signin', 'APPROVED', 'imported') returning ticket_decision_id
+                """, UUID.class, manual);
+        tenants.runIn(WORKSPACE, () -> enqueuer.onDecided(new ReviewFeedbackDecidedEvent(List.of(decision))));
+        assertThat(outboxCount()).isZero();
+    }
+
+    @Test
     void queuesNothingWhenSuccessfulDecisionTransactionIsRolledBack_AC_010_1() {
         UUID ticket = ticket("ITS-rollback", "PENDING_REVIEW", writerId);
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
@@ -305,7 +321,7 @@ class ReviewNotificationIT {
     void retriesAndFailsQueuedMailWithoutChangingDecision_AC_010_4() {
         UUID ticket = ticket("ITS-retry", "PENDING_REVIEW", writerId);
         decisions.decide(reviewerId, Set.of(PROJECT), List.of(ticket), Action.REJECTED, FEEDBACK);
-        var storedDecision = jdbc.queryForMap("select * from review_decision");
+        var storedDecision = jdbc.queryForMap("select * from ticket_decision");
         var storedTicket = jdbc.queryForMap("select * from ticket where ticket_id = ?", ticket);
         doThrow(mock(SmtpEmailSender.DeliveryException.class)).when(sender).send(any());
         var beans = new StaticListableBeanFactory();
@@ -335,7 +351,7 @@ class ReviewNotificationIT {
                 assertThat(((java.sql.Timestamp) row.get("next_attempt_at")).toInstant())
                         .isEqualTo(NOW.plus(Duration.ofMinutes(minutes[attempt + 1])));
             }
-            assertThat(jdbc.queryForMap("select * from review_decision")).isEqualTo(storedDecision);
+            assertThat(jdbc.queryForMap("select * from ticket_decision")).isEqualTo(storedDecision);
             assertThat(jdbc.queryForMap("select * from ticket where ticket_id = ?", ticket))
                     .isEqualTo(storedTicket);
         }
@@ -361,7 +377,7 @@ class ReviewNotificationIT {
         assertThat(notification.writerName()).isEqualTo("Writer Name");
         assertThat(notification.decidedAt())
                 .isEqualTo(jdbc.queryForObject(
-                                "select decided_at from review_decision where review_decision_id = ?",
+                                "select decided_at from ticket_decision where ticket_decision_id = ?",
                                 java.sql.Timestamp.class,
                                 id)
                         .toInstant());
@@ -391,8 +407,8 @@ class ReviewNotificationIT {
             // Simulate an orphaned historical reference; commit restores FK enforcement.
             jdbc.execute("set local session_replication_role = replica");
             UUID id = jdbc.queryForObject("""
-                    insert into review_decision (ticket_id, project_manager_id, decision, reason_or_comment)
-                    values (?, ?, 'REJECTED', ?) returning review_decision_id
+                    insert into ticket_decision (ticket_id, reviewer_id, decision, feedback)
+                    values (?, ?, 'REJECTED', ?) returning ticket_decision_id
                     """, UUID.class, ticket, UUID.randomUUID(), FEEDBACK);
             events.publishEvent(new ReviewFeedbackDecidedEvent(List.of(id)));
             return id;
@@ -450,7 +466,7 @@ class ReviewNotificationIT {
     }
 
     private List<UUID> decisionIds() {
-        return jdbc.queryForList("select review_decision_id from review_decision", UUID.class);
+        return jdbc.queryForList("select ticket_decision_id from ticket_decision", UUID.class);
     }
 
     private UUID account(String email) {

@@ -8,6 +8,8 @@ info:
     backend must agree to (frontend guideline 06 §6 and the decision log): Problem Details errors with an MSG
     `code`, Spring-style paging (`page` from 0, `size`, `sort`), and the `/me` session shape.
 tags:
+  - name: wiki
+    description: Wiki Spaces, folders and documents (SRS UC-38 to UC-50).
   - name: workspace
     description: Admin Workspace Setup and company information (UC-10, UC-11).
   - name: users
@@ -39,6 +41,342 @@ tags:
   - name: dashboard
     description: Knowledge Dashboard figures, screen 9.1.
 paths:
+  /api/v1/wiki/spaces:
+    get:
+      tags: [wiki]
+      operationId: listWikiSpaces
+      summary: List viewable Spaces by name with the caller's access level.
+      responses:
+        '200':
+          description: Viewable Spaces.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/WikiSpace' } }
+        '401':
+          $ref: '#/components/responses/Problem'
+  /api/v1/wiki/company-wide:
+    get:
+      tags: [wiki]
+      operationId: listCompanyWideDocuments
+      summary: List Published Company-wide documents by Space name and title.
+      responses:
+        '200':
+          description: Documents from Active Spaces of Active Departments.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/WikiDocumentSummary' } }
+        '401':
+          $ref: '#/components/responses/Problem'
+  /api/v1/wiki/spaces/{spaceId}/folders:
+    post:
+      tags: [wiki]
+      operationId: createWikiFolder
+      summary: Create a folder in a managed Space.
+      parameters:
+        - { name: spaceId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateWikiFolderRequest' }
+      responses:
+        '201':
+          description: Folder created with a stripped name.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WikiFolder' }
+        '400':
+          description: MSG01 or MSG02 on name; MSG86 on parentId for depth over three.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          description: MSG04 for an unknown or inactive Space or parent outside the Space.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '409':
+          description: MSG85 on name when another sibling has the same stripped name ignoring case.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+    get:
+      tags: [wiki]
+      operationId: listWikiFolders
+      summary: List all folders of a viewable Space by name.
+      parameters:
+        - { name: spaceId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Flat folder tree.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/WikiFolder' } }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: Active Space is not viewable (MSG08).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '404':
+          description: Unknown or Hidden Space, or Deleted Department (MSG04).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+  /api/v1/wiki/folders/{folderId}:
+    put:
+      tags: [wiki]
+      operationId: updateWikiFolder
+      summary: Rename or move a folder and its sub-tree in a managed Space.
+      parameters:
+        - { name: folderId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateWikiFolderRequest' }
+      responses:
+        '200':
+          description: Folder updated; sub-folders and documents remain inside it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WikiFolder' }
+        '400':
+          description: MSG01 or MSG02 on name; MSG86 on parentId for cycles or sub-tree depth over three.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          description: MSG04 for an unknown folder, inactive Space or parent outside the Space.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '409':
+          description: MSG85 on name when another sibling has the same stripped name ignoring case.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+    delete:
+      tags: [wiki]
+      operationId: deleteWikiFolder
+      summary: Delete an empty folder in a managed Space.
+      parameters:
+        - { name: folderId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204':
+          description: Empty folder deleted.
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          description: MSG87 with direct folder_count and document_count including trashed documents; nothing deleted.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+  /api/v1/wiki/spaces/{spaceId}/documents:
+    post:
+      tags: [wiki]
+      operationId: publishWikiDocuments
+      summary: Publish one to ten readable PDF or DOCX files in a managed Space.
+      parameters:
+        - { name: spaceId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [files, metadata]
+              properties:
+                files:
+                  type: array
+                  minItems: 1
+                  maxItems: 10
+                  items: { type: string, format: binary }
+                metadata:
+                  $ref: '#/components/schemas/WikiPublishMetadata'
+                  description: JSON metadata; also accepts the JSON string part sent by the generated client.
+            encoding:
+              metadata: { contentType: application/json }
+      responses:
+        '201':
+          description: Published documents in file order; indexing queued after commit.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/WikiDocumentRef' } }
+        '400':
+          description: MSG01 for files, metadata or documents[i].title; MSG02 for titles over 200; MSG88 for over ten files; MSG89 for invalid type with file_name; MSG90 for unreadable text with file_name.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          description: MSG04 for an inactive or unknown Space or a folder outside the Space.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '409':
+          description: MSG84 on documents[i].title for a duplicate Published title in the folder or this request. Nothing stored.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '413':
+          $ref: '#/components/responses/Problem'
+    get:
+      tags: [wiki]
+      operationId: listWikiDocuments
+      summary: List Published documents directly in a folder by title.
+      parameters:
+        - { name: spaceId, in: path, required: true, schema: { type: string, format: uuid } }
+        - name: folderId
+          in: query
+          description: Folder of this Space; absent means the top level.
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Documents directly in the requested folder.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/WikiDocumentSummary' } }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: Active Space is not viewable (MSG08).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '404':
+          description: Unknown or Hidden Space, Deleted Department, or folder outside the Space (MSG04).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+  /api/v1/wiki/spaces/{spaceId}/uploads/extract:
+    post:
+      tags: [wiki]
+      operationId: extractWikiUploads
+      summary: Preview one to ten PDF or DOCX files without storing them.
+      parameters:
+        - { name: spaceId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [files]
+              properties:
+                files:
+                  type: array
+                  minItems: 1
+                  maxItems: 10
+                  items: { type: string, format: binary }
+      responses:
+        '200':
+          description: Preview rows in file order; unreadable files have empty excerpts and zero words.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/WikiUploadPreview' } }
+        '400':
+          description: MSG01 on files when absent; MSG88 for over ten; MSG89 with file_name for invalid extension or magic bytes.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '413':
+          $ref: '#/components/responses/Problem'
+  /api/v1/wiki/documents/{documentId}/file:
+    get:
+      tags: [wiki]
+      operationId: downloadWikiDocumentFile
+      summary: Download the original file after checking current document access.
+      parameters:
+        - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Original bytes and content type, with an attachment filename and nosniff.
+          headers:
+            Content-Disposition: { schema: { type: string } }
+            X-Content-Type-Options: { schema: { type: string, const: nosniff } }
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema: { type: string, format: binary }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '404':
+          description: MSG110 for unknown, trashed or non-viewable documents.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+  /api/v1/wiki/documents/search:
+    get:
+      tags: [wiki]
+      operationId: searchWikiDocuments
+      summary: Search viewable documents by words and best passage similarity.
+      description: >
+        At most 50 results, ordered by keyword rank plus best passage similarity descending,
+        then title. Semantic matches require tsolve.wiki.search.min-similarity (default 0.55).
+        If embedding fails, only keyword matches are returned.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Nonblank; length checked as received before stripping whitespace.
+          schema: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        '200':
+          description: Ranked viewable documents.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/WikiDocumentSummary' } }
+        '400':
+          description: Missing or blank q (MSG01); nonblank q longer than 200 characters as received (MSG02, max_length 200). Field q.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '401':
+          $ref: '#/components/responses/Problem'
+  /api/v1/wiki/documents/{documentId}:
+    get:
+      tags: [wiki]
+      operationId: getWikiDocument
+      summary: Read a viewable Wiki document as extracted plain text.
+      parameters:
+        - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Document and whether the caller can delete it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WikiDocumentDetail' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '404':
+          description: Unknown, deleted or non-viewable document (MSG110).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
   /api/v1/projects/connection-test:
     post:
       tags: [projects]
@@ -2417,6 +2755,98 @@ components:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
   schemas:
+    WikiSpace:
+      type: object
+      required: [spaceId, name, departmentName, accessLevel]
+      properties:
+        spaceId: { type: string, format: uuid }
+        name: { type: string }
+        departmentName: { type: string }
+        accessLevel: { type: string, enum: [VIEW, KNOWLEDGE_MANAGER] }
+    WikiUploadPreview:
+      type: object
+      required: [fileName, title, excerpt, wordCount, result]
+      properties:
+        fileName: { type: string }
+        title: { type: string, maxLength: 200 }
+        excerpt: { type: string, maxLength: 300 }
+        wordCount: { type: integer, minimum: 0 }
+        result: { type: string, enum: [READY, UNREADABLE] }
+    WikiPublishMetadata:
+      type: object
+      required: [documents]
+      properties:
+        folderId: { type: [string, 'null'], format: uuid }
+        documents:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            type: object
+            required: [title, visibility]
+            properties:
+              title: { type: string, minLength: 1, maxLength: 200 }
+              visibility: { type: string, enum: [DEPARTMENT, COMPANY_WIDE] }
+    WikiDocumentRef:
+      type: object
+      required: [documentId, title]
+      properties:
+        documentId: { type: string, format: uuid }
+        title: { type: string }
+    CreateWikiFolderRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Nonblank; length checked as received, then leading and trailing whitespace stripped.
+        parentId: { type: [string, 'null'], format: uuid }
+    UpdateWikiFolderRequest:
+      type: object
+      required: [name, parentId]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Nonblank; length checked as received, then leading and trailing whitespace stripped.
+        parentId:
+          type: [string, 'null']
+          format: uuid
+          description: New parent in the same Space; null moves the folder to the top level.
+    WikiFolder:
+      type: object
+      required: [folderId, parentId, name, level]
+      properties:
+        folderId: { type: string, format: uuid }
+        parentId: { type: [string, 'null'], format: uuid }
+        name: { type: string }
+        level: { type: integer, minimum: 1, maximum: 3 }
+    WikiDocumentSummary:
+      type: object
+      required: [documentId, title, spaceId, spaceName, folderId, folderName, visibility, owner, updatedAt]
+      properties:
+        documentId: { type: string, format: uuid }
+        title: { type: string }
+        spaceId: { type: string, format: uuid }
+        spaceName: { type: string }
+        folderId: { type: [string, 'null'], format: uuid }
+        folderName: { type: [string, 'null'] }
+        visibility: { type: string, enum: [DEPARTMENT, COMPANY_WIDE] }
+        owner: { type: string, description: Owner's full name. }
+        updatedAt: { type: string, format: date-time }
+    WikiDocumentDetail:
+      allOf:
+        - $ref: '#/components/schemas/WikiDocumentSummary'
+        - type: object
+          required: [content, fileName, fileSize, canDelete]
+          properties:
+            content: { type: string, description: Extracted plain text. }
+            fileName: { type: string }
+            fileSize: { type: integer, format: int64 }
+            canDelete: { type: boolean }
     WorkspaceSetupRequest:
       type: object
       required: [companyName, jiraSiteUrl, serviceAccountEmail, serviceAccountToken]
@@ -2651,6 +3081,7 @@ components:
           TRACKER_CONFIGURATION_CHANGE,
           DEPARTMENT_CHANGE,
           PROJECT_MEMBER_CHANGE,
+          FOLDER_CHANGE,
         ]
     AuditEntry:
       type: object
