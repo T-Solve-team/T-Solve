@@ -35,7 +35,9 @@ import type {
   WikiDocumentRef,
   WikiDocumentSummary,
   WikiFolder,
+  WikiRestoreResult,
   WikiSpace,
+  WikiTrashItem,
   WikiUploadPreview,
 } from '../model';
 
@@ -1361,11 +1363,99 @@ export function useSearchWikiDocuments<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getTrashWikiDocumentUrl = (documentId: string) => {
+  return `/api/v1/wiki/documents/${documentId}`;
+};
+
+/**
+ * @summary Move a Published document to its Space's trash.
+ */
+export const trashWikiDocument = async (
+  documentId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getTrashWikiDocumentUrl(documentId), {
+    ...options,
+    method: 'DELETE',
+  });
+};
+
+export const getTrashWikiDocumentMutationKey = () => ['trashWikiDocument'] as const;
+
+export const getTrashWikiDocumentMutationOptions = <
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof trashWikiDocument>>,
+    TError,
+    TrashWikiDocumentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof trashWikiDocument>>,
+  TError,
+  TrashWikiDocumentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getTrashWikiDocumentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof trashWikiDocument>>,
+    TrashWikiDocumentMutationVariables
+  > = (props) => {
+    const { documentId } = props ?? {};
+
+    return trashWikiDocument(documentId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type TrashWikiDocumentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof trashWikiDocument>>
+>;
+
+export type TrashWikiDocumentMutationError = ErrorType<ProblemResponse | ProblemDetail>;
+export type TrashWikiDocumentMutationVariables = { documentId: string };
+
+/**
+ * @summary Move a Published document to its Space's trash.
+ */
+export const useTrashWikiDocument = <
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof trashWikiDocument>>,
+      TError,
+      TrashWikiDocumentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof trashWikiDocument>>,
+  TError,
+  TrashWikiDocumentMutationVariables,
+  TContext
+> => {
+  return useMutation(getTrashWikiDocumentMutationOptions(options), queryClient);
+};
 export const getGetWikiDocumentUrl = (documentId: string) => {
   return `/api/v1/wiki/documents/${documentId}`;
 };
 
 /**
+ * The Space's Knowledge Manager may also read trashed documents, with canDelete false.
  * @summary Read a viewable Wiki document as extracted plain text.
  */
 export const getWikiDocument = async (
@@ -1488,3 +1578,308 @@ export function useGetWikiDocument<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getListWikiTrashUrl = (spaceId: string) => {
+  return `/api/v1/wiki/spaces/${spaceId}/trash`;
+};
+
+/**
+ * @summary List a managed Space's trashed documents, newest deletedAt first.
+ */
+export const listWikiTrash = async (
+  spaceId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<WikiTrashItem[]> => {
+  return http<WikiTrashItem[]>(getListWikiTrashUrl(spaceId), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getListWikiTrashQueryKey = (spaceId: string) => {
+  return [`/api/v1/wiki/spaces/${spaceId}/trash`] as const;
+};
+
+export const getListWikiTrashQueryOptions = <
+  TData = Awaited<ReturnType<typeof listWikiTrash>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  spaceId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listWikiTrash>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListWikiTrashQueryKey(spaceId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listWikiTrash>>> = ({ signal }) =>
+    listWikiTrash(spaceId, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: spaceId !== null && spaceId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof listWikiTrash>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListWikiTrashQueryResult = NonNullable<Awaited<ReturnType<typeof listWikiTrash>>>;
+export type ListWikiTrashQueryError = ErrorType<ProblemResponse | ProblemDetail>;
+
+export function useListWikiTrash<
+  TData = Awaited<ReturnType<typeof listWikiTrash>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  spaceId: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listWikiTrash>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listWikiTrash>>,
+          TError,
+          Awaited<ReturnType<typeof listWikiTrash>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListWikiTrash<
+  TData = Awaited<ReturnType<typeof listWikiTrash>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  spaceId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listWikiTrash>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listWikiTrash>>,
+          TError,
+          Awaited<ReturnType<typeof listWikiTrash>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListWikiTrash<
+  TData = Awaited<ReturnType<typeof listWikiTrash>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  spaceId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listWikiTrash>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List a managed Space's trashed documents, newest deletedAt first.
+ */
+
+export function useListWikiTrash<
+  TData = Awaited<ReturnType<typeof listWikiTrash>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  spaceId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listWikiTrash>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListWikiTrashQueryOptions(spaceId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getRestoreWikiDocumentUrl = (documentId: string) => {
+  return `/api/v1/wiki/documents/${documentId}/restore`;
+};
+
+/**
+ * A title conflict appends " (restored)", " (restored 2)" and so on, shortening the original title to keep at most 200 characters. Re-index after commit unless already INDEXED.
+ * @summary Restore a trashed document to Published in its original folder.
+ */
+export const restoreWikiDocument = async (
+  documentId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<WikiRestoreResult> => {
+  return http<WikiRestoreResult>(getRestoreWikiDocumentUrl(documentId), {
+    ...options,
+    method: 'POST',
+  });
+};
+
+export const getRestoreWikiDocumentMutationKey = () => ['restoreWikiDocument'] as const;
+
+export const getRestoreWikiDocumentMutationOptions = <
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof restoreWikiDocument>>,
+    TError,
+    RestoreWikiDocumentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof restoreWikiDocument>>,
+  TError,
+  RestoreWikiDocumentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRestoreWikiDocumentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof restoreWikiDocument>>,
+    RestoreWikiDocumentMutationVariables
+  > = (props) => {
+    const { documentId } = props ?? {};
+
+    return restoreWikiDocument(documentId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RestoreWikiDocumentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof restoreWikiDocument>>
+>;
+
+export type RestoreWikiDocumentMutationError = ErrorType<ProblemResponse | ProblemDetail>;
+export type RestoreWikiDocumentMutationVariables = { documentId: string };
+
+/**
+ * @summary Restore a trashed document to Published in its original folder.
+ */
+export const useRestoreWikiDocument = <
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof restoreWikiDocument>>,
+      TError,
+      RestoreWikiDocumentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof restoreWikiDocument>>,
+  TError,
+  RestoreWikiDocumentMutationVariables,
+  TContext
+> => {
+  return useMutation(getRestoreWikiDocumentMutationOptions(options), queryClient);
+};
+export const getDeleteWikiDocumentPermanentlyUrl = (documentId: string) => {
+  return `/api/v1/wiki/documents/${documentId}/permanent`;
+};
+
+/**
+ * @summary Permanently delete a trashed document and its passages.
+ */
+export const deleteWikiDocumentPermanently = async (
+  documentId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDeleteWikiDocumentPermanentlyUrl(documentId), {
+    ...options,
+    method: 'DELETE',
+  });
+};
+
+export const getDeleteWikiDocumentPermanentlyMutationKey = () =>
+  ['deleteWikiDocumentPermanently'] as const;
+
+export const getDeleteWikiDocumentPermanentlyMutationOptions = <
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteWikiDocumentPermanently>>,
+    TError,
+    DeleteWikiDocumentPermanentlyMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteWikiDocumentPermanently>>,
+  TError,
+  DeleteWikiDocumentPermanentlyMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteWikiDocumentPermanentlyMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteWikiDocumentPermanently>>,
+    DeleteWikiDocumentPermanentlyMutationVariables
+  > = (props) => {
+    const { documentId } = props ?? {};
+
+    return deleteWikiDocumentPermanently(documentId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteWikiDocumentPermanentlyMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteWikiDocumentPermanently>>
+>;
+
+export type DeleteWikiDocumentPermanentlyMutationError = ErrorType<ProblemResponse | ProblemDetail>;
+export type DeleteWikiDocumentPermanentlyMutationVariables = { documentId: string };
+
+/**
+ * @summary Permanently delete a trashed document and its passages.
+ */
+export const useDeleteWikiDocumentPermanently = <
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteWikiDocumentPermanently>>,
+      TError,
+      DeleteWikiDocumentPermanentlyMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteWikiDocumentPermanently>>,
+  TError,
+  DeleteWikiDocumentPermanentlyMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteWikiDocumentPermanentlyMutationOptions(options), queryClient);
+};

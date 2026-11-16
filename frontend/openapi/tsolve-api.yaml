@@ -358,10 +358,32 @@ paths:
         '401':
           $ref: '#/components/responses/Problem'
   /api/v1/wiki/documents/{documentId}:
+    delete:
+      tags: [wiki]
+      operationId: trashWikiDocument
+      summary: Move a Published document to its Space's trash.
+      parameters:
+        - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204':
+          description: Moved to trash; excluded from browsing, download and retrieval immediately.
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: MSG08 when the caller can view the document but is not its Space's Knowledge Manager.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '404':
+          description: MSG110 for unknown, non-viewable or non-Published documents.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
     get:
       tags: [wiki]
       operationId: getWikiDocument
       summary: Read a viewable Wiki document as extracted plain text.
+      description: The Space's Knowledge Manager may also read trashed documents, with canDelete false.
       parameters:
         - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
       responses:
@@ -373,7 +395,78 @@ paths:
         '401':
           $ref: '#/components/responses/Problem'
         '404':
-          description: Unknown, deleted or non-viewable document (MSG110).
+          description: Unknown or non-viewable document, including trash outside the caller's managed Space (MSG110).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+  /api/v1/wiki/spaces/{spaceId}/trash:
+    get:
+      tags: [wiki]
+      operationId: listWikiTrash
+      summary: List a managed Space's trashed documents, newest deletedAt first.
+      parameters:
+        - { name: spaceId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Trashed documents; an empty array when none exist.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/WikiTrashItem' } }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          description: MSG04 for an unknown, Hidden or Deleted-Department Space.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+  /api/v1/wiki/documents/{documentId}/restore:
+    post:
+      tags: [wiki]
+      operationId: restoreWikiDocument
+      summary: Restore a trashed document to Published in its original folder.
+      description: >
+        A title conflict appends " (restored)", " (restored 2)" and so on, shortening the
+        original title to keep at most 200 characters. Re-index after commit unless already INDEXED.
+      parameters:
+        - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Final title and whether it was renamed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WikiRestoreResult' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          description: MSG110 for unknown, non-viewable or non-trashed documents.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '409':
+          description: MSG84 if another upload or restore takes the chosen title; document stays in trash.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+  /api/v1/wiki/documents/{documentId}/permanent:
+    delete:
+      tags: [wiki]
+      operationId: deleteWikiDocumentPermanently
+      summary: Permanently delete a trashed document and its passages.
+      parameters:
+        - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204':
+          description: Deleted; original file cleanup runs after commit, with failures logged at WARN.
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          description: MSG110 for unknown, non-viewable or non-trashed documents.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ProblemDetail' }
@@ -2787,6 +2880,22 @@ components:
             properties:
               title: { type: string, minLength: 1, maxLength: 200 }
               visibility: { type: string, enum: [DEPARTMENT, COMPANY_WIDE] }
+    WikiTrashItem:
+      type: object
+      required: [documentId, title, folderName, owner, deletedBy, deletedAt]
+      properties:
+        documentId: { type: string, format: uuid }
+        title: { type: string }
+        folderName: { type: [string, 'null'] }
+        owner: { type: string, description: Owner's full name. }
+        deletedBy: { type: string, description: Deleting user's full name. }
+        deletedAt: { type: string, format: date-time }
+    WikiRestoreResult:
+      type: object
+      required: [title, renamed]
+      properties:
+        title: { type: string, maxLength: 200 }
+        renamed: { type: boolean }
     WikiDocumentRef:
       type: object
       required: [documentId, title]
@@ -2841,12 +2950,13 @@ components:
       allOf:
         - $ref: '#/components/schemas/WikiDocumentSummary'
         - type: object
-          required: [content, fileName, fileSize, canDelete]
+          required: [content, fileName, fileSize, canDelete, inTrash]
           properties:
             content: { type: string, description: Extracted plain text. }
             fileName: { type: string }
             fileSize: { type: integer, format: int64 }
             canDelete: { type: boolean }
+            inTrash: { type: boolean, description: True only on the Knowledge Manager's read of a trashed document. }
     WorkspaceSetupRequest:
       type: object
       required: [companyName, jiraSiteUrl, serviceAccountEmail, serviceAccountToken]
