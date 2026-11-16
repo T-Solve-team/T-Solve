@@ -248,7 +248,7 @@
         "jira-import-preview-page": "passing",
         "jira-import-verify": "passing",
         "jira-gateway-auth": "passing",
-        "jira-pull-deadline": "evaluating",
+        "jira-pull-deadline": "passing",
         "ticket-status-model": "passing",
         "manual-ticket-contract": "passing",
         "manual-ticket-create": "passing",
@@ -257,19 +257,19 @@
         "manual-evidence-contract": "passing",
         "manual-evidence-backend": "passing",
         "manual-evidence-tab": "passing",
-        "import-batch-date-range": "pending",
-        "import-history-api": "pending",
-        "import-history-page": "pending",
-        "ticket-detail-scope": "pending",
-        "ticket-detail-page": "pending",
+        "import-batch-date-range": "passing",
+        "import-history-api": "passing",
+        "import-history-page": "passing",
+        "ticket-detail-scope": "passing",
+        "ticket-detail-page": "passing",
         "ticket-publication-contract": "passing",
         "ticket-publication": "passing",
         "ticket-publication-buttons": "passing",
-        "ticket-decision-table": "evaluating",
-        "drop-legacy-solution-tables": "evaluating",
-        "jira-import-workspace-account": "evaluating"
+        "ticket-decision-table": "passing",
+        "drop-legacy-solution-tables": "passing",
+        "jira-import-workspace-account": "passing"
       },
-      "lastUpdated": "2026-11-16T15:24:32.576Z",
+      "lastUpdated": "2026-11-16T17:48:57.779Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
@@ -421,7 +421,7 @@
         "row-level-security": "pending",
         "workspace-registry": "pending",
         "web-tenant-resolver": "pending",
-        "file-storage": "evaluating",
+        "file-storage": "passing",
         "local-compose": "pending",
         "ci-images": "pending",
         "staging-servers": "pending",
@@ -449,7 +449,7 @@
         "cross-module-isolation": "passing",
         "e2e-smoke": "passing"
       },
-      "lastUpdated": "2026-11-14T06:06:15.574Z",
+      "lastUpdated": "2026-11-15T19:54:14.488Z",
       "branch": "feat/platform",
       "repos": [
         "default"
