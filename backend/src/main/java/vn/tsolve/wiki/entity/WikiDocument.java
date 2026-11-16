@@ -109,6 +109,21 @@ public class WikiDocument {
         return id;
     }
 
+    public void trash(UUID actor, Instant now) {
+        status = Status.DELETED;
+        deletedBy = actor;
+        deletedAt = now;
+        updatedAt = now;
+    }
+
+    public void restore(String restoredTitle, Instant now) {
+        status = Status.PUBLISHED;
+        title = restoredTitle;
+        deletedBy = null;
+        deletedAt = null;
+        updatedAt = now;
+    }
+
     public Long getSpaceId() {
         return spaceId;
     }

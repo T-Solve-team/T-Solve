@@ -1668,6 +1668,12 @@
 {"ts":"2026-11-14T20:13:25.404Z","type":"feature-status","module":"wiki","feature":"wiki-upload-ui","from":"pending","to":"in-progress"}
 {"ts":"2026-11-14T20:36:52.241Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"6bd9d92d3ad8aec081a00bb76d8aa80110515f40"}
 {"ts":"2026-11-14T20:36:52.526Z","type":"feature-status","module":"wiki","feature":"wiki-upload-ui","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T20:36:54.289Z","type":"feature-status","module":"wiki","feature":"wiki-trash-api","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T20:59:28.316Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"2a1c6c2bf2cc3fb5158054e3c8faa8b20166d262"}
+{"ts":"2026-11-14T20:59:28.752Z","type":"feature-status","module":"wiki","feature":"wiki-trash-api","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T20:59:31.157Z","type":"feature-status","module":"wiki","feature":"wiki-trash-ui","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T21:16:17.125Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"9fe4cb5ddff98bcd24898634c80064068cbd93ae"}
+{"ts":"2026-11-14T21:16:17.421Z","type":"feature-status","module":"wiki","feature":"wiki-trash-ui","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-15T02:46:48.884Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"b3519408bcd08aee4aeed87f198b4cdb611d7d8f"}
 {"ts":"2026-11-15T04:51:38.289Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"2f212b192f81c70a677b3fda692127f0759fd9f8"}
 {"ts":"2026-11-15T05:30:10.750Z","type":"quick-opened","what":"ReviewStorageIT old-DB build skips wiki changesets that need pgvector (BUG-246)","files":["backend/src/test/java/vn/tsolve/review/ReviewStorageIT.java","docs/bug-log.md"]}
@@ -1681,6 +1687,7 @@
 {"ts":"2026-11-15T05:39:50.465Z","type":"feature-status","module":"wiki","feature":"wiki-upload-ui","from":"evaluating","to":"fixing"}
 {"ts":"2026-11-15T05:58:28.716Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"186f3b38ff677b97644a1e42cf77f0837be6767b"}
 {"ts":"2026-11-15T05:58:28.996Z","type":"feature-status","module":"wiki","feature":"wiki-upload-ui","from":"fixing","to":"evaluating"}
+{"ts":"2026-11-15T05:58:55.273Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"e3eb9e775fb837a8087a5ccbc98327adba517271"}
 {"ts":"2026-11-14T18:40:17.560Z","type":"feature-status","module":"identity","feature":"profile-spaces-backend","from":"pending","to":"in-progress"}
 {"ts":"2026-11-14T18:40:17.885Z","type":"feature-status","module":"identity","feature":"profile-spaces-backend","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-14T18:40:18.180Z","type":"feature-status","module":"identity","feature":"profile-spaces-backend","from":"evaluating","to":"passing"}
@@ -1799,6 +1806,11 @@
 {"ts":"2026-11-15T13:06:13.442Z","type":"quick-closed","what":"PR253 review: update WikiHomePage folder-button queries for the per-folder aria-labels","files":["frontend/src/features/wiki/pages/WikiHomePage.test.tsx"]}
 {"ts":"2026-11-15T13:07:01.691Z","type":"quick-opened","what":"PR254 review: strip NUL characters from extracted Wiki text so publish does not answer 500 (BUG-292)","files":["backend/src/main/java/vn/tsolve/wiki/service/TextExtractor.java","backend/src/test/java/vn/tsolve/wiki/service/TextExtractorTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-15T13:08:14.567Z","type":"quick-closed","what":"PR254 review: strip NUL characters from extracted Wiki text so publish does not answer 500 (BUG-292)","files":["backend/src/main/java/vn/tsolve/wiki/service/TextExtractor.java","backend/src/test/java/vn/tsolve/wiki/service/TextExtractorTest.java","docs/bug-log.md"]}
+{"ts":"2026-11-15T13:43:00.565Z","type":"spec-approved","module":"wiki","specHash":"e0bc9139a93e01ab9494b78ee9b13e1f7978f4d6c0cdd566fb69112b31e280f4"}
+{"ts":"2026-11-15T13:43:27.603Z","type":"feature-status","module":"wiki","feature":"wiki-trash-detail","from":null,"to":"pending"}
+{"ts":"2026-11-15T13:54:53.489Z","type":"feature-status","module":"wiki","feature":"wiki-trash-detail","from":"pending","to":"in-progress"}
+{"ts":"2026-11-15T13:55:12.466Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"38d16367f63e4f1ea3b8e79cc57d4a6a6f1b5829"}
+{"ts":"2026-11-15T13:55:14.043Z","type":"feature-status","module":"wiki","feature":"wiki-trash-detail","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-16T03:22:15.631Z","type":"quick-opened","what":"PR #252 review follow-ups: tsvector prefix 150000, ponytail notes on rank mix and folder tree","files":["backend/src/main/resources/db/changelog/changes/040-wiki-tables.sql","docs/bug-log.md","backend/src/main/java/vn/tsolve/wiki/repository/WikiSearchRepository.java","frontend/src/features/wiki/components/FolderTree.tsx"]}
 {"ts":"2026-11-16T03:31:30.631Z","type":"quick-closed","what":"PR #252 review follow-ups: tsvector prefix 150000, ponytail notes on rank mix and folder tree","files":["backend/src/main/resources/db/changelog/changes/040-wiki-tables.sql","docs/bug-log.md","backend/src/main/java/vn/tsolve/wiki/repository/WikiSearchRepository.java","frontend/src/features/wiki/components/FolderTree.tsx"]}
 {"ts":"2026-11-16T03:46:34.297Z","type":"quick-opened","what":"BUG-292: a second Confirm racing a committed Confirm answers MSG30 instead of 404 (AC-004.12)","files":["backend/src/main/java/vn/tsolve/ticket/service/impl/ImportConfirmServiceImpl.java","backend/src/test/java/vn/tsolve/ticket/service/impl/ImportConfirmServiceImplTest.java","docs/bug-log.md"]}

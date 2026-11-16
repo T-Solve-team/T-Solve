@@ -91,6 +91,7 @@ class WikiBrowseServiceImplTest {
                 "Text",
                 "guide.pdf",
                 42,
+                false,
                 false);
         when(repository.findDocument(user, id)).thenReturn(Optional.of(detail));
         assertThat(service.getDocument(user, id)).isEqualTo(detail);
