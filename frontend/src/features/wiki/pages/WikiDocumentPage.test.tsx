@@ -65,7 +65,7 @@ describe('WikiDocumentPage', () => {
     await waitFor(() => expect(view.queryClient.isFetching()).toBe(0));
   });
 
-  it('AC-005.13 returns to 11.1 without refetching the trashed document first (BUG-304)', async () => {
+  it('AC-005.13 returns to 11.1 without refetching the trashed document first (BUG-305)', async () => {
     const read = vi.fn();
     server.use(
       // Other GET routes of the same shape (Wiki Home's lists) fall through to the default mocks.

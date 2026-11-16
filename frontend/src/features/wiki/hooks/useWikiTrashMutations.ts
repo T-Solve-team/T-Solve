@@ -31,7 +31,7 @@ export function useWikiTrashMutations(spaceId: string) {
     mutation: {
       // The document page is still mounted here, and removing or refetching its query would refetch the page
       // being left. Mark the cached view as in trash and stale instead: no request now, and the next visit
-      // shows the read-only view while it refetches (BUG-304).
+      // shows the read-only view while it refetches (BUG-305).
       onSuccess: (_, { documentId }) => {
         showMessage('MSG101');
         const queryKey = getGetWikiDocumentQueryKey(documentId);

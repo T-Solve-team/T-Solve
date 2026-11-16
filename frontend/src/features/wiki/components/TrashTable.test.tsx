@@ -224,7 +224,7 @@ describe('TrashTable in Space Settings', () => {
     },
   );
 
-  it('AC-005.15 hides the MSG84 notice once Delete permanently is chosen (BUG-305)', async () => {
+  it('AC-005.15 hides the MSG84 notice once Delete permanently is chosen (BUG-306)', async () => {
     mockTrash();
     server.use(
       http.post('*/api/v1/wiki/documents/:documentId/restore', () =>

@@ -195,7 +195,7 @@ class WikiTrashIT extends WikiReadTestSupport {
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
-    void restoresCaseInsensitiveSuffixAndBoundsTitleInOriginalFolder_AC_005_5_AC_005_6_BUG_303(boolean longTitle) {
+    void restoresCaseInsensitiveSuffixAndBoundsTitleInOriginalFolder_AC_005_5_AC_005_6_BUG_304(boolean longTitle) {
         UUID folder = folder(space, null, "Guides", 1);
         String base = longTitle ? "x".repeat(200) : "Guide";
         UUID id = document(space, folder, base, "DEPARTMENT", "INDEXED", "Text");
