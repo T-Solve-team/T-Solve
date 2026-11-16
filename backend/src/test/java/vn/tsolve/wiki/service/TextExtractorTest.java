@@ -68,7 +68,7 @@ class TextExtractorTest {
     }
 
     @Test
-    void stripsNulThatPdfBoxEmitsForUnmappedGlyphs_BUG_292() {
+    void stripsNulThatPdfBoxEmitsForUnmappedGlyphs_BUG_293() {
         assertThat(TextExtractor.readable("Wiki\u0000 guide\u0000")).isEqualTo("Wiki guide");
         assertThat(TextExtractor.readable("\u0000 \u0000")).isEmpty();
     }
