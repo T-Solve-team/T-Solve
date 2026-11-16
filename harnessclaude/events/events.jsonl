@@ -1860,3 +1860,7 @@
 {"ts":"2026-11-16T15:21:09.927Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-workspace-account","from":null,"to":"pending"}
 {"ts":"2026-11-16T15:24:32.340Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-workspace-account","from":"pending","to":"in-progress"}
 {"ts":"2026-11-16T15:24:32.583Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-workspace-account","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-16T15:52:45.213Z","type":"spec-approved","module":"workspace","specHash":"4684ae66fa3cbb936612e934249e83a55fb0f95b51453d613795a833bc4a38f9"}
+{"ts":"2026-11-16T15:53:06.597Z","type":"feature-status","module":"workspace","feature":"jira-check-reason","from":null,"to":"pending"}
+{"ts":"2026-11-16T15:53:06.878Z","type":"feature-status","module":"workspace","feature":"jira-check-reason-screen","from":null,"to":"pending"}
+{"ts":"2026-11-16T15:53:29.581Z","type":"spec-approved","module":"workspace","specHash":"4ba54cb5b8cbfb3157e105736a1bdc947a9dac13a39e26b1a3f9f57f23b4e3dc"}

@@ -23,6 +23,7 @@ Covers UC-12 Create Department (Jira KAN-120, STORY-001..STORY-002), the rename 
 | 2026-11-15 | STORY-005..STORY-011 | KAN-119 stories renumbered again from STORY-003..STORY-009 (AC-003.x..AC-009.x become AC-005.x..AC-011.x), wording unchanged; the requirements numbered 7..11 become 10..14 | KAN-121 (#206, STORY-003, STORY-004 rename) reached `main` first and took STORY-003 and STORY-004; the specs merge into one |
 | 2026-11-16 | STORY-006, STORY-010, STORY-011 | Change request: Workspace Settings shows the stored token masked with its last four characters, never revealable or copyable. `WorkspaceInfo` gains `serviceAccountTokenSet` and `serviceAccountTokenHint` (new AC-006.5, AC-010.7, AC-010.8); AC-006.2, AC-010.2, AC-011.7 and Non-Functional 4 reworded to allow only that hint. No issue date and no expiry date are shown (`token_expiry_date` stays Out of Scope) | User request during the staging test of 16/11 (BinhBinh13): the Admin cannot tell whether a token is stored or which one. Decisions of 16/11: last four characters (not dots only); expiry date and saved date dropped |
 | 2026-11-16 | STORY-005..STORY-011 | KAN-344: the service account is an Atlassian service account with a scoped API token, sent as `Authorization: Bearer` to the gateway `https://api.atlassian.com/ex/jira/{cloudId}`. The email field is removed (AC-005.4 removed; AC-005.1, AC-005.3, AC-005.12, AC-006.2, AC-007.1, AC-007.3, AC-007.4, AC-007.7, AC-007.8, AC-009.2, AC-009.4, AC-010.1 reworded). `workspace_info` stores the site's cloud id (new AC-005.14, AC-007.11, AC-011.8); the check uses the gateway (AC-011.1 reworded); `JiraServiceAccount` returns the site, cloud id and token (AC-008.1 reworded, new AC-008.4); requirements 10, 13, 14 and Non-Functional 5 follow | Staging, 16/11: the Jira import answered MSG50 and RESEARCH-003 shows a real service account's scoped token gets 401 on the site URL. User decisions of 16/11: Bearer through the gateway (option B), no email field, cloud id in `workspace_info` (not the platform catalog yet), workspace and tracker in one PR |
+| 2026-11-16 | STORY-005, STORY-007, STORY-009, STORY-010, STORY-011 | KAN-344 follow-up: `MSG156` carries a `reason` (`TOKEN_REJECTED`, `MISSING_PERMISSIONS`, `JIRA_UNREACHABLE`) and, for missing permissions, `missing_permissions` (new AC-011.9); the backend logs each failed check with the reason, the Jira status and the missing permission keys (new AC-011.10); Setup and Settings show a second line under the token field (new AC-009.8, AC-010.9). AC-005.7, AC-007.5, AC-007.11 and AC-011.1 reworded to send the reason. The `MSG156` text stays as System_Messages v3460 gives it | Staging, 16/11 (Workspace Bluefin): a valid token lacking only Modify reporter showed `MSG156` and the log had no Jira status, so finding the cause took manual curl calls. User decision of 16/11: screen line plus log, keep the `MSG156` text, Jira key KAN-344 |
 | 2026-11-12 | STORY-003, STORY-004 | Add UC-13 rename: read and rename API with the Space (AC-003.1 to AC-003.22) and screen 2.3 Department Detail with the 2.2 link (AC-004.1 to AC-004.14); UC-13 leaves Out of Scope except the default Project; interim limit 6 added; contract gains `getDepartment` and `updateDepartment` | KAN-121, decisions D4 and D6 to D20 |
 
 ## Requirements
@@ -176,7 +177,7 @@ These are known limits of the code this story builds on. They are not defects of
   - AC-005.6: WHEN the fields are valid, THE backend SHALL read the site's cloud id (AC-011.8) and then check the
     service account with that cloud id as in STORY-011, before it links the site or stores anything.
   - AC-005.7: IF the service account check fails, THEN THE backend SHALL answer 400 with `code` `MSG156` and `params`
-    `tracker_name` = `Jira` on `serviceAccountToken`, link nothing and store nothing.
+    `tracker_name` = `Jira` and the reason of AC-011.9 on `serviceAccountToken`, link nothing and store nothing.
   - AC-005.8: WHEN the service account check passes, THE backend SHALL call `JiraSiteLinker.linkJiraSite(siteUrl)`
     in the same transaction that stores the row, so that a refused link stores no row.
   - AC-005.9: IF the linker refuses because the site is linked to another Workspace, THEN THE backend SHALL answer
@@ -225,7 +226,8 @@ These are known limits of the code this story builds on. They are not defects of
   - AC-007.4: WHEN a new token is given, THE backend SHALL check it with the stored site's cloud id as in STORY-011
     before it stores anything.
   - AC-007.5: IF that check fails, or the stored token it needs cannot be decrypted, THEN THE backend SHALL answer
-    400 with `code` `MSG156` and `params` `tracker_name` = `Jira` on `serviceAccountToken` and change nothing.
+    400 with `code` `MSG156` and `params` `tracker_name` = `Jira` on `serviceAccountToken` and change nothing; a
+    failed check also sends the reason of AC-011.9, an undecryptable stored token sends no reason.
   - AC-007.6: WHILE only the company name changes, THE backend SHALL not call Jira.
   - AC-007.7: IF the request carries `jiraSiteUrl` or `serviceAccountEmail`, THEN THE backend SHALL ignore them and
     keep the stored site (the site is read-only, GBR-24).
@@ -237,7 +239,7 @@ These are known limits of the code this story builds on. They are not defects of
   - AC-007.11: WHEN a new token is given and the row has no cloud id (a Workspace set up before KAN-344), THE backend
     SHALL read the stored site's cloud id (AC-011.8) before the check of AC-007.4 and store it with the token; IF it
     cannot be read or breaks AC-011.8, THEN THE backend SHALL answer 400 with `code` `MSG156` and `params`
-    `tracker_name` = `Jira` on `serviceAccountToken` and change nothing.
+    `tracker_name` = `Jira` and `reason` = `JIRA_UNREACHABLE` on `serviceAccountToken` and change nothing.
 
 ### STORY-008: The service account for other modules
 - As `tracker` and the Chatbot, I want the current Workspace's service account, so that I call Jira as the company.
@@ -269,6 +271,15 @@ These are known limits of the code this story builds on. They are not defects of
   - AC-009.6: IF the backend answers 409 (`WORKSPACE_ALREADY_SET_UP`), THEN THE web app SHALL show no error, refetch `/me` and
     open 2.2 Workspace Settings.
   - AC-009.7: WHILE the request is in flight, THE Save button SHALL be disabled, so the form is not sent twice.
+  - AC-009.8: WHEN the backend answers `MSG156` with a `reason`, THE screen SHALL show under the token field, below
+    the `MSG156` text, one more line for that reason:
+    - `TOKEN_REJECTED`: "Jira did not accept this token. Check that it is a scoped API token of the service account
+      with the required scopes."
+    - `MISSING_PERMISSIONS`: "Missing Jira permissions: " followed by the keys of `missing_permissions` in their
+      order, each shown as Browse projects, Create issues or Modify reporter, joined by ", ", and a full stop
+      (for example "Missing Jira permissions: Modify reporter.").
+    - `JIRA_UNREACHABLE`: "Jira could not be reached. Try again later."
+    An unknown or absent reason SHALL add no line.
 
 ### STORY-010: Screen 2.2 Workspace Settings, company information section
 - As the Admin, I want to see and edit the Workspace information, so that I keep it correct.
@@ -289,6 +300,8 @@ These are known limits of the code this story builds on. They are not defects of
     Save.
   - AC-010.8: IF `serviceAccountTokenSet` is false, THEN THE screen SHALL show "Current token" as "Not set" and SHALL
     not show the hint that leaving the field empty keeps the current token.
+  - AC-010.9: WHEN the backend answers `MSG156` with a `reason`, THE screen SHALL show the reason line of AC-009.8
+    under the token field, below the `MSG156` text.
 
 ### STORY-011: Service account check, site rule and token at rest
 - As the operations team, I want the secret and the outbound calls kept safe, so that a Workspace cannot leak its
@@ -297,7 +310,8 @@ These are known limits of the code this story builds on. They are not defects of
   - AC-011.1: WHEN the service account is checked, THE backend SHALL call `GET /rest/api/3/myself` and then
     `GET /rest/api/3/mypermissions?permissions=BROWSE_PROJECTS,CREATE_ISSUES,MODIFY_REPORTER` on
     `https://api.atlassian.com/ex/jira/{cloudId}` with the header `Authorization: Bearer <token>`, and pass only when
-    both answer 200 and all three permissions have `havePermission` true.
+    both answer 200 and all three permissions have `havePermission` true; a failure on permissions SHALL name the
+    permissions whose `havePermission` is not true.
   - AC-011.2: IF Jira answers 401 or 403, any other error status, times out or cannot be reached, THEN THE check SHALL
     fail (the caller answers `MSG156`) and no Jira body or credential SHALL reach the response or a log line.
   - AC-011.3: THE site rule SHALL accept only an address that, after trimming and lower-casing, is `https`, has no
@@ -315,6 +329,15 @@ These are known limits of the code this story builds on. They are not defects of
     `https://<host>/_edge/tenant_info` of the normalised site as AC-011.4 does (no redirect, 200 with a `cloudId`),
     and accept it only when it is a UUID in canonical form (36 characters, hexadecimal and hyphens), so that it can
     never change the gateway path.
+  - AC-011.9: WHEN a service account check of Setup or Update fails, THE backend SHALL add to the `MSG156` params a
+    `reason`: `MISSING_PERMISSIONS` when both calls answered 200 but a permission is missing, with
+    `missing_permissions` = the missing keys among `BROWSE_PROJECTS`, `CREATE_ISSUES`, `MODIFY_REPORTER` in that
+    order, joined by ","; `TOKEN_REJECTED` when Jira answered any other status that is not 200 and below 500;
+    `JIRA_UNREACHABLE` when Jira
+    answered 5xx, timed out or could not be reached, or the cloud id could not be read (AC-007.11).
+  - AC-011.10: WHEN a service account check of Setup or Update fails, THE backend SHALL log one WARN line with the
+    step (setup or update), the reason, the Jira HTTP status (0 when there was none) and the missing permission keys,
+    and nothing else from Jira's answer.
 
 ## Out of Scope
 - UC-14 and UC-15: Delete and Restore Department. Each comes through Change Mode when its Jira story starts (KAN-122, KAN-123).
