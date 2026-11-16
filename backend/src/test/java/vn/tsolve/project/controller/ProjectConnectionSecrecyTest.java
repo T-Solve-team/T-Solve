@@ -60,6 +60,7 @@ import vn.tsolve.tracker.service.impl.TrackerProjectServiceImpl;
  */
 class ProjectConnectionSecrecyTest {
     private static final String EMAIL = "svc@acme.atlassian.test";
+    private static final String CLOUD_ID = "1324a887-45db-1bf4-1e99-ef0ff456d421";
     private static final String TOKEN = "ATATT-planted-token";
     private static final String BODY_MARKER = "planted-secret-body";
     private static final String BASIC =
@@ -87,9 +88,10 @@ class ProjectConnectionSecrecyTest {
     @BeforeEach
     void setUp() {
         jira.start();
-        JiraAccount account = new JiraAccount(jira.baseUrl(), EMAIL, TOKEN);
+        JiraAccount account = new JiraAccount("https://acme.atlassian.net", CLOUD_ID, TOKEN);
         TrackerProjectServiceImpl tracker = new TrackerProjectServiceImpl(
-                () -> Optional.of(account), new JiraClient(Duration.ofSeconds(30), Duration.ofSeconds(30)));
+                () -> Optional.of(account),
+                new JiraClient(Duration.ofSeconds(30), Duration.ofSeconds(30), jira.baseUrl() + "/ex/jira/"));
         TenantScope scope = mock(TenantScope.class);
         when(scope.currentWorkspaceId()).thenReturn(new UUID(127, 100));
         when(links.findCallerDepartment(CALLER))
@@ -145,8 +147,9 @@ class ProjectConnectionSecrecyTest {
             String path, int projectStatus, String projectBody, int statusesStatus, int expected, String code)
             throws Exception {
         String canonicalKey = projectBody.contains("LEGACY") ? "LEGACY" : "OPS";
-        jira.stubFor(get(urlEqualTo("/rest/api/3/project/OPS")).willReturn(json(projectStatus, projectBody)));
-        jira.stubFor(get(urlEqualTo("/rest/api/3/project/" + canonicalKey + "/statuses"))
+        jira.stubFor(get(urlEqualTo("/ex/jira/" + CLOUD_ID + "/rest/api/3/project/OPS"))
+                .willReturn(json(projectStatus, projectBody)));
+        jira.stubFor(get(urlEqualTo("/ex/jira/" + CLOUD_ID + "/rest/api/3/project/" + canonicalKey + "/statuses"))
                 .willReturn(json(statusesStatus, statusesStatus == 200 ? STATUSES_BODY : ERROR_BODY)));
         when(links.findLink("LEGACY"))
                 .thenReturn(Optional.of(

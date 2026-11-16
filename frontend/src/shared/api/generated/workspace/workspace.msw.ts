@@ -18,7 +18,6 @@ export const getSetupWorkspaceResponseMock = (
 ): WorkspaceInfo => ({
   companyName: faker.string.alpha({ length: { min: 10, max: 20 } }),
   jiraSiteUrl: faker.string.alpha({ length: { min: 10, max: 20 } }),
-  serviceAccountEmail: faker.internet.email(),
   ...overrideResponse,
 });
 
@@ -27,7 +26,6 @@ export const getGetWorkspaceResponseMock = (
 ): WorkspaceInfo => ({
   companyName: faker.string.alpha({ length: { min: 10, max: 20 } }),
   jiraSiteUrl: faker.string.alpha({ length: { min: 10, max: 20 } }),
-  serviceAccountEmail: faker.internet.email(),
   ...overrideResponse,
 });
 
@@ -36,7 +34,6 @@ export const getUpdateWorkspaceResponseMock = (
 ): WorkspaceInfo => ({
   companyName: faker.string.alpha({ length: { min: 10, max: 20 } }),
   jiraSiteUrl: faker.string.alpha({ length: { min: 10, max: 20 } }),
-  serviceAccountEmail: faker.internet.email(),
   ...overrideResponse,
 });
 

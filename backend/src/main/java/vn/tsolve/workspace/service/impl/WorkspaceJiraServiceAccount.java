@@ -51,14 +51,15 @@ public class WorkspaceJiraServiceAccount implements JiraServiceAccount {
         }
         WorkspaceInfo workspace = found.get();
         String siteUrl = workspace.getJiraSiteAddress();
-        String email = workspace.getServiceAccountEmail();
+        String cloudId = workspace.getJiraCloudId();
         String encryptedToken = workspace.getServiceAccountApiToken();
-        if (isBlank(siteUrl) || isBlank(email) || isBlank(encryptedToken)) {
+        // AC-008.4: a row set up before KAN-344 has no cloud id until the Admin enters a new token.
+        if (isBlank(siteUrl) || isBlank(cloudId) || isBlank(encryptedToken)) {
             return Optional.empty();
         }
         try {
             String token = cipher.decrypt(workspaceId, encryptedToken);
-            return Optional.of(new JiraAccount(siteUrl, email, token));
+            return Optional.of(new JiraAccount(siteUrl, cloudId, token));
         } catch (IllegalStateException exception) {
             log.error("Workspace {} Jira service account token could not be decrypted", workspaceId);
             return Optional.empty();
