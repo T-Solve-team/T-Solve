@@ -1,43 +1,40 @@
 package vn.tsolve.identity.repository;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
+import vn.tsolve.common.session.dto.ProjectMembership;
+import vn.tsolve.common.session.dto.ProjectRole;
 
 @Repository
 public class ScopeAccessRepository {
-    private static final String COUNTED_MEMBERSHIP =
-            """
+    private static final String COUNTED_MEMBERSHIP = """
             ((m.role_in_project = 'PROJECT_MANAGER' AND EXISTS (
                 SELECT 1 FROM user_role r WHERE r.user_id = u.id AND r.role = 'PROJECT_MANAGER'))
              OR (m.role_in_project = 'MEMBER' AND EXISTS (
                 SELECT 1 FROM user_role r WHERE r.user_id = u.id AND r.role = 'TICKET_RESOLVER')))
             """;
 
-    private static final String SCOPED_DEPARTMENTS =
-            """
+    private static final String SCOPED_DEPARTMENTS = """
             SELECT u.department_id WHERE EXISTS (
                 SELECT 1 FROM user_role r WHERE r.user_id = u.id AND r.role = 'PROJECT_MANAGER')
             UNION
             SELECT p.department_id FROM project_membership m
             JOIN project p ON p.public_id = m.project_id
             WHERE m.user_id = u.id AND
-            """
-                    + COUNTED_MEMBERSHIP;
+            """ + COUNTED_MEMBERSHIP;
 
-    private static final String DEPARTMENT =
-            """
+    private static final String DEPARTMENT = """
             SELECT EXISTS (
                 SELECT 1 FROM app_user u
                 JOIN department d ON d.public_id = :departmentId AND d.status = 'ACTIVE'
                 WHERE u.id = :accountId AND u.status = 'ACTIVE'
                   AND d.department_id IN (
-            """
-                    + SCOPED_DEPARTMENTS + "))";
+            """ + SCOPED_DEPARTMENTS + "))";
 
-    private static final String PROJECT =
-            """
+    private static final String PROJECT = """
             SELECT EXISTS (
                 SELECT 1 FROM app_user u
                 JOIN project_membership m ON m.user_id = u.id
@@ -45,11 +42,9 @@ public class ScopeAccessRepository {
                 JOIN department d ON d.department_id = p.department_id AND d.status = 'ACTIVE'
                 WHERE u.id = :accountId AND u.status = 'ACTIVE' AND p.public_id = :projectId
                   AND
-            """
-                    + COUNTED_MEMBERSHIP + ")";
+            """ + COUNTED_MEMBERSHIP + ")";
 
-    private static final String SPACE =
-            """
+    private static final String SPACE = """
             SELECT EXISTS (
                 SELECT 1 FROM app_user u
                 JOIN space s ON s.public_id = :spaceId AND s.status = 'ACTIVE'
@@ -60,8 +55,19 @@ public class ScopeAccessRepository {
                       JOIN user_role r ON r.user_id = sm.user_id AND r.role = 'KNOWLEDGE_MANAGER'
                       WHERE sm.space_id = s.space_id AND sm.user_id = u.id)
                     OR s.department_id IN (
+            """ + SCOPED_DEPARTMENTS + ")))";
+
+    // The memberships the scope check above counts, so /me lists the Projects whose tickets the user can see.
+    private static final String PROJECTS =
             """
-                    + SCOPED_DEPARTMENTS + ")))";
+            SELECT p.public_id, p.jira_project_key, d.public_id AS department_public_id,
+                   d.name AS department_name, m.role_in_project
+            FROM app_user u
+            JOIN project_membership m ON m.user_id = u.id
+            JOIN project p ON p.public_id = m.project_id
+            JOIN department d ON d.department_id = p.department_id
+            WHERE u.id = :accountId AND
+            """ + COUNTED_MEMBERSHIP + " ORDER BY lower(p.jira_project_key), p.public_id";
 
     private final NamedParameterJdbcTemplate jdbc;
 
@@ -77,6 +83,18 @@ public class ScopeAccessRepository {
     public boolean project(UUID accountId, UUID projectId) {
         return Boolean.TRUE.equals(
                 jdbc.queryForObject(PROJECT, Map.of("accountId", accountId, "projectId", projectId), Boolean.class));
+    }
+
+    public List<ProjectMembership> projects(UUID accountId) {
+        return jdbc.query(
+                PROJECTS,
+                Map.of("accountId", accountId),
+                (rs, row) -> new ProjectMembership(
+                        rs.getObject("public_id", UUID.class),
+                        rs.getString("jira_project_key"),
+                        rs.getObject("department_public_id", UUID.class),
+                        rs.getString("department_name"),
+                        ProjectRole.valueOf(rs.getString("role_in_project"))));
     }
 
     public boolean space(UUID accountId, UUID spaceId) {
