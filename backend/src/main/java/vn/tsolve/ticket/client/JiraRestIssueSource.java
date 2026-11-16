@@ -11,11 +11,11 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
@@ -27,11 +27,13 @@ import vn.tsolve.ticket.exception.JiraUnavailableException;
 import vn.tsolve.ticket.service.JiraIssue;
 import vn.tsolve.ticket.service.JiraIssuePage;
 import vn.tsolve.ticket.service.JiraIssueSource;
+import vn.tsolve.tracker.dto.JiraAccount;
+import vn.tsolve.tracker.service.JiraServiceAccount;
 
 /**
- * {@link JiraIssueSource} over the Jira Cloud REST API v3 with the Workspace service account's scoped API token sent
- * as Bearer through the Atlassian gateway. The settings may be empty — a pull answers MSG50 (AC-001.7) — but a site URL
- * must be https. Logs and errors carry only the project key, an HTTP status or an error type (NFR 2, 4).
+ * {@link JiraIssueSource} over the Jira Cloud REST API v3 with the Workspace's service account (read from
+ * {@code workspace} for each pull, KAN-345): its scoped API token sent as Bearer through the Atlassian gateway. No
+ * account answers MSG50 (AC-001.7, AC-001.14). Logs and errors carry only the project key, an HTTP status or an error type (NFR 2, 4).
  */
 @Component
 public class JiraRestIssueSource implements JiraIssueSource {
@@ -47,46 +49,50 @@ public class JiraRestIssueSource implements JiraIssueSource {
     private static final int MAX_RETRIES = 2;
     private static final int MAX_RETRY_SECONDS = 5;
 
-    private final String siteUrl;
-    private final RestClient client;
+    private static final String GATEWAY = "https://api.atlassian.com/ex/jira/";
+    // The cloud id becomes part of the gateway path: only a canonical UUID may (workspace AC-011.8).
+    private static final Pattern CLOUD_ID =
+            Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+
+    private final JiraServiceAccount accounts;
+    private final RestClient.Builder builder;
     private final Sleeper sleeper;
     private final Clock clock;
 
+    /** The Workspace's account is read for each pull (AC-001.12, KAN-345); nothing comes from the environment. */
     @Autowired
-    public JiraRestIssueSource(
-            @Value("${JIRA_SITE_URL:}") String siteUrl,
-            @Value("${JIRA_CLOUD_ID:}") String cloudId,
-            @Value("${JIRA_API_TOKEN:}") String apiToken,
-            Clock clock) {
-        this(
-                siteUrl,
-                cloudId,
-                apiToken,
-                clientBuilder(Duration.ofSeconds(10), Duration.ofSeconds(30)),
-                Thread::sleep,
-                clock);
+    public JiraRestIssueSource(JiraServiceAccount accounts, Clock clock) {
+        this(accounts, clientBuilder(Duration.ofSeconds(10), Duration.ofSeconds(30)), Thread::sleep, clock);
     }
 
-    JiraRestIssueSource(
-            String siteUrl, String cloudId, String apiToken, RestClient.Builder builder, Sleeper sleeper, Clock clock) {
-        String site = siteUrl == null ? "" : httpsOnly(siteUrl).strip().replaceAll("/+$", "");
-        boolean configured = !site.isEmpty() && !isBlank(cloudId) && !isBlank(apiToken);
-        this.siteUrl = configured ? site : null;
-        this.client = configured
-                ? builder.baseUrl("https://api.atlassian.com/ex/jira/" + cloudId.strip())
-                        .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + apiToken)
-                        .defaultHeader(HttpHeaders.ACCEPT, "application/json")
-                        .build()
-                : null;
+    JiraRestIssueSource(JiraServiceAccount accounts, RestClient.Builder builder, Sleeper sleeper, Clock clock) {
+        this.accounts = accounts;
+        this.builder = builder;
         this.sleeper = sleeper;
         this.clock = clock;
     }
 
-    private static String httpsOnly(String siteUrl) {
-        if (!isBlank(siteUrl) && !siteUrl.strip().startsWith("https://")) {
-            throw new IllegalStateException("JIRA_SITE_URL must start with https://");
+    /** One pull's connection: the gateway client with the token and the site for the issue links. */
+    private record Connection(RestClient client, String siteUrl) {}
+
+    // AC-001.14: no account, or one that is incomplete or unusable, is a connection that is not configured (MSG50)
+    private Connection connect() {
+        JiraAccount account = accounts.current().orElse(null);
+        String site = account == null || account.siteUrl() == null
+                ? ""
+                : account.siteUrl().strip().replaceAll("/+$", "");
+        String cloudId = account == null || account.cloudId() == null
+                ? ""
+                : account.cloudId().strip().toLowerCase(Locale.ROOT);
+        if (!site.startsWith("https://") || !CLOUD_ID.matcher(cloudId).matches() || isBlank(account.apiToken())) {
+            throw new JiraUnavailableException("The Jira connection is not configured");
         }
-        return siteUrl;
+        RestClient client = builder.clone()
+                .baseUrl(GATEWAY + cloudId)
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + account.apiToken())
+                .defaultHeader(HttpHeaders.ACCEPT, "application/json")
+                .build();
+        return new Connection(client, site);
     }
 
     private static boolean isBlank(String value) {
@@ -103,17 +109,16 @@ public class JiraRestIssueSource implements JiraIssueSource {
     @Override
     public JiraIssuePage resolvedIssues(
             String projectKey, LocalDate from, LocalDate to, String pageToken, Instant deadline) {
-        if (client == null) {
-            throw new JiraUnavailableException("The Jira connection is not configured");
-        }
         if (projectKey == null || !PROJECT_KEY.matcher(projectKey).matches()) {
             throw new JiraUnavailableException("The Project's Jira key is not valid");
         }
+        Connection jira = connect();
         // JQL dates follow the account's profile time zone, at most 19 h away from Vietnam time: ask for a day more on
         // each side and keep only the Vietnam-time range below (AC-001.1, BUG-188)
         String jql = "project = \"" + projectKey + "\" AND resolved >= \"" + from.minusDays(1) + "\" AND resolved < \""
                 + to.plusDays(2) + "\" ORDER BY resolved ASC, key ASC";
-        JsonNode page = call(projectKey, deadline, () -> client.get()
+        JsonNode page = call(projectKey, deadline, () -> jira.client()
+                .get()
                 .uri(uri -> {
                     uri.path("/rest/api/3/search/jql")
                             .queryParam("jql", "{jql}")
@@ -129,7 +134,7 @@ public class JiraRestIssueSource implements JiraIssueSource {
 
         List<JiraIssue> issues = new ArrayList<>();
         for (JsonNode issue : page.path("issues")) {
-            JiraIssue read = issue(projectKey, issue, deadline);
+            JiraIssue read = issue(jira, projectKey, issue, deadline);
             LocalDate resolvedDay = read.resolvedAt().atZone(VIETNAM).toLocalDate();
             if (!resolvedDay.isBefore(from) && !resolvedDay.isAfter(to)) {
                 issues.add(read);
@@ -140,7 +145,7 @@ public class JiraRestIssueSource implements JiraIssueSource {
                 issues, last ? null : page.path("nextPageToken").asText());
     }
 
-    private JiraIssue issue(String projectKey, JsonNode issue, Instant deadline) {
+    private JiraIssue issue(Connection jira, String projectKey, JsonNode issue, Instant deadline) {
         String key = issue.path("key").asText();
         JsonNode fields = issue.path("fields");
         JsonNode assignee = fields.path("assignee");
@@ -150,12 +155,13 @@ public class JiraRestIssueSource implements JiraIssueSource {
                 AdfText.of(fields.get("description")),
                 assignee.hasNonNull("displayName") ? assignee.get("displayName").asText() : null,
                 time(fields.path("resolutiondate").asText(null)),
-                siteUrl + "/browse/" + key,
-                comments(projectKey, key, fields.path("comment"), deadline));
+                jira.siteUrl() + "/browse/" + key,
+                comments(jira, projectKey, key, fields.path("comment"), deadline));
     }
 
     /** The comments the search returned, and the rest from the comment endpoint when the search left some out. */
-    private List<IssueComment> comments(String projectKey, String issueKey, JsonNode fromSearch, Instant deadline) {
+    private List<IssueComment> comments(
+            Connection jira, String projectKey, String issueKey, JsonNode fromSearch, Instant deadline) {
         JsonNode inSearch = fromSearch.path("comments");
         if (fromSearch.path("total").asInt(inSearch.size()) <= inSearch.size()) {
             return readComments(inSearch);
@@ -164,7 +170,8 @@ public class JiraRestIssueSource implements JiraIssueSource {
         int startAt = 0;
         while (true) {
             int offset = startAt;
-            JsonNode page = call(projectKey, deadline, () -> client.get()
+            JsonNode page = call(projectKey, deadline, () -> jira.client()
+                    .get()
                     .uri(uri -> uri.path("/rest/api/3/issue/{key}/comment")
                             .queryParam("startAt", offset)
                             .queryParam("maxResults", PAGE_SIZE)
