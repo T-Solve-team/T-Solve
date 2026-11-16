@@ -15,13 +15,10 @@ import vn.tsolve.common.exception.FieldMessageCodeException;
 @Schema(
         name = "WorkspaceSetupRequest",
         type = "object",
-        requiredProperties = {"companyName", "jiraSiteUrl", "serviceAccountEmail", "serviceAccountToken"})
+        requiredProperties = {"companyName", "jiraSiteUrl", "serviceAccountToken"})
 @SchemaProperties({
     @SchemaProperty(name = "companyName", schema = @Schema(type = "string", minLength = 1, maxLength = 100)),
     @SchemaProperty(name = "jiraSiteUrl", schema = @Schema(type = "string", minLength = 1, maxLength = 200)),
-    @SchemaProperty(
-            name = "serviceAccountEmail",
-            schema = @Schema(type = "string", format = "email", minLength = 1, maxLength = 100)),
     @SchemaProperty(
             name = "serviceAccountToken",
             schema =

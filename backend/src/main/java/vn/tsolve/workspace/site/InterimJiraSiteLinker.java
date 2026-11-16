@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.time.Duration;
+import java.util.Locale;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +26,9 @@ import org.springframework.web.client.RestClientException;
 public class InterimJiraSiteLinker implements JiraSiteLinker {
 
     private static final Logger log = LoggerFactory.getLogger(InterimJiraSiteLinker.class);
+
+    private static final Pattern CLOUD_ID =
+            Pattern.compile("(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
 
     private final RestClient http;
 
@@ -54,6 +59,11 @@ public class InterimJiraSiteLinker implements JiraSiteLinker {
 
     @Override
     public String linkJiraSite(String normalisedSiteUrl) {
+        return readCloudId(normalisedSiteUrl);
+    }
+
+    @Override
+    public String readCloudId(String normalisedSiteUrl) {
         if (JiraSiteRule.normalise(normalisedSiteUrl)
                 .filter(site -> site.equals(normalisedSiteUrl))
                 .isEmpty()) {
@@ -71,10 +81,11 @@ public class InterimJiraSiteLinker implements JiraSiteLinker {
                     .toEntity(JsonNode.class);
             JsonNode body = response.getBody();
             String cloudId = body == null ? "" : body.path("cloudId").asText("");
-            if (cloudId.isBlank()) {
+            // AC-011.8: only a canonical UUID may become part of the gateway path.
+            if (!CLOUD_ID.matcher(cloudId).matches()) {
                 throw unreadable(host, response.getStatusCode().value());
             }
-            return cloudId;
+            return cloudId.toLowerCase(Locale.ROOT);
         } catch (RestClientException e) {
             // No response (0), or a response that cannot be decoded. Never retain the body or cause.
             throw unreadable(host, 0);

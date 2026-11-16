@@ -58,7 +58,6 @@ describe('WorkspaceSettingsPage', () => {
         HttpResponse.json({
           companyName: 'Example Company',
           jiraSiteUrl: 'https://company.atlassian.net',
-          serviceAccountEmail: 'service@company.example',
         }),
       ),
     );
