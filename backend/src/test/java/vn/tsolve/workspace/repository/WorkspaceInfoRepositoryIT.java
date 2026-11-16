@@ -70,7 +70,11 @@ class WorkspaceInfoRepositoryIT {
         scope.runIn(
                 id,
                 () -> repository.saveAndFlush(new WorkspaceInfo(
-                        id, "Fake company", "https://fake.atlassian.net", "fake@example.test", encrypted)));
+                        id,
+                        "Fake company",
+                        "https://fake.atlassian.net",
+                        "1324a887-45db-1bf4-1e99-ef0ff456d421",
+                        encrypted)));
 
         scope.runIn(id, () -> {
             assertThat(repository.findById(id)).hasValueSatisfying(workspace -> {
@@ -78,7 +82,7 @@ class WorkspaceInfoRepositoryIT {
                 assertThat(workspace.getCompanyName()).isEqualTo("Fake company");
                 assertThat(workspace.getSignInProvider()).isEqualTo("GOOGLE");
                 assertThat(workspace.getJiraSiteAddress()).isEqualTo("https://fake.atlassian.net");
-                assertThat(workspace.getServiceAccountEmail()).isEqualTo("fake@example.test");
+                assertThat(workspace.getJiraCloudId()).isEqualTo("1324a887-45db-1bf4-1e99-ef0ff456d421");
                 assertThat(workspace.getServiceAccountApiToken()).isEqualTo(encrypted);
                 assertThat(workspace.getTokenExpiryDate()).isNull();
             });

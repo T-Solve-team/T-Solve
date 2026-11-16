@@ -56,6 +56,7 @@ import vn.tsolve.workspace.site.JiraSiteLinker;
 class WorkspaceServiceImplTest {
     private static final String SITE = "https://fake.atlassian.net";
     private static final String TOKEN = "obviously-fake-jira-token";
+    private static final String CLOUD_ID = "1324a887-45db-1bf4-1e99-ef0ff456d421";
     private final ObjectMapper json = new ObjectMapper();
     private final UUID workspaceId = UUID.randomUUID();
     private final TenantScope scope = mock(TenantScope.class);
@@ -72,6 +73,7 @@ class WorkspaceServiceImplTest {
     void setup() {
         when(scope.currentWorkspaceId()).thenReturn(workspaceId);
         when(cipher.encrypt(workspaceId, TOKEN)).thenReturn("fake-ciphertext");
+        when(linker.readCloudId(SITE)).thenReturn(CLOUD_ID);
         service = new WorkspaceServiceImpl(
                 scope,
                 repository,
@@ -88,7 +90,6 @@ class WorkspaceServiceImplTest {
         return json.createObjectNode()
                 .put("companyName", "Fake company")
                 .put("jiraSiteUrl", " HTTPS://FAKE.ATLASSIAN.NET/ ")
-                .put("serviceAccountEmail", "fake@example.test")
                 .put("serviceAccountToken", TOKEN);
     }
 
@@ -105,7 +106,7 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-005.1 inserts bound id, GOOGLE, normalized site and encrypted token")
+    @DisplayName("AC-005.1 inserts bound id, GOOGLE, normalized site, its cloud id and encrypted token")
     void insertsSetup() {
         WorkspaceInfoResponse response = service.setup(valid());
         var saved = ArgumentCaptor.forClass(WorkspaceInfo.class);
@@ -115,18 +116,25 @@ class WorkspaceServiceImplTest {
         assertThat(row.getId()).isEqualTo(workspaceId);
         assertThat(row.getCompanyName()).isEqualTo("Fake company");
         assertThat(row.getJiraSiteAddress()).isEqualTo(SITE);
-        assertThat(row.getServiceAccountEmail()).isEqualTo("fake@example.test");
+        assertThat(row.getJiraCloudId()).isEqualTo(CLOUD_ID);
         assertThat(row.getSignInProvider()).isEqualTo("GOOGLE");
         assertThat(row.getServiceAccountApiToken()).isEqualTo("fake-ciphertext");
         assertThat(row.getTokenExpiryDate()).isNull();
-        assertThat(response).isEqualTo(new WorkspaceInfoResponse("Fake company", SITE, "fake@example.test"));
+        assertThat(response).isEqualTo(new WorkspaceInfoResponse("Fake company", SITE));
+    }
+
+    @Test
+    @DisplayName("AC-005.1 stores no email even when the request still sends one (KAN-344)")
+    void ignoresAnEmailInTheSetupRequest() {
+        service.setup(valid().put("serviceAccountEmail", "not an email"));
+        verify(tracker).checkServiceAccount(new JiraAccount(SITE, CLOUD_ID, TOKEN));
+        verify(entities).persist(any(WorkspaceInfo.class));
     }
 
     @ParameterizedTest
     @CsvSource({
         "companyName,Company name",
         "jiraSiteUrl,Jira site address",
-        "serviceAccountEmail,Service account email",
         "serviceAccountToken,Service account API token"
     })
     @DisplayName("AC-005.2 rejects missing, null, blank and non-string required fields before any check")
@@ -144,11 +152,7 @@ class WorkspaceServiceImplTest {
     }
 
     @ParameterizedTest
-    @CsvSource({
-        "companyName,Company name,100",
-        "jiraSiteUrl,Jira site address,200",
-        "serviceAccountEmail,Service account email,100"
-    })
+    @CsvSource({"companyName,Company name,100", "jiraSiteUrl,Jira site address,200"})
     @DisplayName("AC-005.3 measures raw length and returns MSG02 with field_name and max_length")
     void limitsFields(String field, String label, int limit) {
         error(
@@ -160,24 +164,11 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-005.3 accepts company, site and email exactly at their limits")
+    @DisplayName("AC-005.3 accepts company and site exactly at their limits")
     void acceptsLimits() {
-        String email = "a".repeat(86) + "@example.test";
         String site = " ".repeat(200 - SITE.length()) + SITE;
-        assertThat(email).hasSize(99);
-        email = "a" + email;
-        service.setup(valid().put("companyName", "x".repeat(100))
-                .put("jiraSiteUrl", site)
-                .put("serviceAccountEmail", email));
+        service.setup(valid().put("companyName", "x".repeat(100)).put("jiraSiteUrl", site));
         verify(entities).persist(any(WorkspaceInfo.class));
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"bad", "a b@example.test", "a@@example.test", "a@example", "a@", "@example.test"})
-    @DisplayName("AC-005.4 rejects malformed email without contacting Jira")
-    void rejectsEmail(String email) {
-        error(valid().put("serviceAccountEmail", email), "serviceAccountEmail", "MSG03", Map.of());
-        verifyNoInteractions(repository, tracker, linker);
     }
 
     @ParameterizedTest
@@ -196,12 +187,13 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-005.6 checks the normalized Jira account before linking or inserting")
+    @DisplayName("AC-005.6 reads the cloud id, then checks the account with it, before linking or inserting")
     void checksAccountInOrder() {
         service.setup(valid());
         var order = inOrder(repository, tracker, linker, cipher, entities, audit);
         order.verify(repository).count();
-        order.verify(tracker).checkServiceAccount(new JiraAccount(SITE, "fake@example.test", TOKEN));
+        order.verify(linker).readCloudId(SITE);
+        order.verify(tracker).checkServiceAccount(new JiraAccount(SITE, CLOUD_ID, TOKEN));
         order.verify(linker).linkJiraSite(SITE);
         order.verify(cipher).encrypt(workspaceId, TOKEN);
         order.verify(entities).persist(any(WorkspaceInfo.class));
@@ -211,13 +203,7 @@ class WorkspaceServiceImplTest {
                         AuditAction.TRACKER_CONFIGURATION_CHANGE,
                         "WORKSPACE",
                         workspaceId,
-                        Map.of(
-                                "companyName",
-                                "Fake company",
-                                "jiraSiteUrl",
-                                SITE,
-                                "serviceAccountEmail",
-                                "fake@example.test"));
+                        Map.of("companyName", "Fake company", "jiraSiteUrl", SITE));
     }
 
     @ParameterizedTest
@@ -229,7 +215,17 @@ class WorkspaceServiceImplTest {
                 : new JiraUnavailableException(status);
         doThrow(failure).when(tracker).checkServiceAccount(any());
         error(valid(), "serviceAccountToken", "MSG156", Map.of("tracker_name", "Jira"));
-        verifyNoInteractions(linker);
+        verify(linker, never()).linkJiraSite(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"UNREADABLE", "LINKED_ELSEWHERE"})
+    @DisplayName("AC-005.14 an unreadable cloud id returns MSG61 without a check, a link or a row")
+    void rejectsUnreadableCloudId(String reason) {
+        when(linker.readCloudId(SITE)).thenThrow(new JiraSiteLinkRefusedException(Reason.valueOf(reason)));
+        error(valid(), "jiraSiteUrl", "MSG61", Map.of());
+        verifyNoInteractions(tracker);
+        verify(linker, never()).linkJiraSite(any());
     }
 
     @Test
@@ -339,7 +335,7 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-005.12 audits exactly the three public setup fields without token or ciphertext")
+    @DisplayName("AC-005.12 audits exactly the company name and site, without email, token or ciphertext")
     void auditsSafeDetails() throws Exception {
         WorkspaceInfoResponse response = service.setup(valid());
         verify(audit)
@@ -347,13 +343,7 @@ class WorkspaceServiceImplTest {
                         AuditAction.TRACKER_CONFIGURATION_CHANGE,
                         "WORKSPACE",
                         workspaceId,
-                        Map.of(
-                                "companyName",
-                                "Fake company",
-                                "jiraSiteUrl",
-                                SITE,
-                                "serviceAccountEmail",
-                                "fake@example.test"));
+                        Map.of("companyName", "Fake company", "jiraSiteUrl", SITE));
         assertThat(json.writeValueAsString(response)).doesNotContain(TOKEN, "fake-ciphertext", "Token", "token");
         assertThat(WorkspaceSetupRequest.parse(json.writeValueAsString(valid()), json)
                         .toString())
@@ -361,17 +351,16 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-006.2 reads only the three public fields of the bound Workspace")
+    @DisplayName("AC-006.2 reads only the two public fields of the bound Workspace, no email or cloud id")
     void readsWorkspace() throws Exception {
         when(repository.findById(workspaceId))
-                .thenReturn(Optional.of(
-                        new WorkspaceInfo(workspaceId, "Fake company", SITE, "fake@example.test", "fake-ciphertext")));
+                .thenReturn(
+                        Optional.of(new WorkspaceInfo(workspaceId, "Fake company", SITE, CLOUD_ID, "fake-ciphertext")));
         JsonNode result = json.valueToTree(service.get());
-        assertThat(result.size()).isEqualTo(3);
+        assertThat(result.size()).isEqualTo(2);
         assertThat(result)
-                .isEqualTo(
-                        json.readTree(
-                                "{\"companyName\":\"Fake company\",\"jiraSiteUrl\":\"https://fake.atlassian.net\",\"serviceAccountEmail\":\"fake@example.test\"}"));
+                .isEqualTo(json.readTree(
+                        "{\"companyName\":\"Fake company\",\"jiraSiteUrl\":\"https://fake.atlassian.net\"}"));
         verifyNoInteractions(tracker, linker, cipher, entities, audit);
     }
 
@@ -395,7 +384,7 @@ class WorkspaceServiceImplTest {
     }
 
     private WorkspaceInfo storedWorkspace() {
-        var stored = new WorkspaceInfo(workspaceId, "Fake company", SITE, "fake@example.test", "fake-ciphertext");
+        var stored = new WorkspaceInfo(workspaceId, "Fake company", SITE, CLOUD_ID, "fake-ciphertext");
         when(repository.findById(workspaceId)).thenReturn(Optional.of(stored));
         when(repository.save(any(WorkspaceInfo.class))).thenAnswer(call -> call.getArgument(0));
         when(transactions.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
@@ -426,17 +415,16 @@ class WorkspaceServiceImplTest {
     void updatesWorkspace() throws Exception {
         storedWorkspace();
         when(cipher.encrypt(workspaceId, "obviously-fake-new-token")).thenReturn("fake-new-ciphertext");
-        WorkspaceInfoResponse response = service.update(valid().put("companyName", " Renamed ")
-                .put("serviceAccountEmail", " new@example.test ")
-                .put("serviceAccountToken", "obviously-fake-new-token"));
+        WorkspaceInfoResponse response = service.update(
+                valid().put("companyName", " Renamed ").put("serviceAccountToken", "obviously-fake-new-token"));
         WorkspaceInfo saved = updatedWorkspace();
         assertThat(saved.getId()).isEqualTo(workspaceId);
         assertThat(saved.getCompanyName()).isEqualTo("Renamed");
-        assertThat(saved.getServiceAccountEmail()).isEqualTo("new@example.test");
+        assertThat(saved.getJiraCloudId()).isEqualTo(CLOUD_ID);
         assertThat(saved.getServiceAccountApiToken()).isEqualTo("fake-new-ciphertext");
         assertThat(saved.getSignInProvider()).isEqualTo("GOOGLE");
-        assertThat(response).isEqualTo(new WorkspaceInfoResponse("Renamed", SITE, "new@example.test"));
-        assertThat(json.valueToTree(response).size()).isEqualTo(3);
+        assertThat(response).isEqualTo(new WorkspaceInfoResponse("Renamed", SITE));
+        assertThat(json.valueToTree(response).size()).isEqualTo(2);
         assertThat(json.writeValueAsString(response))
                 .doesNotContain(TOKEN, "obviously-fake-new-token", "fake-new-ciphertext", "token", "Token");
         verify(transactions).commit(any());
@@ -460,52 +448,44 @@ class WorkspaceServiceImplTest {
                         "WORKSPACE",
                         workspaceId,
                         Map.of(
-                                "companyName", Map.of("old", "Fake company", "new", "Fake company"),
-                                "serviceAccountEmail", Map.of("old", "fake@example.test", "new", "fake@example.test"),
-                                "tokenChanged", false));
+                                "companyName",
+                                Map.of("old", "Fake company", "new", "Fake company"),
+                                "tokenChanged",
+                                false));
     }
 
-    @ParameterizedTest
-    @CsvSource({"companyName,Company name", "serviceAccountEmail,Service account email"})
-    @DisplayName("AC-007.3 rejects absent, null, blank and non-string required update fields")
-    void requiresUpdateFields(String field, String label) {
+    @Test
+    @DisplayName("AC-007.3 rejects absent, null, blank and non-string company names")
+    void requiresUpdateFields() {
         ObjectNode input = valid();
-        input.remove(field);
-        updateError(input, field, "MSG01", Map.of("field_name", label));
-        input.putNull(field);
-        updateError(input, field, "MSG01", Map.of("field_name", label));
-        input.put(field, " \t\n ");
-        updateError(input, field, "MSG01", Map.of("field_name", label));
-        input.put(field, 42);
-        updateError(input, field, "MSG01", Map.of("field_name", label));
-        verifyNoInteractions(tracker, linker, cipher);
-    }
-
-    @ParameterizedTest
-    @CsvSource({"companyName,Company name", "serviceAccountEmail,Service account email"})
-    @DisplayName("AC-007.3 rejects raw fields over 100 characters with MSG02 and max_length")
-    void limitsUpdateFields(String field, String label) {
-        updateError(
-                valid().put(field, "x".repeat(101)), field, "MSG02", Map.of("field_name", label, "max_length", 100));
+        input.remove("companyName");
+        updateError(input, "companyName", "MSG01", Map.of("field_name", "Company name"));
+        input.putNull("companyName");
+        updateError(input, "companyName", "MSG01", Map.of("field_name", "Company name"));
+        input.put("companyName", " \t\n ");
+        updateError(input, "companyName", "MSG01", Map.of("field_name", "Company name"));
+        input.put("companyName", 42);
+        updateError(input, "companyName", "MSG01", Map.of("field_name", "Company name"));
         verifyNoInteractions(tracker, linker, cipher);
     }
 
     @Test
-    @DisplayName("AC-007.3 accepts company name and email exactly at 100 characters")
-    void acceptsUpdateLimits() {
-        storedWorkspace();
-        String email = "a".repeat(87) + "@example.test";
-        assertThat(email).hasSize(100);
-        service.update(valid().put("companyName", "x".repeat(100)).put("serviceAccountEmail", email));
-        assertThat(updatedWorkspace().getCompanyName()).hasSize(100);
+    @DisplayName("AC-007.3 rejects a company name over 100 characters with MSG02 and max_length")
+    void limitsUpdateFields() {
+        updateError(
+                valid().put("companyName", "x".repeat(101)),
+                "companyName",
+                "MSG02",
+                Map.of("field_name", "Company name", "max_length", 100));
+        verifyNoInteractions(tracker, linker, cipher);
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"bad", "a b@example.test", "a@@example.test", "a@example", "a@", "@example.test"})
-    @DisplayName("AC-007.3 rejects invalid email with MSG03 before contacting Jira")
-    void rejectsUpdateEmail(String email) {
-        updateError(valid().put("serviceAccountEmail", email), "serviceAccountEmail", "MSG03", Map.of());
-        verifyNoInteractions(tracker, linker, cipher);
+    @Test
+    @DisplayName("AC-007.3 accepts a company name exactly at 100 characters")
+    void acceptsUpdateLimits() {
+        storedWorkspace();
+        service.update(valid().put("companyName", "x".repeat(100)));
+        assertThat(updatedWorkspace().getCompanyName()).hasSize(100);
     }
 
     @ParameterizedTest
@@ -526,15 +506,10 @@ class WorkspaceServiceImplTest {
         verifyNoInteractions(tracker, linker, cipher);
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"absent", "", " \t\n "})
-    @DisplayName("AC-007.4 changed email checks stored site and decrypted stored token before writing")
-    void checksChangedEmailWithStoredToken(String token) {
+    @Test
+    @DisplayName("AC-007.4 a new token is checked with the stored site's cloud id before anything is written")
+    void checksANewTokenWithTheStoredCloudId() {
         storedWorkspace();
-        when(cipher.decrypt(workspaceId, "fake-ciphertext")).thenReturn(TOKEN);
-        ObjectNode input = valid().put("serviceAccountEmail", "new@example.test");
-        if (token.equals("absent")) input.remove("serviceAccountToken");
-        else input.put("serviceAccountToken", token);
         doAnswer(call -> {
                     verifyNoInteractions(transactions, audit, entities);
                     verify(repository, never()).save(any());
@@ -542,21 +517,9 @@ class WorkspaceServiceImplTest {
                 })
                 .when(tracker)
                 .checkServiceAccount(any());
-        service.update(input);
-        verify(tracker).checkServiceAccount(new JiraAccount(SITE, "new@example.test", TOKEN));
-        verify(cipher).decrypt(workspaceId, "fake-ciphertext");
-        verify(cipher, never()).encrypt(any(), any());
-        assertThat(updatedWorkspace().getServiceAccountApiToken()).isEqualTo("fake-ciphertext");
-        verifyNoInteractions(linker);
-    }
-
-    @Test
-    @DisplayName("AC-007.4 any supplied non-blank token is checked and encrypted without decrypting to compare D21")
-    void checksEvenRepeatedToken() {
-        storedWorkspace();
         service.update(valid());
         var order = inOrder(tracker, cipher, repository);
-        order.verify(tracker).checkServiceAccount(new JiraAccount(SITE, "fake@example.test", TOKEN));
+        order.verify(tracker).checkServiceAccount(new JiraAccount(SITE, CLOUD_ID, TOKEN));
         order.verify(cipher).encrypt(workspaceId, TOKEN);
         order.verify(repository).save(any(WorkspaceInfo.class));
         verify(cipher, never()).decrypt(any(), any());
@@ -573,43 +536,10 @@ class WorkspaceServiceImplTest {
                 : new JiraUnavailableException(status);
         doThrow(failure).when(tracker).checkServiceAccount(any());
         updateError(
-                valid().put("companyName", "Renamed").put("serviceAccountEmail", "new@example.test"),
-                "serviceAccountToken",
-                "MSG156",
-                Map.of("tracker_name", "Jira"));
+                valid().put("companyName", "Renamed"), "serviceAccountToken", "MSG156", Map.of("tracker_name", "Jira"));
         assertThat(stored.getCompanyName()).isEqualTo("Fake company");
-        assertThat(stored.getServiceAccountEmail()).isEqualTo("fake@example.test");
         assertThat(stored.getServiceAccountApiToken()).isEqualTo("fake-ciphertext");
         verifyNoInteractions(cipher, linker);
-    }
-
-    @Test
-    @DisplayName("AC-007.5 undecryptable stored token on an email change returns MSG156 and changes nothing D29")
-    void rejectsUndecryptableStoredToken() {
-        storedWorkspace();
-        when(cipher.decrypt(workspaceId, "fake-ciphertext"))
-                .thenThrow(new IllegalStateException("Workspace token decryption failed"));
-        ObjectNode input = valid().put("serviceAccountEmail", "new@example.test");
-        input.remove("serviceAccountToken");
-        var logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(WorkspaceServiceImpl.class);
-        var logs = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
-        logs.start();
-        logger.addAppender(logs);
-        try {
-            updateError(input, "serviceAccountToken", "MSG156", Map.of("tracker_name", "Jira"));
-            assertThat(logs.list).singleElement().satisfies(event -> {
-                assertThat(event.getLevel()).isEqualTo(ch.qos.logback.classic.Level.ERROR);
-                assertThat(event.getFormattedMessage())
-                        .contains(workspaceId.toString())
-                        .doesNotContain(TOKEN, "fake-ciphertext", "new@example.test");
-                assertThat(event.getThrowableProxy()).isNull();
-            });
-        } finally {
-            logger.detachAppender(logs);
-            logs.stop();
-        }
-        verifyNoInteractions(tracker, linker);
-        verify(cipher, never()).encrypt(any(), any());
     }
 
     @Test
@@ -624,35 +554,75 @@ class WorkspaceServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-007.7 ignores even non-string jiraSiteUrl and checks only the stored site D17")
-    void ignoresUpdateSite() {
+    @DisplayName("AC-007.7 ignores even non-string jiraSiteUrl and serviceAccountEmail and checks only the stored site")
+    void ignoresUpdateSiteAndEmail() {
         storedWorkspace();
         ObjectNode input = valid();
         input.putObject("jiraSiteUrl").put("ignored", "http://localhost");
+        input.putObject("serviceAccountEmail").put("ignored", "not an email");
         service.update(input);
         assertThat(updatedWorkspace().getJiraSiteAddress()).isEqualTo(SITE);
-        verify(tracker).checkServiceAccount(new JiraAccount(SITE, "fake@example.test", TOKEN));
+        verify(tracker).checkServiceAccount(new JiraAccount(SITE, CLOUD_ID, TOKEN));
         verifyNoInteractions(linker);
     }
 
     @Test
-    @DisplayName("AC-007.8 audits old and new public values and tokenChanged true without secret values")
+    @DisplayName("AC-007.8 audits the old and new company name and tokenChanged true, without email or secrets")
     void auditsUpdate() throws Exception {
         storedWorkspace();
-        ObjectNode input = valid().put("companyName", "Renamed").put("serviceAccountEmail", "new@example.test");
+        ObjectNode input = valid().put("companyName", "Renamed");
         service.update(input);
         verify(audit)
                 .record(
                         AuditAction.TRACKER_CONFIGURATION_CHANGE,
                         "WORKSPACE",
                         workspaceId,
-                        Map.of(
-                                "companyName", Map.of("old", "Fake company", "new", "Renamed"),
-                                "serviceAccountEmail", Map.of("old", "fake@example.test", "new", "new@example.test"),
-                                "tokenChanged", true));
+                        Map.of("companyName", Map.of("old", "Fake company", "new", "Renamed"), "tokenChanged", true));
         assertThat(WorkspaceUpdateRequest.parse(json.writeValueAsString(input), json)
                         .toString())
                 .doesNotContain(TOKEN);
+    }
+
+    private WorkspaceInfo storedWorkspaceWithoutCloudId() {
+        var stored = new WorkspaceInfo(workspaceId, "Fake company", SITE, null, "fake-ciphertext");
+        when(repository.findById(workspaceId)).thenReturn(Optional.of(stored));
+        when(repository.save(any(WorkspaceInfo.class))).thenAnswer(call -> call.getArgument(0));
+        when(transactions.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
+        return stored;
+    }
+
+    @Test
+    @DisplayName("AC-007.11 a new token on a row set up before KAN-344 reads, checks with and stores the cloud id")
+    void readsTheCloudIdForAnOldRow() {
+        storedWorkspaceWithoutCloudId();
+        service.update(valid());
+        var order = inOrder(linker, tracker, repository);
+        order.verify(linker).readCloudId(SITE);
+        order.verify(tracker).checkServiceAccount(new JiraAccount(SITE, CLOUD_ID, TOKEN));
+        order.verify(repository).save(any(WorkspaceInfo.class));
+        assertThat(updatedWorkspace().getJiraCloudId()).isEqualTo(CLOUD_ID);
+        verify(linker, never()).linkJiraSite(any());
+    }
+
+    @Test
+    @DisplayName("AC-007.11 an unreadable cloud id on an old row returns MSG156 on the token and changes nothing")
+    void rejectsAnUnreadableCloudIdForAnOldRow() {
+        WorkspaceInfo stored = storedWorkspaceWithoutCloudId();
+        when(linker.readCloudId(SITE)).thenThrow(new JiraSiteLinkRefusedException(Reason.UNREADABLE));
+        updateError(valid(), "serviceAccountToken", "MSG156", Map.of("tracker_name", "Jira"));
+        assertThat(stored.getJiraCloudId()).isNull();
+        verifyNoInteractions(tracker, cipher);
+    }
+
+    @Test
+    @DisplayName("AC-007.6 a company-only update on an old row keeps it without a cloud id and calls nothing")
+    void renamesAnOldRowWithoutJira() {
+        storedWorkspaceWithoutCloudId();
+        ObjectNode input = valid().put("companyName", "Renamed");
+        input.remove("serviceAccountToken");
+        service.update(input);
+        assertThat(updatedWorkspace().getJiraCloudId()).isNull();
+        verifyNoInteractions(tracker, linker, cipher);
     }
 
     @Test

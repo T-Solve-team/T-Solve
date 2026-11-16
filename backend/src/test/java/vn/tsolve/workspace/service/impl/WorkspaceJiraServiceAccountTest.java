@@ -39,7 +39,7 @@ class WorkspaceJiraServiceAccountTest {
     private static final UUID WORKSPACE = UUID.fromString("00000000-0000-0000-0000-000000000001");
     private static final UUID OTHER_WORKSPACE = UUID.fromString("00000000-0000-0000-0000-000000000002");
     private static final String SITE = "https://example.atlassian.net";
-    private static final String EMAIL = "fake-bot@example.test";
+    private static final String CLOUD_ID = "1324a887-45db-1bf4-1e99-ef0ff456d421";
     private static final String TOKEN = "obviously-fake-jira-token";
 
     private final TenantScope scope = mock(TenantScope.class);
@@ -57,11 +57,11 @@ class WorkspaceJiraServiceAccountTest {
     }
 
     @Test
-    @DisplayName("AC-008.1 returns the bound Workspace's site, email and decrypted token")
+    @DisplayName("AC-008.1 returns the bound Workspace's site, cloud id and decrypted token")
     void returnsAccount() {
-        store(SITE, EMAIL, cipher.encrypt(WORKSPACE, TOKEN));
+        store(SITE, CLOUD_ID, cipher.encrypt(WORKSPACE, TOKEN));
 
-        withAccount(account -> assertThat(account.current()).contains(new JiraAccount(SITE, EMAIL, TOKEN)));
+        withAccount(account -> assertThat(account.current()).contains(new JiraAccount(SITE, CLOUD_ID, TOKEN)));
 
         verify(repository).findById(WORKSPACE);
     }
@@ -79,15 +79,15 @@ class WorkspaceJiraServiceAccountTest {
     @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(strings = "  ")
-    @DisplayName("AC-008.1 returns empty when the stored site, email or token is missing")
+    @DisplayName("AC-008.1 AC-008.4 returns empty when the stored site, cloud id or token is missing")
     void returnsEmptyWithIncompleteAccount(String missing) {
         String encrypted = cipher.encrypt(WORKSPACE, TOKEN);
         withAccount(account -> {
-            store(missing, EMAIL, encrypted);
+            store(missing, CLOUD_ID, encrypted);
             assertThat(account.current()).isEmpty();
             store(SITE, missing, encrypted);
             assertThat(account.current()).isEmpty();
-            store(SITE, EMAIL, missing);
+            store(SITE, CLOUD_ID, missing);
             assertThat(account.current()).isEmpty();
         });
     }
@@ -96,15 +96,17 @@ class WorkspaceJiraServiceAccountTest {
     @DisplayName("AC-008.1 reads the current Workspace and token again on every call")
     void followsBoundWorkspaceAndUpdates() {
         when(scope.currentWorkspaceId()).thenReturn(WORKSPACE, OTHER_WORKSPACE, WORKSPACE);
-        WorkspaceInfo initial = row(SITE, EMAIL, cipher.encrypt(WORKSPACE, TOKEN));
-        WorkspaceInfo updated = row(SITE, "updated@example.test", cipher.encrypt(WORKSPACE, "fake-updated-token"));
+        WorkspaceInfo initial = row(SITE, CLOUD_ID, cipher.encrypt(WORKSPACE, TOKEN));
+        WorkspaceInfo updated =
+                row(SITE, "2324a887-45db-1bf4-1e99-ef0ff456d421", cipher.encrypt(WORKSPACE, "fake-updated-token"));
         when(repository.findById(WORKSPACE)).thenReturn(Optional.of(initial), Optional.of(updated));
         when(repository.findById(OTHER_WORKSPACE)).thenReturn(Optional.empty());
 
         withAccount(account -> {
-            assertThat(account.current()).contains(new JiraAccount(SITE, EMAIL, TOKEN));
+            assertThat(account.current()).contains(new JiraAccount(SITE, CLOUD_ID, TOKEN));
             assertThat(account.current()).isEmpty();
-            assertThat(account.current()).contains(new JiraAccount(SITE, "updated@example.test", "fake-updated-token"));
+            assertThat(account.current())
+                    .contains(new JiraAccount(SITE, "2324a887-45db-1bf4-1e99-ef0ff456d421", "fake-updated-token"));
         });
     }
 
@@ -115,11 +117,11 @@ class WorkspaceJiraServiceAccountTest {
         when(worker.currentWorkspaceId()).thenReturn(Optional.of(OTHER_WORKSPACE));
         when(repository.findById(OTHER_WORKSPACE))
                 .thenReturn(Optional.of(new WorkspaceInfo(
-                        OTHER_WORKSPACE, "Other", SITE, EMAIL, cipher.encrypt(OTHER_WORKSPACE, TOKEN))));
+                        OTHER_WORKSPACE, "Other", SITE, CLOUD_ID, cipher.encrypt(OTHER_WORKSPACE, TOKEN))));
 
         runner.withBean(WorkerTenantService.class, () -> worker).run(context -> assertThat(
                         context.getBean(JiraServiceAccount.class).current())
-                .contains(new JiraAccount(SITE, EMAIL, TOKEN)));
+                .contains(new JiraAccount(SITE, CLOUD_ID, TOKEN)));
 
         verify(repository).findById(OTHER_WORKSPACE);
         verifyNoInteractions(scope);
@@ -130,11 +132,11 @@ class WorkspaceJiraServiceAccountTest {
     void fallsBackWhenWorkerUnbound() {
         WorkerTenantService worker = mock(WorkerTenantService.class);
         when(worker.currentWorkspaceId()).thenReturn(Optional.empty());
-        store(SITE, EMAIL, cipher.encrypt(WORKSPACE, TOKEN));
+        store(SITE, CLOUD_ID, cipher.encrypt(WORKSPACE, TOKEN));
 
         runner.withBean(WorkerTenantService.class, () -> worker).run(context -> assertThat(
                         context.getBean(JiraServiceAccount.class).current())
-                .contains(new JiraAccount(SITE, EMAIL, TOKEN)));
+                .contains(new JiraAccount(SITE, CLOUD_ID, TOKEN)));
 
         verify(scope).currentWorkspaceId();
         verify(repository).findById(WORKSPACE);
@@ -143,10 +145,10 @@ class WorkspaceJiraServiceAccountTest {
     @Test
     @DisplayName("AC-008.1 falls back to TenantScope when no WorkerTenantService bean exists")
     void fallsBackWithoutWorkerBean() {
-        store(SITE, EMAIL, cipher.encrypt(WORKSPACE, TOKEN));
+        store(SITE, CLOUD_ID, cipher.encrypt(WORKSPACE, TOKEN));
 
         withAccount(account -> {
-            assertThat(account.current()).contains(new JiraAccount(SITE, EMAIL, TOKEN));
+            assertThat(account.current()).contains(new JiraAccount(SITE, CLOUD_ID, TOKEN));
         });
 
         verify(scope).currentWorkspaceId();
@@ -169,7 +171,7 @@ class WorkspaceJiraServiceAccountTest {
             packed[packed.length - 1] ^= 1;
             encrypted = "v1:" + Base64.getEncoder().encodeToString(packed);
         }
-        store(SITE, EMAIL, encrypted);
+        store(SITE, CLOUD_ID, encrypted);
         Logger logger =
                 (Logger) LoggerFactory.getLogger("vn.tsolve.workspace.service.impl.WorkspaceJiraServiceAccount");
         ListAppender<ILoggingEvent> logs = new ListAppender<>();
@@ -180,7 +182,7 @@ class WorkspaceJiraServiceAccountTest {
 
             assertThat(logs.list).isNotEmpty().allSatisfy(event -> {
                 assertThat(event.getLevel()).isEqualTo(Level.ERROR);
-                assertThat(event.getFormattedMessage()).doesNotContain(TOKEN, EMAIL, encrypted);
+                assertThat(event.getFormattedMessage()).doesNotContain(TOKEN, CLOUD_ID, encrypted);
                 assertThat(event.getThrowableProxy()).isNull();
             });
         } finally {
@@ -206,12 +208,12 @@ class WorkspaceJiraServiceAccountTest {
         });
     }
 
-    private void store(String site, String email, String encrypted) {
-        when(repository.findById(WORKSPACE)).thenReturn(Optional.of(row(site, email, encrypted)));
+    private void store(String site, String cloudId, String encrypted) {
+        when(repository.findById(WORKSPACE)).thenReturn(Optional.of(row(site, cloudId, encrypted)));
     }
 
-    private static WorkspaceInfo row(String site, String email, String encrypted) {
-        return new WorkspaceInfo(WORKSPACE, "Example", site, email, encrypted);
+    private static WorkspaceInfo row(String site, String cloudId, String encrypted) {
+        return new WorkspaceInfo(WORKSPACE, "Example", site, cloudId, encrypted);
     }
 
     private static TokenCipher cipher(byte[] key) {

@@ -35,7 +35,7 @@ import vn.tsolve.tracker.service.TrackerProjectService;
 class TrackerProjectServiceImplTest {
 
     private static final JiraAccount ACCOUNT =
-            new JiraAccount("https://acme.atlassian.net", "bot@acme.test", "secret-token");
+            new JiraAccount("https://acme.atlassian.net", "1324a887-45db-1bf4-1e99-ef0ff456d421", "secret-token");
 
     @Mock
     private JiraServiceAccount serviceAccount;
