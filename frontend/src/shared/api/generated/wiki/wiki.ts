@@ -24,15 +24,19 @@ import type {
 
 import type {
   CreateWikiFolderRequest,
+  ExtractWikiUploadsBody,
   ListWikiDocumentsParams,
   ProblemDetail,
   ProblemResponse,
+  PublishWikiDocumentsBody,
   SearchWikiDocumentsParams,
   UpdateWikiFolderRequest,
   WikiDocumentDetail,
+  WikiDocumentRef,
   WikiDocumentSummary,
   WikiFolder,
   WikiSpace,
+  WikiUploadPreview,
 } from '../model';
 
 import { http } from '../../http';
@@ -732,6 +736,102 @@ export const useDeleteWikiFolder = <
 > => {
   return useMutation(getDeleteWikiFolderMutationOptions(options), queryClient);
 };
+export const getPublishWikiDocumentsUrl = (spaceId: string) => {
+  return `/api/v1/wiki/spaces/${spaceId}/documents`;
+};
+
+/**
+ * @summary Publish one to ten readable PDF or DOCX files in a managed Space.
+ */
+export const publishWikiDocuments = async (
+  spaceId: string,
+  publishWikiDocumentsBody: PublishWikiDocumentsBody,
+  options?: Parameters<typeof http>[1],
+): Promise<WikiDocumentRef[]> => {
+  const formData = new FormData();
+  publishWikiDocumentsBody.files.forEach((value) => formData.append(`files`, value));
+  formData.append(`metadata`, JSON.stringify(publishWikiDocumentsBody.metadata));
+
+  return http<WikiDocumentRef[]>(getPublishWikiDocumentsUrl(spaceId), {
+    ...options,
+    method: 'POST',
+    body: formData,
+  });
+};
+
+export const getPublishWikiDocumentsMutationKey = () => ['publishWikiDocuments'] as const;
+
+export const getPublishWikiDocumentsMutationOptions = <
+  TError = ErrorType<ProblemDetail | ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof publishWikiDocuments>>,
+    TError,
+    PublishWikiDocumentsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof publishWikiDocuments>>,
+  TError,
+  PublishWikiDocumentsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPublishWikiDocumentsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof publishWikiDocuments>>,
+    PublishWikiDocumentsMutationVariables
+  > = (props) => {
+    const { spaceId, data } = props ?? {};
+
+    return publishWikiDocuments(spaceId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PublishWikiDocumentsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof publishWikiDocuments>>
+>;
+export type PublishWikiDocumentsMutationBody = PublishWikiDocumentsBody;
+export type PublishWikiDocumentsMutationError = ErrorType<ProblemDetail | ProblemResponse>;
+export type PublishWikiDocumentsMutationVariables = {
+  spaceId: string;
+  data: PublishWikiDocumentsBody;
+};
+
+/**
+ * @summary Publish one to ten readable PDF or DOCX files in a managed Space.
+ */
+export const usePublishWikiDocuments = <
+  TError = ErrorType<ProblemDetail | ProblemResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof publishWikiDocuments>>,
+      TError,
+      PublishWikiDocumentsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof publishWikiDocuments>>,
+  TError,
+  PublishWikiDocumentsMutationVariables,
+  TContext
+> => {
+  return useMutation(getPublishWikiDocumentsMutationOptions(options), queryClient);
+};
 export const getListWikiDocumentsUrl = (spaceId: string, params?: ListWikiDocumentsParams) => {
   const normalizedParams = new URLSearchParams();
 
@@ -872,6 +972,239 @@ export function useListWikiDocuments<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getListWikiDocumentsQueryOptions(spaceId, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getExtractWikiUploadsUrl = (spaceId: string) => {
+  return `/api/v1/wiki/spaces/${spaceId}/uploads/extract`;
+};
+
+/**
+ * @summary Preview one to ten PDF or DOCX files without storing them.
+ */
+export const extractWikiUploads = async (
+  spaceId: string,
+  extractWikiUploadsBody: ExtractWikiUploadsBody,
+  options?: Parameters<typeof http>[1],
+): Promise<WikiUploadPreview[]> => {
+  const formData = new FormData();
+  extractWikiUploadsBody.files.forEach((value) => formData.append(`files`, value));
+
+  return http<WikiUploadPreview[]>(getExtractWikiUploadsUrl(spaceId), {
+    ...options,
+    method: 'POST',
+    body: formData,
+  });
+};
+
+export const getExtractWikiUploadsMutationKey = () => ['extractWikiUploads'] as const;
+
+export const getExtractWikiUploadsMutationOptions = <
+  TError = ErrorType<ProblemDetail | ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof extractWikiUploads>>,
+    TError,
+    ExtractWikiUploadsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof extractWikiUploads>>,
+  TError,
+  ExtractWikiUploadsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getExtractWikiUploadsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof extractWikiUploads>>,
+    ExtractWikiUploadsMutationVariables
+  > = (props) => {
+    const { spaceId, data } = props ?? {};
+
+    return extractWikiUploads(spaceId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ExtractWikiUploadsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof extractWikiUploads>>
+>;
+export type ExtractWikiUploadsMutationBody = ExtractWikiUploadsBody;
+export type ExtractWikiUploadsMutationError = ErrorType<ProblemDetail | ProblemResponse>;
+export type ExtractWikiUploadsMutationVariables = { spaceId: string; data: ExtractWikiUploadsBody };
+
+/**
+ * @summary Preview one to ten PDF or DOCX files without storing them.
+ */
+export const useExtractWikiUploads = <
+  TError = ErrorType<ProblemDetail | ProblemResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof extractWikiUploads>>,
+      TError,
+      ExtractWikiUploadsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof extractWikiUploads>>,
+  TError,
+  ExtractWikiUploadsMutationVariables,
+  TContext
+> => {
+  return useMutation(getExtractWikiUploadsMutationOptions(options), queryClient);
+};
+export const getDownloadWikiDocumentFileUrl = (documentId: string) => {
+  return `/api/v1/wiki/documents/${documentId}/file`;
+};
+
+/**
+ * @summary Download the original file after checking current document access.
+ */
+export const downloadWikiDocumentFile = async (
+  documentId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getDownloadWikiDocumentFileUrl(documentId), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getDownloadWikiDocumentFileQueryKey = (documentId: string) => {
+  return [`/api/v1/wiki/documents/${documentId}/file`] as const;
+};
+
+export const getDownloadWikiDocumentFileQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadWikiDocumentFile>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  documentId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadWikiDocumentFile>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDownloadWikiDocumentFileQueryKey(documentId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadWikiDocumentFile>>> = ({
+    signal,
+  }) => downloadWikiDocumentFile(documentId, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: documentId !== null && documentId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof downloadWikiDocumentFile>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type DownloadWikiDocumentFileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadWikiDocumentFile>>
+>;
+export type DownloadWikiDocumentFileQueryError = ErrorType<ProblemResponse | ProblemDetail>;
+
+export function useDownloadWikiDocumentFile<
+  TData = Awaited<ReturnType<typeof downloadWikiDocumentFile>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  documentId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadWikiDocumentFile>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadWikiDocumentFile>>,
+          TError,
+          Awaited<ReturnType<typeof downloadWikiDocumentFile>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadWikiDocumentFile<
+  TData = Awaited<ReturnType<typeof downloadWikiDocumentFile>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  documentId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadWikiDocumentFile>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadWikiDocumentFile>>,
+          TError,
+          Awaited<ReturnType<typeof downloadWikiDocumentFile>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadWikiDocumentFile<
+  TData = Awaited<ReturnType<typeof downloadWikiDocumentFile>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  documentId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadWikiDocumentFile>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Download the original file after checking current document access.
+ */
+
+export function useDownloadWikiDocumentFile<
+  TData = Awaited<ReturnType<typeof downloadWikiDocumentFile>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  documentId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadWikiDocumentFile>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDownloadWikiDocumentFileQueryOptions(documentId, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

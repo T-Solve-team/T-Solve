@@ -34,6 +34,7 @@ import vn.tsolve.wiki.dto.WikiDocumentDetail;
 import vn.tsolve.wiki.dto.WikiDocumentSummary;
 import vn.tsolve.wiki.service.WikiBrowseService;
 import vn.tsolve.wiki.service.WikiSearchService;
+import vn.tsolve.wiki.service.WikiUploadService;
 
 @WebMvcTest(
         useDefaultFilters = false,
@@ -49,6 +50,9 @@ class WikiDocumentControllerTest {
 
     @MockBean
     private WikiSearchService search;
+
+    @MockBean
+    private WikiUploadService uploads;
 
     @Test
     @WithTSolveUser

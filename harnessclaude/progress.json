@@ -212,21 +212,21 @@
         "wiki-home-ui": "passing",
         "wiki-folder-api": "passing",
         "wiki-folder-ui": "passing",
-        "wiki-upload-api": "pending",
-        "wiki-indexing": "pending",
-        "wiki-upload-ui": "pending",
+        "wiki-upload-api": "evaluating",
+        "wiki-indexing": "evaluating",
+        "wiki-upload-ui": "evaluating",
         "wiki-trash-api": "pending",
         "wiki-trash-ui": "pending",
         "wiki-permissions-api": "pending",
         "wiki-permissions-ui": "pending"
       },
-      "lastUpdated": "2026-11-15T05:36:06.280Z",
+      "lastUpdated": "2026-11-15T05:58:28.995Z",
       "branch": "feat/wiki",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "2f212b192f81c70a677b3fda692127f0759fd9f8"
+        "default": "186f3b38ff677b97644a1e42cf77f0837be6767b"
       }
     },
     "ticket-repository": {
