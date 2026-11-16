@@ -148,6 +148,7 @@ class JiraImportServiceImplTest {
         assertThat(response.needsSolutionCount()).isEqualTo(4);
         assertThat(response.message()).isNull();
         assertThat(response.rows().getContent()).hasSize(4);
+        verify(jira, times(1)).pull(eq(KEY), eq(FROM), eq(TO), any()); // one account read for both pages (BUG-311)
     }
 
     @Test
