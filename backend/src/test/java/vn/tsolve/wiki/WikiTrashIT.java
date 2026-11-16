@@ -490,9 +490,9 @@ class WikiTrashIT extends WikiReadTestSupport {
         WikiTrashService trashService(
                 @Qualifier("trashDocuments") WikiDocumentRepository documents,
                 AccessRepository access,
-                FileStorage storage,
+                ObjectProvider<FileStorage> storage,
                 AuditService audit,
-                TenantJobService jobs) {
+                ObjectProvider<TenantJobService> jobs) {
             return new WikiTrashServiceImpl(
                     documents,
                     access,

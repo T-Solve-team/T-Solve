@@ -29,6 +29,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -55,8 +57,13 @@ class WikiTrashServiceImplTest {
     private final FileStorage storage = mock(FileStorage.class);
     private final AuditService audit = mock(AuditService.class);
     private final TenantJobService jobs = mock(TenantJobService.class);
-    private final WikiTrashServiceImpl service =
-            new WikiTrashServiceImpl(documents, access, search, storage, audit, jobs);
+    private final WikiTrashServiceImpl service = new WikiTrashServiceImpl(
+            documents,
+            access,
+            search,
+            provider(FileStorage.class, storage),
+            audit,
+            provider(TenantJobService.class, jobs));
     private final UUID user = UUID.randomUUID();
     private final UUID space = UUID.randomUUID();
     private final UUID id = UUID.randomUUID();
@@ -332,6 +339,27 @@ class WikiTrashServiceImplTest {
             case "PERMANENT" -> service.deletePermanently(user, id);
             default -> throw new IllegalArgumentException(operation);
         }
+    }
+
+    @Test
+    void startsAndDeletesWithoutFileStorageOrWorker_BUG_307() {
+        var bare = new WikiTrashServiceImpl(
+                documents,
+                access,
+                search,
+                provider(FileStorage.class, null),
+                audit,
+                provider(TenantJobService.class, null));
+        deleted();
+        bare.deletePermanently(user, id);
+        commit();
+        verify(documents).delete(document);
+    }
+
+    private static <T> ObjectProvider<T> provider(Class<T> type, T bean) {
+        var factory = new StaticListableBeanFactory();
+        if (bean != null) factory.addBean("bean", bean);
+        return factory.getBeanProvider(type);
     }
 
     private void commit() {
