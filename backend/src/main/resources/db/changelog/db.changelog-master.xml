@@ -61,4 +61,6 @@
     <include file="changes/037-review-decision-publication.sql" relativeToChangelogFile="true"/>
     <include file="changes/038-ticket-decision.sql" relativeToChangelogFile="true"/>
     <include file="changes/039-drop-legacy-solution-tables.sql" relativeToChangelogFile="true"/>
+    <include file="changes/040-wiki-tables.sql" relativeToChangelogFile="true"/>
+    <include file="changes/041-wiki-audit-folder-change.sql" relativeToChangelogFile="true"/>
 </databaseChangeLog>

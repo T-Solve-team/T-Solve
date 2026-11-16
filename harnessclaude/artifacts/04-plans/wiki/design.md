@@ -37,7 +37,12 @@ AND EXISTS (SELECT 1 FROM department d WHERE d.department_id = s.department_id A
 AND EXISTS (SELECT 1 FROM app_user u WHERE u.id = :userId AND u.status = 'ACTIVE' AND (
       EXISTS (SELECT 1 FROM space_manager sm JOIN user_role r ON r.user_id = sm.user_id AND r.role = 'KNOWLEDGE_MANAGER'
               WHERE sm.space_id = s.space_id AND sm.user_id = u.id)
-   OR s.department_id = u.department_id
+   OR s.department_id IN (
+          SELECT u.department_id
+          UNION
+          SELECT pr.department_id FROM project_membership m JOIN project pr ON pr.public_id = m.project_id
+          WHERE m.user_id = u.id AND m.role_in_project = 'MEMBER'
+            AND EXISTS (SELECT 1 FROM user_role r WHERE r.user_id = u.id AND r.role = 'TICKET_RESOLVER'))
    OR EXISTS (SELECT 1 FROM space_permission p WHERE p.space_id = s.space_id AND p.user_id = u.id)
    OR EXISTS (SELECT 1 FROM space_permission p JOIN department pd ON pd.department_id = p.department_id AND pd.status = 'ACTIVE'
               WHERE p.space_id = s.space_id AND p.department_id IN (

@@ -1462,11 +1462,11 @@
     }
   },
   "wiki": {
-    "specHash": "75e10cbc9301985fbfd3cf1d5d09b0e79987563b15ed1b03d543a10b35727f2a",
-    "approvedAt": "2026-11-14T04:19:53.905Z",
+    "specHash": "c47a3ede0c7021da586cd73765155d5e5e0b5d22b00ef446b9d510948f3597fb",
+    "approvedAt": "2026-11-14T15:16:37.613Z",
     "by": "user",
     "acs": {
-      "AC-001.1": "WHEN the view rule is evaluated for a user and a Space, THE system SHALL grant View only if the user is Active, the Space is Active, its Department is Active, and one of these holds: the user is the Space's Knowledge Manager (a  row and the role ); the user's own Department is the Space's Department; one of the user's Departments has a permission on the Space; the user has their own permission on the Space.",
+      "AC-001.1": "WHEN the view rule is evaluated for a user and a Space, THE system SHALL grant View only if the user is Active, the Space is Active, its Department is Active, and one of these holds: the user is the Space's Knowledge Manager (a  row and the role ); one of the user's Departments (AC-001.2) is the Space's Department; one of the user's Departments has a permission on the Space; the user has their own permission on the Space.",
       "AC-001.2": "WHEN the user's Departments are computed, THE system SHALL use the user's own Department, plus, when the user has the role , the Departments of the Projects in which the user is a , counting only Active Departments.",
       "AC-001.3": "IF a user is Deactivated, THEN THE system SHALL apply none of that user's permissions and grant them no View.",
       "AC-001.4": "WHEN the view rule is evaluated for a user and a Wiki document, THE system SHALL grant it only if the document is Published, its Space and Department are Active, and the document is Company-wide or the user can view its Space.",

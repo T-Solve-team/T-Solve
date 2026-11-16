@@ -6,6 +6,7 @@ export { CsvUpload } from './CsvUpload';
 export { cells, DataTable, type DataTableColumn } from './DataTable';
 export { DetailModal } from './DetailModal';
 export { EvidenceUpload, type EvidenceUploadValue } from './EvidenceUpload';
+export { FileDropzone } from './FileDropzone';
 export { FormModal } from './FormModal';
 export { ScreenPlaceholder } from './ScreenPlaceholder';
 export { EmptyState, ErrorState, LoadingState } from './States';
