@@ -166,6 +166,34 @@ describe('WorkspaceSetupPage', () => {
     },
   );
 
+  it('AC-009.8 shows the reason line under the token field below MSG156', async () => {
+    const params = { tracker_name: 'Jira', reason: 'TOKEN_REJECTED' };
+    server.use(
+      http.post('*/api/v1/workspace/setup', () =>
+        HttpResponse.json(
+          {
+            status: 400,
+            code: 'MSG156',
+            fieldErrors: [{ field: 'serviceAccountToken', code: 'MSG156', params }],
+          },
+          { status: 400 },
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderApp(paths.workspaceSetup, { role: 'ADMIN' });
+    await fillForm(user);
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() =>
+      expect(screen.getByLabelText(LABELS.serviceAccountToken)).toHaveAccessibleDescription(
+        expect.stringContaining(msg('MSG156', params)),
+      ),
+    );
+    expect(screen.getByLabelText(LABELS.serviceAccountToken)).toHaveAccessibleDescription(
+      expect.stringContaining('Jira did not accept this token.'),
+    );
+  });
+
   it('AC-009.5 sends the form, shows MSG05, refetches /me and opens User List', async () => {
     let body: unknown;
     server.use(

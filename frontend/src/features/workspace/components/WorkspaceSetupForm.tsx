@@ -1,10 +1,11 @@
 import { Button, Flex, Form, Input } from 'antd';
 import { useRef } from 'react';
 import type { WorkspaceSetupRequest } from '@/shared/api';
-import { applyApiErrors, rules } from '@/shared/forms';
+import { rules } from '@/shared/forms';
 import { showMessage } from '@/shared/messages';
 import { AppForm, FormField, SectionCard } from '@/shared/ui';
 import { isWorkspaceAlreadySetUp, useSetUpWorkspace } from '../hooks/useWorkspace';
+import { applyWorkspaceApiErrors } from './serviceAccountReason';
 
 export function WorkspaceSetupForm() {
   const [form] = Form.useForm<WorkspaceSetupRequest>();
@@ -19,7 +20,7 @@ export function WorkspaceSetupForm() {
       {
         onError: (error) => {
           if (isWorkspaceAlreadySetUp(error)) return;
-          if (!applyApiErrors(form, error)) showMessage(error.code, error.params);
+          if (!applyWorkspaceApiErrors(form, error)) showMessage(error.code, error.params);
         },
         onSettled: () => {
           submitting.current = false;

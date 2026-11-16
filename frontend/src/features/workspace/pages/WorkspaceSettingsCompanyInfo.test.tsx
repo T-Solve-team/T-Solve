@@ -145,6 +145,39 @@ describe('WorkspaceSettingsPage company information', () => {
     },
   );
 
+  it('AC-010.9 shows the reason line under the token field below MSG156', async () => {
+    const params = {
+      tracker_name: 'Jira',
+      reason: 'MISSING_PERMISSIONS',
+      missing_permissions: 'MODIFY_REPORTER',
+    };
+    server.use(
+      http.put('*/api/v1/workspace', () =>
+        HttpResponse.json(
+          {
+            status: 400,
+            code: 'MSG156',
+            fieldErrors: [{ field: 'serviceAccountToken', code: 'MSG156', params }],
+          },
+          { status: 400 },
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderApp(paths.workspaceSettings, { role: 'ADMIN' });
+    await findSave();
+    await replace(user, LABELS.serviceAccountToken, 'typed-fake-token');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() =>
+      expect(screen.getByLabelText(LABELS.serviceAccountToken)).toHaveAccessibleDescription(
+        expect.stringContaining(msg('MSG156', params)),
+      ),
+    );
+    expect(screen.getByLabelText(LABELS.serviceAccountToken)).toHaveAccessibleDescription(
+      expect.stringContaining('Missing Jira permissions: Modify reporter.'),
+    );
+  });
+
   it('AC-010.5 Cancel restores the loaded values and sends nothing', async () => {
     const user = userEvent.setup();
     renderApp(paths.workspaceSettings, { role: 'ADMIN' });
