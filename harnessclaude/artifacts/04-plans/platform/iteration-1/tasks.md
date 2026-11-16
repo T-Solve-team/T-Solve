@@ -604,16 +604,25 @@ Edge #36).
 (`http://acme.localhost/<bucket>/…`), on staging too; see a 405 for any other method and a download, not a rendered page,
 for a stored HTML file.
 **Covers:** AC-009.2 (the `/<bucket>/*` route on a Workspace site), AC-007.12 and AC-007.15 (through Caddy).
-**Design:** Signed URL host and routing (R11, R12); Infrastructure — Edge limits.
-**Description:** The Caddy route (GET/HEAD of `/<bucket>/*` to `garage:3900` with the original `Host`, other methods 405,
-`nosniff`, signature parameters out of the access log) added to `Caddyfile.local` and `Caddyfile`.
-**Edge rows:** #40 (signature not in the Caddy access log), #41 (HTML/SVG downloaded, not rendered).
-**Tests (about 5 checks):** `infra/tests/caddy-routing.test.sh` additions: signed GET 200 with `nosniff` and a download type,
-HEAD allowed, PUT/POST/DELETE 405, an altered signature refused, Edge #40 and #41.
+**Design:** Signed URL host and routing (R11, R12); Infrastructure — Edge limits. Research: RESEARCH-005 (with a draft
+of the route).
+**Description:** The Caddy route (GET/HEAD of `/{$FILE_STORAGE_BUCKET}/*` to `garage:3900` with the original `Host`, no
+path rewrite, other methods 405 with `Allow: GET, HEAD`, `nosniff` by `header_down`) added to `Caddyfile.local` and
+`Caddyfile`, before the web-app route. The `(common)` log switches to `format filter` (`wrap json`) deleting
+`X-Amz-Signature` and `X-Amz-Credential` from `request>uri`. `FILE_STORAGE_BUCKET` is passed, required, to the `caddy`
+service of `docker-compose.yml` and `infra/compose.staging.yml`.
+**Edge rows:** #39 (through Caddy), #40 (signature not in the Caddy access log), #41 (HTML/SVG downloaded, not rendered).
+**Tests (about 6 checks):** `infra/tests/caddy-routing.test.sh` additions. The object is put and the URL presigned with the
+`amazon/aws-cli` image on the compose network (put on `http://garage:3900`, presign for `http://acme.localhost`, region
+`garage`, path-style). Checks: signed GET 200 with `nosniff`, `application/octet-stream` and the same bytes (an HTML
+file, Edge #41); HEAD with that URL not 405 (Garage refuses it, 400 or 403: the signature covers the method);
+PUT/POST/DELETE 405; an altered signature and an unsigned request refused with 400 or 403 and no content (Edge #39, D16);
+no `X-Amz-Signature=` in the Caddy log (Edge #40).
 **Files:**
-- Modify: `infra/caddy/Caddyfile.local`, `infra/caddy/Caddyfile`
+- Modify: `infra/caddy/Caddyfile.local`, `infra/caddy/Caddyfile`, `docker-compose.yml`, `infra/compose.staging.yml`
 - Test: `infra/tests/caddy-routing.test.sh`
-**Dependencies:** Tasks 11 (local Caddy), 14 (staging Caddy), 16
+**Dependencies:** Tasks 1 (Garage locally, no `root_domain`), 11 (local Caddy on port 80), 13 (Garage on staging), 14
+(staging Caddy, `caddy-routing.test.sh`), 16
 **Estimated size:** small
 **Done when:** the signed-URL download works in a browser on a local Workspace site and `caddy-routing.test.sh` passes.
 

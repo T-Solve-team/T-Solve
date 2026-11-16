@@ -295,6 +295,14 @@ Caddy must forward it unchanged.
   (Caddy's default), before the web-app route; other methods get 405. Garage has no published port. The route adds
   `X-Content-Type-Options: nosniff` and removes the signature parameters from the access log. The bucket name is
   reserved as a path on the Workspace site (the web app has no such route).
+- What keeps the signature valid (RESEARCH-005): the route never rewrites the path (`handle`, not `handle_path`); the
+  host and port of `FILE_STORAGE_PUBLIC_URL_PATTERN` are the ones the browser sends (locally Caddy on port 80 and
+  `http://{site}.localhost`, no port); `garage.toml` sets no `root_domain`, so Garage reads every host as path-style.
+  The signature covers the method, so a `HEAD` with a URL signed for `GET` reaches Garage and is refused there.
+- Caddy details: `nosniff` is set with `header_down` inside `reverse_proxy`; the access log of every site uses the
+  `filter` format (`wrap json`) with `request>uri query { delete X-Amz-Signature; delete X-Amz-Credential }`; the bucket
+  path comes from `{$FILE_STORAGE_BUCKET}`, which the `caddy` service of both compose files receives as a required
+  variable.
 - No new host, no new certificate (the Workspace wildcard covers it) and no new reserved site name. TTL is
   `FILE_STORAGE_URL_TTL_SECONDS`.
 
@@ -606,7 +614,7 @@ High row into a task.
 | 36 | STORY-007 | Authorization | A's key used while B is bound: `read`, `delete`, `signedUrl` | Critical | `NotFoundException`, no content, no URL, nothing deleted | TenantIsolationIT (AC-007.11) |
 | 37 | STORY-007 | Scale | File of exactly 10 MB, 10 MB + 1 byte, 0 bytes | High | 10 MB stored; +1 refused with no object; 0 bytes stored | ObjectFileStorageIT |
 | 38 | STORY-007 | Error cascades | Garage down or the connection breaks during `store` | High | Exception, no object, no multipart upload; `read` fails closed | ObjectFileStorageIT |
-| 39 | STORY-007 | Authorization | Signed URL after the TTL; URL with a changed key or method; unsigned request to `/<bucket>/…` | High | Refused by Garage (403); bucket has no anonymous access | ObjectFileStorageIT, `caddy-routing.test.sh` |
+| 39 | STORY-007 | Authorization | Signed URL after the TTL; URL with a changed key or method; unsigned request to `/<bucket>/…` | High | Refused by Garage (400 or 403, no content; KAN-96 D16); bucket has no anonymous access | ObjectFileStorageIT, `caddy-routing.test.sh` |
 | 40 | STORY-007 | Compliance | The signature in the query string reaches the Caddy access log | High | Signature parameters removed from the log | `caddy-routing.test.sh` |
 | 41 | STORY-007 | Input extremes | An uploaded HTML or SVG file opened through its signed URL | High | Stored as `application/octet-stream` with `nosniff`: downloaded, not rendered | `caddy-routing.test.sh` |
 | 42 | STORY-007 | Timing | Two `delete` calls for one key | Low | Both succeed (AC-007.10) | ObjectFileStorageIT |
