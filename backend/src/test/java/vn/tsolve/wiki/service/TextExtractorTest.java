@@ -68,6 +68,13 @@ class TextExtractorTest {
     }
 
     @Test
+    void readsDocxWithTheCommonsIoThatCsvImportNeeds_BUG_297() throws Exception {
+        // commons-csv 1.12 reads through this class (commons-io 2.17+); POI must run on the same commons-io.
+        Class.forName("org.apache.commons.io.input.UnsynchronizedBufferedReader");
+        assertThat(extractor.extract(fixture("guide.docx"), "guide.docx")).contains("DOCX guide");
+    }
+
+    @Test
     void stripsNulThatPdfBoxEmitsForUnmappedGlyphs_BUG_293() {
         assertThat(TextExtractor.readable("Wiki\u0000 guide\u0000")).isEqualTo("Wiki guide");
         assertThat(TextExtractor.readable("\u0000 \u0000")).isEmpty();
