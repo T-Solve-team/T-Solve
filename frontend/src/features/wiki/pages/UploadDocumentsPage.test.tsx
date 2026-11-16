@@ -288,13 +288,16 @@ describe('UploadDocumentsPage', () => {
     },
   );
 
-  it('AC-004.22 uses stateful mocks to publish and browse the new document', async () => {
+  it('AC-004.22 uses stateful mocks to publish and browse the new document (BUG-278)', async () => {
     const { user, input } = await openUpload();
     await user.upload(input(), file('new-guide.pdf'));
     await screen.findByRole('textbox', { name: 'Title for new-guide.pdf' });
     await user.click(screen.getByRole('button', { name: 'Publish' }));
     expect(await screen.findByText(msg('MSG95', { count: 1 }))).toBeInTheDocument();
-    expect(await screen.findByRole('link', { name: 'new-guide' })).toBeInTheDocument();
+    // Wiki Home is a lazy page and loads its Space, folders and documents in turn: give it more time (BUG-278).
+    expect(
+      await screen.findByRole('link', { name: 'new-guide' }, { timeout: 5000 }),
+    ).toBeInTheDocument();
   });
 
   it('AC-004.23 cancels back to Wiki Home without publishing', async () => {
