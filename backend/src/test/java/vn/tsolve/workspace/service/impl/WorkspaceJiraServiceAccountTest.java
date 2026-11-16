@@ -59,7 +59,7 @@ class WorkspaceJiraServiceAccountTest {
 
     private void row(UUID workspaceId, String site, String cloudId) {
         when(repository.findById(workspaceId))
-                .thenReturn(Optional.of(new WorkspaceInfo(workspaceId, "Example", site, cloudId, null)));
+                .thenReturn(Optional.of(new WorkspaceInfo(workspaceId, "Example", site, cloudId)));
     }
 
     @Test

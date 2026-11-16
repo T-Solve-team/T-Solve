@@ -1,6 +1,5 @@
 package vn.tsolve.workspace.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -26,35 +25,25 @@ public class WorkspaceInfo {
     @Column(name = "jira_site_address", length = 255, updatable = false)
     private String jiraSiteAddress;
 
-    // KAN-344: kept for rows written before the email field was removed; never written or read again.
-    @Column(name = "service_account_email", length = 254, insertable = false, updatable = false)
-    private String serviceAccountEmail;
-
     @Column(name = "jira_cloud_id", length = 36)
     private String jiraCloudId;
-
-    @Column(name = "service_account_api_token", columnDefinition = "text")
-    private String serviceAccountApiToken;
 
     @Column(name = "token_expiry_date")
     private LocalDate tokenExpiryDate;
 
     protected WorkspaceInfo() {}
 
-    public WorkspaceInfo(
-            UUID id, String companyName, String jiraSiteAddress, String jiraCloudId, String serviceAccountApiToken) {
+    // KAN-349: no Jira credential is stored; changeset 043 cleared the old service account columns.
+    public WorkspaceInfo(UUID id, String companyName, String jiraSiteAddress, String jiraCloudId) {
         this.id = id;
         this.companyName = companyName;
         this.jiraSiteAddress = jiraSiteAddress;
         this.jiraCloudId = jiraCloudId;
-        this.serviceAccountApiToken = serviceAccountApiToken;
     }
 
-    /** Settings (UC-11): the site stays; a replaced token comes with the cloud id it was checked against. */
-    public void update(String companyName, String jiraCloudId, String serviceAccountApiToken) {
+    /** Settings (UC-11): only the company name changes; the site and its cloud id stay (GBR-24). */
+    public void rename(String companyName) {
         this.companyName = companyName;
-        this.jiraCloudId = jiraCloudId;
-        this.serviceAccountApiToken = serviceAccountApiToken;
     }
 
     public UUID getId() {
@@ -75,11 +64,6 @@ public class WorkspaceInfo {
 
     public String getJiraCloudId() {
         return jiraCloudId;
-    }
-
-    @JsonIgnore
-    public String getServiceAccountApiToken() {
-        return serviceAccountApiToken;
     }
 
     public LocalDate getTokenExpiryDate() {

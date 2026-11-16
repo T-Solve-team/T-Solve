@@ -212,17 +212,16 @@ class TokenCipherTest {
     }
 
     @Test
-    @DisplayName("AC-011.7 entity and cipher diagnostics and entity JSON hide secret values")
+    @DisplayName("AC-012.6 cipher diagnostics and the Workspace entity hold no token (KAN-349)")
     void hidesSecretsInDiagnosticsAndJson() throws Exception {
         String encrypted = cipher.encrypt(WORKSPACE, TOKEN);
         WorkspaceInfo workspace = new WorkspaceInfo(
-                WORKSPACE, "Fake company", "https://fake.atlassian.net", "fake@example.test", encrypted);
+                WORKSPACE, "Fake company", "https://fake.atlassian.net", "1324a887-45db-1bf4-1e99-ef0ff456d421");
 
-        assertThat(workspace.getServiceAccountApiToken()).isEqualTo(encrypted);
         assertThat(workspace.toString()).doesNotContain(TOKEN, encrypted, KEY);
         assertThat(cipher.toString()).doesNotContain(TOKEN, encrypted, KEY);
         assertThat(new ObjectMapper().writeValueAsString(workspace))
-                .doesNotContain(TOKEN, encrypted, "serviceAccountApiToken");
+                .doesNotContain(TOKEN, encrypted, "serviceAccountApiToken", "serviceAccountEmail");
     }
 
     private static TokenCipher cipher(String key) {
