@@ -2,6 +2,7 @@ package vn.tsolve.ticket.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -99,6 +100,14 @@ class TicketDetailVisibilityTest {
     }
 
     @Test
+    void nonPublishedProjectManagerOfAnInactiveProject_AC_008_2_BUG_312() {
+        // an inactive Project is missing from the caller's active Projects, but its membership still counts
+        ticket(TicketStatus.UNPUBLISHED, null);
+        when(tickets.isProjectManager(PROJECT, CALLER)).thenReturn(true);
+        assertThat(reads.detail(Map.of(), CALLER, true, ID).ticketId()).isEqualTo(ID);
+    }
+
+    @Test
     @DisplayName("AC-008.2 AC-008.4 denies a Department manager who does not manage this Project")
     void pendingOtherProjectManager() {
         ticket(TicketStatus.PENDING_REVIEW, null);
@@ -167,7 +176,8 @@ class TicketDetailVisibilityTest {
         when(tickets.findPlacement(PROJECT)).thenReturn(Optional.of(placement));
     }
 
-    private static Map<UUID, ProjectAccess> projects(boolean managed) {
+    private Map<UUID, ProjectAccess> projects(boolean managed) {
+        lenient().when(tickets.isProjectManager(PROJECT, CALLER)).thenReturn(managed);
         return Map.of(PROJECT, new ProjectAccess(new Project(PROJECT, "DETAIL"), DEPARTMENT, managed));
     }
 }
