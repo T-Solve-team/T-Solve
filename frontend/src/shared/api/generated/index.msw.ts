@@ -13,4 +13,5 @@ export { getSessionMock } from './session/session.msw';
 export { getTicketsMock } from './tickets/tickets.msw';
 export { getTriageMock } from './triage/triage.msw';
 export { getUsersMock } from './users/users.msw';
+export { getWikiMock } from './wiki/wiki.msw';
 export { getWorkspaceMock } from './workspace/workspace.msw';

@@ -8,6 +8,8 @@ info:
     backend must agree to (frontend guideline 06 §6 and the decision log): Problem Details errors with an MSG
     `code`, Spring-style paging (`page` from 0, `size`, `sort`), and the `/me` session shape.
 tags:
+  - name: wiki
+    description: Wiki Spaces, folders and documents (SRS UC-38 to UC-50).
   - name: workspace
     description: Admin Workspace Setup and company information (UC-10, UC-11).
   - name: users
@@ -39,6 +41,134 @@ tags:
   - name: dashboard
     description: Knowledge Dashboard figures, screen 9.1.
 paths:
+  /api/v1/wiki/spaces:
+    get:
+      tags: [wiki]
+      operationId: listWikiSpaces
+      summary: List viewable Spaces by name with the caller's access level.
+      responses:
+        '200':
+          description: Viewable Spaces.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/WikiSpace' } }
+        '401':
+          $ref: '#/components/responses/Problem'
+  /api/v1/wiki/company-wide:
+    get:
+      tags: [wiki]
+      operationId: listCompanyWideDocuments
+      summary: List Published Company-wide documents by Space name and title.
+      responses:
+        '200':
+          description: Documents from Active Spaces of Active Departments.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/WikiDocumentSummary' } }
+        '401':
+          $ref: '#/components/responses/Problem'
+  /api/v1/wiki/spaces/{spaceId}/folders:
+    get:
+      tags: [wiki]
+      operationId: listWikiFolders
+      summary: List all folders of a viewable Space by name.
+      parameters:
+        - { name: spaceId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Flat folder tree.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/WikiFolder' } }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: Active Space is not viewable (MSG08).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '404':
+          description: Unknown or Hidden Space, or Deleted Department (MSG04).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+  /api/v1/wiki/spaces/{spaceId}/documents:
+    get:
+      tags: [wiki]
+      operationId: listWikiDocuments
+      summary: List Published documents directly in a folder by title.
+      parameters:
+        - { name: spaceId, in: path, required: true, schema: { type: string, format: uuid } }
+        - name: folderId
+          in: query
+          description: Folder of this Space; absent means the top level.
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Documents directly in the requested folder.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/WikiDocumentSummary' } }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: Active Space is not viewable (MSG08).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '404':
+          description: Unknown or Hidden Space, Deleted Department, or folder outside the Space (MSG04).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+  /api/v1/wiki/documents/search:
+    get:
+      tags: [wiki]
+      operationId: searchWikiDocuments
+      summary: Search viewable documents by words and best passage similarity.
+      description: >
+        At most 50 results, ordered by keyword rank plus best passage similarity descending,
+        then title. Semantic matches require tsolve.wiki.search.min-similarity (default 0.55).
+        If embedding fails, only keyword matches are returned.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Nonblank; length checked as received before stripping whitespace.
+          schema: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        '200':
+          description: Ranked viewable documents.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/WikiDocumentSummary' } }
+        '400':
+          description: Missing or blank q (MSG01); nonblank q longer than 200 characters as received (MSG02, max_length 200). Field q.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '401':
+          $ref: '#/components/responses/Problem'
+  /api/v1/wiki/documents/{documentId}:
+    get:
+      tags: [wiki]
+      operationId: getWikiDocument
+      summary: Read a viewable Wiki document as extracted plain text.
+      parameters:
+        - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Document and whether the caller can delete it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WikiDocumentDetail' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '404':
+          description: Unknown, deleted or non-viewable document (MSG110).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
   /api/v1/projects/connection-test:
     post:
       tags: [projects]
@@ -2417,6 +2547,45 @@ components:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
   schemas:
+    WikiSpace:
+      type: object
+      required: [spaceId, name, departmentName, accessLevel]
+      properties:
+        spaceId: { type: string, format: uuid }
+        name: { type: string }
+        departmentName: { type: string }
+        accessLevel: { type: string, enum: [VIEW, KNOWLEDGE_MANAGER] }
+    WikiFolder:
+      type: object
+      required: [folderId, parentId, name, level]
+      properties:
+        folderId: { type: string, format: uuid }
+        parentId: { type: [string, 'null'], format: uuid }
+        name: { type: string }
+        level: { type: integer, minimum: 1, maximum: 3 }
+    WikiDocumentSummary:
+      type: object
+      required: [documentId, title, spaceId, spaceName, folderId, folderName, visibility, owner, updatedAt]
+      properties:
+        documentId: { type: string, format: uuid }
+        title: { type: string }
+        spaceId: { type: string, format: uuid }
+        spaceName: { type: string }
+        folderId: { type: [string, 'null'], format: uuid }
+        folderName: { type: [string, 'null'] }
+        visibility: { type: string, enum: [DEPARTMENT, COMPANY_WIDE] }
+        owner: { type: string, description: Owner's full name. }
+        updatedAt: { type: string, format: date-time }
+    WikiDocumentDetail:
+      allOf:
+        - $ref: '#/components/schemas/WikiDocumentSummary'
+        - type: object
+          required: [content, fileName, fileSize, canDelete]
+          properties:
+            content: { type: string, description: Extracted plain text. }
+            fileName: { type: string }
+            fileSize: { type: integer, format: int64 }
+            canDelete: { type: boolean }
     WorkspaceSetupRequest:
       type: object
       required: [companyName, jiraSiteUrl, serviceAccountEmail, serviceAccountToken]

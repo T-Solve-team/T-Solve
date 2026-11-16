@@ -104,14 +104,22 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
                 .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
         long errorRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.ERROR);
         long removedRows = previewRows.countByIdPreviewIdAndStatus(previewId, PreviewRowStatus.REMOVED);
-        // first, so a file with only Needs Solution rows answers MSG_NEW_4, not MSG30 (design, edge case 47)
-        requireRowsReady(preview, errorRows);
-        requireRowsToImport(
-                preview,
-                previewRows
-                        .findByIdPreviewIdAndStatus(previewId, PreviewRowStatus.VALID)
-                        .isEmpty(),
-                errorRows);
+        try {
+            // first, so a file with only Needs Solution rows answers MSG_NEW_4, not MSG30 (design, edge case 47)
+            requireRowsReady(preview, errorRows);
+            requireRowsToImport(
+                    preview,
+                    previewRows
+                            .findByIdPreviewIdAndStatus(previewId, PreviewRowStatus.VALID)
+                            .isEmpty(),
+                    errorRows);
+        } catch (NothingToImportException | RowsNotReadyException e) {
+            // a Confirm that committed after the first read deleted the preview with its rows: 404 (BUG-292)
+            if (previews.findByIdAndOwner(previewId, user).isEmpty()) {
+                throw new NotFoundException("Import preview " + previewId);
+            }
+            throw e;
+        }
         // rejected before anything starts, so no Import Batch is recorded (design B1, E1): MSG40 first, then 403
         if (!projects.isActive(preview.getProjectId())) {
             throw new ProjectNotActiveException();

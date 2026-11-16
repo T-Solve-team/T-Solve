@@ -15,6 +15,7 @@ Covers UC-38 to UC-50, Wiki Space and Wiki Document Management (Jira epic KAN-91
 | 2026-11-13 | STORY-001 to STORY-006 | Initial spec: UC-38 to UC-50 | KAN-91 |
 | 2026-11-13 | STORY-002 to STORY-004 | Builder check: AC-002.13 leaves the trash read to AC-005.4; `q` limits as received (AC-002.7, AC-002.9); AC-003.7 covers an unknown `folderId`; AC-004.10 names its code; AC-004.12 in the same transaction | Inline builder check |
 | 2026-11-14 | STORY-005 | AC-005.2 excepts the Knowledge Manager's read of AC-005.4; new AC-005.17: a restore that loses its title to a concurrent request answers 409 MSG84; pull request numbers replaced by Jira keys | Review of #223 (findings 1, 4, 8) |
+| 2026-11-14 | STORY-001 | AC-001.1: the Space's own Department grants View to every user whose Departments (AC-001.2) include it, so a Ticket Resolver in a Project of that Department views the Space; matches Functional 2 and identity AC-011.5 | Task 1 review (KAN-170), user decision |
 
 ## Requirements
 
@@ -48,7 +49,7 @@ These are known limits of the code this module builds on. They are not defects o
 ### STORY-001: Who can view what (view rule and retrieval ports)
 - As the system, I want one view rule for Spaces and Wiki documents so that the Wiki, the Knowledge Chatbot and AI Solution Suggestion show each user only what they may read.
 - Acceptance:
-  - AC-001.1: WHEN the view rule is evaluated for a user and a Space, THE system SHALL grant View only if the user is Active, the Space is Active, its Department is Active, and one of these holds: the user is the Space's Knowledge Manager (a `space_manager` row and the role `KNOWLEDGE_MANAGER`); the user's own Department is the Space's Department; one of the user's Departments has a permission on the Space; the user has their own permission on the Space.
+  - AC-001.1: WHEN the view rule is evaluated for a user and a Space, THE system SHALL grant View only if the user is Active, the Space is Active, its Department is Active, and one of these holds: the user is the Space's Knowledge Manager (a `space_manager` row and the role `KNOWLEDGE_MANAGER`); one of the user's Departments (AC-001.2) is the Space's Department; one of the user's Departments has a permission on the Space; the user has their own permission on the Space.
   - AC-001.2: WHEN the user's Departments are computed, THE system SHALL use the user's own Department, plus, when the user has the role `TICKET_RESOLVER`, the Departments of the Projects in which the user is a `MEMBER`, counting only Active Departments.
   - AC-001.3: IF a user is Deactivated, THEN THE system SHALL apply none of that user's permissions and grant them no View.
   - AC-001.4: WHEN the view rule is evaluated for a user and a Wiki document, THE system SHALL grant it only if the document is Published, its Space and Department are Active, and the document is Company-wide or the user can view its Space.

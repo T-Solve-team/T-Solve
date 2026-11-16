@@ -204,12 +204,12 @@
       }
     },
     "wiki": {
-      "status": "planned",
-      "currentPhase": "plan",
+      "status": "implementing",
+      "currentPhase": "implement",
       "features": {
-        "wiki-view-rule": "pending",
-        "wiki-browse-api": "pending",
-        "wiki-home-ui": "pending",
+        "wiki-view-rule": "evaluating",
+        "wiki-browse-api": "evaluating",
+        "wiki-home-ui": "evaluating",
         "wiki-folder-api": "pending",
         "wiki-folder-ui": "pending",
         "wiki-upload-api": "pending",
@@ -220,7 +220,14 @@
         "wiki-permissions-api": "pending",
         "wiki-permissions-ui": "pending"
       },
-      "lastUpdated": "2026-11-13T16:53:08.292Z"
+      "lastUpdated": "2026-11-15T02:46:48.880Z",
+      "branch": "feat/wiki",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "b3519408bcd08aee4aeed87f198b4cdb611d7d8f"
+      }
     },
     "ticket-repository": {
       "status": "implementing",

@@ -67,6 +67,9 @@ management:
         include: health,info
 
 tsolve:
+  wiki:
+    search:
+      min-similarity: ${WIKI_SEARCH_MIN_SIMILARITY:0.55}
   workspace:
     secret-key: ${WORKSPACE_SECRET_KEY}
   # File storage (STORY-007) on Garage through the S3 API. Empty endpoint = no storage beans (see StorageConfig).
