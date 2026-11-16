@@ -186,7 +186,7 @@ class WikiTrashServiceImplTest {
     }
 
     @Test
-    void neverSplitsSurrogatePairWhenShorteningTitle_BUG_301() {
+    void neverSplitsSurrogatePairWhenShorteningTitle_BUG_303() {
         deleted();
         String original = "x".repeat(188) + "\uD83D\uDE00" + "y".repeat(10);
         ReflectionTestUtils.setField(document, "title", original);
@@ -214,7 +214,7 @@ class WikiTrashServiceImplTest {
     }
 
     @Test
-    void resolvesAuditSpaceBeforeRemovingDocument_AC_005_8_AC_005_11_BUG_279_BUG_299() {
+    void resolvesAuditSpaceBeforeRemovingDocument_AC_005_8_AC_005_11_BUG_279_BUG_301() {
         deleted();
         doAnswer(call -> {
                     when(search.findDocumentSpace(id)).thenReturn(Optional.empty());
@@ -275,7 +275,7 @@ class WikiTrashServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"TRASH", "RESTORE", "PERMANENT"})
-    void returnsForbiddenForViewableDocumentAndNotFoundOtherwiseWithoutLocking_AC_005_10_BUG_299(String operation) {
+    void returnsForbiddenForViewableDocumentAndNotFoundOtherwiseWithoutLocking_AC_005_10_BUG_301(String operation) {
         when(access.managesSpace(user, 42)).thenReturn(false);
         when(access.findAvailableDocuments(user, List.of(id))).thenReturn(Set.of(id));
         assertThatThrownBy(() -> act(operation)).isInstanceOf(AccessDeniedException.class);

@@ -171,6 +171,7 @@ public class WikiSearchRepository {
                 .addValue("q", query)
                 .addValue("vector", vector)
                 .addValue("minSimilarity", minSimilarity);
+        // ponytail: ts_rank_cd is unbounded, similarity is 0..1, so one can dominate; normalise both if ranking drifts.
         // With no embedding, omit the chunk scan and similarity entirely: keyword rank alone decides the order.
         String similarity = vector == null ? "0" : "COALESCE(best.similarity, 0)";
         String passages = vector == null ? "" : """

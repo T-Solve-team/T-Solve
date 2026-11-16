@@ -42,6 +42,7 @@ import vn.tsolve.wiki.dto.WikiDocumentRef;
 import vn.tsolve.wiki.dto.WikiPublishMetadata;
 import vn.tsolve.wiki.dto.WikiUploadPreview;
 import vn.tsolve.wiki.entity.WikiDocument;
+import vn.tsolve.wiki.exception.WikiStorageUnavailableException;
 import vn.tsolve.wiki.mapper.WikiDocumentMapper;
 import vn.tsolve.wiki.repository.AccessRepository;
 import vn.tsolve.wiki.repository.FolderRepository;
@@ -60,9 +61,11 @@ public class WikiUploadServiceImpl implements WikiUploadService {
     private final AccessRepository access;
     private final WikiSearchRepository spaces;
     private final TextExtractor extractor;
-    private final FileStorage storage;
+    // Optional like every FileStorage user while storage is not in every setup (StorageConfig, BUG-296).
+    private final ObjectProvider<FileStorage> storage;
     private final AuditService audit;
-    private final TenantJobService jobs;
+    // Optional: the worker runs only with tsolve.worker.enabled (BUG-296).
+    private final ObjectProvider<TenantJobService> jobs;
     private final TransactionTemplate transaction;
     private final ObjectProvider<TenantContext> tenantContext;
     private final WikiDocumentMapper mapper;
@@ -74,9 +77,9 @@ public class WikiUploadServiceImpl implements WikiUploadService {
             AccessRepository access,
             WikiSearchRepository spaces,
             TextExtractor extractor,
-            FileStorage storage,
+            ObjectProvider<FileStorage> storage,
             AuditService audit,
-            TenantJobService jobs,
+            ObjectProvider<TenantJobService> jobs,
             PlatformTransactionManager transactions,
             ObjectProvider<TenantContext> tenantContext,
             WikiDocumentMapper mapper,
@@ -97,7 +100,7 @@ public class WikiUploadServiceImpl implements WikiUploadService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    // No transaction: parsing up to 10 files must not hold a pooled connection (BUG-294).
     public List<WikiUploadPreview> extract(UUID userId, UUID spaceId, List<MultipartFile> files) {
         requireManager(userId, spaceId);
         return readFiles(files).stream()
@@ -132,7 +135,7 @@ public class WikiUploadServiceImpl implements WikiUploadService {
         try {
             for (Upload upload : uploads) {
                 try (var input = new ByteArrayInputStream(upload.bytes())) {
-                    stored.add(storage.store(input).key());
+                    stored.add(storage().store(input).key());
                 }
             }
             return transaction.execute(status -> {
@@ -165,9 +168,20 @@ public class WikiUploadServiceImpl implements WikiUploadService {
                 TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
-                        // An enqueue failure cannot roll back committed rows or delete their original files.
+                        // The rows are committed: an enqueue failure must not fail the upload (spec §35, BUG-295).
+                        // The document stays PENDING and keyword-searchable (AC-001.11).
                         committed.set(true);
-                        for (WikiDocumentRef document : result) jobs.enqueue("wiki-index", document.documentId());
+                        for (WikiDocumentRef document : result) {
+                            try {
+                                TenantJobService worker = jobs.getIfAvailable();
+                                if (worker == null) throw new IllegalStateException("No worker configured");
+                                worker.enqueue("wiki-index", document.documentId());
+                            } catch (RuntimeException failure) {
+                                // ponytail: no re-index sweep yet; PENDING documents need a manual re-enqueue.
+                                log.error(
+                                        "Could not enqueue wiki-index for document {}", document.documentId(), failure);
+                            }
+                        }
                     }
                 });
                 return List.copyOf(result);
@@ -213,9 +227,15 @@ public class WikiUploadServiceImpl implements WikiUploadService {
     }
 
     private void transfer(String key, OutputStream output) throws IOException {
-        try (var input = storage.read(key)) {
+        try (var input = storage().read(key)) {
             input.transferTo(output);
         }
+    }
+
+    private FileStorage storage() {
+        FileStorage target = storage.getIfAvailable();
+        if (target == null) throw new WikiStorageUnavailableException();
+        return target;
     }
 
     private long requireManager(UUID userId, UUID spaceId) {
@@ -328,7 +348,7 @@ public class WikiUploadServiceImpl implements WikiUploadService {
     private void cleanup(List<String> keys) {
         for (String key : keys) {
             try {
-                storage.delete(key);
+                storage().delete(key);
             } catch (RuntimeException failure) {
                 log.warn("Could not remove failed Wiki upload key={}", key);
             }

@@ -14,6 +14,7 @@ type FolderTreeProps = {
 export function FolderTree({ folders, folderId, onSelect, managedSpaceId }: FolderTreeProps) {
   const [action, setAction] = useState<{ kind: 'edit' | 'delete'; folderId: string } | null>(null);
   const activeFolder = folders.find((folder) => folder.folderId === action?.folderId);
+  // ponytail: re-filters all folders per node (O(n²)); fine for dozens, group by parentId if trees grow.
   function children(parentId: string | null): TreeDataNode[] {
     return folders
       .filter((folder) => folder.parentId === parentId)

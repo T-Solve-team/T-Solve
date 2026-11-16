@@ -43,11 +43,13 @@ import vn.tsolve.common.audit.AuditAction;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.CodedException;
 import vn.tsolve.common.tenant.TenantContext;
+import vn.tsolve.platform.service.FileStorage;
 import vn.tsolve.wiki.InMemoryFileStorage;
 import vn.tsolve.wiki.dto.WikiDocumentRef;
 import vn.tsolve.wiki.dto.WikiPublishMetadata;
 import vn.tsolve.wiki.entity.WikiDocument;
 import vn.tsolve.wiki.entity.WikiDocument.Visibility;
+import vn.tsolve.wiki.exception.WikiStorageUnavailableException;
 import vn.tsolve.wiki.mapper.WikiDocumentMapper;
 import vn.tsolve.wiki.repository.AccessRepository;
 import vn.tsolve.wiki.repository.FolderRepository;
@@ -73,9 +75,9 @@ class WikiUploadServiceImplTest {
             access,
             spaces,
             new TextExtractor(),
-            storage,
+            provider(FileStorage.class, storage),
             audit,
-            jobs,
+            provider(TenantJobService.class, jobs),
             transactions,
             new StaticListableBeanFactory().getBeanProvider(TenantContext.class),
             Mappers.getMapper(WikiDocumentMapper.class),
@@ -163,9 +165,9 @@ class WikiUploadServiceImplTest {
                 access,
                 spaces,
                 parser,
-                storage,
+                provider(FileStorage.class, storage),
                 audit,
-                jobs,
+                provider(TenantJobService.class, jobs),
                 transactions,
                 new StaticListableBeanFactory().getBeanProvider(TenantContext.class),
                 Mappers.getMapper(WikiDocumentMapper.class),
@@ -250,6 +252,29 @@ class WikiUploadServiceImplTest {
                                 && details.containsKey("folderId")
                                 && details.get("visibility").equals("DEPARTMENT")));
         verify(jobs).enqueue("wiki-index", document.getId());
+    }
+
+    @Test
+    void anEnqueueFailureAfterCommitStillReturnsEveryPublishedDocument_BUG_295() throws IOException {
+        when(jobs.enqueue(eq("wiki-index"), any()))
+                .thenThrow(new IllegalStateException("JobRunr down"))
+                .thenReturn(UUID.randomUUID());
+        var result = publish(
+                user,
+                space,
+                List.of(file("guide.pdf", "a.pdf"), file("guide.pdf", "b.pdf")),
+                new WikiPublishMetadata(null, List.of(row("A"), row("B"))));
+        assertThat(result).extracting(WikiDocumentRef::title).containsExactly("A", "B");
+        verify(jobs, org.mockito.Mockito.times(2)).enqueue(eq("wiki-index"), any());
+        assertThat(storage.files).hasSize(2);
+    }
+
+    @Test
+    void extractHoldsNoTransactionWhileParsingFiles_BUG_294() throws NoSuchMethodException {
+        assertThat(WikiUploadServiceImpl.class
+                        .getMethod("extract", UUID.class, UUID.class, List.class)
+                        .isAnnotationPresent(org.springframework.transaction.annotation.Transactional.class))
+                .isFalse();
     }
 
     @ParameterizedTest
@@ -388,6 +413,60 @@ class WikiUploadServiceImplTest {
         assertThat(storage.closedReads).isEqualTo(2);
         when(access.findAvailableDocuments(user, List.of(id))).thenReturn(Set.of());
         assertCode(() -> service.download(user, id), "MSG110", null);
+    }
+
+    @Test
+    void publishAnswers503WithMsg06WhenNoFileStorageIsConfigured_BUG_296() throws IOException {
+        var unconfigured = new WikiUploadServiceImpl(
+                documents,
+                folders,
+                access,
+                spaces,
+                new TextExtractor(),
+                new StaticListableBeanFactory().getBeanProvider(FileStorage.class),
+                audit,
+                provider(TenantJobService.class, jobs),
+                transactions,
+                new StaticListableBeanFactory().getBeanProvider(TenantContext.class),
+                Mappers.getMapper(WikiDocumentMapper.class),
+                new ObjectMapper());
+        assertThatThrownBy(() -> unconfigured.publish(
+                        user,
+                        space,
+                        List.of(file("guide.pdf", "guide.pdf")),
+                        new ObjectMapper().writeValueAsString(metadata("Guide"))))
+                .isInstanceOfSatisfying(WikiStorageUnavailableException.class, error -> assertThat(error.getCode())
+                        .isEqualTo("MSG06"));
+        verifyNoInteractions(audit, jobs);
+    }
+
+    @Test
+    void publishWithoutAWorkerStillReturnsThePendingDocuments_BUG_296() throws IOException {
+        var noWorker = new WikiUploadServiceImpl(
+                documents,
+                folders,
+                access,
+                spaces,
+                new TextExtractor(),
+                provider(FileStorage.class, storage),
+                audit,
+                new StaticListableBeanFactory().getBeanProvider(TenantJobService.class),
+                transactions,
+                new StaticListableBeanFactory().getBeanProvider(TenantContext.class),
+                Mappers.getMapper(WikiDocumentMapper.class),
+                new ObjectMapper());
+        var result = noWorker.publish(
+                user,
+                space,
+                List.of(file("guide.pdf", "guide.pdf")),
+                new ObjectMapper().writeValueAsString(metadata("Guide")));
+        assertThat(result).extracting(WikiDocumentRef::title).containsExactly("Guide");
+    }
+
+    private static <T> org.springframework.beans.factory.ObjectProvider<T> provider(Class<T> type, T bean) {
+        var factory = new StaticListableBeanFactory();
+        factory.addBean("bean", bean);
+        return factory.getBeanProvider(type);
     }
 
     private List<WikiDocumentRef> publish(

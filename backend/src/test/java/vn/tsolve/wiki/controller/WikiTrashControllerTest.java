@@ -134,7 +134,7 @@ class WikiTrashControllerTest {
 
     @Test
     @WithTSolveUser
-    void letsServiceAnswerEmployeeTrashListing_AC_002_6_AC_005_10_BUG_300() throws Exception {
+    void letsServiceAnswerEmployeeTrashListing_AC_002_6_AC_005_10_BUG_302() throws Exception {
         when(trash.listTrash(USER, ID)).thenThrow(new AccessDeniedException("MSG08"));
         mvc.perform(request("LIST"))
                 .andExpect(status().isForbidden())

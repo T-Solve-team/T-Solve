@@ -58,7 +58,7 @@ export function TrashTable({ spaceId }: TrashTableProps) {
             danger
             disabled={isBusy}
             onClick={() => {
-              // The MSG84 notice belongs to the last restore only (BUG-303).
+              // The MSG84 notice belongs to the last restore only (BUG-305).
               restore.reset();
               setSelected(row);
             }}
