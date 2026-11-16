@@ -1823,6 +1823,28 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/app-token:
+    post:
+      tags: [jira-app]
+      operationId: receiveJiraAppToken
+      summary: Forge scheduled and install/upgrade triggers hand the app system token to the backend (workspace STORY-012, KAN-349).
+      security:
+        - forgeInvocationToken: []
+      parameters:
+        - name: x-forge-oauth-system
+          in: header
+          required: true
+          description: The app system token; kept encrypted until it expires, never returned or logged.
+          schema: { type: string }
+      responses:
+        '204':
+          description: Token held for the Workspace of the site.
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
   /api/v1/jira-app/questions/eligibility:
     get:
       tags: [jira-app]
