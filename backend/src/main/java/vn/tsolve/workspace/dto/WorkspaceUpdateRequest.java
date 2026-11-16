@@ -10,12 +10,9 @@ import io.swagger.v3.oas.annotations.media.SchemaProperty;
 @Schema(
         name = "WorkspaceUpdateRequest",
         type = "object",
-        requiredProperties = {"companyName", "serviceAccountEmail"})
+        requiredProperties = {"companyName"})
 @SchemaProperties({
     @SchemaProperty(name = "companyName", schema = @Schema(type = "string", minLength = 1, maxLength = 100)),
-    @SchemaProperty(
-            name = "serviceAccountEmail",
-            schema = @Schema(type = "string", format = "email", minLength = 1, maxLength = 100)),
     @SchemaProperty(
             name = "serviceAccountToken",
             schema =

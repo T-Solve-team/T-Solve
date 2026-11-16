@@ -10,5 +10,4 @@
 export interface WorkspaceInfo {
   companyName: string;
   jiraSiteUrl: string;
-  serviceAccountEmail: string;
 }

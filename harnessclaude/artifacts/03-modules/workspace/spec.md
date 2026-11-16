@@ -21,6 +21,8 @@ Covers UC-12 Create Department (Jira KAN-120, STORY-001..STORY-002), the rename 
 | 2026-11-13 | all | Merged the KAN-120 spec (main, #202) with the KAN-119 spec: Out of Scope no longer lists UC-10/UC-11 or the Departments KAN-120 built; requirements, contracts and Definition of Done joined | KAN-119 merges main |
 | 2026-11-15 | STORY-006 | AC-006.1 and the Interface Contracts name `vn.tsolve.common.session.lookup.WorkspaceStatusLookup#isCompanyInformationEntered()` instead of the orphan `common.lookup.WorkspaceStatusLookup#isReady()` | BUG-206: `/me` (`SessionServiceImpl`) reads the `common.session.lookup` interface, so `workspaceReady` stayed false after Setup |
 | 2026-11-15 | STORY-005..STORY-011 | KAN-119 stories renumbered again from STORY-003..STORY-009 (AC-003.x..AC-009.x become AC-005.x..AC-011.x), wording unchanged; the requirements numbered 7..11 become 10..14 | KAN-121 (#206, STORY-003, STORY-004 rename) reached `main` first and took STORY-003 and STORY-004; the specs merge into one |
+| 2026-11-16 | STORY-006, STORY-010, STORY-011 | Change request: Workspace Settings shows the stored token masked with its last four characters, never revealable or copyable. `WorkspaceInfo` gains `serviceAccountTokenSet` and `serviceAccountTokenHint` (new AC-006.5, AC-010.7, AC-010.8); AC-006.2, AC-010.2, AC-011.7 and Non-Functional 4 reworded to allow only that hint. No issue date and no expiry date are shown (`token_expiry_date` stays Out of Scope) | User request during the staging test of 16/11 (BinhBinh13): the Admin cannot tell whether a token is stored or which one. Decisions of 16/11: last four characters (not dots only); expiry date and saved date dropped |
+| 2026-11-16 | STORY-005..STORY-011 | KAN-344: the service account is an Atlassian service account with a scoped API token, sent as `Authorization: Bearer` to the gateway `https://api.atlassian.com/ex/jira/{cloudId}`. The email field is removed (AC-005.4 removed; AC-005.1, AC-005.3, AC-005.12, AC-006.2, AC-007.1, AC-007.3, AC-007.4, AC-007.7, AC-007.8, AC-009.2, AC-009.4, AC-010.1 reworded). `workspace_info` stores the site's cloud id (new AC-005.14, AC-007.11, AC-011.8); the check uses the gateway (AC-011.1 reworded); `JiraServiceAccount` returns the site, cloud id and token (AC-008.1 reworded, new AC-008.4); requirements 10, 13, 14 and Non-Functional 5 follow | Staging, 16/11: the Jira import answered MSG50 and RESEARCH-003 shows a real service account's scoped token gets 401 on the site URL. User decisions of 16/11: Bearer through the gateway (option B), no email field, cloud id in `workspace_info` (not the platform catalog yet), workspace and tracker in one PR |
 | 2026-11-12 | STORY-003, STORY-004 | Add UC-13 rename: read and rename API with the Space (AC-003.1 to AC-003.22) and screen 2.3 Department Detail with the 2.2 link (AC-004.1 to AC-004.14); UC-13 leaves Out of Scope except the default Project; interim limit 6 added; contract gains `getDepartment` and `updateDepartment` | KAN-121, decisions D4 and D6 to D20 |
 
 ## Requirements
@@ -36,25 +38,28 @@ Covers UC-12 Create Department (Jira KAN-120, STORY-001..STORY-002), the rename 
 8. A rename changes only the names. The Department's status, default Project, Projects and tickets stay as they were (UC-13 step 5).
 9. Each rename that changes the name is recorded in the audit log with the name before and after.
 10. The tenant database of every Workspace holds exactly one `workspace` row once the Admin has set the Workspace up
-   (UC-10): company name, Jira site address, Jira service account email and its encrypted API token
-   (`02_tenant.sql`). Before that the Workspace has no row and is "not set up".
+   (UC-10): company name, Jira site address, the site's cloud id and the encrypted scoped API token of the Jira
+   service account (`02_tenant.sql`). Before that the Workspace has no row and is "not set up".
 11. Workspace Setup (UC-10, screen 2.1) is done once, by an Admin. It checks the fields, the Jira site address, the
    service account with Jira, links the Jira site through the catalog port, stores the row and records the action in
    the audit log (GBR-14, GBR-24).
 12. Workspace Settings (UC-11, screen 2.2) lets an Admin edit the company name and the service account. The Jira site
    address can never be changed after Setup (GBR-24, GBR-37).
-13. The service account must authenticate with Jira and hold Browse projects, Create Issues and Modify Reporter
-   (GBR-14, GBR-40), checked whenever it is entered or changed.
+13. The service account is an Atlassian service account. Its scoped API token must authenticate with Jira through
+   the Atlassian API gateway and hold Browse projects, Create Issues and Modify Reporter (GBR-14, GBR-40), checked
+   whenever it is entered or changed. T-Solve asks for no email: a scoped token needs none (RESEARCH-003).
 14. `workspace` tells `/me` whether the Workspace is set up (`workspaceReady`) and gives other modules the current
-   service account (`JiraServiceAccount` of `tracker`).
+   service account (`JiraServiceAccount` of `tracker`): site address, cloud id and token.
 
 ### Non-Functional
 1. The name rules hold in the database: two requests sent at the same moment cannot create two Departments with one name.
 2. The Department, its Space and the audit entry are written in one database transaction, with no outbound call inside it. The same holds for a rename.
 3. A Workspace's Departments live only in that Workspace's database (GBR-37, ADR-0002). The Workspace of a request never comes from request content.
 4. The API token is encrypted at rest with AES-256-GCM under the key `WORKSPACE_SECRET_KEY`; it never appears in a
-   response, a log line, an audit entry or an exception message.
-5. The backend makes outbound calls only to a Jira site address that passed the site rule of AC-011.3 (no
+   response, a log line, an audit entry or an exception message, except its last four characters in
+   `serviceAccountTokenHint` (AC-006.5).
+5. The backend makes outbound calls only to a Jira site address that passed the site rule of AC-011.3, and to
+   `https://api.atlassian.com/ex/jira/{cloudId}` with a cloud id read from that site that passed AC-011.8 (no
    server-side request forgery through the address the Admin types).
 6. Every Jira call made for a check has a connect timeout of at most 5 s and a read timeout of at most 10 s.
 
@@ -157,22 +162,19 @@ These are known limits of the code this story builds on. They are not defects of
 - As the first Admin, I want to enter the company information, the Jira site and the service account once, so that
   users can work and Project Managers can connect Jira projects.
 - Acceptance:
-  - AC-005.1: WHEN an Admin calls `POST /api/v1/workspace/setup` with `companyName`, `jiraSiteUrl`,
-    `serviceAccountEmail` and `serviceAccountToken` while the Workspace is not set up and every check passes, THE
-    backend SHALL store the `workspace` row with the bound Workspace's id as `workspace_id`, the normalised site
-    address, the email, the encrypted token and `sign_in_provider` `GOOGLE`, and answer 201 with the Workspace
-    information of AC-006.2.
+  - AC-005.1: WHEN an Admin calls `POST /api/v1/workspace/setup` with `companyName`, `jiraSiteUrl` and
+    `serviceAccountToken` while the Workspace is not set up and every check passes, THE backend SHALL store the
+    `workspace` row with the bound Workspace's id as `workspace_id`, the normalised site address, the site's cloud id
+    (AC-011.8), the encrypted token, no service account email and `sign_in_provider` `GOOGLE`, and answer 201 with the
+    Workspace information of AC-006.2.
   - AC-005.2: IF a required field is missing or blank, THEN THE backend SHALL answer 400 with `code` `MSG01` on that
     field and store nothing.
-  - AC-005.3: IF `companyName` is longer than 100 characters, `jiraSiteUrl` longer than 200 or `serviceAccountEmail`
-    longer than 100, THEN THE backend SHALL answer 400 with `code` `MSG02` and `params` `max_length` on that field and
-    store nothing.
-  - AC-005.4: IF `serviceAccountEmail` is not a valid email address, THEN THE backend SHALL answer 400 with `code`
-    `MSG03` on `serviceAccountEmail` and store nothing.
+  - AC-005.3: IF `companyName` is longer than 100 characters or `jiraSiteUrl` longer than 200, THEN THE backend SHALL
+    answer 400 with `code` `MSG02` and `params` `max_length` on that field and store nothing.
   - AC-005.5: IF `jiraSiteUrl` breaks the site rule of AC-011.3, THEN THE backend SHALL answer 400 with `code` `MSG61`
     on `jiraSiteUrl`, call nothing outside and store nothing.
-  - AC-005.6: WHEN the fields are valid, THE backend SHALL check the service account against the normalised site as
-    in STORY-011 before it links the site or stores anything.
+  - AC-005.6: WHEN the fields are valid, THE backend SHALL read the site's cloud id (AC-011.8) and then check the
+    service account with that cloud id as in STORY-011, before it links the site or stores anything.
   - AC-005.7: IF the service account check fails, THEN THE backend SHALL answer 400 with `code` `MSG156` and `params`
     `tracker_name` = `Jira` on `serviceAccountToken`, link nothing and store nothing.
   - AC-005.8: WHEN the service account check passes, THE backend SHALL call `JiraSiteLinker.linkJiraSite(siteUrl)`
@@ -184,9 +186,11 @@ These are known limits of the code this story builds on. They are not defects of
   - AC-005.11: IF the Workspace is already set up (a row exists, or a concurrent Setup stored it first), THEN THE
     backend SHALL answer 409 with `code` `WORKSPACE_ALREADY_SET_UP` (a technical code with no user message: the web app redirects instead), change nothing and never overwrite the Jira site (GBR-24).
   - AC-005.12: WHEN Setup succeeds, THE backend SHALL record one audit entry `TRACKER_CONFIGURATION_CHANGE`, target
-    type `WORKSPACE`, target id the Workspace id, with details `companyName`, `jiraSiteUrl` and
-    `serviceAccountEmail`, never the token.
+    type `WORKSPACE`, target id the Workspace id, with details `companyName` and `jiraSiteUrl`, never the token.
   - AC-005.13: IF the caller is signed in without the Admin role, THEN THE backend SHALL answer 403 and store nothing.
+  - AC-005.14: IF the site's cloud id cannot be read or breaks AC-011.8, THEN THE backend SHALL answer 400 with
+    `code` `MSG61` on `jiraSiteUrl`, make no service account check, log the failure without the token, and store
+    nothing.
 
 ### STORY-006: Read the Workspace status and information
 - As the web app, I want to know whether the Workspace is set up and read its information, so that it opens Workspace
@@ -195,48 +199,59 @@ These are known limits of the code this story builds on. They are not defects of
   - AC-006.1: THE `workspace` module SHALL implement `vn.tsolve.common.session.lookup.WorkspaceStatusLookup#isCompanyInformationEntered()`, which answers true exactly
     when the bound Workspace's tenant database has its `workspace` row (be-foundation AC-003.2).
   - AC-006.2: WHEN an Admin calls `GET /api/v1/workspace` while the Workspace is set up, THE backend SHALL answer 200
-    with `companyName`, `jiraSiteUrl` and `serviceAccountEmail`, and no field that holds or hints at the token.
+    with `companyName`, `jiraSiteUrl`, `serviceAccountTokenSet` and `serviceAccountTokenHint` (AC-006.5), and no
+    other field that holds or hints at the token, no email and no cloud id.
   - AC-006.3: IF the Workspace is not set up, THEN THE backend SHALL answer `GET /api/v1/workspace` with 404 and
     `code` `MSG60`.
   - AC-006.4: IF the caller of `GET /api/v1/workspace` does not have the Admin role, THEN THE backend SHALL answer
     403.
+  - AC-006.5: WHEN the backend answers with the Workspace information (Setup, read or update), THE backend SHALL set
+    `serviceAccountTokenSet` to true exactly when a token is stored, and `serviceAccountTokenHint` to the last four
+    characters of the decrypted stored token; IF no token is stored, the stored token cannot be decrypted, or it has
+    fewer than 12 characters, THEN `serviceAccountTokenHint` SHALL be null. No other part of the token, its length or
+    its ciphertext SHALL be sent.
 
 ### STORY-007: Update the Workspace information (UC-11, backend)
-- As the Admin, I want to edit the company name and the service account, so that T-Solve stays correct when the
-  company changes.
+- As the Admin, I want to edit the company name and the service account token, so that T-Solve stays correct when
+  the company changes.
 - Acceptance:
-  - AC-007.1: WHEN an Admin calls `PUT /api/v1/workspace` with `companyName`, `serviceAccountEmail` and an optional
-    `serviceAccountToken` while the Workspace is set up and every check passes, THE backend SHALL store the new values
-    and answer 200 with the Workspace information of AC-006.2.
+  - AC-007.1: WHEN an Admin calls `PUT /api/v1/workspace` with `companyName` and an optional `serviceAccountToken`
+    while the Workspace is set up and every check passes, THE backend SHALL store the new values and answer 200 with
+    the Workspace information of AC-006.2.
   - AC-007.2: WHERE `serviceAccountToken` is absent or blank, THE backend SHALL keep the stored token.
-  - AC-007.3: IF `companyName` or `serviceAccountEmail` is missing or blank, THEN THE backend SHALL answer 400 with
-    `code` `MSG01` on that field; IF a field breaks the limits of AC-005.3 or the email format of AC-005.4, THEN THE
-    backend SHALL answer 400 with `MSG02` or `MSG03` on that field; in every case it changes nothing.
-  - AC-007.4: WHEN the email or the token differs from the stored one, THE backend SHALL check the resulting service
-    account (new or stored email with new or stored token) against the stored site as in STORY-011 before it stores
-    anything.
+  - AC-007.3: IF `companyName` is missing or blank, THEN THE backend SHALL answer 400 with `code` `MSG01` on that
+    field; IF it is longer than 100 characters, THEN THE backend SHALL answer 400 with `MSG02` on that field; in every
+    case it changes nothing.
+  - AC-007.4: WHEN a new token is given, THE backend SHALL check it with the stored site's cloud id as in STORY-011
+    before it stores anything.
   - AC-007.5: IF that check fails, or the stored token it needs cannot be decrypted, THEN THE backend SHALL answer
     400 with `code` `MSG156` and `params` `tracker_name` = `Jira` on `serviceAccountToken` and change nothing.
   - AC-007.6: WHILE only the company name changes, THE backend SHALL not call Jira.
-  - AC-007.7: IF the request carries `jiraSiteUrl`, THEN THE backend SHALL ignore it and keep the stored site (the
-    site is read-only, GBR-24).
+  - AC-007.7: IF the request carries `jiraSiteUrl` or `serviceAccountEmail`, THEN THE backend SHALL ignore them and
+    keep the stored site (the site is read-only, GBR-24).
   - AC-007.8: WHEN an update is stored, THE backend SHALL record one audit entry `TRACKER_CONFIGURATION_CHANGE`,
-    target type `WORKSPACE`, with the old and new `companyName` and `serviceAccountEmail` and `tokenChanged`
-    true/false, never a token.
+    target type `WORKSPACE`, with the old and new `companyName` and `tokenChanged` true/false, never a token.
   - AC-007.9: IF the Workspace is not set up, THEN THE backend SHALL answer `PUT /api/v1/workspace` with 404 and
     `code` `MSG60`.
   - AC-007.10: IF the caller does not have the Admin role, THEN THE backend SHALL answer 403 and change nothing.
+  - AC-007.11: WHEN a new token is given and the row has no cloud id (a Workspace set up before KAN-344), THE backend
+    SHALL read the stored site's cloud id (AC-011.8) before the check of AC-007.4 and store it with the token; IF it
+    cannot be read or breaks AC-011.8, THEN THE backend SHALL answer 400 with `code` `MSG156` and `params`
+    `tracker_name` = `Jira` on `serviceAccountToken` and change nothing.
 
 ### STORY-008: The service account for other modules
 - As `tracker` and the Chatbot, I want the current Workspace's service account, so that I call Jira as the company.
 - Acceptance:
   - AC-008.1: THE `workspace` module SHALL implement `tracker`'s `JiraServiceAccount.current()`, returning the bound
-    Workspace's site address, email and decrypted token, or empty while the Workspace is not set up. The bound
+    Workspace's site address, cloud id and decrypted token, or empty while the Workspace is not set up. The bound
     Workspace is the one of the worker job running (`WorkerTenantService`) or else of the web request (`TenantScope`).
   - AC-008.2: THE backend SHALL have no other `JiraServiceAccount` bean: the stand-in `ConfiguredJiraServiceAccount`
     and its `tsolve.tracker.jira.site-url`, `service-account-email`, `service-account-token` settings are removed.
   - AC-008.3: IF the stored token cannot be decrypted (wrong key or tampered value), THEN THE implementation SHALL log
     an error without the value and return empty, so no Jira call is made with a broken token.
+  - AC-008.4: IF the row has no cloud id (set up before KAN-344 and its token not replaced since), THEN THE
+    implementation SHALL return empty, so callers treat the Jira connection as not configured until the Admin enters a
+    new token (AC-007.11).
 
 ### STORY-009: Screen 2.1 Workspace Setup
 - As the first Admin, I want a Setup screen, so that I enter the information right after my first sign-in.
@@ -244,11 +259,11 @@ These are known limits of the code this story builds on. They are not defects of
   - AC-009.1: WHILE a signed-in Admin's `/me` has `workspaceReady` false, THE web app SHALL open 2.1 Workspace Setup
     and show `MSG60` (existing guard `RequireWorkspace`, fe-foundation AC-003.2).
   - AC-009.2: THE screen SHALL have the fields Company name (at most 100 characters), Jira site address (at most 200,
-    placeholder `https://company.atlassian.net`), Service account email (at most 100) and Service account API token
-    (masked input), all required.
+    placeholder `https://company.atlassian.net`) and Service account API token (masked input, with the hint that it
+    is the scoped API token of an Atlassian service account), all required, and no email field.
   - AC-009.3: WHEN the Admin clicks Save with an empty required field, THE screen SHALL show `MSG01` under that field
     and send nothing.
-  - AC-009.4: WHEN the backend answers with a field error (`MSG01`, `MSG02`, `MSG03`, `MSG61`, `MSG153`, `MSG156`),
+  - AC-009.4: WHEN the backend answers with a field error (`MSG01`, `MSG02`, `MSG61`, `MSG153`, `MSG156`),
     THE screen SHALL show the message under that field and keep every value entered.
   - AC-009.5: WHEN Setup succeeds, THE web app SHALL show `MSG05`, refetch `/me` and open the User List.
   - AC-009.6: IF the backend answers 409 (`WORKSPACE_ALREADY_SET_UP`), THEN THE web app SHALL show no error, refetch `/me` and
@@ -259,23 +274,30 @@ These are known limits of the code this story builds on. They are not defects of
 - As the Admin, I want to see and edit the Workspace information, so that I keep it correct.
 - Acceptance:
   - AC-010.1: WHEN an Admin opens 2.2 Workspace Settings, THE screen SHALL load `GET /api/v1/workspace` and show the
-    company name and service account email as editable fields and the Jira site address as read-only text.
+    company name as an editable field and the Jira site address as read-only text, and no email field.
   - AC-010.2: THE API token field SHALL start empty with the hint that leaving it empty keeps the current token, and
-    THE screen SHALL never show a stored token.
+    THE screen SHALL never show a stored token beyond the masked value of AC-010.7.
   - AC-010.3: WHEN the Admin saves valid values, THE screen SHALL send `PUT /api/v1/workspace` (the token only when
     typed) and show `MSG05`.
   - AC-010.4: WHEN the backend answers with a field error, THE screen SHALL show it under that field and keep the
     values entered.
   - AC-010.5: WHEN the Admin cancels, THE screen SHALL restore the loaded values and send nothing.
   - AC-010.6: IF loading fails, THEN THE screen SHALL show the shared error state with a retry.
+  - AC-010.7: WHILE `serviceAccountTokenSet` is true, THE screen SHALL show above the API token field a read-only
+    "Current token" value of twelve `•` followed by `serviceAccountTokenHint` (twelve `•` alone when the hint is null),
+    with no control that reveals it and no copy action; the value SHALL not be a form field and SHALL not be sent on
+    Save.
+  - AC-010.8: IF `serviceAccountTokenSet` is false, THEN THE screen SHALL show "Current token" as "Not set" and SHALL
+    not show the hint that leaving the field empty keeps the current token.
 
 ### STORY-011: Service account check, site rule and token at rest
 - As the operations team, I want the secret and the outbound calls kept safe, so that a Workspace cannot leak its
   token or make the backend call an internal address.
 - Acceptance:
   - AC-011.1: WHEN the service account is checked, THE backend SHALL call `GET /rest/api/3/myself` and then
-    `GET /rest/api/3/mypermissions?permissions=BROWSE_PROJECTS,CREATE_ISSUES,MODIFY_REPORTER` on the site with Basic
-    auth (email, token), and pass only when both answer 200 and all three permissions have `havePermission` true.
+    `GET /rest/api/3/mypermissions?permissions=BROWSE_PROJECTS,CREATE_ISSUES,MODIFY_REPORTER` on
+    `https://api.atlassian.com/ex/jira/{cloudId}` with the header `Authorization: Bearer <token>`, and pass only when
+    both answer 200 and all three permissions have `havePermission` true.
   - AC-011.2: IF Jira answers 401 or 403, any other error status, times out or cannot be reached, THEN THE check SHALL
     fail (the caller answers `MSG156`) and no Jira body or credential SHALL reach the response or a log line.
   - AC-011.3: THE site rule SHALL accept only an address that, after trimming and lower-casing, is `https`, has no
@@ -288,7 +310,11 @@ These are known limits of the code this story builds on. They are not defects of
   - AC-011.6: IF `WORKSPACE_SECRET_KEY` is missing or is not the Base64 form of exactly 32 bytes, THEN THE backend SHALL
     fail to start with an error that names the setting but not its value.
   - AC-011.7: THE token SHALL not appear in any response body, log line, audit entry, exception message or
-    `toString()` of the module's types.
+    `toString()` of the module's types, except its last four characters in `serviceAccountTokenHint` (AC-006.5).
+  - AC-011.8: WHEN the backend needs the site's cloud id (AC-005.6, AC-007.11), THE backend SHALL read it from
+    `https://<host>/_edge/tenant_info` of the normalised site as AC-011.4 does (no redirect, 200 with a `cloudId`),
+    and accept it only when it is a UUID in canonical form (36 characters, hexadecimal and hyphens), so that it can
+    never change the gateway path.
 
 ## Out of Scope
 - UC-14 and UC-15: Delete and Restore Department. Each comes through Change Mode when its Jira story starts (KAN-122, KAN-123).
@@ -373,13 +399,18 @@ POST /api/v1/workspace/setup   (Admin)  body WorkspaceSetupRequest  → 201 Work
 GET  /api/v1/workspace         (Admin)                               → 200 WorkspaceInfo | 403 | 404
 PUT  /api/v1/workspace         (Admin)  body WorkspaceUpdateRequest → 200 WorkspaceInfo | 400 | 403 | 404
 
-WorkspaceSetupRequest  { companyName, jiraSiteUrl, serviceAccountEmail, serviceAccountToken }   all string, required
-WorkspaceUpdateRequest { companyName, serviceAccountEmail, serviceAccountToken? }
-WorkspaceInfo          { companyName, jiraSiteUrl, serviceAccountEmail }
+WorkspaceSetupRequest  { companyName, jiraSiteUrl, serviceAccountToken }   all string, required
+WorkspaceUpdateRequest { companyName, serviceAccountToken? }
+WorkspaceInfo          { companyName, jiraSiteUrl,
+                         serviceAccountTokenSet (boolean), serviceAccountTokenHint (string, 4 characters, nullable) }
 Errors: ProblemDetails with code / params / field, as the rest of the API.
 
 vn.tsolve.common.session.lookup.WorkspaceStatusLookup { boolean isCompanyInformationEntered(); }  // used by /me (be-foundation)
 vn.tsolve.tracker.service.JiraServiceAccount  { Optional<JiraAccount> current(); }  // implemented here
+vn.tsolve.tracker.dto.JiraAccount(String siteUrl, String cloudId, String apiToken)  // tracker type; no email (KAN-344)
+
+Schema: a new changeset adds `jira_cloud_id VARCHAR(36)` (nullable) to the `workspace` table; `service_account_email`
+stays in the table for rows written before KAN-344 and is no longer written or read.
 ```
 
 ### Required from other modules

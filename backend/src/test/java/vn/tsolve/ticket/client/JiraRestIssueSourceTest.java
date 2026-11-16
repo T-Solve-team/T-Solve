@@ -23,12 +23,14 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -40,12 +42,13 @@ import vn.tsolve.ticket.entity.IssueComment;
 import vn.tsolve.ticket.exception.JiraUnavailableException;
 import vn.tsolve.ticket.service.JiraIssue;
 import vn.tsolve.ticket.service.JiraIssuePage;
+import vn.tsolve.tracker.dto.JiraAccount;
 
 @ExtendWith(OutputCaptureExtension.class)
 class JiraRestIssueSourceTest {
 
     private static final String SITE_URL = "https://example.atlassian.net";
-    private static final String CLOUD_ID = "test-cloud-id";
+    private static final String CLOUD_ID = "1324a887-45db-1bf4-1e99-ef0ff456d421";
     private static final String GATEWAY = "https://api.atlassian.com/ex/jira/" + CLOUD_ID;
     private static final String SEARCH = GATEWAY + "/rest/api/3/search/jql";
     private static final String COMMENTS = GATEWAY + "/rest/api/3/issue/KAN-7/comment";
@@ -73,7 +76,11 @@ class JiraRestIssueSourceTest {
     }
 
     private JiraRestIssueSource source() {
-        return new JiraRestIssueSource(SITE_URL + "/", CLOUD_ID, TOKEN, builder, sleeps::add, clock);
+        return source(new JiraAccount(SITE_URL + "/", CLOUD_ID, TOKEN));
+    }
+
+    private JiraRestIssueSource source(JiraAccount account) {
+        return new JiraRestIssueSource(() -> Optional.ofNullable(account), builder, sleeps::add, clock);
     }
 
     private static String issue(String key, String resolved, String assignee, String comments) {
@@ -326,8 +333,8 @@ class JiraRestIssueSourceTest {
             RestClient.Builder realClient = JiraRestIssueSource.clientBuilder(
                             Duration.ofSeconds(1), Duration.ofMillis(300))
                     .uriBuilderFactory(new DefaultUriBuilderFactory(localUrl));
-            JiraRestIssueSource slow =
-                    new JiraRestIssueSource(SITE_URL, CLOUD_ID, TOKEN, realClient, Thread::sleep, clock);
+            JiraRestIssueSource slow = new JiraRestIssueSource(
+                    () -> Optional.of(new JiraAccount(SITE_URL, CLOUD_ID, TOKEN)), realClient, Thread::sleep, clock);
 
             assertThatThrownBy(() -> slow.resolvedIssues("KAN", FROM, TO, null, DEADLINE))
                     .isInstanceOf(JiraUnavailableException.class)
@@ -338,12 +345,39 @@ class JiraRestIssueSourceTest {
     }
 
     @Test
-    void reportsAMissingConnectionWithoutCallingJira_AC_001_7() {
-        JiraRestIssueSource unset = new JiraRestIssueSource("", "", "", builder, sleeps::add, clock);
+    void reportsAWorkspaceWithoutAServiceAccountWithoutCallingJira_AC_001_7_AC_001_14_BUG_308() {
+        JiraRestIssueSource unset = source(null);
 
         assertThatThrownBy(() -> unset.resolvedIssues("KAN", FROM, TO, null, DEADLINE))
                 .isInstanceOf(JiraUnavailableException.class)
                 .hasFieldOrPropertyWithValue("reason", "The Jira connection is not configured");
+        assertThat(sleeps).isEmpty();
+    }
+
+    @Test
+    void readsTheWorkspaceAccountAgainForEveryPull_AC_001_12_BUG_308() {
+        String otherCloud = "2324a887-45db-1bf4-1e99-ef0ff456d421";
+        var accounts = new java.util.ArrayDeque<>(List.of(
+                new JiraAccount(SITE_URL, CLOUD_ID, TOKEN),
+                new JiraAccount("https://other.atlassian.net", otherCloud, "replaced-token")));
+        JiraRestIssueSource source =
+                new JiraRestIssueSource(() -> Optional.of(accounts.poll()), builder, sleeps::add, clock);
+        jira.expect(requestTo(org.hamcrest.Matchers.startsWith(SEARCH)))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN))
+                .andRespond(withSuccess(
+                        "{\"issues\":[" + issue("KAN-7", "2026-10-10T10:00:00.000+0700", null, "{\"comments\":[]}")
+                                + "],\"isLast\":true}",
+                        MediaType.APPLICATION_JSON));
+        jira.expect(requestTo(org.hamcrest.Matchers.startsWith(
+                        "https://api.atlassian.com/ex/jira/" + otherCloud + "/rest/api/3/search/jql")))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer replaced-token"))
+                .andRespond(withSuccess("{\"issues\":[],\"isLast\":true}", MediaType.APPLICATION_JSON));
+
+        assertThat(source.resolvedIssues("KAN", FROM, TO, null, DEADLINE).issues())
+                .extracting(JiraIssue::url)
+                .containsExactly(SITE_URL + "/browse/KAN-7");
+        assertThat(source.resolvedIssues("KAN", FROM, TO, null, DEADLINE).issues())
+                .isEmpty();
     }
 
     @Test
@@ -460,26 +494,20 @@ class JiraRestIssueSourceTest {
     }
 
     @Test
-    void AC_001_7_requiresEveryConnectionSetting() {
-        for (String[] settings :
-                List.of(new String[] {" ", CLOUD_ID, TOKEN}, new String[] {SITE_URL, " ", TOKEN}, new String[] {
-                    SITE_URL, CLOUD_ID, " "
-                })) {
-            JiraRestIssueSource unset =
-                    new JiraRestIssueSource(settings[0], settings[1], settings[2], builder, sleeps::add, clock);
+    void AC_001_14_requiresEveryPartOfTheAccount_BUG_308() {
+        for (JiraAccount account : List.of(
+                new JiraAccount(" ", CLOUD_ID, TOKEN),
+                new JiraAccount("http://example.atlassian.net", CLOUD_ID, TOKEN),
+                new JiraAccount(SITE_URL, " ", TOKEN),
+                new JiraAccount(SITE_URL, "test-cloud-id", TOKEN),
+                new JiraAccount(SITE_URL, CLOUD_ID + "/../x", TOKEN),
+                new JiraAccount(SITE_URL, CLOUD_ID, " "))) {
+            JiraRestIssueSource unset = source(account);
 
             assertThatThrownBy(() -> unset.resolvedIssues("KAN", FROM, TO, null, DEADLINE))
                     .isInstanceOf(JiraUnavailableException.class)
                     .hasFieldOrPropertyWithValue("reason", "The Jira connection is not configured");
         }
         assertThat(sleeps).isEmpty();
-    }
-
-    @Test
-    void refusesAPlainHttpSiteAtStartUp() {
-        assertThatThrownBy(() -> new JiraRestIssueSource("http://example.atlassian.net", CLOUD_ID, TOKEN, clock))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("JIRA_SITE_URL");
-        assertThat(new JiraRestIssueSource("", "", "", clock)).isNotNull();
     }
 }

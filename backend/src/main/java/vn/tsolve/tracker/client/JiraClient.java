@@ -4,9 +4,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -22,8 +24,9 @@ import vn.tsolve.tracker.exception.JiraRejectedException;
 import vn.tsolve.tracker.exception.JiraUnavailableException;
 
 /**
- * Jira Cloud REST API v3 as the Workspace's service account (Basic auth: email + API token). Errors keep only the HTTP
- * status: Jira's body may quote the issue, and the credentials never leave this class (Non-Functional 4, 9).
+ * Jira Cloud REST API v3 as the Workspace's service account: its scoped API token as Bearer through the Atlassian
+ * gateway {@code https://api.atlassian.com/ex/jira/{cloudId}} (AC-012.9, KAN-344). Errors keep only the HTTP status:
+ * Jira's body may quote the issue, and the token never leaves this class (Non-Functional 4, 9).
  */
 @Component
 public class JiraClient implements TicketTrackerClient {
@@ -31,21 +34,34 @@ public class JiraClient implements TicketTrackerClient {
     // Jira lists comments oldest first by default; the newest page is enough to find the one T-Solve posted.
     private static final String COMMENTS = "/rest/api/3/issue/{issueKey}/comment?orderBy=-created&maxResults=100";
 
+    private static final String GATEWAY = "https://api.atlassian.com/ex/jira/";
+    // Only a canonical UUID may become part of the gateway path (workspace AC-011.8).
+    private static final Pattern CLOUD_ID =
+            Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+
     private final RestClient.Builder builder;
+    private final String gateway;
 
     @Autowired
     public JiraClient(
             @Value("${tsolve.tracker.jira.connect-timeout:5s}") Duration connectTimeout,
             @Value("${tsolve.tracker.jira.read-timeout:10s}") Duration readTimeout) {
+        this(connectTimeout, readTimeout, GATEWAY);
+    }
+
+    /** For tests: real timeouts with the gateway replaced by a local stub server ({@code <base>/ex/jira/}). */
+    public JiraClient(Duration connectTimeout, Duration readTimeout, String gateway) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(connectTimeout);
         factory.setReadTimeout(readTimeout);
         this.builder = RestClient.builder().requestFactory(factory);
+        this.gateway = gateway;
     }
 
     /** For tests: a builder bound to a mock server. */
     public JiraClient(RestClient.Builder builder) {
         this.builder = builder;
+        this.gateway = GATEWAY;
     }
 
     @Override
@@ -172,9 +188,15 @@ public class JiraClient implements TicketTrackerClient {
     }
 
     private RestClient http(JiraAccount account) {
+        String cloudId = account.cloudId() == null ? "" : account.cloudId().toLowerCase(Locale.ROOT);
+        if (!CLOUD_ID.matcher(cloudId).matches()
+                || account.apiToken() == null
+                || account.apiToken().isBlank()) {
+            throw new JiraUnavailableException(0);
+        }
         return builder.clone()
-                .baseUrl(account.siteUrl())
-                .defaultHeaders(headers -> headers.setBasicAuth(account.email(), account.apiToken()))
+                .baseUrl(gateway + cloudId)
+                .defaultHeaders(headers -> headers.setBearerAuth(account.apiToken()))
                 .defaultHeader("Accept", MediaType.APPLICATION_JSON_VALUE)
                 .build();
     }
@@ -192,7 +214,7 @@ public class JiraClient implements TicketTrackerClient {
             // No answer: connection refused, timeout, unreadable body.
             throw new JiraUnavailableException(0);
         } catch (IllegalArgumentException e) {
-            // A malformed site URL, credential or response header leaves no usable answer.
+            // A malformed credential or response header leaves no usable answer.
             throw new JiraUnavailableException(0);
         }
     }

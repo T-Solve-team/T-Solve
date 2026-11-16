@@ -1,10 +1,8 @@
-import { screen } from '@testing-library/react';
 import { chatbotRoutes } from '@/features/chatbot';
 import { triageRoutes } from '@/features/triage';
 import { wikiRoutes } from '@/features/wiki';
 import type { Role } from '@/shared/auth';
 import type { FeatureRoute } from '@/shared/routing';
-import { renderApp } from '@/test/render';
 import { featureRoutes } from './feature-routes';
 
 type Row = readonly [number: string, title: string, path: string, roles: readonly Role[] | 'GUEST'];
@@ -101,23 +99,8 @@ describe('route map', () => {
     expect(named).toHaveLength(8);
   });
 
-  // The placeholder screens not built yet: a module that builds its screen removes its row (12.1: chatbot, KAN-71; 10.1: triage, KAN-149; 2.1: workspace, KAN-119).
-  it.each([
-    ['11.1', 'Wiki Home', '/wiki', 'EMPLOYEE'],
-    ['11.2', 'Wiki Document', '/wiki/documents/7', 'EMPLOYEE'],
-    ['11.4', 'Upload Documents', '/wiki/upload', 'KNOWLEDGE_MANAGER'],
-    ['11.7', 'Space Settings', '/wiki/spaces/1/settings', 'KNOWLEDGE_MANAGER'],
-  ] as const)('AC-005.3 shows the placeholder of %s %s', async (number, title, path, role) => {
-    renderApp(path, { role });
-    // The first findBy also loads the lazy page module: give it more time (guideline 10 §6).
-    expect(
-      await screen.findByRole('heading', { level: 1, name: title }, { timeout: 5000 }),
-    ).toBeInTheDocument();
-    const escapedNumber = number.replaceAll('.', '\\.');
-    expect(
-      screen.getByText(new RegExp(`^${escapedNumber} ${title} — not built yet`)),
-    ).toBeInTheDocument();
-  });
+  // Every screen of the route map is built: each module removed its placeholder row (12.1: chatbot, KAN-71;
+  // 10.1: triage, KAN-149; 2.1: workspace, KAN-119; 11.1/11.2: wiki, KAN-170, BUG-255; 11.4/11.7: wiki, KAN-167/KAN-173, BUG-285).
 
   // Their mocks are checked in src/mocks/handlers.test.ts (app/ may not import a feature's mocks).
   it('AC-005.4 registers the triage, wiki and chatbot routes like every other feature', () => {
