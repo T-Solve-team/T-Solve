@@ -1653,9 +1653,21 @@
 {"ts":"2026-11-14T16:26:18.509Z","type":"feature-status","module":"wiki","feature":"wiki-home-ui","from":"pending","to":"in-progress"}
 {"ts":"2026-11-14T16:59:13.898Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"9c72f9bd66c7d305de423cb25ace1bae16ea9681"}
 {"ts":"2026-11-14T16:59:14.197Z","type":"feature-status","module":"wiki","feature":"wiki-home-ui","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T16:59:19.888Z","type":"feature-status","module":"wiki","feature":"wiki-folder-api","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T17:23:22.435Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"d74e1ba04af95c39c5c003313e3e0404aa70fb8f"}
+{"ts":"2026-11-14T17:23:23.005Z","type":"feature-status","module":"wiki","feature":"wiki-folder-api","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T17:23:30.904Z","type":"feature-status","module":"wiki","feature":"wiki-folder-ui","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T17:40:55.231Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"68c7f4521ab0cc23353394f14fce690b8673f3d2"}
+{"ts":"2026-11-14T17:40:55.593Z","type":"feature-status","module":"wiki","feature":"wiki-folder-ui","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-15T02:46:48.884Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"b3519408bcd08aee4aeed87f198b4cdb611d7d8f"}
+{"ts":"2026-11-15T04:51:38.289Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"2f212b192f81c70a677b3fda692127f0759fd9f8"}
 {"ts":"2026-11-15T05:30:10.750Z","type":"quick-opened","what":"ReviewStorageIT old-DB build skips wiki changesets that need pgvector (BUG-246)","files":["backend/src/test/java/vn/tsolve/review/ReviewStorageIT.java","docs/bug-log.md"]}
 {"ts":"2026-11-15T05:32:04.703Z","type":"quick-closed","what":"ReviewStorageIT old-DB build skips wiki changesets that need pgvector (BUG-246)","files":["backend/src/test/java/vn/tsolve/review/ReviewStorageIT.java","docs/bug-log.md"]}
+{"ts":"2026-11-15T05:36:05.042Z","type":"feature-status","module":"wiki","feature":"wiki-view-rule","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T05:36:05.352Z","type":"feature-status","module":"wiki","feature":"wiki-browse-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T05:36:05.666Z","type":"feature-status","module":"wiki","feature":"wiki-home-ui","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T05:36:05.984Z","type":"feature-status","module":"wiki","feature":"wiki-folder-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T05:36:06.281Z","type":"feature-status","module":"wiki","feature":"wiki-folder-ui","from":"evaluating","to":"passing"}
 {"ts":"2026-11-14T18:40:17.560Z","type":"feature-status","module":"identity","feature":"profile-spaces-backend","from":"pending","to":"in-progress"}
 {"ts":"2026-11-14T18:40:17.885Z","type":"feature-status","module":"identity","feature":"profile-spaces-backend","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-14T18:40:18.180Z","type":"feature-status","module":"identity","feature":"profile-spaces-backend","from":"evaluating","to":"passing"}
@@ -1766,6 +1778,9 @@
 {"ts":"2026-11-15T06:15:28.331Z","type":"spec-approved","module":"ticket-repository","specHash":"a8ff743ebfbb26695e43c6f55435fd1a3aecf2d41f9d853d00c4deca64f743ef"}
 {"ts":"2026-11-15T12:51:07.648Z","type":"quick-opened","what":"PR252 review: reject NUL in wiki search q (BUG-290); bound search_vector input below the tsvector 1 MB limit (BUG-291)","files":["backend/src/main/java/vn/tsolve/wiki/service/impl/WikiSearchServiceImpl.java","backend/src/test/java/vn/tsolve/wiki/service/impl/WikiSearchServiceImplTest.java","backend/src/main/resources/db/changelog/changes/040-wiki-tables.sql","backend/src/test/java/vn/tsolve/wiki/WikiSearchIT.java","docs/bug-log.md"]}
 {"ts":"2026-11-15T12:56:47.932Z","type":"quick-closed","what":"PR252 review: reject NUL in wiki search q (BUG-290); bound search_vector input below the tsvector 1 MB limit (BUG-291)","files":["backend/src/main/java/vn/tsolve/wiki/service/impl/WikiSearchServiceImpl.java","backend/src/test/java/vn/tsolve/wiki/service/impl/WikiSearchServiceImplTest.java","backend/src/main/resources/db/changelog/changes/040-wiki-tables.sql","backend/src/test/java/vn/tsolve/wiki/WikiSearchIT.java","docs/bug-log.md"]}
+{"ts":"2026-11-15T12:57:53.318Z","type":"quick-opened","what":"PR253 review: name each folder action button after its folder for screen readers","files":["frontend/src/features/wiki/components/FolderTree.tsx","frontend/src/features/wiki/components/FolderModal.test.tsx"]}
+{"ts":"2026-11-15T13:03:03.147Z","type":"quick-opened","what":"PR253 review: update WikiHomePage folder-button queries for the per-folder aria-labels","files":["frontend/src/features/wiki/pages/WikiHomePage.test.tsx"]}
+{"ts":"2026-11-15T13:06:13.442Z","type":"quick-closed","what":"PR253 review: update WikiHomePage folder-button queries for the per-folder aria-labels","files":["frontend/src/features/wiki/pages/WikiHomePage.test.tsx"]}
 {"ts":"2026-11-16T03:22:15.631Z","type":"quick-opened","what":"PR #252 review follow-ups: tsvector prefix 150000, ponytail notes on rank mix and folder tree","files":["backend/src/main/resources/db/changelog/changes/040-wiki-tables.sql","docs/bug-log.md","backend/src/main/java/vn/tsolve/wiki/repository/WikiSearchRepository.java","frontend/src/features/wiki/components/FolderTree.tsx"]}
 {"ts":"2026-11-16T03:31:30.631Z","type":"quick-closed","what":"PR #252 review follow-ups: tsvector prefix 150000, ponytail notes on rank mix and folder tree","files":["backend/src/main/resources/db/changelog/changes/040-wiki-tables.sql","docs/bug-log.md","backend/src/main/java/vn/tsolve/wiki/repository/WikiSearchRepository.java","frontend/src/features/wiki/components/FolderTree.tsx"]}
 {"ts":"2026-11-16T03:46:34.297Z","type":"quick-opened","what":"BUG-292: a second Confirm racing a committed Confirm answers MSG30 instead of 404 (AC-004.12)","files":["backend/src/main/java/vn/tsolve/ticket/service/impl/ImportConfirmServiceImpl.java","backend/src/test/java/vn/tsolve/ticket/service/impl/ImportConfirmServiceImplTest.java","docs/bug-log.md"]}

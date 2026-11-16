@@ -6,24 +6,29 @@
  *
  * OpenAPI spec version: 0.1.0-stub
  */
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from '@tanstack/react-query';
 
 import type {
+  CreateWikiFolderRequest,
   ListWikiDocumentsParams,
   ProblemDetail,
   ProblemResponse,
   SearchWikiDocumentsParams,
+  UpdateWikiFolderRequest,
   WikiDocumentDetail,
   WikiDocumentSummary,
   WikiFolder,
@@ -294,6 +299,115 @@ export function useListCompanyWideDocuments<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getCreateWikiFolderUrl = (spaceId: string) => {
+  return `/api/v1/wiki/spaces/${spaceId}/folders`;
+};
+
+/**
+ * @summary Create a folder in a managed Space.
+ */
+export const createWikiFolder = async (
+  spaceId: string,
+  createWikiFolderRequest: CreateWikiFolderRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<WikiFolder> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<WikiFolder>(getCreateWikiFolderUrl(spaceId), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createWikiFolderRequest),
+  });
+};
+
+export const getCreateWikiFolderMutationKey = () => ['createWikiFolder'] as const;
+
+export const getCreateWikiFolderMutationOptions = <
+  TError = ErrorType<ProblemDetail | ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createWikiFolder>>,
+    TError,
+    CreateWikiFolderMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createWikiFolder>>,
+  TError,
+  CreateWikiFolderMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateWikiFolderMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createWikiFolder>>,
+    CreateWikiFolderMutationVariables
+  > = (props) => {
+    const { spaceId, data } = props ?? {};
+
+    return createWikiFolder(spaceId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateWikiFolderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createWikiFolder>>
+>;
+export type CreateWikiFolderMutationBody = CreateWikiFolderRequest;
+export type CreateWikiFolderMutationError = ErrorType<ProblemDetail | ProblemResponse>;
+export type CreateWikiFolderMutationVariables = { spaceId: string; data: CreateWikiFolderRequest };
+
+/**
+ * @summary Create a folder in a managed Space.
+ */
+export const useCreateWikiFolder = <
+  TError = ErrorType<ProblemDetail | ProblemResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createWikiFolder>>,
+      TError,
+      CreateWikiFolderMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createWikiFolder>>,
+  TError,
+  CreateWikiFolderMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateWikiFolderMutationOptions(options), queryClient);
+};
 export const getListWikiFoldersUrl = (spaceId: string) => {
   return `/api/v1/wiki/spaces/${spaceId}/folders`;
 };
@@ -422,6 +536,202 @@ export function useListWikiFolders<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getUpdateWikiFolderUrl = (folderId: string) => {
+  return `/api/v1/wiki/folders/${folderId}`;
+};
+
+/**
+ * @summary Rename or move a folder and its sub-tree in a managed Space.
+ */
+export const updateWikiFolder = async (
+  folderId: string,
+  updateWikiFolderRequest: UpdateWikiFolderRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<WikiFolder> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<WikiFolder>(getUpdateWikiFolderUrl(folderId), {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateWikiFolderRequest),
+  });
+};
+
+export const getUpdateWikiFolderMutationKey = () => ['updateWikiFolder'] as const;
+
+export const getUpdateWikiFolderMutationOptions = <
+  TError = ErrorType<ProblemDetail | ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateWikiFolder>>,
+    TError,
+    UpdateWikiFolderMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateWikiFolder>>,
+  TError,
+  UpdateWikiFolderMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateWikiFolderMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateWikiFolder>>,
+    UpdateWikiFolderMutationVariables
+  > = (props) => {
+    const { folderId, data } = props ?? {};
+
+    return updateWikiFolder(folderId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateWikiFolderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateWikiFolder>>
+>;
+export type UpdateWikiFolderMutationBody = UpdateWikiFolderRequest;
+export type UpdateWikiFolderMutationError = ErrorType<ProblemDetail | ProblemResponse>;
+export type UpdateWikiFolderMutationVariables = { folderId: string; data: UpdateWikiFolderRequest };
+
+/**
+ * @summary Rename or move a folder and its sub-tree in a managed Space.
+ */
+export const useUpdateWikiFolder = <
+  TError = ErrorType<ProblemDetail | ProblemResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateWikiFolder>>,
+      TError,
+      UpdateWikiFolderMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateWikiFolder>>,
+  TError,
+  UpdateWikiFolderMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateWikiFolderMutationOptions(options), queryClient);
+};
+export const getDeleteWikiFolderUrl = (folderId: string) => {
+  return `/api/v1/wiki/folders/${folderId}`;
+};
+
+/**
+ * @summary Delete an empty folder in a managed Space.
+ */
+export const deleteWikiFolder = async (
+  folderId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDeleteWikiFolderUrl(folderId), {
+    ...options,
+    method: 'DELETE',
+  });
+};
+
+export const getDeleteWikiFolderMutationKey = () => ['deleteWikiFolder'] as const;
+
+export const getDeleteWikiFolderMutationOptions = <
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteWikiFolder>>,
+    TError,
+    DeleteWikiFolderMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteWikiFolder>>,
+  TError,
+  DeleteWikiFolderMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteWikiFolderMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteWikiFolder>>,
+    DeleteWikiFolderMutationVariables
+  > = (props) => {
+    const { folderId } = props ?? {};
+
+    return deleteWikiFolder(folderId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteWikiFolderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteWikiFolder>>
+>;
+
+export type DeleteWikiFolderMutationError = ErrorType<ProblemResponse | ProblemDetail>;
+export type DeleteWikiFolderMutationVariables = { folderId: string };
+
+/**
+ * @summary Delete an empty folder in a managed Space.
+ */
+export const useDeleteWikiFolder = <
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteWikiFolder>>,
+      TError,
+      DeleteWikiFolderMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteWikiFolder>>,
+  TError,
+  DeleteWikiFolderMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteWikiFolderMutationOptions(options), queryClient);
+};
 export const getListWikiDocumentsUrl = (spaceId: string, params?: ListWikiDocumentsParams) => {
   const normalizedParams = new URLSearchParams();
 

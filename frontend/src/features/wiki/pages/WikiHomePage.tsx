@@ -8,11 +8,13 @@ import { ErrorState, FormField, LoadingState, SectionCard } from '@/shared/ui';
 import { CompanyWideView } from '../components/CompanyWideView';
 import { DocumentsTable } from '../components/DocumentsTable';
 import { FolderTree } from '../components/FolderTree';
+import { FolderModal } from '../components/FolderModal';
 import { useWikiHome, WIKI_QUERY_MAX } from '../hooks/useWikiHome';
 
 export function WikiHomePage() {
   const navigate = useNavigate();
   const home = useWikiHome();
+  const [newFolderSpaceId, setNewFolderSpaceId] = useState<string | null>(null);
   const isManager = home.selectedSpace?.accessLevel === 'KNOWLEDGE_MANAGER';
   const uploadParams = new URLSearchParams({ space: home.spaceId });
   if (home.folderId) uploadParams.set('folder', home.folderId);
@@ -85,7 +87,12 @@ export function WikiHomePage() {
                 >
                   Upload documents
                 </Button>
-                <Button disabled>New folder</Button>
+                <Button
+                  disabled={!home.folders.isSuccess}
+                  onClick={() => setNewFolderSpaceId(home.spaceId)}
+                >
+                  New folder
+                </Button>
                 <Button onClick={() => void navigate(paths.spaceSettings(home.spaceId))}>
                   Space Settings
                 </Button>
@@ -106,6 +113,7 @@ export function WikiHomePage() {
                     folders={home.folders.data}
                     folderId={home.folderId}
                     onSelect={home.selectFolder}
+                    managedSpaceId={isManager ? home.spaceId : undefined}
                   />
                 )}
               </Col>
@@ -120,6 +128,13 @@ export function WikiHomePage() {
             </Row>
           </Flex>
         </SectionCard>
+      )}
+      {isManager && newFolderSpaceId === home.spaceId && home.folders.isSuccess && (
+        <FolderModal
+          spaceId={home.spaceId}
+          folders={home.folders.data}
+          onClose={() => setNewFolderSpaceId(null)}
+        />
       )}
     </Flex>
   );

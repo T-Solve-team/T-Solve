@@ -1,5 +1,12 @@
 import { delay, getResponse, http, type HttpHandler } from 'msw';
-import { getMe, type WikiDocumentDetail, type WikiFolder, type WikiSpace } from '@/shared/api';
+import {
+  getMe,
+  type CreateWikiFolderRequest,
+  type UpdateWikiFolderRequest,
+  type WikiDocumentDetail,
+  type WikiFolder,
+  type WikiSpace,
+} from '@/shared/api';
 import {
   getGetWikiDocumentMockHandler,
   getListCompanyWideDocumentsMockHandler,
@@ -7,6 +14,9 @@ import {
   getListWikiFoldersMockHandler,
   getListWikiSpacesMockHandler,
   getSearchWikiDocumentsMockHandler,
+  getCreateWikiFolderMockHandler,
+  getUpdateWikiFolderMockHandler,
+  getDeleteWikiFolderMockHandler,
 } from '@/shared/api/generated/wiki/wiki.msw';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
 import { getDevUser } from '@/shared/auth';
@@ -25,6 +35,7 @@ const folders: WikiFolder[] = [
   { folderId: NETWORK, parentId: GUIDES, name: 'Network', level: 2 },
   { folderId: VPN, parentId: NETWORK, name: 'VPN', level: 3 },
 ];
+const folderState = new Map<string, WikiFolder[]>();
 const documents: WikiDocumentDetail[] = [
   {
     documentId: '00000000-0000-4000-8000-000000009001',
@@ -98,6 +109,82 @@ async function spaceError(spaceId: string) {
     : problem(403, 'MSG08');
 }
 
+async function managerError(spaceId: string) {
+  const error = await spaceError(spaceId);
+  if (error) return error;
+  return (await viewableSpaces()).some(
+    (space) => space.spaceId === spaceId && space.accessLevel === 'KNOWLEDGE_MANAGER',
+  )
+    ? null
+    : problem(403, 'MSG08');
+}
+
+function saveFolder(
+  spaceId: string,
+  data: CreateWikiFolderRequest,
+  folderId?: string,
+): WikiFolder | Response {
+  const current = folderState.get(spaceId) ?? [];
+  const folder = current.find((item) => item.folderId === folderId);
+  if (typeof data.name !== 'string' || !data.name.trim())
+    return problem(400, 'MSG01', {
+      fieldErrors: [{ field: 'name', code: 'MSG01', params: { field_name: 'Name' } }],
+    });
+  if (data.name.length > 100)
+    return problem(400, 'MSG02', {
+      fieldErrors: [
+        { field: 'name', code: 'MSG02', params: { field_name: 'Name', max_length: 100 } },
+      ],
+    });
+  const parentId = data.parentId ?? null;
+  const parent = current.find((item) => item.folderId === parentId);
+  if (parentId && !parent) return problem(404, 'MSG04');
+  const name = data.name.trim();
+  if (
+    current.some(
+      (item) =>
+        item.folderId !== folderId &&
+        item.parentId === parentId &&
+        item.name.toLowerCase() === name.toLowerCase(),
+    )
+  ) {
+    return problem(409, 'MSG85', { fieldErrors: [{ field: 'name', code: 'MSG85' }] });
+  }
+  const subtree = new Set(folderId ? [folderId] : []);
+  for (let level = 1; level <= 3; level++) {
+    for (const item of current) {
+      if (item.parentId && subtree.has(item.parentId)) subtree.add(item.folderId);
+    }
+  }
+  const level = (parent?.level ?? 0) + 1;
+  const delta = level - (folder?.level ?? level);
+  if (
+    level > 3 ||
+    (parentId && subtree.has(parentId)) ||
+    current.some((item) => subtree.has(item.folderId) && item.level + delta > 3)
+  ) {
+    return problem(400, 'MSG86', { fieldErrors: [{ field: 'parentId', code: 'MSG86' }] });
+  }
+  const saved = { folderId: folderId ?? crypto.randomUUID(), name, parentId, level };
+  folderState.set(
+    spaceId,
+    folderId
+      ? current.map((item) =>
+          item.folderId === folderId
+            ? saved
+            : subtree.has(item.folderId)
+              ? { ...item, level: item.level + delta }
+              : item,
+        )
+      : [...current, saved],
+  );
+  return saved;
+}
+
+function findFolderSpace(folderId: string) {
+  return [...folderState].find(([, items]) => items.some((folder) => folder.folderId === folderId));
+}
+
 /** Generated factories serialize every successful response; guards supply the contract's error codes. */
 export const handlers: HttpHandler[] = [
   http.all('*/api/v1/wiki/*', () => {
@@ -118,7 +205,53 @@ export const handlers: HttpHandler[] = [
     const spaceId = String(params.spaceId);
     const error = await spaceError(spaceId);
     if (error) return error;
-    return getResponse([getListWikiFoldersMockHandler(spaceId === IT ? folders : [])], request);
+    return getResponse([getListWikiFoldersMockHandler(folderState.get(spaceId) ?? [])], request);
+  }),
+  http.post<{ spaceId: string }, CreateWikiFolderRequest>(
+    '*/api/v1/wiki/spaces/:spaceId/folders',
+    async ({ params, request }) => {
+      await delay(MOCK_DELAY_MS);
+      const error = await managerError(params.spaceId);
+      if (error) return error;
+      const result = saveFolder(params.spaceId, await request.json());
+      return result instanceof Response
+        ? result
+        : getResponse([getCreateWikiFolderMockHandler(result)], request);
+    },
+  ),
+  http.put<{ folderId: string }, UpdateWikiFolderRequest>(
+    '*/api/v1/wiki/folders/:folderId',
+    async ({ params, request }) => {
+      await delay(MOCK_DELAY_MS);
+      const found = findFolderSpace(params.folderId);
+      if (!found) return problem(404, 'MSG04');
+      const error = await managerError(found[0]);
+      if (error) return error;
+      const result = saveFolder(found[0], await request.json(), params.folderId);
+      return result instanceof Response
+        ? result
+        : getResponse([getUpdateWikiFolderMockHandler(result)], request);
+    },
+  ),
+  http.delete('*/api/v1/wiki/folders/:folderId', async ({ params, request }) => {
+    await delay(MOCK_DELAY_MS);
+    const folderId = String(params.folderId);
+    const found = findFolderSpace(folderId);
+    if (!found) return problem(404, 'MSG04');
+    const [spaceId, items] = found;
+    const error = await managerError(spaceId);
+    if (error) return error;
+    const folderCount = items.filter((item) => item.parentId === folderId).length;
+    const documentCount = documents.filter((item) => item.folderId === folderId).length;
+    if (folderCount || documentCount)
+      return problem(409, 'MSG87', {
+        params: { folder_count: folderCount, document_count: documentCount },
+      });
+    folderState.set(
+      spaceId,
+      items.filter((item) => item.folderId !== folderId),
+    );
+    return getResponse([getDeleteWikiFolderMockHandler()], request);
   }),
   http.get('*/api/v1/wiki/spaces/:spaceId/documents', async ({ params, request }) => {
     await delay(MOCK_DELAY_MS);
@@ -126,7 +259,7 @@ export const handlers: HttpHandler[] = [
     const error = await spaceError(spaceId);
     if (error) return error;
     const folderId = new URL(request.url).searchParams.get('folderId');
-    if (folderId && (spaceId !== IT || !folders.some((folder) => folder.folderId === folderId)))
+    if (folderId && !folderState.get(spaceId)?.some((folder) => folder.folderId === folderId))
       return problem(404, 'MSG04');
     return getResponse(
       [
@@ -180,5 +313,12 @@ export const handlers: HttpHandler[] = [
   }),
 ];
 
-/** Task 3 has no mutations or mutable mock state. */
-export function resetMockData(): void {}
+export function resetMockData(): void {
+  folderState.clear();
+  folderState.set(
+    IT,
+    folders.map((folder) => ({ ...folder })),
+  );
+  folderState.set(HR, []);
+}
+resetMockData();

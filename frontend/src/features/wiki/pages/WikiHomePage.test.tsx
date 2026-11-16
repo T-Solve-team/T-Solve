@@ -8,6 +8,7 @@ import {
   getListWikiDocumentsMockHandler,
   getListWikiFoldersMockHandler,
   getListWikiSpacesMockHandler,
+  getDeleteWikiFolderMockHandler,
   getSearchWikiDocumentsMockHandler,
 } from '@/shared/api/generated/wiki/wiki.msw';
 import { problem } from '@/shared/api/mocks';
@@ -221,7 +222,7 @@ describe('WikiHomePage', () => {
 
   it('AC-002.21 shows the three buttons for the selected manager Space and navigates Upload with folder context (BUG-254)', async () => {
     const { user, router } = await openHome();
-    expect(screen.getByRole('button', { name: 'New folder' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'New folder' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Space Settings' })).toBeEnabled();
     await user.click(screen.getByRole('button', { name: 'Upload documents' }));
     await waitFor(() => expect(router.state.location.pathname).toBe(paths.wikiUpload));
@@ -239,6 +240,71 @@ describe('WikiHomePage', () => {
     expect(screen.queryByRole('button', { name: 'Space Settings' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'New folder' })).not.toBeInTheDocument();
     expect(screen.queryByText('Rename')).not.toBeInTheDocument();
+    expect(screen.queryByText('Move')).not.toBeInTheDocument();
+    expect(screen.queryByText('Delete')).not.toBeInTheDocument();
+  });
+
+  it.each(['Rename', 'Move'])(
+    'AC-002.21 opens the Folder popup from %s without changing the selected folder',
+    async (action) => {
+      const { user, router } = await openHome();
+      const tree = screen.getByRole('tree', { name: 'Folders' });
+      const row = within(tree).getByText('Network').closest('[role="treeitem"]');
+      if (!(row instanceof HTMLElement)) throw new Error('Folder row missing');
+      await user.click(within(row).getByRole('button', { name: `${action} Network` }));
+      const dialog = await screen.findByRole('dialog', { name: 'Folder' });
+      expect(within(dialog).getByRole('textbox', { name: 'Name' })).toHaveValue('Network');
+      expect(new URLSearchParams(router.state.location.search).get('folder')).toBe(FOLDER);
+    },
+  );
+
+  it('AC-003.16 cancels Delete without a request, then confirms, shows MSG05, refreshes and clears a deleted selection', async () => {
+    const deleted = vi.fn();
+    let folders = [{ folderId: CHILD, parentId: null, name: 'Network', level: 1 }];
+    server.use(
+      getListWikiFoldersMockHandler(() => folders),
+      getDeleteWikiFolderMockHandler(({ params }) => {
+        deleted(params.folderId);
+        folders = [];
+      }),
+    );
+    const { user, router } = await openHome(`?space=${IT}&folder=${CHILD}`);
+    await user.click(screen.getByRole('button', { name: 'Delete Network' }));
+    let dialog = await screen.findByRole('dialog', { name: 'Delete' });
+    expect(dialog).toHaveTextContent('Network');
+    expect(deleted).not.toHaveBeenCalled();
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(deleted).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Delete Network' }));
+    dialog = await screen.findByRole('dialog', { name: 'Delete' });
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole('tree', { name: 'Folders' })).not.toHaveTextContent('Network'),
+    );
+    expect(deleted).toHaveBeenCalledExactlyOnceWith(CHILD);
+    expect(new URLSearchParams(router.state.location.search).has('folder')).toBe(false);
+  });
+
+  it('AC-003.16 keeps a nonempty folder and shows MSG87 with the server counts', async () => {
+    server.use(
+      http.delete('*/api/v1/wiki/folders/:folderId', () =>
+        problem(409, 'MSG87', {
+          params: { folder_count: 2, document_count: 3 },
+        }),
+      ),
+    );
+    const { user } = await openHome();
+    const row = screen.getByText('Network').closest('[role="treeitem"]');
+    if (!(row instanceof HTMLElement)) throw new Error('Folder row missing');
+    await user.click(within(row).getByRole('button', { name: 'Delete Network' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Delete' });
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    expect(
+      await within(dialog).findByText(msg('MSG87', { folder_count: 2, document_count: 3 })),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('tree', { name: 'Folders' })).toHaveTextContent('Network');
   });
 
   it('AC-002.14 shows loading then an inline error and recovers on retry', async () => {

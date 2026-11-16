@@ -11,7 +11,14 @@ import { faker } from '@faker-js/faker';
 import { HttpResponse, http } from 'msw';
 import type { HttpResponseResolver, RequestHandlerOptions } from 'msw';
 
-import type { WikiDocumentDetail, WikiDocumentSummary, WikiFolder, WikiSpace } from '../model';
+import type {
+  CreateWikiFolderRequest,
+  UpdateWikiFolderRequest,
+  WikiDocumentDetail,
+  WikiDocumentSummary,
+  WikiFolder,
+  WikiSpace,
+} from '../model';
 
 export const getListWikiSpacesResponseMock = (): WikiSpace[] =>
   Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -37,6 +44,16 @@ export const getListCompanyWideDocumentsResponseMock = (): WikiDocumentSummary[]
     updatedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
   }));
 
+export const getCreateWikiFolderResponseMock = (
+  overrideResponse: Partial<Extract<WikiFolder, object>> = {},
+): WikiFolder => ({
+  folderId: faker.string.uuid(),
+  parentId: faker.helpers.arrayElement([faker.string.uuid(), null]),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  level: faker.number.int({ min: 1, max: 3 }),
+  ...overrideResponse,
+});
+
 export const getListWikiFoldersResponseMock = (): WikiFolder[] =>
   Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     folderId: faker.string.uuid(),
@@ -44,6 +61,16 @@ export const getListWikiFoldersResponseMock = (): WikiFolder[] =>
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     level: faker.number.int({ min: 1, max: 3 }),
   }));
+
+export const getUpdateWikiFolderResponseMock = (
+  overrideResponse: Partial<Extract<WikiFolder, object>> = {},
+): WikiFolder => ({
+  folderId: faker.string.uuid(),
+  parentId: faker.helpers.arrayElement([faker.string.uuid(), null]),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  level: faker.number.int({ min: 1, max: 3 }),
+  ...overrideResponse,
+});
 
 export const getListWikiDocumentsResponseMock = (): WikiDocumentSummary[] =>
   Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -146,6 +173,32 @@ export const getListCompanyWideDocumentsMockHandler = (
   );
 };
 
+export const getCreateWikiFolderMockHandler = (
+  overrideResponse?:
+    | WikiFolder
+    | ((
+        info: Parameters<HttpResponseResolver<{ spaceId: string }, CreateWikiFolderRequest>>[0],
+      ) => Promise<WikiFolder> | WikiFolder),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<{ spaceId: string }, CreateWikiFolderRequest>(
+    '*/api/v1/wiki/spaces/:spaceId/folders',
+    async (
+      info: Parameters<HttpResponseResolver<{ spaceId: string }, CreateWikiFolderRequest>>[0],
+    ) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateWikiFolderResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListWikiFoldersMockHandler = (
   overrideResponse?:
     | WikiFolder[]
@@ -165,6 +218,51 @@ export const getListWikiFoldersMockHandler = (
           : getListWikiFoldersResponseMock(),
         { status: 200 },
       );
+    },
+    options,
+  );
+};
+
+export const getUpdateWikiFolderMockHandler = (
+  overrideResponse?:
+    | WikiFolder
+    | ((
+        info: Parameters<HttpResponseResolver<{ folderId: string }, UpdateWikiFolderRequest>>[0],
+      ) => Promise<WikiFolder> | WikiFolder),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put<{ folderId: string }, UpdateWikiFolderRequest>(
+    '*/api/v1/wiki/folders/:folderId',
+    async (
+      info: Parameters<HttpResponseResolver<{ folderId: string }, UpdateWikiFolderRequest>>[0],
+    ) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateWikiFolderResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteWikiFolderMockHandler = (
+  overrideResponse?:
+    | void
+    | ((info: Parameters<HttpResponseResolver<{ folderId: string }>>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete<{ folderId: string }>(
+    '*/api/v1/wiki/folders/:folderId',
+    async (info: Parameters<HttpResponseResolver<{ folderId: string }>>[0]) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
     },
     options,
   );
@@ -244,7 +342,10 @@ export const getGetWikiDocumentMockHandler = (
 export const getWikiMock = () => [
   getListWikiSpacesMockHandler(),
   getListCompanyWideDocumentsMockHandler(),
+  getCreateWikiFolderMockHandler(),
   getListWikiFoldersMockHandler(),
+  getUpdateWikiFolderMockHandler(),
+  getDeleteWikiFolderMockHandler(),
   getListWikiDocumentsMockHandler(),
   getSearchWikiDocumentsMockHandler(),
   getGetWikiDocumentMockHandler(),
