@@ -224,6 +224,22 @@ describe('TrashTable in Space Settings', () => {
     },
   );
 
+  it('AC-005.15 hides the MSG84 notice once Delete permanently is chosen (BUG-306)', async () => {
+    mockTrash();
+    server.use(
+      http.post('*/api/v1/wiki/documents/:documentId/restore', () =>
+        HttpResponse.json({ title: `${item.title} (restored)`, renamed: true }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderApp(trashPath, { role: 'KNOWLEDGE_MANAGER' });
+    await user.click(await screen.findByRole('button', { name: 'Restore' }, { timeout: 5000 }));
+    expect(await screen.findByText(msg('MSG84'))).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Delete permanently' }));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.queryByText(msg('MSG84'))).not.toBeInTheDocument();
+  });
+
   it('AC-005.15 keeps the row after restore conflict and allows retry without success notices', async () => {
     const mock = mockTrash();
     server.use(

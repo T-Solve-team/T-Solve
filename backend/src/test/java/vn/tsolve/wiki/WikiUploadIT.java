@@ -403,7 +403,7 @@ class WikiUploadIT extends WikiReadTestSupport {
                 WikiSearchRepository search,
                 ObjectProvider<FileStorage> storage,
                 AuditService audit,
-                TenantJobService jobs,
+                ObjectProvider<TenantJobService> jobs,
                 PlatformTransactionManager transactions,
                 ObjectProvider<TenantContext> tenants) {
             return new WikiUploadServiceImpl(

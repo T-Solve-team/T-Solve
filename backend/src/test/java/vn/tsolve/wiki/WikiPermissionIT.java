@@ -82,7 +82,7 @@ class WikiPermissionIT extends WikiReadTestSupport {
     }
 
     @Test
-    void omitsADemotedOrDeactivatedManagerFromTheHeader_AC_006_1_BUG_294() {
+    void omitsADemotedOrDeactivatedManagerFromTheHeader_AC_006_1_BUG_308() {
         var repository = context.getBean(WikiPermissionRepository.class);
         jdbc.update("DELETE FROM user_role WHERE user_id = ? AND role = 'KNOWLEDGE_MANAGER'", user);
         assertThat(repository.getSettings(space).knowledgeManager()).isNull();

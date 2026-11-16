@@ -4,7 +4,7 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 import vn.tsolve.common.exception.MessageCodeException;
 
-/** Object storage is not configured, so Wiki files cannot be stored or read (BUG-288). */
+/** File storage is not configured, so a Wiki file cannot be stored or read (BUG-296). */
 public class WikiStorageUnavailableException extends MessageCodeException {
 
     public WikiStorageUnavailableException() {

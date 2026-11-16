@@ -29,6 +29,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
@@ -60,9 +61,9 @@ class WikiTrashServiceImplTest {
             documents,
             access,
             search,
-            new StaticListableBeanFactory(Map.of("storage", storage)).getBeanProvider(FileStorage.class),
+            provider(FileStorage.class, storage),
             audit,
-            jobs);
+            provider(TenantJobService.class, jobs));
     private final UUID user = UUID.randomUUID();
     private final UUID space = UUID.randomUUID();
     private final UUID id = UUID.randomUUID();
@@ -87,7 +88,7 @@ class WikiTrashServiceImplTest {
         ReflectionTestUtils.setField(document, "id", id);
         when(documents.findForIndexing(id)).thenReturn(Optional.of(document));
         when(access.managesSpace(user, 42)).thenReturn(true);
-        when(search.findDocumentSpace(id)).thenReturn(Optional.of(space));
+        when(search.findDocumentSpace(id)).thenReturn(Optional.of(new WikiSearchRepository.DocumentSpace(42, space)));
         when(search.findSpace(user, space)).thenReturn(Optional.of(new WikiSearchRepository.SpaceAccess(42, true)));
         TransactionSynchronizationManager.initSynchronization();
     }
@@ -191,6 +192,17 @@ class WikiTrashServiceImplTest {
         assertThat(result.renamed()).isTrue();
     }
 
+    @Test
+    void neverSplitsSurrogatePairWhenShorteningTitle_BUG_304() {
+        deleted();
+        String original = "x".repeat(188) + "\uD83D\uDE00" + "y".repeat(10);
+        ReflectionTestUtils.setField(document, "title", original);
+        when(documents.existsBySpaceIdAndFolderIdAndStatusAndTitleIgnoreCase(42L, folder, Status.PUBLISHED, original))
+                .thenReturn(true);
+        var result = service.restore(user, id);
+        assertThat(result.title()).isEqualTo("x".repeat(188) + " (restored)");
+    }
+
     @ParameterizedTest
     @EnumSource(IndexStatus.class)
     void enqueuesOnlyUnindexedRestoresAfterCommit_AC_005_7(IndexStatus index) {
@@ -209,7 +221,7 @@ class WikiTrashServiceImplTest {
     }
 
     @Test
-    void resolvesAuditSpaceBeforeRemovingDocument_AC_005_8_AC_005_11_BUG_279() {
+    void resolvesAuditSpaceBeforeRemovingDocument_AC_005_8_AC_005_11_BUG_279_BUG_302() {
         deleted();
         doAnswer(call -> {
                     when(search.findDocumentSpace(id)).thenReturn(Optional.empty());
@@ -219,6 +231,7 @@ class WikiTrashServiceImplTest {
                 .flush();
         service.deletePermanently(user, id);
         verify(audit).record(AuditAction.DELETE, "WIKI_DOCUMENT", id, details("PERMANENT", "Guide"));
+        verify(search).findDocumentSpace(id);
     }
 
     @Test
@@ -269,12 +282,13 @@ class WikiTrashServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"TRASH", "RESTORE", "PERMANENT"})
-    void returnsForbiddenForViewableDocumentAndNotFoundOtherwise_AC_005_10(String operation) {
+    void returnsForbiddenForViewableDocumentAndNotFoundOtherwiseWithoutLocking_AC_005_10_BUG_302(String operation) {
         when(access.managesSpace(user, 42)).thenReturn(false);
         when(access.findAvailableDocuments(user, List.of(id))).thenReturn(Set.of(id));
         assertThatThrownBy(() -> act(operation)).isInstanceOf(AccessDeniedException.class);
         when(access.findAvailableDocuments(user, List.of(id))).thenReturn(Set.of());
         assertMissing(() -> act(operation));
+        verify(documents, never()).findForIndexing(any());
         assertThat(document.getStatus()).isEqualTo(Status.PUBLISHED);
         verify(documents, never()).saveAndFlush(any());
         verify(documents, never()).delete(any());
@@ -325,6 +339,27 @@ class WikiTrashServiceImplTest {
             case "PERMANENT" -> service.deletePermanently(user, id);
             default -> throw new IllegalArgumentException(operation);
         }
+    }
+
+    @Test
+    void startsAndDeletesWithoutFileStorageOrWorker_BUG_307() {
+        var bare = new WikiTrashServiceImpl(
+                documents,
+                access,
+                search,
+                provider(FileStorage.class, null),
+                audit,
+                provider(TenantJobService.class, null));
+        deleted();
+        bare.deletePermanently(user, id);
+        commit();
+        verify(documents).delete(document);
+    }
+
+    private static <T> ObjectProvider<T> provider(Class<T> type, T bean) {
+        var factory = new StaticListableBeanFactory();
+        if (bean != null) factory.addBean("bean", bean);
+        return factory.getBeanProvider(type);
     }
 
     private void commit() {

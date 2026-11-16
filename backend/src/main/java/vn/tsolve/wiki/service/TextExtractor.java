@@ -48,7 +48,7 @@ public class TextExtractor {
         return true;
     }
 
-    // PDFBox emits NUL for glyphs without a Unicode mapping; PostgreSQL text rejects it (BUG-292).
+    // PDFBox emits NUL for glyphs without a Unicode mapping; PostgreSQL text rejects it (BUG-293).
     static String readable(String text) {
         String clean = text.replace("\0", "");
         return clean.isBlank() ? "" : clean;

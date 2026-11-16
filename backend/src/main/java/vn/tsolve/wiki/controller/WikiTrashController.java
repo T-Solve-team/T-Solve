@@ -42,9 +42,9 @@ public class WikiTrashController {
 
     @GetMapping("/spaces/{spaceId}/trash")
     @Operation(operationId = "listWikiTrash", summary = "List a managed Space's trash, newest first")
-    @ApiResponse(responseCode = "403", description = "MSG08: not the Space's Knowledge Manager")
-    @ApiResponse(responseCode = "404", description = "MSG04: Space unknown or inactive")
-    @PreAuthorize("hasRole('" + Roles.KNOWLEDGE_MANAGER + "')")
+    @ApiResponse(responseCode = "403", description = "MSG08: viewable Space the caller does not manage")
+    @ApiResponse(responseCode = "404", description = "MSG04: Space unknown, Hidden or inactive")
+    @PreAuthorize("hasRole('" + Roles.EMPLOYEE + "')")
     public ResponseEntity<List<WikiTrashItem>> listTrash(
             @AuthenticationPrincipal TSolveUser user, @PathVariable UUID spaceId) {
         return ResponseEntity.ok(service.listTrash(user.id(), spaceId));

@@ -9,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.lang.Nullable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,9 +35,10 @@ public class WikiTrashServiceImpl implements WikiTrashService {
     private final WikiDocumentRepository documents;
     private final AccessRepository access;
     private final WikiSearchRepository search;
+    // Optional like every FileStorage and worker user: neither is in every setup (StorageConfig, BUG-296, BUG-307).
     private final ObjectProvider<FileStorage> storage;
     private final AuditService audit;
-    private final TenantJobService jobs;
+    private final ObjectProvider<TenantJobService> jobs;
 
     public WikiTrashServiceImpl(
             WikiDocumentRepository documents,
@@ -46,7 +46,7 @@ public class WikiTrashServiceImpl implements WikiTrashService {
             WikiSearchRepository search,
             ObjectProvider<FileStorage> storage,
             AuditService audit,
-            @Nullable TenantJobService jobs) {
+            ObjectProvider<TenantJobService> jobs) {
         this.documents = documents;
         this.access = access;
         this.search = search;
@@ -57,10 +57,11 @@ public class WikiTrashServiceImpl implements WikiTrashService {
 
     @Override
     public void trash(UUID userId, UUID documentId) {
-        WikiDocument document = requireManagedDocument(userId, documentId, WikiDocument.Status.PUBLISHED);
+        Managed managed = requireManagedDocument(userId, documentId, WikiDocument.Status.PUBLISHED);
+        WikiDocument document = managed.document();
         document.trash(userId, Instant.now());
         documents.saveAndFlush(document);
-        record(document, "TRASH", AuditAction.DELETE);
+        record(managed, "TRASH", AuditAction.DELETE);
     }
 
     @Override
@@ -73,7 +74,8 @@ public class WikiTrashServiceImpl implements WikiTrashService {
 
     @Override
     public WikiRestoreResult restore(UUID userId, UUID documentId) {
-        WikiDocument document = requireManagedDocument(userId, documentId, WikiDocument.Status.DELETED);
+        Managed managed = requireManagedDocument(userId, documentId, WikiDocument.Status.DELETED);
+        WikiDocument document = managed.document();
         String original = document.getTitle();
         String title = original;
         for (int number = 1;
@@ -81,7 +83,10 @@ public class WikiTrashServiceImpl implements WikiTrashService {
                         document.getSpaceId(), document.getFolderId(), WikiDocument.Status.PUBLISHED, title);
                 number++) {
             String suffix = number == 1 ? " (restored)" : " (restored " + number + ")";
-            title = original.substring(0, Math.min(original.length(), 200 - suffix.length())) + suffix;
+            int end = Math.min(original.length(), 200 - suffix.length());
+            // Never cut between the two halves of a surrogate pair.
+            if (end > 0 && Character.isHighSurrogate(original.charAt(end - 1))) end--;
+            title = original.substring(0, end) + suffix;
         }
         document.restore(title, Instant.now());
         try {
@@ -95,17 +100,17 @@ public class WikiTrashServiceImpl implements WikiTrashService {
             }
             throw failure;
         }
-        record(document, "RESTORE", AuditAction.PUBLISH);
+        record(managed, "RESTORE", AuditAction.PUBLISH);
         if (document.getIndexStatus() != WikiDocument.IndexStatus.INDEXED) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    if (jobs == null) {
-                        log.warn(
-                                "Worker is disabled; restored Wiki document {} stays waiting for indexing", documentId);
-                    } else {
-                        jobs.enqueue("wiki-index", documentId);
+                    TenantJobService worker = jobs.getIfAvailable();
+                    if (worker == null) {
+                        log.warn("No worker configured; restored Wiki document {} stays unindexed", documentId);
+                        return;
                     }
+                    worker.enqueue("wiki-index", documentId);
                 }
             });
         }
@@ -114,8 +119,9 @@ public class WikiTrashServiceImpl implements WikiTrashService {
 
     @Override
     public void deletePermanently(UUID userId, UUID documentId) {
-        WikiDocument document = requireManagedDocument(userId, documentId, WikiDocument.Status.DELETED);
-        record(document, "PERMANENT", AuditAction.DELETE);
+        Managed managed = requireManagedDocument(userId, documentId, WikiDocument.Status.DELETED);
+        WikiDocument document = managed.document();
+        record(managed, "PERMANENT", AuditAction.DELETE);
         documents.delete(document);
         documents.flush();
         String key = document.getFileKey();
@@ -123,9 +129,9 @@ public class WikiTrashServiceImpl implements WikiTrashService {
             @Override
             public void afterCommit() {
                 try {
-                    FileStorage files = storage.getIfAvailable();
-                    if (files == null) throw new IllegalStateException("Object storage is not configured");
-                    files.delete(key);
+                    FileStorage target = storage.getIfAvailable();
+                    if (target == null) throw new IllegalStateException("No file storage configured");
+                    target.delete(key);
                 } catch (RuntimeException failure) {
                     log.warn("Could not remove permanently deleted Wiki file key={}", key);
                 }
@@ -133,27 +139,30 @@ public class WikiTrashServiceImpl implements WikiTrashService {
         });
     }
 
-    private WikiDocument requireManagedDocument(UUID userId, UUID documentId, WikiDocument.Status status) {
-        // Share the indexer's row lock so indexing and trash transitions cannot overwrite each other.
-        WikiDocument document =
-                documents.findForIndexing(documentId).orElseThrow(() -> new NotFoundException("MSG110", Map.of()));
-        if (!access.managesSpace(userId, document.getSpaceId())) {
+    private Managed requireManagedDocument(UUID userId, UUID documentId, WikiDocument.Status status) {
+        // Plain read first: only the Space's Knowledge Manager may take the row lock below.
+        var space = search.findDocumentSpace(documentId).orElseThrow(() -> new NotFoundException("MSG110", Map.of()));
+        if (!access.managesSpace(userId, space.spaceId())) {
             if (access.findAvailableDocuments(userId, List.of(documentId)).contains(documentId)) {
                 throw new AccessDeniedException("MSG08");
             }
             throw new NotFoundException("MSG110", Map.of());
         }
+        // Share the indexer's row lock so indexing and trash transitions cannot overwrite each other.
+        WikiDocument document =
+                documents.findForIndexing(documentId).orElseThrow(() -> new NotFoundException("MSG110", Map.of()));
         if (document.getStatus() != status) throw new NotFoundException("MSG110", Map.of());
-        return document;
+        return new Managed(document, space.publicId());
     }
 
-    private void record(WikiDocument document, String operation, AuditAction action) {
-        UUID spaceId =
-                search.findDocumentSpace(document.getId()).orElseThrow(() -> new NotFoundException("MSG110", Map.of()));
+    private void record(Managed managed, String operation, AuditAction action) {
+        WikiDocument document = managed.document();
         audit.record(
                 action,
                 "WIKI_DOCUMENT",
                 document.getId(),
-                Map.of("operation", operation, "title", document.getTitle(), "spaceId", spaceId));
+                Map.of("operation", operation, "title", document.getTitle(), "spaceId", managed.spacePublicId()));
     }
+
+    private record Managed(WikiDocument document, UUID spacePublicId) {}
 }

@@ -21,7 +21,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
-import org.springframework.lang.Nullable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -62,9 +61,11 @@ public class WikiUploadServiceImpl implements WikiUploadService {
     private final AccessRepository access;
     private final WikiSearchRepository spaces;
     private final TextExtractor extractor;
+    // Optional like every FileStorage user while storage is not in every setup (StorageConfig, BUG-296).
     private final ObjectProvider<FileStorage> storage;
     private final AuditService audit;
-    private final TenantJobService jobs;
+    // Optional: the worker runs only with tsolve.worker.enabled (BUG-296).
+    private final ObjectProvider<TenantJobService> jobs;
     private final TransactionTemplate transaction;
     private final ObjectProvider<TenantContext> tenantContext;
     private final WikiDocumentMapper mapper;
@@ -78,7 +79,7 @@ public class WikiUploadServiceImpl implements WikiUploadService {
             TextExtractor extractor,
             ObjectProvider<FileStorage> storage,
             AuditService audit,
-            @Nullable TenantJobService jobs,
+            ObjectProvider<TenantJobService> jobs,
             PlatformTransactionManager transactions,
             ObjectProvider<TenantContext> tenantContext,
             WikiDocumentMapper mapper,
@@ -99,7 +100,7 @@ public class WikiUploadServiceImpl implements WikiUploadService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    // No transaction: parsing up to 10 files must not hold a pooled connection (BUG-294).
     public List<WikiUploadPreview> extract(UUID userId, UUID spaceId, List<MultipartFile> files) {
         requireManager(userId, spaceId);
         return readFiles(files).stream()
@@ -167,9 +168,20 @@ public class WikiUploadServiceImpl implements WikiUploadService {
                 TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
-                        // An enqueue failure cannot roll back committed rows or delete their original files.
+                        // The rows are committed: an enqueue failure must not fail the upload (spec §35, BUG-295).
+                        // The document stays PENDING and keyword-searchable (AC-001.11).
                         committed.set(true);
-                        for (WikiDocumentRef document : result) enqueue(document.documentId());
+                        for (WikiDocumentRef document : result) {
+                            try {
+                                TenantJobService worker = jobs.getIfAvailable();
+                                if (worker == null) throw new IllegalStateException("No worker configured");
+                                worker.enqueue("wiki-index", document.documentId());
+                            } catch (RuntimeException failure) {
+                                // ponytail: no re-index sweep yet; PENDING documents need a manual re-enqueue.
+                                log.error(
+                                        "Could not enqueue wiki-index for document {}", document.documentId(), failure);
+                            }
+                        }
                     }
                 });
                 return List.copyOf(result);
@@ -191,19 +203,18 @@ public class WikiUploadServiceImpl implements WikiUploadService {
         }
         WikiDocument document =
                 documents.findById(documentId).orElseThrow(() -> new NotFoundException("MSG110", Map.of()));
-        FileStorage files = storage();
         String key = document.getFileKey();
         TenantContext context = tenantContext.getIfAvailable();
         UUID workspace = context == null ? null : context.requireWorkspaceId();
         return new WikiDocumentFile(
                 document.getFileName(), document.getContentType(), document.getFileSize(), output -> {
-                    if (context == null) transfer(files, key, output);
+                    if (context == null) transfer(key, output);
                     else {
                         try {
                             // MVC writes on another thread; restore the request's Workspace before FileStorage.read.
                             context.runIn(workspace, () -> {
                                 try {
-                                    transfer(files, key, output);
+                                    transfer(key, output);
                                 } catch (IOException failure) {
                                     throw new UncheckedIOException(failure);
                                 }
@@ -215,26 +226,16 @@ public class WikiUploadServiceImpl implements WikiUploadService {
                 });
     }
 
-    private static void transfer(FileStorage files, String key, OutputStream output) throws IOException {
-        try (var input = files.read(key)) {
+    private void transfer(String key, OutputStream output) throws IOException {
+        try (var input = storage().read(key)) {
             input.transferTo(output);
         }
     }
 
-    private void enqueue(UUID documentId) {
-        if (jobs == null) {
-            log.warn("Worker is disabled; Wiki document {} stays waiting for indexing", documentId);
-            return;
-        }
-        jobs.enqueue("wiki-index", documentId);
-    }
-
     private FileStorage storage() {
-        FileStorage files = storage.getIfAvailable();
-        if (files == null) {
-            throw new WikiStorageUnavailableException();
-        }
-        return files;
+        FileStorage target = storage.getIfAvailable();
+        if (target == null) throw new WikiStorageUnavailableException();
+        return target;
     }
 
     private long requireManager(UUID userId, UUID spaceId) {

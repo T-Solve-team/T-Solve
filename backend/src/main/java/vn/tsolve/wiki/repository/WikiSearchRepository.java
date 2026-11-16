@@ -49,13 +49,14 @@ public class WikiSearchRepository {
                         row.getString("department_name"), row.getString("access_level")));
     }
 
-    public Optional<UUID> findDocumentSpace(UUID documentId) {
+    public Optional<DocumentSpace> findDocumentSpace(UUID documentId) {
         return jdbc
                 .query(
-                        "SELECT s.public_id FROM wiki_document w JOIN space s ON s.space_id = w.space_id "
+                        "SELECT s.space_id, s.public_id FROM wiki_document w JOIN space s ON s.space_id = w.space_id "
                                 + "WHERE w.wiki_document_id = :documentId",
                         Map.of("documentId", documentId),
-                        (row, index) -> row.getObject("public_id", UUID.class))
+                        (row, index) ->
+                                new DocumentSpace(row.getLong("space_id"), row.getObject("public_id", UUID.class)))
                 .stream()
                 .findFirst();
     }
@@ -170,6 +171,7 @@ public class WikiSearchRepository {
                 .addValue("q", query)
                 .addValue("vector", vector)
                 .addValue("minSimilarity", minSimilarity);
+        // ponytail: ts_rank_cd is unbounded, similarity is 0..1, so one can dominate; normalise both if ranking drifts.
         // With no embedding, omit the chunk scan and similarity entirely: keyword rank alone decides the order.
         String similarity = vector == null ? "0" : "COALESCE(best.similarity, 0)";
         String passages = vector == null ? "" : """
@@ -204,4 +206,6 @@ public class WikiSearchRepository {
     }
 
     public record SpaceAccess(long spaceId, boolean viewable) {}
+
+    public record DocumentSpace(long spaceId, UUID publicId) {}
 }

@@ -22,6 +22,13 @@ public interface WikiDocumentRepository extends JpaRepository<WikiDocument, UUID
 
     long countByFolderId(UUID folderId);
 
+    /** Folds case with {@code lower()}, like {@code uq_wiki_document_published_title}, not Spring's {@code upper()}. */
+    @Query("select count(d) > 0 from WikiDocument d where d.spaceId = :spaceId and d.status = :status"
+            + " and (d.folderId = :folderId or (:folderId is null and d.folderId is null))"
+            + " and lower(d.title) = lower(:title)")
     boolean existsBySpaceIdAndFolderIdAndStatusAndTitleIgnoreCase(
-            Long spaceId, UUID folderId, WikiDocument.Status status, String title);
+            @Param("spaceId") Long spaceId,
+            @Param("folderId") UUID folderId,
+            @Param("status") WikiDocument.Status status,
+            @Param("title") String title);
 }
