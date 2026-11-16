@@ -21,6 +21,7 @@ Covers UC-12 Create Department (Jira KAN-120, STORY-001..STORY-002), the rename 
 | 2026-11-13 | all | Merged the KAN-120 spec (main, #202) with the KAN-119 spec: Out of Scope no longer lists UC-10/UC-11 or the Departments KAN-120 built; requirements, contracts and Definition of Done joined | KAN-119 merges main |
 | 2026-11-15 | STORY-006 | AC-006.1 and the Interface Contracts name `vn.tsolve.common.session.lookup.WorkspaceStatusLookup#isCompanyInformationEntered()` instead of the orphan `common.lookup.WorkspaceStatusLookup#isReady()` | BUG-206: `/me` (`SessionServiceImpl`) reads the `common.session.lookup` interface, so `workspaceReady` stayed false after Setup |
 | 2026-11-15 | STORY-005..STORY-011 | KAN-119 stories renumbered again from STORY-003..STORY-009 (AC-003.x..AC-009.x become AC-005.x..AC-011.x), wording unchanged; the requirements numbered 7..11 become 10..14 | KAN-121 (#206, STORY-003, STORY-004 rename) reached `main` first and took STORY-003 and STORY-004; the specs merge into one |
+| 2026-11-16 | STORY-006, STORY-010, STORY-011 | Change request: Workspace Settings shows the stored token masked with its last four characters, never revealable or copyable. `WorkspaceInfo` gains `serviceAccountTokenSet` and `serviceAccountTokenHint` (new AC-006.5, AC-010.7, AC-010.8); AC-006.2, AC-010.2, AC-011.7 and Non-Functional 4 reworded to allow only that hint. No issue date and no expiry date are shown (`token_expiry_date` stays Out of Scope) | User request during the staging test of 16/11 (BinhBinh13): the Admin cannot tell whether a token is stored or which one. Decisions of 16/11: last four characters (not dots only); expiry date and saved date dropped |
 | 2026-11-12 | STORY-003, STORY-004 | Add UC-13 rename: read and rename API with the Space (AC-003.1 to AC-003.22) and screen 2.3 Department Detail with the 2.2 link (AC-004.1 to AC-004.14); UC-13 leaves Out of Scope except the default Project; interim limit 6 added; contract gains `getDepartment` and `updateDepartment` | KAN-121, decisions D4 and D6 to D20 |
 
 ## Requirements
@@ -53,7 +54,8 @@ Covers UC-12 Create Department (Jira KAN-120, STORY-001..STORY-002), the rename 
 2. The Department, its Space and the audit entry are written in one database transaction, with no outbound call inside it. The same holds for a rename.
 3. A Workspace's Departments live only in that Workspace's database (GBR-37, ADR-0002). The Workspace of a request never comes from request content.
 4. The API token is encrypted at rest with AES-256-GCM under the key `WORKSPACE_SECRET_KEY`; it never appears in a
-   response, a log line, an audit entry or an exception message.
+   response, a log line, an audit entry or an exception message, except its last four characters in
+   `serviceAccountTokenHint` (AC-006.5).
 5. The backend makes outbound calls only to a Jira site address that passed the site rule of AC-011.3 (no
    server-side request forgery through the address the Admin types).
 6. Every Jira call made for a check has a connect timeout of at most 5 s and a read timeout of at most 10 s.
@@ -195,11 +197,17 @@ These are known limits of the code this story builds on. They are not defects of
   - AC-006.1: THE `workspace` module SHALL implement `vn.tsolve.common.session.lookup.WorkspaceStatusLookup#isCompanyInformationEntered()`, which answers true exactly
     when the bound Workspace's tenant database has its `workspace` row (be-foundation AC-003.2).
   - AC-006.2: WHEN an Admin calls `GET /api/v1/workspace` while the Workspace is set up, THE backend SHALL answer 200
-    with `companyName`, `jiraSiteUrl` and `serviceAccountEmail`, and no field that holds or hints at the token.
+    with `companyName`, `jiraSiteUrl`, `serviceAccountEmail`, `serviceAccountTokenSet` and `serviceAccountTokenHint`
+    (AC-006.5), and no other field that holds or hints at the token.
   - AC-006.3: IF the Workspace is not set up, THEN THE backend SHALL answer `GET /api/v1/workspace` with 404 and
     `code` `MSG60`.
   - AC-006.4: IF the caller of `GET /api/v1/workspace` does not have the Admin role, THEN THE backend SHALL answer
     403.
+  - AC-006.5: WHEN the backend answers with the Workspace information (Setup, read or update), THE backend SHALL set
+    `serviceAccountTokenSet` to true exactly when a token is stored, and `serviceAccountTokenHint` to the last four
+    characters of the decrypted stored token; IF no token is stored, the stored token cannot be decrypted, or it has
+    fewer than 12 characters, THEN `serviceAccountTokenHint` SHALL be null. No other part of the token, its length or
+    its ciphertext SHALL be sent.
 
 ### STORY-007: Update the Workspace information (UC-11, backend)
 - As the Admin, I want to edit the company name and the service account, so that T-Solve stays correct when the
@@ -261,13 +269,19 @@ These are known limits of the code this story builds on. They are not defects of
   - AC-010.1: WHEN an Admin opens 2.2 Workspace Settings, THE screen SHALL load `GET /api/v1/workspace` and show the
     company name and service account email as editable fields and the Jira site address as read-only text.
   - AC-010.2: THE API token field SHALL start empty with the hint that leaving it empty keeps the current token, and
-    THE screen SHALL never show a stored token.
+    THE screen SHALL never show a stored token beyond the masked value of AC-010.7.
   - AC-010.3: WHEN the Admin saves valid values, THE screen SHALL send `PUT /api/v1/workspace` (the token only when
     typed) and show `MSG05`.
   - AC-010.4: WHEN the backend answers with a field error, THE screen SHALL show it under that field and keep the
     values entered.
   - AC-010.5: WHEN the Admin cancels, THE screen SHALL restore the loaded values and send nothing.
   - AC-010.6: IF loading fails, THEN THE screen SHALL show the shared error state with a retry.
+  - AC-010.7: WHILE `serviceAccountTokenSet` is true, THE screen SHALL show above the API token field a read-only
+    "Current token" value of twelve `•` followed by `serviceAccountTokenHint` (twelve `•` alone when the hint is null),
+    with no control that reveals it and no copy action; the value SHALL not be a form field and SHALL not be sent on
+    Save.
+  - AC-010.8: IF `serviceAccountTokenSet` is false, THEN THE screen SHALL show "Current token" as "Not set" and SHALL
+    not show the hint that leaving the field empty keeps the current token.
 
 ### STORY-011: Service account check, site rule and token at rest
 - As the operations team, I want the secret and the outbound calls kept safe, so that a Workspace cannot leak its
@@ -288,7 +302,7 @@ These are known limits of the code this story builds on. They are not defects of
   - AC-011.6: IF `WORKSPACE_SECRET_KEY` is missing or is not the Base64 form of exactly 32 bytes, THEN THE backend SHALL
     fail to start with an error that names the setting but not its value.
   - AC-011.7: THE token SHALL not appear in any response body, log line, audit entry, exception message or
-    `toString()` of the module's types.
+    `toString()` of the module's types, except its last four characters in `serviceAccountTokenHint` (AC-006.5).
 
 ## Out of Scope
 - UC-14 and UC-15: Delete and Restore Department. Each comes through Change Mode when its Jira story starts (KAN-122, KAN-123).
@@ -375,7 +389,8 @@ PUT  /api/v1/workspace         (Admin)  body WorkspaceUpdateRequest → 200 Work
 
 WorkspaceSetupRequest  { companyName, jiraSiteUrl, serviceAccountEmail, serviceAccountToken }   all string, required
 WorkspaceUpdateRequest { companyName, serviceAccountEmail, serviceAccountToken? }
-WorkspaceInfo          { companyName, jiraSiteUrl, serviceAccountEmail }
+WorkspaceInfo          { companyName, jiraSiteUrl, serviceAccountEmail,
+                         serviceAccountTokenSet (boolean), serviceAccountTokenHint (string, 4 characters, nullable) }
 Errors: ProblemDetails with code / params / field, as the rest of the API.
 
 vn.tsolve.common.session.lookup.WorkspaceStatusLookup { boolean isCompanyInformationEntered(); }  // used by /me (be-foundation)

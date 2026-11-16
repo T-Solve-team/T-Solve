@@ -1338,8 +1338,8 @@
     }
   },
   "workspace": {
-    "specHash": "1deeffb98454aa06eb6588d0dd6bfb8e50d069df60973cf47ba85cbfa192e2ad",
-    "approvedAt": "2026-11-14T22:34:54.101Z",
+    "specHash": "108b683dc09920d438ed8045aa51ea7da5e9e6304d2dcd3af55a0a7e8e7d5911",
+    "approvedAt": "2026-11-16T07:39:46.838Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN an Admin sends  with an allowed name, THE system SHALL store one Department in status  under that name with leading and trailing whitespace removed and inner spaces kept, and answer 201 with its  and stored .",
@@ -1425,6 +1425,7 @@
       "AC-006.2": "WHEN an Admin calls  while the Workspace is set up, THE backend SHALL answer 200",
       "AC-006.3": "IF the Workspace is not set up, THEN THE backend SHALL answer  with 404 and",
       "AC-006.4": "IF the caller of  does not have the Admin role, THEN THE backend SHALL answer",
+      "AC-006.5": "WHEN the backend answers with the Workspace information (Setup, read or update), THE backend SHALL set",
       "AC-007.1": "WHEN an Admin calls  with ,  and an optional",
       "AC-007.2": "WHERE  is absent or blank, THE backend SHALL keep the stored token.",
       "AC-007.3": "IF  or  is missing or blank, THEN THE backend SHALL answer 400 with",
@@ -1451,6 +1452,8 @@
       "AC-010.4": "WHEN the backend answers with a field error, THE screen SHALL show it under that field and keep the",
       "AC-010.5": "WHEN the Admin cancels, THE screen SHALL restore the loaded values and send nothing.",
       "AC-010.6": "IF loading fails, THEN THE screen SHALL show the shared error state with a retry.",
+      "AC-010.7": "WHILE  is true, THE screen SHALL show above the API token field a read-only",
+      "AC-010.8": "IF  is false, THEN THE screen SHALL show \"Current token\" as \"Not set\" and SHALL",
       "AC-011.1": "WHEN the service account is checked, THE backend SHALL call  and then",
       "AC-011.2": "IF Jira answers 401 or 403, any other error status, times out or cannot be reached, THEN THE check SHALL",
       "AC-011.3": "THE site rule SHALL accept only an address that, after trimming and lower-casing, is , has no",

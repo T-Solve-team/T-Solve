@@ -167,9 +167,10 @@
         "workspace-setup-screen": "passing",
         "workspace-settings-screen": "passing",
         "rename-department-api": "passing",
-        "rename-department-screen": "passing"
+        "rename-department-screen": "passing",
+        "workspace-token-hint": "pending"
       },
-      "lastUpdated": "2026-11-12T19:46:35.915Z",
+      "lastUpdated": "2026-11-16T13:53:48.894Z",
       "branch": "feat/workspace",
       "repos": [
         "default"
