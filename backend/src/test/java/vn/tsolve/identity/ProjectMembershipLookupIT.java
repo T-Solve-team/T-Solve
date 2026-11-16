@@ -60,7 +60,7 @@ class ProjectMembershipLookupIT {
     void seed() {
         for (JdbcTemplate db : List.of(TwoTenantDatabases.tenantA(), TwoTenantDatabases.tenantB())) {
             db.update("DELETE FROM app_user WHERE email LIKE '%@pmlk-fixture.test'");
-            db.update("DELETE FROM project WHERE jira_project_key LIKE 'PMLK-%'");
+            db.update("DELETE FROM project WHERE public_id IN (?,?,?,?,?)", SAM, ALPHA, REMOVED, OTHER, BETA_PROJECT);
             db.update("DELETE FROM department WHERE public_id IN (?,?,?)", D1, D2, BETA_DEPARTMENT);
         }
         JdbcTemplate db = TwoTenantDatabases.tenantA();
