@@ -134,10 +134,16 @@ class WorkspaceInfoRepositoryIT {
                          WHERE table_schema = 'public' AND table_name = 'workspace'
                         """, String.class))
                 .containsExactlyInAnyOrder(
-                        "workspace_id:uuid:NO:-", "company_name:character varying:NO:150",
-                        "sign_in_provider:character varying:NO:30", "jira_site_address:character varying:YES:255",
-                        "service_account_email:character varying:YES:254", "service_account_api_token:text:YES:-",
-                        "token_expiry_date:date:YES:-", "singleton:boolean:NO:-");
+                        "workspace_id:uuid:NO:-",
+                        "company_name:character varying:NO:150",
+                        "sign_in_provider:character varying:NO:30",
+                        "jira_site_address:character varying:YES:255",
+                        "service_account_email:character varying:YES:254",
+                        "service_account_api_token:text:YES:-",
+                        "token_expiry_date:date:YES:-",
+                        "singleton:boolean:NO:-",
+                        // KAN-344, changeset 042 (AC-005.1, AC-011.8)
+                        "jira_cloud_id:character varying:YES:36");
         assertThat(db.queryForObject(
                         "SELECT conname FROM pg_constraint WHERE conrelid = 'workspace'::regclass AND contype = 'p'",
                         String.class))
