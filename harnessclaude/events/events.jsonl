@@ -1674,6 +1674,12 @@
 {"ts":"2026-11-14T20:59:31.157Z","type":"feature-status","module":"wiki","feature":"wiki-trash-ui","from":"pending","to":"in-progress"}
 {"ts":"2026-11-14T21:16:17.125Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"9fe4cb5ddff98bcd24898634c80064068cbd93ae"}
 {"ts":"2026-11-14T21:16:17.421Z","type":"feature-status","module":"wiki","feature":"wiki-trash-ui","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T21:16:19.338Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-api","from":"pending","to":"in-progress"}
+{"ts":"2026-11-15T01:50:45.400Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"93423f09078cfeebcbe89b6f0382608bcba5acee"}
+{"ts":"2026-11-15T01:50:45.757Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-api","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-15T01:50:56.276Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-ui","from":"pending","to":"in-progress"}
+{"ts":"2026-11-15T02:07:08.974Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"a20ae6c20439042cd1cef818b4a1337d6f7afd9e"}
+{"ts":"2026-11-15T02:07:09.253Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-ui","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-15T02:46:48.884Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"b3519408bcd08aee4aeed87f198b4cdb611d7d8f"}
 {"ts":"2026-11-15T04:51:38.289Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"2f212b192f81c70a677b3fda692127f0759fd9f8"}
 {"ts":"2026-11-15T05:30:10.750Z","type":"quick-opened","what":"ReviewStorageIT old-DB build skips wiki changesets that need pgvector (BUG-246)","files":["backend/src/test/java/vn/tsolve/review/ReviewStorageIT.java","docs/bug-log.md"]}
@@ -1688,6 +1694,7 @@
 {"ts":"2026-11-15T05:58:28.716Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"186f3b38ff677b97644a1e42cf77f0837be6767b"}
 {"ts":"2026-11-15T05:58:28.996Z","type":"feature-status","module":"wiki","feature":"wiki-upload-ui","from":"fixing","to":"evaluating"}
 {"ts":"2026-11-15T05:58:55.273Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"e3eb9e775fb837a8087a5ccbc98327adba517271"}
+{"ts":"2026-11-15T05:59:14.775Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"eb5f0efcc48e7eb8733dfed3bbd67a60383c888a"}
 {"ts":"2026-11-14T18:40:17.560Z","type":"feature-status","module":"identity","feature":"profile-spaces-backend","from":"pending","to":"in-progress"}
 {"ts":"2026-11-14T18:40:17.885Z","type":"feature-status","module":"identity","feature":"profile-spaces-backend","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-14T18:40:18.180Z","type":"feature-status","module":"identity","feature":"profile-spaces-backend","from":"evaluating","to":"passing"}
@@ -1773,6 +1780,21 @@
 {"ts":"2026-11-14T22:35:22.792Z","type":"spec-approved","module":"tracker","specHash":"759e03700d56dd4b265645102759f62c4481efebcb09002021309582464e13d8"}
 {"ts":"2026-11-14T22:34:54.110Z","type":"spec-approved","module":"workspace","specHash":"1deeffb98454aa06eb6588d0dd6bfb8e50d069df60973cf47ba85cbfa192e2ad"}
 {"ts":"2026-11-15T06:53:14.357Z","type":"quick-opened","what":"Route-table test still expects the built Wiki screens 11.4 and 11.7 as placeholders (BUG-285)","files":["frontend/src/app/router/route-table.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-11-15T07:34:49.889Z","type":"quick-closed","what":"Route-table test still expects the built Wiki screens 11.4 and 11.7 as placeholders (BUG-285)","files":["frontend/src/app/router/route-table.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-11-15T07:34:58.614Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"3cdb351ecab619c99e3ab7a1c844a0d1ee96975e"}
+{"ts":"2026-11-15T10:09:43.404Z","type":"feature-status","module":"wiki","feature":"wiki-upload-ui","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T10:09:43.715Z","type":"feature-status","module":"wiki","feature":"wiki-trash-ui","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T10:09:44.014Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-ui","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T10:19:45.606Z","type":"feature-status","module":"wiki","feature":"wiki-upload-api","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-15T10:19:45.912Z","type":"feature-status","module":"wiki","feature":"wiki-trash-api","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-15T11:18:19.113Z","type":"feature-status","module":"wiki","feature":"wiki-upload-api","from":"fixing","to":"evaluating"}
+{"ts":"2026-11-15T11:18:19.519Z","type":"feature-status","module":"wiki","feature":"wiki-trash-api","from":"fixing","to":"evaluating"}
+{"ts":"2026-11-15T11:18:19.876Z","type":"feature-status","module":"wiki","feature":"wiki-upload-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T11:18:20.286Z","type":"feature-status","module":"wiki","feature":"wiki-trash-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T11:18:20.700Z","type":"feature-status","module":"wiki","feature":"wiki-indexing","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T11:18:21.081Z","type":"feature-status","module":"wiki","feature":"wiki-permissions-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T11:23:00.600Z","type":"module-status","module":"wiki","from":"implementing","to":"evaluating"}
+{"ts":"2026-11-15T11:23:00.913Z","type":"module-status","module":"wiki","from":"evaluating","to":"completed"}
 {"ts":"2026-11-15T02:31:23.461Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication-contract","from":"pending","to":"in-progress"}
 {"ts":"2026-11-15T02:34:23.013Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication","from":"pending","to":"in-progress"}
 {"ts":"2026-11-15T02:37:36.057Z","type":"feature-status","module":"ticket-repository","feature":"ticket-publication-buttons","from":"pending","to":"in-progress"}
@@ -1809,6 +1831,9 @@
 {"ts":"2026-11-15T13:54:53.489Z","type":"feature-status","module":"wiki","feature":"wiki-trash-detail","from":"pending","to":"in-progress"}
 {"ts":"2026-11-15T13:55:12.466Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"38d16367f63e4f1ea3b8e79cc57d4a6a6f1b5829"}
 {"ts":"2026-11-15T13:55:14.043Z","type":"feature-status","module":"wiki","feature":"wiki-trash-detail","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-15T13:57:37.973Z","type":"module-status","module":"wiki","from":"completed","to":"planned"}
+{"ts":"2026-11-15T13:57:39.493Z","type":"module-status","module":"wiki","from":"planned","to":"implementing"}
+{"ts":"2026-11-15T19:10:09.117Z","type":"feature-status","module":"wiki","feature":"wiki-trash-detail","from":"evaluating","to":"passing"}
 {"ts":"2026-11-16T03:22:15.631Z","type":"quick-opened","what":"PR #252 review follow-ups: tsvector prefix 150000, ponytail notes on rank mix and folder tree","files":["backend/src/main/resources/db/changelog/changes/040-wiki-tables.sql","docs/bug-log.md","backend/src/main/java/vn/tsolve/wiki/repository/WikiSearchRepository.java","frontend/src/features/wiki/components/FolderTree.tsx"]}
 {"ts":"2026-11-16T03:31:30.631Z","type":"quick-closed","what":"PR #252 review follow-ups: tsvector prefix 150000, ponytail notes on rank mix and folder tree","files":["backend/src/main/resources/db/changelog/changes/040-wiki-tables.sql","docs/bug-log.md","backend/src/main/java/vn/tsolve/wiki/repository/WikiSearchRepository.java","frontend/src/features/wiki/components/FolderTree.tsx"]}
 {"ts":"2026-11-16T03:46:34.297Z","type":"quick-opened","what":"BUG-292: a second Confirm racing a committed Confirm answers MSG30 instead of 404 (AC-004.12)","files":["backend/src/main/java/vn/tsolve/ticket/service/impl/ImportConfirmServiceImpl.java","backend/src/test/java/vn/tsolve/ticket/service/impl/ImportConfirmServiceImplTest.java","docs/bug-log.md"]}

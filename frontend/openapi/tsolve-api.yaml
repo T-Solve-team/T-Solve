@@ -41,6 +41,92 @@ tags:
   - name: dashboard
     description: Knowledge Dashboard figures, screen 9.1.
 paths:
+  /api/v1/wiki/spaces/{spaceId}/settings:
+    get:
+      tags: [wiki]
+      operationId: getWikiSpaceSettings
+      summary: Read a managed Space's header and View permissions.
+      description: The computed own Department is locked; stored Departments and users are sorted by name.
+      parameters:
+        - { name: spaceId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Space settings.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WikiSpaceSettings' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/wiki/spaces/{spaceId}/permission-candidates:
+    get:
+      tags: [wiki]
+      operationId: listWikiPermissionCandidates
+      summary: List Active Departments and users without a stored permission on a managed Space.
+      description: Excludes the own Department; each list is sorted by name.
+      parameters:
+        - { name: spaceId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Eligible grantees.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WikiPermissionCandidates' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/wiki/spaces/{spaceId}/permissions:
+    post:
+      tags: [wiki]
+      operationId: grantWikiPermissions
+      summary: Grant View on a managed Space to Departments and users.
+      description: >
+        Validate every id before storing anything. Skip already granted ids, including concurrent grants.
+        Record one audit entry per newly stored permission. An empty selection is 400 MSG01 on grantees;
+        an unknown or inactive grantee, or the own Department, is 404 MSG04.
+      parameters:
+        - { name: spaceId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GrantWikiPermissionsRequest' }
+      responses:
+        '201':
+          description: Permissions granted; no response body.
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/wiki/permissions/{permissionId}:
+    delete:
+      tags: [wiki]
+      operationId: revokeWikiPermission
+      summary: Revoke a stored permission of a managed Space.
+      description: >
+        Returns 404 MSG04 for an unknown permission or one outside the caller's managed Spaces.
+        The computed own Department permission cannot be removed. Other sources of View remain effective.
+      parameters:
+        - { name: permissionId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204':
+          description: Permission revoked; no response body.
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
   /api/v1/wiki/spaces:
     get:
       tags: [wiki]
@@ -2848,6 +2934,74 @@ components:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
   schemas:
+    WikiSpaceSettings:
+      type: object
+      required: [spaceId, name, departmentName, knowledgeManager, ownDepartment, departments, users]
+      properties:
+        spaceId: { type: string, format: uuid }
+        name: { type: string }
+        departmentName: { type: string }
+        knowledgeManager: { type: [string, 'null'], description: Knowledge Manager's full name. }
+        ownDepartment:
+          type: object
+          required: [departmentId, name, locked]
+          properties:
+            departmentId: { type: string, format: uuid }
+            name: { type: string }
+            locked: { type: boolean, const: true }
+        departments:
+          type: array
+          items:
+            type: object
+            required: [permissionId, departmentId, name, grantedBy, grantedAt]
+            properties:
+              permissionId: { type: string, format: uuid }
+              departmentId: { type: string, format: uuid }
+              name: { type: string }
+              grantedBy: { type: string, description: Granting user's full name. }
+              grantedAt: { type: string, format: date-time }
+        users:
+          type: array
+          items:
+            type: object
+            required: [permissionId, userId, fullName, email, homeDepartment, active, grantedBy, grantedAt]
+            properties:
+              permissionId: { type: string, format: uuid }
+              userId: { type: string, format: uuid }
+              fullName: { type: string }
+              email: { type: string, format: email }
+              homeDepartment: { type: [string, 'null'] }
+              active: { type: boolean }
+              grantedBy: { type: string, description: Granting user's full name. }
+              grantedAt: { type: string, format: date-time }
+    WikiPermissionCandidates:
+      type: object
+      required: [departments, users]
+      properties:
+        departments:
+          type: array
+          items:
+            type: object
+            required: [departmentId, name]
+            properties:
+              departmentId: { type: string, format: uuid }
+              name: { type: string }
+        users:
+          type: array
+          items:
+            type: object
+            required: [userId, fullName, email, homeDepartment]
+            properties:
+              userId: { type: string, format: uuid }
+              fullName: { type: string }
+              email: { type: string, format: email }
+              homeDepartment: { type: [string, 'null'] }
+    GrantWikiPermissionsRequest:
+      type: object
+      required: [departmentIds, userIds]
+      properties:
+        departmentIds: { type: array, items: { type: string, format: uuid } }
+        userIds: { type: array, items: { type: string, format: uuid } }
     WikiSpace:
       type: object
       required: [spaceId, name, departmentName, accessLevel]
