@@ -57,6 +57,10 @@ Conditions that would break it:
 - `handle_path`, `uri strip_prefix` or any rewrite of the path (R11 already rejects a rewritten path).
 - A port mismatch: the host in the signature is the authority of `FILE_STORAGE_PUBLIC_URL_PATTERN`. Locally Caddy must
   serve on port 80 and the pattern must be `http://{site}.localhost` with no port; any other port must appear in both.
+- Automatic HTTPS on `*.localhost`: Caddy treats `*.localhost` as eligible for automatic HTTPS (internal CA) and
+  redirects :80 to :443. A bare `*.localhost { … }` site makes the signed `GET` on `http://acme.localhost/…` a 308, and
+  `caddy-routing.test.sh` (curl without `-L`) sees 308, not 200. The local site address must be `http://*.localhost`
+  (scheme written out), or the global option `auto_https off`.
 - A `root_domain` in Garage's `garage.toml` that is a suffix of the site hosts (Garage would then take `acme` as a bucket
   name). Task 1's `garage.toml` should leave `root_domain` out.
 
@@ -64,7 +68,8 @@ Conditions that would break it:
 SigV4 puts the HTTP method in the canonical request, and `signedUrl` presigns `GetObject` only. A `HEAD` with that URL
 reaches Garage (Caddy allows it) and Garage refuses it (400 or 403, as for an expired URL, D16). Task 17's test line
 "HEAD allowed" can only mean "Caddy does not answer 405"; it cannot expect a 200. This is the same behaviour Edge #39
-asks for ("URL with a changed … method: refused").
+asks for ("URL with a changed … method: refused"). Design R11 therefore states that `HEAD` is only passed through, not
+served; AC-009.2 asks for no `HEAD` download. Presigning `HeadObject` as well waits until a criterion asks for it.
 
 ### 4. Downloaded, not rendered
 - `store` writes every object as `application/octet-stream` (`ObjectFileStorage.java:99`, asserted in
@@ -133,11 +138,14 @@ log {
 The script has no backend endpoint that returns a signed URL (none is in the platform spec). The simplest source is the
 `amazon/aws-cli` image on the compose network:
 - `s3api put-object` (internal endpoint `http://garage:3900`, `--content-type application/octet-stream`) for an HTML file;
-- `s3 presign` with `--endpoint-url http://acme.localhost`, `--region garage` and path-style addressing for the URL.
+- `s3 presign` with `--endpoint-url http://acme.localhost` and `--region garage` for the URL. `aws s3 presign` has no
+  path-style flag, so the test mounts an AWS config file (`AWS_CONFIG_FILE`) with `[default]`, `s3 =`,
+  `  addressing_style = path`. Without it the URL may be virtual-hosted (`<bucket>.acme.localhost`) and the GET fails
+  for a reason unrelated to the route.
 
 Then `curl` through Caddy checks: `GET` 200 with `nosniff` and `application/octet-stream`; `HEAD` not 405 (Garage
 refuses it, see 3); `PUT`/`POST`/`DELETE` 405; an altered signature and an unsigned request refused (400 or 403, D16);
-`docker logs caddy` holds no `X-Amz-Signature=` (Edge #40). The image is used by the test only.
+neither `docker logs caddy` nor `docker logs garage` holds `X-Amz-Signature=` (Edge #40). The image is used by the test only.
 
 ## Recommendations
 1. Keep KAN-265 deferred (D2) until Garage runs in the local stack (Task 1), the local Caddy exists (Task 11) and
@@ -146,12 +154,13 @@ refuses it, see 3); `PUT`/`POST`/`DELETE` 405; an altered signature and an unsig
    the `caddy` service of both compose files.
 3. Correct Task 17's test expectations: `HEAD` with a `GET`-signed URL is refused by Garage (not a 200), and refusals
    are 400 or 403 (D16, as in Edge #39).
-4. Give Tasks 1 and 11 two constraints: no `root_domain` in `garage.toml`, and a local public URL pattern
-   `http://{site}.localhost` with Caddy on port 80.
+4. Give Tasks 1 and 11 three constraints: no `root_domain` in `garage.toml`; a local public URL pattern
+   `http://{site}.localhost` with Caddy on port 80; the local site address `http://*.localhost` (or `auto_https off`).
 
 ## Open Questions
-- Does Garage log the request query string (and so the signature) at its default log level? Check in Task 1's
-  container logs. If it does, set Garage's log level or filter so Edge #40 also holds outside Caddy.
+- Does Garage log the request query string (and so the signature) at its default log level? Task 17's test now checks
+  `docker logs garage` for `X-Amz-Signature=`. If it fails, set Garage's log level or filter so Edge #40 also holds
+  outside Caddy.
 - Should the route exclude `admin.<domain>`? This spike says it is harmless. The owner of Task 14 decides when the
   site blocks are split.
 - The design still describes a custom Caddy image with wildcard certificates (Task 14), but `main` runs the stock image
