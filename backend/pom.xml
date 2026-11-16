@@ -27,6 +27,8 @@
         <jobrunr.version>8.6.0</jobrunr.version>
         <testcontainers.version>1.21.4</testcontainers.version>
         <aws-sdk.version>2.57.12</aws-sdk.version>
+        <pdfbox.version>3.0.4</pdfbox.version>
+        <poi.version>5.3.0</poi.version>
     </properties>
 
     <dependencyManagement>
@@ -42,6 +44,23 @@
     </dependencyManagement>
 
     <dependencies>
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>${pdfbox.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>${poi.version}</version>
+            <!-- Its commons-io 2.16.1 would win over the 2.17.0 that commons-csv needs (BUG-297). -->
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-io</groupId>
+                    <artifactId>commons-io</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
         <!-- Object storage (Garage) through the S3 API (W1); Apache 4 avoids Boot's Apache 5/Netty conflicts and Spring HTTP client switching. -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>

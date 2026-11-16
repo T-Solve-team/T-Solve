@@ -14,6 +14,7 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   TRACKER_CONFIGURATION_CHANGE: 'Tracker configuration change',
   DEPARTMENT_CHANGE: 'Department change',
   PROJECT_MEMBER_CHANGE: 'Project member change',
+  FOLDER_CHANGE: 'Folder change',
 };
 
 export function isAuditAction(value: string | null): value is AuditAction {

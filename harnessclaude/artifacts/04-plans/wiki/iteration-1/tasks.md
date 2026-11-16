@@ -160,3 +160,13 @@ Blockers: Tasks 6 and 9 need `FileStorage` (KAN-96) on `main`. AC-001.7 needs tr
 - Create: `frontend/src/features/wiki/components/GrantAccessModal.tsx`
 - Test: `frontend/src/features/wiki/pages/SpaceSettingsPage.test.tsx`
 **Tests:** AC-006.11 to AC-006.14.
+
+## Task 13: Trashed document view (PR #255 review)
+
+**Story:** STORY-005
+**Feature:** wiki-trash-detail
+**Description:** `inTrash` on `WikiDocumentDetail` (false on a normal read, true on the Knowledge Manager's trash read); 11.2 shows the StatusTag preset `IN_TRASH` ("In trash") and hides Download and Delete when `inTrash` is true. Also from the review: after a trash from 11.2, return to 11.1 with the document's Space selected.
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`, `backend/src/main/java/vn/tsolve/wiki/dto/WikiDocumentDetail.java`, `backend/src/main/java/vn/tsolve/wiki/repository/WikiSearchRepository.java`, `frontend/src/features/wiki/pages/WikiDocumentPage.tsx`, `frontend/src/shared/ui/StatusTag/status-tags.ts`
+- Test: `WikiBrowseIT.java` (or the existing trash IT), `WikiDocumentPage.test.tsx`
+**Tests:** AC-002.11, AC-005.4, AC-005.18.

@@ -33,6 +33,7 @@ the request belongs to; **discovery** = finding that database from the request (
 | 2026-11-07 | STORY-012 (new), STORY-011 | Add STORY-012 (KAN-131): after the suggestion job stores a suggestion, the tracker posts it on the issue as the MSG80 comment with the Workspace's Jira service account, once, and records the comment's id and time; AC-011.7 reworded so a rerun posts a comment that is still missing instead of stopping. Functional 2, Non-Functional 9, Out of Scope, Interface Contracts and Required from other modules follow | KAN-131 completes the flow "issue created → AI answers on the issue". User decisions of 07/11: the backend posts with the Workspace's Jira service account (`workspace.service_account_email` / `service_account_token`, created when a tenant is onboarded) rather than a Forge function or the Forge system token; a stand-in reads it from configuration until `workspace` is built; `suggestion_result` gets `jira_comment_id` and `commented_at`; MSG80 is posted without its "Related documents" sentence and names no source, so no Wiki access check or restricted title reaches the comment, which everyone who can see the issue reads — a deviation from SRS MSG80 (`{wiki_links}`) to tell the SRS author |
 | 2026-11-12 | STORY-013 | Add the Project module's read-only Jira project lookup, Browse check and deduplicated statuses; expose TrackerProjectService and extend TicketTrackerClient | KAN-127 (project-integration) needs the Browse check and the project's statuses; one Jira client per tracker module boundary, decisions D22, D46 of kan-127-decisions.md |
 | 2026-11-12 | STORY-013 | Correct client findProject return type to Optional<String>, empty on project 404; no acceptance criterion changes | Explicit RUN 2 contract, KAN-127 D56 |
+| 2026-11-16 | STORY-012, STORY-013 | KAN-344: new AC-012.9 — every `JiraClient` call sends the service account's scoped token as `Authorization: Bearer` to `https://api.atlassian.com/ex/jira/{cloudId}` instead of Basic auth on the site; `JiraAccount` becomes `(siteUrl, cloudId, apiToken)`. AC-013.10, AC-013.12, functional requirement 9, the service account term and Required from other modules follow | RESEARCH-003: a real service account's scoped token gets 401 on the site URL; user decisions of 16/11 (option B, no email, workspace and tracker in one PR) |
 
 ## Requirements
 
@@ -60,7 +61,8 @@ the request belongs to; **discovery** = finding that database from the request (
 8. The tracker runs inside one tenant database: it reads and writes tenant tables without a Workspace ID and
    never chooses or switches the database itself (discovery does).
 9. The MSG80 comment is posted with the Workspace's Jira service account, read from the `workspace` module for
-   each call; the tracker never stores, logs or returns its email or API token.
+   each call; the tracker never stores, logs or returns its API token. Every call the tracker makes with the service
+   account goes to the Atlassian API gateway with the scoped token as Bearer (AC-012.9).
 
 ## User Stories
 
@@ -125,7 +127,7 @@ the request belongs to; **discovery** = finding that database from the request (
 
 ### STORY-012: Post the suggestion on the issue (KAN-131)
 - As a reporter, I want the T-Solve suggestion to appear on my new issue as a comment so that I can try it without waiting for the team (UC-36, GBR-35).
-- Terms: **service account** = the Workspace's Jira account (`workspace.service_account_email` and its API token) that T-Solve uses to read and write Jira issues; **MSG80 comment** = MSG80 filled with the suggestion.
+- Terms: **service account** = the Workspace's Atlassian service account (the site's cloud id and its scoped API token, from `workspace`) that T-Solve uses to read and write Jira issues; **MSG80 comment** = MSG80 filled with the suggestion.
 - Acceptance:
   - AC-012.1: WHEN the suggestion job has stored a suggestion (AC-011.4), THE tracker SHALL add one comment to the issue in Jira with the service account, whose text is MSG80 with `{suggested_solution}` = the stored suggested solution and without its "Related documents" sentence.
   - AC-012.2: THE MSG80 comment SHALL never name, link or quote a source the suggestion was built from — neither a Wiki document nor a ticket; the sources stay only in the issue's suggestion result.
@@ -135,6 +137,7 @@ the request belongs to; **discovery** = finding that database from the request (
   - AC-012.6: WHEN the job stores no suggestion (AC-011.5), THE tracker SHALL add no comment.
   - AC-012.7: IF adding the comment fails (Jira unreachable, 5xx or 429, timeout), THEN THE suggestion job SHALL fail so that the job runner retries it, keep the stored suggestion, and log only the issue key, the HTTP status and the error type.
   - AC-012.8: IF the service account is missing, or Jira answers 401, 403 or 404, THEN THE tracker SHALL add no comment, keep the stored suggestion, end the job without a retry and log only the issue key and the reason.
+  - AC-012.9: WHEN the tracker calls Jira with the service account, THE tracker SHALL send the request to `https://api.atlassian.com/ex/jira/{cloudId}` + the REST path, with the cloud id of `JiraServiceAccount.current()` and the header `Authorization: Bearer <token>`, and no Basic authentication or email.
 
 ### STORY-013: Read a Jira project for the Project module (KAN-127)
 - As the Project module, I want to read the Jira project and its statuses using the Workspace's service account so that the Project Manager can test Browse projects and choose the initial Project settings without entering a token.
@@ -148,9 +151,9 @@ the request belongs to; **discovery** = finding that database from the request (
   - AC-013.7: IF either Jira read answers 5xx or 429, times out, is unreachable or does not answer, THEN THE tracker SHALL return `UNAVAILABLE` without a partial project result or an exception crossing the service boundary.
   - AC-013.8: IF a successful Jira response has no nonblank canonical key, a status has no nonblank id or name, or a response body is unreadable, THEN THE tracker SHALL return `UNAVAILABLE` (KAN-127 D53).
   - AC-013.9: WHEN both reads succeed and the statuses response is a valid empty array, THE tracker SHALL return `FOUND` with an empty statuses list.
-  - AC-013.10: THE lookup SHALL use `JiraServiceAccount.current()` and the existing `JiraClient` Basic authentication with a 5-second connect timeout and a 10-second read timeout, as STORY-012 does.
+  - AC-013.10: THE lookup SHALL use `JiraServiceAccount.current()` and the `JiraClient` gateway Bearer authentication of AC-012.9 with a 5-second connect timeout and a 10-second read timeout, as STORY-012 does.
   - AC-013.11: IF the project read fails, THEN THE tracker SHALL make no statuses call.
-  - AC-013.12: THE lookup's logs SHALL carry only the project key, HTTP status when available and lookup outcome, never the service-account email, API token or a Jira response body.
+  - AC-013.12: THE lookup's logs SHALL carry only the project key, HTTP status when available and lookup outcome, never the service-account API token or a Jira response body.
   - AC-013.13: THE lookup SHALL persist no data and return no service-account credential or Jira response body.
 
 ## Out of Scope
@@ -215,8 +218,8 @@ Malformed successful responses follow KAN-127 D53. The Project module maps outco
 endpoint or Forge authentication requirement.
 
 Decisions for this change: `artifacts/04-plans/project-integration/iteration-1/kan-127-decisions.md`, D22-D6,
-D46 and D53. Existing Basic authentication remains an interim limit for real scoped service-account tokens
-(D23, RESEARCH-003); this change does not implement gateway Bearer authentication.
+D46 and D53. Since KAN-344 (AC-012.9) every `JiraClient` call, these included, uses gateway Bearer authentication
+with the service account's scoped token (RESEARCH-003); `JiraAccount` is `(siteUrl, cloudId, apiToken)`.
 
 ### Required from other modules
 Declared by tracker as service interfaces it calls; the owners implement them (stubs until then).
@@ -228,7 +231,7 @@ Declared by tracker as service interfaces it calls; the owners implement them (s
 | `search` (KAN-47) | Suggest for a new issue: from its Project, summary and description, return the sources used and the suggested solution, or no suggestion (STORY-011; a configured stand-in until KAN-47) |
 | `worker` (KAN-102) | `TenantJobService.enqueue(handlerType, recordId)` and a `TenantJobHandler` the tracker registers; JobRunr runs it in the Workspace and retries a failed run (STORY-011; in-process when the worker is not enabled) |
 | `ticket` | Read the Solution Form state; save draft; submit (incl. empty) |
-| `workspace` | The Workspace's Jira site URL and service account (email, decrypted API token) — a stand-in that reads configuration until `workspace` is built (STORY-012) |
+| `workspace` | The Workspace's Jira service account: site URL, the site's cloud id and the decrypted scoped API token (`JiraServiceAccount.current()`, empty while missing) (STORY-012, AC-012.9) |
 | `identity` | Find the T-Solve user (and whether active) for a Jira accountId |
 | discovery | Run each Jira App API request against the tenant database of the FIT's site |
 

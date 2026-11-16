@@ -4,7 +4,6 @@ import { setDevUser } from '@/shared/auth';
 const SETUP = {
   companyName: 'Example Company',
   jiraSiteUrl: 'https://company.atlassian.net',
-  serviceAccountEmail: 'service@company.example',
   serviceAccountToken: 'fake-test-api-token',
 };
 
@@ -17,12 +16,10 @@ describe('Workspace mock contracts', () => {
     expect(info).toEqual({
       companyName: SETUP.companyName,
       jiraSiteUrl: SETUP.jiraSiteUrl,
-      serviceAccountEmail: SETUP.serviceAccountEmail,
     });
     expect(await getWorkspace()).toEqual(info);
     const changed = await updateWorkspace({
       companyName: 'Renamed Company',
-      serviceAccountEmail: SETUP.serviceAccountEmail,
     });
     expect(changed).toEqual({ ...info, companyName: 'Renamed Company' });
     expect(await getWorkspace()).toEqual(changed);

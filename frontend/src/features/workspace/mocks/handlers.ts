@@ -9,7 +9,6 @@ let workspace: WorkspaceInfo | undefined;
 const FIELDS = [
   ['companyName', 'Company name', 100],
   ['jiraSiteUrl', 'Jira site address', 200],
-  ['serviceAccountEmail', 'Service account email', 100],
 ] as const;
 
 function accessError() {
@@ -41,11 +40,6 @@ function validate(input: Record<string, unknown>, isSetup: boolean) {
     (typeof input.serviceAccountToken !== 'string' || !input.serviceAccountToken.trim())
   )
     return fieldError('serviceAccountToken', 'MSG01', { field_name: 'Service account API token' });
-  if (
-    typeof input.serviceAccountEmail === 'string' &&
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.serviceAccountEmail.trim())
-  )
-    return fieldError('serviceAccountEmail', 'MSG03');
   if (
     isSetup &&
     (typeof input.jiraSiteUrl !== 'string' ||
@@ -97,16 +91,11 @@ export const handlers: HttpHandler[] = [
     if (workspace)
       return HttpResponse.json({ status: 409, code: 'WORKSPACE_ALREADY_SET_UP' }, { status: 409 });
     // Narrow the JSON boundary before constructing the generated response type. Never retain the token.
-    if (
-      typeof input.companyName !== 'string' ||
-      typeof input.jiraSiteUrl !== 'string' ||
-      typeof input.serviceAccountEmail !== 'string'
-    )
+    if (typeof input.companyName !== 'string' || typeof input.jiraSiteUrl !== 'string')
       return problem(400);
     workspace = {
       companyName: input.companyName.trim(),
       jiraSiteUrl: input.jiraSiteUrl.trim().toLowerCase().replace(/\/$/, ''),
-      serviceAccountEmail: input.serviceAccountEmail.trim(),
     };
     return HttpResponse.json<WorkspaceInfo>(workspace, { status: 201 });
   }),
@@ -126,13 +115,8 @@ export const handlers: HttpHandler[] = [
     if (!isRecord(input)) return problem(400);
     const invalid = validate(input, false);
     if (invalid) return invalid;
-    if (typeof input.companyName !== 'string' || typeof input.serviceAccountEmail !== 'string')
-      return problem(400);
-    workspace = {
-      ...workspace,
-      companyName: input.companyName.trim(),
-      serviceAccountEmail: input.serviceAccountEmail.trim(),
-    };
+    if (typeof input.companyName !== 'string') return problem(400);
+    workspace = { ...workspace, companyName: input.companyName.trim() };
     return HttpResponse.json<WorkspaceInfo>(workspace);
   }),
   http.post('*/api/v1/departments', async ({ request }) => {

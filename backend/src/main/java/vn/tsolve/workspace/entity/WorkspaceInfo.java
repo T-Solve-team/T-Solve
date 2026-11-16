@@ -26,8 +26,12 @@ public class WorkspaceInfo {
     @Column(name = "jira_site_address", length = 255, updatable = false)
     private String jiraSiteAddress;
 
-    @Column(name = "service_account_email", length = 254)
+    // KAN-344: kept for rows written before the email field was removed; never written or read again.
+    @Column(name = "service_account_email", length = 254, insertable = false, updatable = false)
     private String serviceAccountEmail;
+
+    @Column(name = "jira_cloud_id", length = 36)
+    private String jiraCloudId;
 
     @Column(name = "service_account_api_token", columnDefinition = "text")
     private String serviceAccountApiToken;
@@ -38,15 +42,18 @@ public class WorkspaceInfo {
     protected WorkspaceInfo() {}
 
     public WorkspaceInfo(
-            UUID id,
-            String companyName,
-            String jiraSiteAddress,
-            String serviceAccountEmail,
-            String serviceAccountApiToken) {
+            UUID id, String companyName, String jiraSiteAddress, String jiraCloudId, String serviceAccountApiToken) {
         this.id = id;
         this.companyName = companyName;
         this.jiraSiteAddress = jiraSiteAddress;
-        this.serviceAccountEmail = serviceAccountEmail;
+        this.jiraCloudId = jiraCloudId;
+        this.serviceAccountApiToken = serviceAccountApiToken;
+    }
+
+    /** Settings (UC-11): the site stays; a replaced token comes with the cloud id it was checked against. */
+    public void update(String companyName, String jiraCloudId, String serviceAccountApiToken) {
+        this.companyName = companyName;
+        this.jiraCloudId = jiraCloudId;
         this.serviceAccountApiToken = serviceAccountApiToken;
     }
 
@@ -66,8 +73,8 @@ public class WorkspaceInfo {
         return jiraSiteAddress;
     }
 
-    public String getServiceAccountEmail() {
-        return serviceAccountEmail;
+    public String getJiraCloudId() {
+        return jiraCloudId;
     }
 
     @JsonIgnore

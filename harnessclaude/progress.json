@@ -167,9 +167,12 @@
         "workspace-setup-screen": "passing",
         "workspace-settings-screen": "passing",
         "rename-department-api": "passing",
-        "rename-department-screen": "passing"
+        "rename-department-screen": "passing",
+        "workspace-token-hint": "pending",
+        "jira-cloud-id": "evaluating",
+        "workspace-form-no-email": "evaluating"
       },
-      "lastUpdated": "2026-11-12T19:46:35.915Z",
+      "lastUpdated": "2026-11-16T14:29:51.789Z",
       "branch": "feat/workspace",
       "repos": [
         "default"
@@ -204,23 +207,31 @@
       }
     },
     "wiki": {
-      "status": "planned",
-      "currentPhase": "plan",
+      "status": "implementing",
+      "currentPhase": "implement",
       "features": {
-        "wiki-view-rule": "pending",
-        "wiki-browse-api": "pending",
-        "wiki-home-ui": "pending",
-        "wiki-folder-api": "pending",
-        "wiki-folder-ui": "pending",
-        "wiki-upload-api": "pending",
-        "wiki-indexing": "pending",
-        "wiki-upload-ui": "pending",
-        "wiki-trash-api": "pending",
-        "wiki-trash-ui": "pending",
-        "wiki-permissions-api": "pending",
-        "wiki-permissions-ui": "pending"
+        "wiki-view-rule": "passing",
+        "wiki-browse-api": "passing",
+        "wiki-home-ui": "passing",
+        "wiki-folder-api": "passing",
+        "wiki-folder-ui": "passing",
+        "wiki-upload-api": "passing",
+        "wiki-indexing": "passing",
+        "wiki-upload-ui": "passing",
+        "wiki-trash-api": "passing",
+        "wiki-trash-ui": "passing",
+        "wiki-permissions-api": "passing",
+        "wiki-permissions-ui": "passing",
+        "wiki-trash-detail": "passing"
       },
-      "lastUpdated": "2026-11-13T16:53:08.292Z"
+      "lastUpdated": "2026-11-15T19:10:09.115Z",
+      "branch": "feat/wiki",
+      "repos": [
+        "default"
+      ],
+      "lastCommit": {
+        "default": "38d16367f63e4f1ea3b8e79cc57d4a6a6f1b5829"
+      }
     },
     "ticket-repository": {
       "status": "implementing",
@@ -255,9 +266,10 @@
         "ticket-publication": "passing",
         "ticket-publication-buttons": "passing",
         "ticket-decision-table": "passing",
-        "drop-legacy-solution-tables": "passing"
+        "drop-legacy-solution-tables": "passing",
+        "jira-import-workspace-account": "evaluating"
       },
-      "lastUpdated": "2026-11-15T19:54:14.191Z",
+      "lastUpdated": "2026-11-16T15:24:32.576Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
@@ -510,9 +522,10 @@
         "suggestion-job-worker": "passing",
         "suggestion-uuid-keys": "evaluating",
         "suggestion-comment": "passing",
-        "jira-project-read": "passing"
+        "jira-project-read": "passing",
+        "jira-gateway-bearer": "evaluating"
       },
-      "lastUpdated": "2026-11-13T09:41:30.891Z",
+      "lastUpdated": "2026-11-16T14:29:52.260Z",
       "branch": "feat/tracker",
       "repos": [
         "default"

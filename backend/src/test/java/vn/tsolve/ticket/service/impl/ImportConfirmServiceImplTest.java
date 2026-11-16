@@ -466,4 +466,15 @@ class ImportConfirmServiceImplTest {
         assertThat(result.created()).isEqualTo(2);
         verify(rows, never()).countByIdPreviewIdAndStatus(PREVIEW, PreviewRowStatus.NEEDS_SOLUTION);
     }
+
+    @Test
+    void aConfirmThatCommitsBetweenTheReadsOfASecondConfirmMakesIt404_BUG_292() {
+        // the first Confirm commits after the second read the preview: its rows and the preview are gone
+        ImportPreview preview = previews.findByIdAndOwner(PREVIEW, PM).orElseThrow();
+        when(previews.findByIdAndOwner(PREVIEW, PM)).thenReturn(Optional.of(preview), Optional.empty());
+        when(rows.findByIdPreviewIdAndStatus(PREVIEW, PreviewRowStatus.VALID)).thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.confirm(PM, PREVIEW)).isInstanceOf(NotFoundException.class);
+        verify(recorder, never()).recordFailed(any(), any(), anyString());
+    }
 }

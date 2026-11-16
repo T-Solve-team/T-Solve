@@ -154,3 +154,21 @@ restores loaded values; shared error state with retry.
 - Test: `frontend/src/features/workspace/pages/WorkspaceSettingsPage.test.tsx` (edge 19)
 **Dependencies:** Task 5, Task 7
 **Estimated size:** medium
+
+---
+
+## Task 9: Masked current token on 2.2 (change request of 16/11)
+
+**Story:** STORY-006, STORY-010, STORY-011
+**Feature:** workspace-token-hint
+**Description:** `WorkspaceInfo` gains `serviceAccountTokenSet` and `serviceAccountTokenHint` (AC-006.5): the mapper
+decrypts the stored token only to take its last four characters, and answers a null hint when there is no token, it
+cannot be decrypted, or it has fewer than 12 characters; nothing else of the token (length, ciphertext) leaves the
+backend (AC-006.2, AC-011.7). Contract first: `frontend/openapi/tsolve-api.yaml`, then `npm run generate:api`. 2.2 shows
+the read-only "Current token" (twelve `•` + hint, no reveal, no copy, not a form field) above the token input
+(AC-010.7), or "Not set" without the keep-current hint (AC-010.8, also closes BUG-294's token half).
+**Files:**
+- Modify: `backend/src/main/java/vn/tsolve/workspace/dto/WorkspaceInfoResponse.java`, `backend/src/main/java/vn/tsolve/workspace/dto/WorkspaceInfoMapper.java`, `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**` (generated), `frontend/src/features/workspace/components/WorkspaceInfoForm.tsx`, `frontend/src/features/workspace/mocks/handlers.ts`
+- Test: `backend/src/test/java/vn/tsolve/workspace/dto/WorkspaceInfoMapperTest.java` (hint, short token, undecryptable, no token; no other token text in the JSON), `WorkspaceControllerIT` (AC-006.5 on GET/PUT/Setup), `frontend/src/features/workspace/pages/WorkspaceSettingsPage.test.tsx` (AC-010.7, AC-010.8)
+**Dependencies:** Task 5, Task 8
+**Estimated size:** small
