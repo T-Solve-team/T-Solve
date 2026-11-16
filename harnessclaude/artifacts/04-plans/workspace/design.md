@@ -561,3 +561,14 @@ Open questions for the spec owner: none.
 | 18 | STORY-009 | UX | 409 response | Medium | No error, go to 2.2 | Task 7 |
 | 19 | STORY-010 | UX | Token never shown, empty means keep | High | Field empty; PUT omits token | Task 8 |
 | 20 | STORY-006 | Access | Non-Admin calls any endpoint | High | 403 | Task 4, Task 5 |
+
+## Change 2026-11-16: Jira service account through the gateway (KAN-344)
+
+| Decision | Chosen | Alternatives | Rationale |
+|---|---|---|---|
+| Authentication | Scoped API token of an Atlassian service account, `Authorization: Bearer` to `https://api.atlassian.com/ex/jira/{cloudId}` (AC-011.1) | Basic email + token on the site URL (kept by tracker until now) | User decision 16/11 (option B): a real service account only has scoped tokens, which get 401 on the site URL (RESEARCH-003); least privilege, not tied to a person |
+| Email field | Removed from Setup, Settings, the API and the audit; `service_account_email` column kept, no longer written or read | Keep it optional | Bearer needs no email; a dead field misleads the Admin (user, 16/11) |
+| Cloud id store | New nullable column `workspace.jira_cloud_id VARCHAR(36)`, filled at Setup and when a token is replaced on a row that has none (AC-005.6, AC-007.11) | The platform catalog (`tenant_workspace.jira_cloud_id`, platform AC-004.19) | The catalog link is not built (platform Task 18); the tenant row needs no other module. When the catalog lands, `current()` may read it instead |
+| Reading the cloud id | `JiraSiteLinker` gains `readCloudId(site)`: the same no-redirect `/_edge/tenant_info` read as `linkJiraSite`, called **before** the check and outside the transaction; only a canonical UUID is accepted (AC-011.8) | Call `linkJiraSite` before the check | The check needs the cloud id first; `linkJiraSite` stays the in-transaction link of AC-005.8 for the future catalog |
+| Old rows | `current()` answers empty while `jira_cloud_id` is null (AC-008.4); the Admin enters a new (scoped) token, which fills it (AC-007.11) | Backfill by a job | Old rows hold classic tokens that cannot work with Bearer anyway; the Admin must re-enter the token |
+| PR | Workspace and tracker in one PR (KAN-344); the import follows in its own PR | Separate PRs | The check is `JiraClient.checkServiceAccount` and `JiraAccount` is tracker's type; one `http()` builder serves every call |

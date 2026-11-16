@@ -168,9 +168,11 @@
         "workspace-settings-screen": "passing",
         "rename-department-api": "passing",
         "rename-department-screen": "passing",
-        "workspace-token-hint": "pending"
+        "workspace-token-hint": "pending",
+        "jira-cloud-id": "pending",
+        "workspace-form-no-email": "pending"
       },
-      "lastUpdated": "2026-11-16T13:53:48.894Z",
+      "lastUpdated": "2026-11-16T14:02:32.686Z",
       "branch": "feat/workspace",
       "repos": [
         "default"
@@ -519,9 +521,10 @@
         "suggestion-job-worker": "passing",
         "suggestion-uuid-keys": "evaluating",
         "suggestion-comment": "passing",
-        "jira-project-read": "passing"
+        "jira-project-read": "passing",
+        "jira-gateway-bearer": "pending"
       },
-      "lastUpdated": "2026-11-13T09:41:30.891Z",
+      "lastUpdated": "2026-11-16T14:02:32.913Z",
       "branch": "feat/tracker",
       "repos": [
         "default"
