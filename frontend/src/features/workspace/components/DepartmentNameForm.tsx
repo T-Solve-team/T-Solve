@@ -1,6 +1,6 @@
 import { Button, Descriptions, Flex, Form, Input } from 'antd';
 import { useEffect, useRef, useState } from 'react';
-import type { DepartmentRef, UpdateDepartmentRequest } from '@/shared/api';
+import type { DepartmentDetail, UpdateDepartmentRequest } from '@/shared/api';
 import { applyApiErrors, rules } from '@/shared/forms';
 import { showMessage } from '@/shared/messages';
 import { AppForm, FormField } from '@/shared/ui';
@@ -8,7 +8,7 @@ import { useRenameDepartment } from '../hooks/useDepartmentMutations';
 
 type DepartmentFormValues = Pick<UpdateDepartmentRequest, 'name'>;
 
-type DepartmentNameFormProps = { department: DepartmentRef };
+type DepartmentNameFormProps = { department: DepartmentDetail };
 
 /** 2.3 Department Detail — the name and its inline rename form, UC-13. */
 export function DepartmentNameForm({ department }: DepartmentNameFormProps) {
@@ -35,7 +35,14 @@ export function DepartmentNameForm({ department }: DepartmentNameFormProps) {
     if (isSubmitting.current) return;
     isSubmitting.current = true;
     rename.mutate(
-      { departmentId: department.departmentId, data: { name: values.name.trim() } },
+      {
+        departmentId: department.departmentId,
+        data: {
+          name: values.name.trim(),
+          // A rename keeps the default Project: absent or null would clear it (K121-D29).
+          defaultProjectId: department.defaultProject?.projectId ?? null,
+        },
+      },
       {
         onSuccess: closeForm,
         onSettled: () => {

@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse, type HttpHandler } from 'msw';
-import type { DepartmentRef, WorkspaceInfo } from '@/shared/api';
+import type { DepartmentDetail, DepartmentRef, WorkspaceInfo } from '@/shared/api';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
 import { getDevUser } from '@/shared/auth';
 import type { MsgCode, MsgParams } from '@/shared/messages';
@@ -57,6 +57,13 @@ const seed = (): DepartmentRef[] => [
   { departmentId: '00000000-0000-4000-8000-0000000000d2', name: 'HR' },
 ];
 let departments: DepartmentRef[] = seed();
+
+// No default Project and no Projects until the select of 2.3 is built (Task 13).
+const detail = (department: DepartmentRef): DepartmentDetail => ({
+  ...department,
+  defaultProject: null,
+  projects: [],
+});
 
 function departmentNameError(code: MsgCode, params?: MsgParams, status = 400) {
   return problem(status, code, { params, fieldErrors: [{ field: 'name', code, params }] });
@@ -134,7 +141,7 @@ export const handlers: HttpHandler[] = [
   http.get('*/api/v1/departments/:departmentId', async ({ params }) => {
     await delay(MOCK_DELAY_MS);
     const found = departments.find((d) => d.departmentId === params.departmentId);
-    return found ? HttpResponse.json<DepartmentRef>(found) : problem(404, 'MSG04');
+    return found ? HttpResponse.json<DepartmentDetail>(detail(found)) : problem(404, 'MSG04');
   }),
   http.put('*/api/v1/departments/:departmentId', async ({ params, request }) => {
     await delay(MOCK_DELAY_MS);
@@ -144,7 +151,7 @@ export const handlers: HttpHandler[] = [
     const invalid = checkName(name, found.departmentId);
     if (invalid) return invalid;
     found.name = String(name).trim();
-    return HttpResponse.json<DepartmentRef>(found);
+    return HttpResponse.json<DepartmentDetail>(detail(found));
   }),
 ];
 

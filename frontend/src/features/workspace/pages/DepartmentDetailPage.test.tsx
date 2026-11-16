@@ -178,7 +178,7 @@ describe('DepartmentDetailPage', () => {
       const input = await typeName(user, '  IT Support  ');
       const save = saveButton();
       await user.dblClick(save);
-      await waitFor(() => expect(bodies).toEqual([{ name: 'IT Support' }]));
+      await waitFor(() => expect(bodies).toEqual([{ name: 'IT Support', defaultProjectId: null }]));
       expect(save).toBeDisabled();
       await user.click(save);
       expect(input).toBeInTheDocument();
@@ -404,7 +404,12 @@ describe('Department mock handlers', () => {
         fieldErrors: [{ field: 'name', code }],
       });
     }
-    expect(await getDepartment(IT_ID)).toEqual({ departmentId: IT_ID, name: 'IT' });
+    expect(await getDepartment(IT_ID)).toEqual({
+      departmentId: IT_ID,
+      name: 'IT',
+      defaultProject: null,
+      projects: [],
+    });
   });
 
   it('reserves seeded and newly created names ignoring case, and allows a case-only rename of itself', async () => {
@@ -421,8 +426,15 @@ describe('Department mock handlers', () => {
     expect(await updateDepartment(IT_ID, { name: ' it ' })).toEqual({
       departmentId: IT_ID,
       name: 'it',
+      defaultProject: null,
+      projects: [],
     });
-    expect(await getDepartment(IT_ID)).toEqual({ departmentId: IT_ID, name: 'it' });
+    expect(await getDepartment(IT_ID)).toEqual({
+      departmentId: IT_ID,
+      name: 'it',
+      defaultProject: null,
+      projects: [],
+    });
   });
 
   it('restores both seeds and removes created Departments on reset', async () => {
@@ -430,8 +442,18 @@ describe('Department mock handlers', () => {
     await updateDepartment(IT_ID, { name: 'Engineering' });
     await updateDepartment(HR_ID, { name: 'People' });
     resetMockData();
-    expect(await getDepartment(IT_ID)).toEqual({ departmentId: IT_ID, name: 'IT' });
-    expect(await getDepartment(HR_ID)).toEqual({ departmentId: HR_ID, name: 'HR' });
+    expect(await getDepartment(IT_ID)).toEqual({
+      departmentId: IT_ID,
+      name: 'IT',
+      defaultProject: null,
+      projects: [],
+    });
+    expect(await getDepartment(HR_ID)).toEqual({
+      departmentId: HR_ID,
+      name: 'HR',
+      defaultProject: null,
+      projects: [],
+    });
     await expect(getDepartment(created.departmentId)).rejects.toMatchObject({
       status: 404,
       code: 'MSG04',
