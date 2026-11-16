@@ -255,7 +255,11 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
                                 ? ticket.getRejectionReason()
                                 : ticket.getChangeRequestComment())
                         : null,
-                projectManager
+                // deciding stays with the active Projects the decision service checks (managedProjectIds); AC-008.2
+                // widens only reading
+                manager
+                        && project != null
+                        && project.managed()
                         && ticket.getSource() == TicketSource.SOLUTION_FORM
                         && ticket.getStatus() == TicketStatus.PENDING_REVIEW);
     }

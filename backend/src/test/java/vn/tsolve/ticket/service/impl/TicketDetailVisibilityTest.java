@@ -2,7 +2,6 @@ package vn.tsolve.ticket.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -108,6 +107,23 @@ class TicketDetailVisibilityTest {
     }
 
     @Test
+    void nonPublishedNonManagerOfAnInactiveProjectIsDenied_AC_008_2_BUG_312() {
+        ticket(TicketStatus.UNPUBLISHED, null);
+        when(tickets.isProjectManager(PROJECT, CALLER)).thenReturn(false);
+        assertThatThrownBy(() -> reads.detail(Map.of(), CALLER, true, ID)).isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void pendingSolutionFormOfAnInactiveProjectIsReadableButNotDecidable_AC_008_2_BUG_312() {
+        // the decision service checks only active Projects, so the manager must not get an Approve/Reject that 403s
+        ticket(TicketStatus.PENDING_REVIEW, null);
+        when(tickets.isProjectManager(PROJECT, CALLER)).thenReturn(true);
+        var detail = reads.detail(Map.of(), CALLER, true, ID);
+        assertThat(detail.ticketId()).isEqualTo(ID);
+        assertThat(detail.canDecide()).isFalse();
+    }
+
+    @Test
     @DisplayName("AC-008.2 AC-008.4 denies a Department manager who does not manage this Project")
     void pendingOtherProjectManager() {
         ticket(TicketStatus.PENDING_REVIEW, null);
@@ -176,8 +192,7 @@ class TicketDetailVisibilityTest {
         when(tickets.findPlacement(PROJECT)).thenReturn(Optional.of(placement));
     }
 
-    private Map<UUID, ProjectAccess> projects(boolean managed) {
-        lenient().when(tickets.isProjectManager(PROJECT, CALLER)).thenReturn(managed);
+    private static Map<UUID, ProjectAccess> projects(boolean managed) {
         return Map.of(PROJECT, new ProjectAccess(new Project(PROJECT, "DETAIL"), DEPARTMENT, managed));
     }
 }
