@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -72,6 +73,11 @@ class MembershipVisibleScopeIT {
         ticket(hrProject, "HR-1", "PUBLISHED", "Other", null);
         ticket(itProject, "ITS-2", "PENDING_REVIEW", "Other", null);
         ticket(hrProject, "HR-2", "PENDING_REVIEW", "Other", null);
+    }
+    /** Shared tenant database: leave no Department behind for other ITs (unique Department names). */
+    @AfterEach
+    void cleanUp() {
+        jdbc.execute("TRUNCATE ticket, project, department, app_user CASCADE");
     }
 
     @Test
