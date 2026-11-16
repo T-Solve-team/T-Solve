@@ -8,26 +8,40 @@ import {
   useDeleteWikiDocumentPermanently,
   useRestoreWikiDocument,
   useTrashWikiDocument,
+  type WikiDocumentDetail,
 } from '@/shared/api';
 import { showMessage } from '@/shared/messages';
 
 /** Keep cached document views consistent across trash, restore and permanent deletion. */
 export function useWikiTrashMutations(spaceId: string) {
   const client = useQueryClient();
-  function refresh(documentId: string) {
+  /** Drop the document's cached view so the next visit reads its new state. */
+  function forgetDocument(documentId: string) {
+    client.removeQueries({ queryKey: getGetWikiDocumentQueryKey(documentId), exact: true });
+  }
+  function refreshLists() {
     return Promise.all([
       client.invalidateQueries({ queryKey: getListWikiTrashQueryKey(spaceId) }),
       client.invalidateQueries({ queryKey: getListWikiDocumentsQueryKey(spaceId) }),
       client.invalidateQueries({ queryKey: getListCompanyWideDocumentsQueryKey() }),
       client.invalidateQueries({ queryKey: getSearchWikiDocumentsQueryKey() }),
-      client.invalidateQueries({ queryKey: getGetWikiDocumentQueryKey(documentId) }),
     ]);
   }
   const trash = useTrashWikiDocument({
     mutation: {
+      // The document page is still mounted here, and removing or refetching its query would refetch the page
+      // being left. Mark the cached view as in trash and stale instead: no request now, and the next visit
+      // shows the read-only view while it refetches (BUG-302).
       onSuccess: (_, { documentId }) => {
         showMessage('MSG101');
-        return refresh(documentId);
+        const queryKey = getGetWikiDocumentQueryKey(documentId);
+        client.setQueryData(
+          queryKey,
+          (old: WikiDocumentDetail | undefined) =>
+            old && { ...old, inTrash: true, canDelete: false },
+        );
+        void client.invalidateQueries({ queryKey, exact: true, refetchType: 'none' });
+        return refreshLists();
       },
     },
   });
@@ -35,7 +49,8 @@ export function useWikiTrashMutations(spaceId: string) {
     mutation: {
       onSuccess: (_, { documentId }) => {
         showMessage('MSG102');
-        return refresh(documentId);
+        forgetDocument(documentId);
+        return refreshLists();
       },
     },
   });
@@ -43,7 +58,8 @@ export function useWikiTrashMutations(spaceId: string) {
     mutation: {
       onSuccess: (_, { documentId }) => {
         showMessage('MSG05');
-        return refresh(documentId);
+        forgetDocument(documentId);
+        return refreshLists();
       },
     },
   });

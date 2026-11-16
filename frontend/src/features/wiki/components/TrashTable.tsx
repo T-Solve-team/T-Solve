@@ -54,7 +54,15 @@ export function TrashTable({ spaceId }: TrashTableProps) {
           >
             Restore
           </Button>
-          <Button danger disabled={isBusy} onClick={() => setSelected(row)}>
+          <Button
+            danger
+            disabled={isBusy}
+            onClick={() => {
+              // The MSG84 notice belongs to the last restore only (BUG-303).
+              restore.reset();
+              setSelected(row);
+            }}
+          >
             Delete permanently
           </Button>
         </Space>

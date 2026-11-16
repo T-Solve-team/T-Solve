@@ -65,6 +65,29 @@ describe('WikiDocumentPage', () => {
     await waitFor(() => expect(view.queryClient.isFetching()).toBe(0));
   });
 
+  it('AC-005.13 returns to 11.1 without refetching the trashed document first (BUG-302)', async () => {
+    const read = vi.fn();
+    server.use(
+      // Other GET routes of the same shape (Wiki Home's lists) fall through to the default mocks.
+      http.get('*/api/v1/wiki/documents/:documentId', ({ params }) => {
+        if (params.documentId !== ID) return undefined;
+        read();
+        return HttpResponse.json({ ...document, canDelete: true });
+      }),
+      http.delete(
+        '*/api/v1/wiki/documents/:documentId',
+        () => new HttpResponse(null, { status: 204 }),
+      ),
+    );
+    const user = userEvent.setup();
+    const view = renderApp(paths.wikiDocument(ID), { role: 'KNOWLEDGE_MANAGER' });
+    await user.click(await screen.findByRole('button', { name: 'Delete' }, { timeout: 5000 }));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'OK' }));
+    await waitFor(() => expect(view.router.state.location.pathname).toBe(paths.wikiHome));
+    await waitFor(() => expect(view.queryClient.isFetching()).toBe(0));
+    expect(read).toHaveBeenCalledOnce();
+  });
+
   it('AC-005.18 shows the In trash tag and neither Download nor Delete for a trashed document', async () => {
     server.use(getGetWikiDocumentMockHandler({ ...document, inTrash: true }));
     renderApp(paths.wikiDocument(ID), { role: 'KNOWLEDGE_MANAGER' });

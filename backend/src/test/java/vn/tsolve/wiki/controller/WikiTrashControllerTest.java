@@ -134,11 +134,15 @@ class WikiTrashControllerTest {
 
     @Test
     @WithTSolveUser
-    void rejectsEmployeeTrashListing_AC_005_10() throws Exception {
+    void letsServiceAnswerEmployeeTrashListing_AC_002_6_AC_005_10_BUG_300() throws Exception {
+        when(trash.listTrash(USER, ID)).thenThrow(new AccessDeniedException("MSG08"));
         mvc.perform(request("LIST"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("MSG08"));
-        verifyNoInteractions(trash);
+        doThrow(new NotFoundException("MSG04", Map.of())).when(trash).listTrash(USER, ID);
+        mvc.perform(request("LIST"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("MSG04"));
     }
 
     @ParameterizedTest
