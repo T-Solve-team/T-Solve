@@ -1172,8 +1172,8 @@
     }
   },
   "ticket-repository": {
-    "specHash": "67ed1ed4b39cb1337c764e9c67ff67a57ffb8b512448017e299b118bb688a4ad",
-    "approvedAt": "2026-11-15T04:15:25.121Z",
+    "specHash": "8eb9089eef37020949b16ac61c5584a9e9d13492a4207c87fe204ec0ce6a815b",
+    "approvedAt": "2026-11-16T15:20:54.291Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager pulls issues for an Active Project they manage with a valid date range, THE system SHALL read from Jira the issues of the Project's Jira project whose resolution date falls within the range (both dates included, Vietnam time), skip every issue whose Jira key is already a Ticket ID, keep at most 100 issues ordered by resolution date oldest first, and create an Import Preview of source Jira with one row per kept issue, numbered from 1 in that order, each with the result Needs Solution.",
@@ -1187,7 +1187,8 @@
       "AC-001.9": "IF the caller does not have the Project Manager role, THEN THE system SHALL reject the pull with HTTP 403 (MSG08).",
       "AC-001.10": "WHEN a pull creates a preview, THE system SHALL delete the caller's previous unconfirmed preview that is not a Draft, if any.",
       "AC-001.11": "IF a Jira call answers HTTP 429, or HTTP 503 with a  header, and  is at most 5 seconds, THEN THE system SHALL wait that many seconds and send the same call again, at most 2 times per call; a missing  on a 429 counts as 1 second, and a  above 5 seconds ends the retries at once.",
-      "AC-001.12": "WHEN the system calls Jira for a pull, THE system SHALL send the configured API token as  to  with the configured cloud id, and SHALL build each row's link to the issue as the configured Jira site URL + .",
+      "AC-001.12": "WHEN the system calls Jira for a pull, THE system SHALL take the bound Workspace's service account from  at the start of that pull, send its token as  to  with its cloud id, and build each row's link to the issue as its site URL + .",
+      "AC-001.14": "IF  returns no account (the Workspace is not set up, has no cloud id yet, or its token cannot be decrypted), THEN THE system SHALL make no Jira call and answer as in AC-001.7 for a connection that is not configured: MSG50, no preview, one Failed Import Batch of source Jira with 0 published.",
       "AC-001.13": "IF reading Jira for one pull — every page, comment call and retry together — takes more than 60 seconds, THEN THE system SHALL stop reading and answer as in AC-001.7: MSG50 with an error message that contains no credential, no preview, and one Import Batch of source Jira with status Failed and 0 published.",
       "AC-002.1": "WHEN the Project Manager lists the rows of a Jira preview, THE system SHALL return them page by page (at most 100 per page) in row-number order with the Jira key, summary, assignee, resolved date and result (Needs Solution or Valid), and the preview SHALL report its source Jira, its date range, the number of rows and the number of Needs Solution rows.",
       "AC-002.2": "WHEN the Project Manager opens one row of a Jira preview, THE system SHALL return its full snapshot (AC-001.2) and its Solution, if any.",
