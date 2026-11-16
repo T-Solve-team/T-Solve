@@ -267,9 +267,9 @@
         "ticket-publication-buttons": "passing",
         "ticket-decision-table": "passing",
         "drop-legacy-solution-tables": "passing",
-        "jira-import-workspace-account": "evaluating"
+        "jira-import-workspace-account": "passing"
       },
-      "lastUpdated": "2026-11-16T15:24:32.576Z",
+      "lastUpdated": "2026-11-16T17:48:57.779Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"

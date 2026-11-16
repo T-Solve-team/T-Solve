@@ -1819,25 +1819,6 @@
 {"ts":"2026-11-15T06:14:01.037Z","type":"feature-status","module":"ticket-repository","feature":"ticket-decision-table","from":null,"to":"pending"}
 {"ts":"2026-11-15T06:14:01.273Z","type":"feature-status","module":"ticket-repository","feature":"drop-legacy-solution-tables","from":null,"to":"pending"}
 {"ts":"2026-11-15T06:15:28.331Z","type":"spec-approved","module":"ticket-repository","specHash":"a8ff743ebfbb26695e43c6f55435fd1a3aecf2d41f9d853d00c4deca64f743ef"}
-{"ts":"2026-11-15T19:54:09.630Z","type":"feature-status","module":"ticket-repository","feature":"import-batch-date-range","from":"pending","to":"in-progress"}
-{"ts":"2026-11-15T19:54:09.893Z","type":"feature-status","module":"ticket-repository","feature":"import-batch-date-range","from":"in-progress","to":"evaluating"}
-{"ts":"2026-11-15T19:54:10.160Z","type":"feature-status","module":"ticket-repository","feature":"import-history-api","from":"pending","to":"in-progress"}
-{"ts":"2026-11-15T19:54:10.444Z","type":"feature-status","module":"ticket-repository","feature":"import-history-api","from":"in-progress","to":"evaluating"}
-{"ts":"2026-11-15T19:54:10.707Z","type":"feature-status","module":"ticket-repository","feature":"import-history-page","from":"pending","to":"in-progress"}
-{"ts":"2026-11-15T19:54:10.965Z","type":"feature-status","module":"ticket-repository","feature":"import-history-page","from":"in-progress","to":"evaluating"}
-{"ts":"2026-11-15T19:54:11.232Z","type":"feature-status","module":"ticket-repository","feature":"ticket-detail-scope","from":"pending","to":"in-progress"}
-{"ts":"2026-11-15T19:54:11.501Z","type":"feature-status","module":"ticket-repository","feature":"ticket-detail-scope","from":"in-progress","to":"evaluating"}
-{"ts":"2026-11-15T19:54:11.765Z","type":"feature-status","module":"ticket-repository","feature":"ticket-detail-page","from":"pending","to":"in-progress"}
-{"ts":"2026-11-15T19:54:12.030Z","type":"feature-status","module":"ticket-repository","feature":"ticket-detail-page","from":"in-progress","to":"evaluating"}
-{"ts":"2026-11-15T19:54:12.333Z","type":"feature-status","module":"ticket-repository","feature":"jira-pull-deadline","from":"evaluating","to":"passing"}
-{"ts":"2026-11-15T19:54:12.604Z","type":"feature-status","module":"ticket-repository","feature":"import-batch-date-range","from":"evaluating","to":"passing"}
-{"ts":"2026-11-15T19:54:12.869Z","type":"feature-status","module":"ticket-repository","feature":"import-history-api","from":"evaluating","to":"passing"}
-{"ts":"2026-11-15T19:54:13.131Z","type":"feature-status","module":"ticket-repository","feature":"import-history-page","from":"evaluating","to":"passing"}
-{"ts":"2026-11-15T19:54:13.401Z","type":"feature-status","module":"ticket-repository","feature":"ticket-detail-scope","from":"evaluating","to":"passing"}
-{"ts":"2026-11-15T19:54:13.671Z","type":"feature-status","module":"ticket-repository","feature":"ticket-detail-page","from":"evaluating","to":"passing"}
-{"ts":"2026-11-15T19:54:13.931Z","type":"feature-status","module":"ticket-repository","feature":"ticket-decision-table","from":"evaluating","to":"passing"}
-{"ts":"2026-11-15T19:54:14.192Z","type":"feature-status","module":"ticket-repository","feature":"drop-legacy-solution-tables","from":"evaluating","to":"passing"}
-{"ts":"2026-11-15T19:54:14.490Z","type":"feature-status","module":"platform","feature":"file-storage","from":"evaluating","to":"passing"}
 {"ts":"2026-11-15T12:51:07.648Z","type":"quick-opened","what":"PR252 review: reject NUL in wiki search q (BUG-290); bound search_vector input below the tsvector 1 MB limit (BUG-291)","files":["backend/src/main/java/vn/tsolve/wiki/service/impl/WikiSearchServiceImpl.java","backend/src/test/java/vn/tsolve/wiki/service/impl/WikiSearchServiceImplTest.java","backend/src/main/resources/db/changelog/changes/040-wiki-tables.sql","backend/src/test/java/vn/tsolve/wiki/WikiSearchIT.java","docs/bug-log.md"]}
 {"ts":"2026-11-15T12:56:47.932Z","type":"quick-closed","what":"PR252 review: reject NUL in wiki search q (BUG-290); bound search_vector input below the tsvector 1 MB limit (BUG-291)","files":["backend/src/main/java/vn/tsolve/wiki/service/impl/WikiSearchServiceImpl.java","backend/src/test/java/vn/tsolve/wiki/service/impl/WikiSearchServiceImplTest.java","backend/src/main/resources/db/changelog/changes/040-wiki-tables.sql","backend/src/test/java/vn/tsolve/wiki/WikiSearchIT.java","docs/bug-log.md"]}
 {"ts":"2026-11-15T12:57:53.318Z","type":"quick-opened","what":"PR253 review: name each folder action button after its folder for screen readers","files":["frontend/src/features/wiki/components/FolderTree.tsx","frontend/src/features/wiki/components/FolderModal.test.tsx"]}
@@ -1879,3 +1860,23 @@
 {"ts":"2026-11-16T15:21:09.927Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-workspace-account","from":null,"to":"pending"}
 {"ts":"2026-11-16T15:24:32.340Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-workspace-account","from":"pending","to":"in-progress"}
 {"ts":"2026-11-16T15:24:32.583Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-workspace-account","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-15T19:54:09.630Z","type":"feature-status","module":"ticket-repository","feature":"import-batch-date-range","from":"pending","to":"in-progress"}
+{"ts":"2026-11-15T19:54:09.893Z","type":"feature-status","module":"ticket-repository","feature":"import-batch-date-range","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-15T19:54:10.160Z","type":"feature-status","module":"ticket-repository","feature":"import-history-api","from":"pending","to":"in-progress"}
+{"ts":"2026-11-15T19:54:10.444Z","type":"feature-status","module":"ticket-repository","feature":"import-history-api","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-15T19:54:10.707Z","type":"feature-status","module":"ticket-repository","feature":"import-history-page","from":"pending","to":"in-progress"}
+{"ts":"2026-11-15T19:54:10.965Z","type":"feature-status","module":"ticket-repository","feature":"import-history-page","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-15T19:54:11.232Z","type":"feature-status","module":"ticket-repository","feature":"ticket-detail-scope","from":"pending","to":"in-progress"}
+{"ts":"2026-11-15T19:54:11.501Z","type":"feature-status","module":"ticket-repository","feature":"ticket-detail-scope","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-15T19:54:11.765Z","type":"feature-status","module":"ticket-repository","feature":"ticket-detail-page","from":"pending","to":"in-progress"}
+{"ts":"2026-11-15T19:54:12.030Z","type":"feature-status","module":"ticket-repository","feature":"ticket-detail-page","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-15T19:54:12.333Z","type":"feature-status","module":"ticket-repository","feature":"jira-pull-deadline","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T19:54:12.604Z","type":"feature-status","module":"ticket-repository","feature":"import-batch-date-range","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T19:54:12.869Z","type":"feature-status","module":"ticket-repository","feature":"import-history-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T19:54:13.131Z","type":"feature-status","module":"ticket-repository","feature":"import-history-page","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T19:54:13.401Z","type":"feature-status","module":"ticket-repository","feature":"ticket-detail-scope","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T19:54:13.671Z","type":"feature-status","module":"ticket-repository","feature":"ticket-detail-page","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T19:54:13.931Z","type":"feature-status","module":"ticket-repository","feature":"ticket-decision-table","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T19:54:14.192Z","type":"feature-status","module":"ticket-repository","feature":"drop-legacy-solution-tables","from":"evaluating","to":"passing"}
+{"ts":"2026-11-15T19:54:14.490Z","type":"feature-status","module":"platform","feature":"file-storage","from":"evaluating","to":"passing"}
+{"ts":"2026-11-16T17:48:57.783Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-workspace-account","from":"evaluating","to":"passing"}
