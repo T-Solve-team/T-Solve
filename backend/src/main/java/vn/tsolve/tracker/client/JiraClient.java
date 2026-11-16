@@ -20,6 +20,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import vn.tsolve.tracker.dto.JiraAccount;
 import vn.tsolve.tracker.dto.TrackerStatus;
+import vn.tsolve.tracker.exception.JiraPermissionMissingException;
 import vn.tsolve.tracker.exception.JiraRejectedException;
 import vn.tsolve.tracker.exception.JiraUnavailableException;
 
@@ -80,6 +81,7 @@ public class JiraClient implements TicketTrackerClient {
             throw new JiraRejectedException(response.getStatusCode().value());
         }
         JsonNode permissions = response.getBody();
+        List<String> missing = new ArrayList<>();
         for (String permission : List.of("BROWSE_PROJECTS", "CREATE_ISSUES", "MODIFY_REPORTER")) {
             if (permissions == null
                     || !permissions
@@ -87,8 +89,11 @@ public class JiraClient implements TicketTrackerClient {
                             .path(permission)
                             .path("havePermission")
                             .booleanValue()) {
-                throw new JiraRejectedException(403);
+                missing.add(permission);
             }
+        }
+        if (!missing.isEmpty()) {
+            throw new JiraPermissionMissingException(missing);
         }
     }
 
