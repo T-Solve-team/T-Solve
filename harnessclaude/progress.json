@@ -153,8 +153,8 @@
       }
     },
     "workspace": {
-      "status": "evaluating",
-      "currentPhase": "evaluate",
+      "status": "implementing",
+      "currentPhase": "implement",
       "features": {
         "create-department-api": "passing",
         "create-department-screen": "passing",
@@ -170,15 +170,17 @@
         "rename-department-screen": "passing",
         "workspace-token-hint": "pending",
         "jira-cloud-id": "evaluating",
-        "workspace-form-no-email": "evaluating"
+        "workspace-form-no-email": "evaluating",
+        "default-project-api": "evaluating",
+        "default-project-screen": "pending"
       },
-      "lastUpdated": "2026-11-16T14:29:51.789Z",
+      "lastUpdated": "2026-11-16T20:44:58.653Z",
       "branch": "feat/workspace",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "dcdc6063c3134ae17f645c18adb7ebcbf836dd16"
+        "default": "5a363ceb5b07c2ad3ad5ebce59ba4b0ccd7bd97e"
       }
     },
     "project-integration": {

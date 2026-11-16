@@ -6,7 +6,7 @@ owner: BA
 
 # Spec: workspace
 
-Covers UC-12 Create Department (Jira KAN-120, STORY-001..STORY-002), the rename part of UC-13 Update Department (Jira KAN-121, STORY-003..STORY-004) and UC-10 Workspace Setup and UC-11 Workspace Settings, company information (Jira KAN-119, STORY-005..STORY-011). Source: SRS v3460, folder `Sua_31-10` (UC-10, UC-11, UC-12, UC-13; screens 2.1, 2.2 and 2.3; GBR-17, GBR-29, GBR-37; MSG01, MSG02, MSG04, MSG05, MSG06, MSG07, MSG08, MSG43). Decisions: KAN-120 `artifacts/04-plans/workspace/iteration-1/kan-120-decisions.md`, KAN-121 `kan-121-decisions.md` (written `K121-D6` in design.md); KAN-119 the master design's "Decisions made without the user (KAN-119)" (D1–D30) and `iteration-1/kan-119/design.md`.
+Covers UC-12 Create Department (Jira KAN-120, STORY-001..STORY-002), UC-13 Update Department (Jira KAN-121: the rename, STORY-003..STORY-004, and the default Project, STORY-012..STORY-013) and UC-10 Workspace Setup and UC-11 Workspace Settings, company information (Jira KAN-119, STORY-005..STORY-011). Source: SRS v3460, folder `Sua_31-10` (UC-10, UC-11, UC-12, UC-13; screens 2.1, 2.2 and 2.3; GBR-17, GBR-19, GBR-21, GBR-29, GBR-37, GBR-40; MSG01, MSG02, MSG04, MSG05, MSG06, MSG07, MSG08, MSG43, MSG156, MSG157). Decisions: KAN-120 `artifacts/04-plans/workspace/iteration-1/kan-120-decisions.md`, KAN-121 `kan-121-decisions.md` (written `K121-D6` in design.md); KAN-119 the master design's "Decisions made without the user (KAN-119)" (D1–D30) and `iteration-1/kan-119/design.md`.
 
 ## Changelog
 
@@ -23,6 +23,7 @@ Covers UC-12 Create Department (Jira KAN-120, STORY-001..STORY-002), the rename 
 | 2026-11-15 | STORY-005..STORY-011 | KAN-119 stories renumbered again from STORY-003..STORY-009 (AC-003.x..AC-009.x become AC-005.x..AC-011.x), wording unchanged; the requirements numbered 7..11 become 10..14 | KAN-121 (#206, STORY-003, STORY-004 rename) reached `main` first and took STORY-003 and STORY-004; the specs merge into one |
 | 2026-11-16 | STORY-006, STORY-010, STORY-011 | Change request: Workspace Settings shows the stored token masked with its last four characters, never revealable or copyable. `WorkspaceInfo` gains `serviceAccountTokenSet` and `serviceAccountTokenHint` (new AC-006.5, AC-010.7, AC-010.8); AC-006.2, AC-010.2, AC-011.7 and Non-Functional 4 reworded to allow only that hint. No issue date and no expiry date are shown (`token_expiry_date` stays Out of Scope) | User request during the staging test of 16/11 (BinhBinh13): the Admin cannot tell whether a token is stored or which one. Decisions of 16/11: last four characters (not dots only); expiry date and saved date dropped |
 | 2026-11-16 | STORY-005..STORY-011 | KAN-344: the service account is an Atlassian service account with a scoped API token, sent as `Authorization: Bearer` to the gateway `https://api.atlassian.com/ex/jira/{cloudId}`. The email field is removed (AC-005.4 removed; AC-005.1, AC-005.3, AC-005.12, AC-006.2, AC-007.1, AC-007.3, AC-007.4, AC-007.7, AC-007.8, AC-009.2, AC-009.4, AC-010.1 reworded). `workspace_info` stores the site's cloud id (new AC-005.14, AC-007.11, AC-011.8); the check uses the gateway (AC-011.1 reworded); `JiraServiceAccount` returns the site, cloud id and token (AC-008.1 reworded, new AC-008.4); requirements 10, 13, 14 and Non-Functional 5 follow | Staging, 16/11: the Jira import answered MSG50 and RESEARCH-003 shows a real service account's scoped token gets 401 on the site URL. User decisions of 16/11: Bearer through the gateway (option B), no email field, cloud id in `workspace_info` (not the platform catalog yet), workspace and tracker in one PR |
+| 2026-11-17 | STORY-003, STORY-012, STORY-013 | Add the default Project of UC-13 (steps 2 and 3, screen 2.3 "Default Project", GBR-40, MSG156, MSG157): new STORY-012 (read the Department with its default Project and choosable Projects; set or clear it in the rename PUT with the Jira checks and the audit, AC-012.1 to AC-012.17) and STORY-013 (2.3 field, AC-013.1 to AC-013.10). AC-003.6 and AC-003.14 reworded for the new field; requirement 8 and Non-Functional 2 reworded, requirements 15 to 17 added; the default-Project lines leave Out of Scope, which keeps the UC-58 consumer and the GBR-17/GBR-21 clearing writes; `getDepartment`/`updateDepartment` answer `DepartmentDetail`; MSG157 joins the catalog | KAN-121 (Jira criteria read 17/11); KAN-127 and KAN-119 are on `main`. Decisions D26 to D42 in `kan-121-decisions.md` (user delegated decisions) |
 | 2026-11-12 | STORY-003, STORY-004 | Add UC-13 rename: read and rename API with the Space (AC-003.1 to AC-003.22) and screen 2.3 Department Detail with the 2.2 link (AC-004.1 to AC-004.14); UC-13 leaves Out of Scope except the default Project; interim limit 6 added; contract gains `getDepartment` and `updateDepartment` | KAN-121, decisions D4 and D6 to D20 |
 
 ## Requirements
@@ -35,7 +36,7 @@ Covers UC-12 Create Department (Jira KAN-120, STORY-001..STORY-002), the rename 
 5. Screen 2.2 Workspace Settings has the "New Department" button, its popup, and a Departments table with the Name column.
 6. A new Department is offered when the Admin adds a Project Manager (UC-05).
 7. An Admin renames an Active Department from screen 2.3 Department Detail. Its Department Space gets the same name in the same transaction (GBR-29). The new name follows the rules of requirement 2.
-8. A rename changes only the names. The Department's status, default Project, Projects and tickets stay as they were (UC-13 step 5).
+8. A save on 2.3 changes only the name and the default Project. The Department's status, Projects and tickets stay as they were (UC-13 step 5).
 9. Each rename that changes the name is recorded in the audit log with the name before and after.
 10. The tenant database of every Workspace holds exactly one `workspace` row once the Admin has set the Workspace up
    (UC-10): company name, Jira site address, the site's cloud id and the encrypted scoped API token of the Jira
@@ -50,10 +51,18 @@ Covers UC-12 Create Department (Jira KAN-120, STORY-001..STORY-002), the rename 
    whenever it is entered or changed. T-Solve asks for no email: a scoped token needs none (RESEARCH-003).
 14. `workspace` tells `/me` whether the Workspace is set up (`workspaceReady`) and gives other modules the current
    service account (`JiraServiceAccount` of `tracker`): site address, cloud id and token.
+15. An Admin chooses or clears a Department's default Project on 2.3, in the same Save as the name (UC-13 step 2). Only
+   an Active Project of that Department can be chosen. A Department with a default Project is one that handles support
+   requests: the Knowledge Chatbot creates issues of type Task there; other Departments have none (GBR-40).
+16. A newly chosen default Project is checked with Jira as the service account before anything is stored: Create
+   Issues and Modify Reporter in that Project (MSG156), and the issue type Task requiring no field other than summary
+   and description (MSG157) (UC-13 step 3, GBR-40).
+17. A default Project that is not Active counts as none: the Department has no default Project until the Admin
+   chooses another one (GBR-40).
 
 ### Non-Functional
 1. The name rules hold in the database: two requests sent at the same moment cannot create two Departments with one name.
-2. The Department, its Space and the audit entry are written in one database transaction, with no outbound call inside it. The same holds for a rename.
+2. The Department, its Space and the audit entry are written in one database transaction, with no outbound call inside it. The same holds for a rename and for a change of the default Project, whose Jira check runs before the transaction opens.
 3. A Workspace's Departments live only in that Workspace's database (GBR-37, ADR-0002). The Workspace of a request never comes from request content.
 4. The API token is encrypted at rest with AES-256-GCM under the key `WORKSPACE_SECRET_KEY`; it never appears in a
    response, a log line, an audit entry or an exception message, except its last four characters in
@@ -122,7 +131,7 @@ These are known limits of the code this story builds on. They are not defects of
   - AC-003.3: WHEN an Admin sends `PUT /api/v1/departments/{departmentId}` with an allowed name for an Active Department, THE system SHALL store that name with leading and trailing whitespace removed and inner spaces kept, and answer 200 with the `departmentId` and stored `name`.
   - AC-003.4: WHEN a Department is renamed, THE system SHALL set the name of its Space to the same name in the same transaction and keep the Space's status and Knowledge Manager.
   - AC-003.5: WHEN a Department is renamed, THE system SHALL write one audit entry in the same transaction with the signed-in Admin's id and email as actor, action `DEPARTMENT_CHANGE`, target type `DEPARTMENT`, target id the `departmentId`, and details holding `operation` = `UPDATE`, `before` = `{name: <old name>}`, `after` = `{name: <new name>}` and `spaceId`.
-  - AC-003.6: WHEN a Department is renamed, THE system SHALL keep its status, its default Project and its Projects unchanged.
+  - AC-003.6: WHEN a Department is renamed, THE system SHALL keep its status and its Projects unchanged, and keep its default Project WHILE `defaultProjectId` names the current one (STORY-012).
   - AC-003.7: WHEN a Department is renamed, THE system SHALL return the new name for it in `GET /api/v1/users/departments` and `GET /api/v1/departments/{departmentId}`.
   - AC-003.8: IF the name is missing, empty or only whitespace, THEN THE system SHALL answer 400 with code MSG01 on field `name` and write no Department, Space or audit entry.
   - AC-003.9: IF the name is not blank and as received is longer than 50 characters, THEN THE system SHALL answer 400 with code MSG02 and `max_length` 50 on field `name` and write no Department, Space or audit entry.
@@ -130,7 +139,7 @@ These are known limits of the code this story builds on. They are not defects of
   - AC-003.11: IF the name after whitespace removal equals the name of a Deleted Department, THEN THE system SHALL answer 409 with code MSG43 on field `name` and write no Department, Space or audit entry.
   - AC-003.12: IF the name after whitespace removal differs from another Department's name only in letter case, THEN THE system SHALL answer 409 with code MSG43 on field `name` and write no Department, Space or audit entry.
   - AC-003.13: WHEN the name after whitespace removal differs from the Department's own current name only in letter case, THE system SHALL rename it as in AC-003.3 to AC-003.5.
-  - AC-003.14: IF the name after whitespace removal equals the Department's current name exactly, THEN THE system SHALL answer 200 with the Department and write no Department, Space or audit change.
+  - AC-003.14: IF the name after whitespace removal equals the Department's current name exactly and the default Project does not change (AC-012.10), THEN THE system SHALL answer 200 with the Department and write no Department, Space or audit change.
   - AC-003.15: IF two requests rename two Departments to the same name at the same moment, THEN THE system SHALL apply one, answer it with 200, answer the other with 409 MSG43, and write one audit entry.
   - AC-003.16: IF two requests rename the same Department at the same moment, THEN THE system SHALL apply them one after the other, answer both with 200, and write the second audit entry with a `before` equal to the first entry's `after`.
   - AC-003.17: IF the Department has no Space, or writing the Space or the audit entry fails, THEN THE system SHALL keep the Department's old name, write no Space or audit change, and answer 500 with code MSG06.
@@ -316,9 +325,46 @@ These are known limits of the code this story builds on. They are not defects of
     and accept it only when it is a UUID in canonical form (36 characters, hexadecimal and hyphens), so that it can
     never change the gateway path.
 
+### STORY-012: Default Project of a Department (API)
+- As an Admin, I want to choose which Project of a support Department receives the issues created from the Knowledge Chatbot, so that those issues land in a Jira project that can take them.
+- In this story a "Project option" is `{projectId, jiraProjectKey}`: the Project's public id and its Jira project key. The "current default Project" is the stored default Project while it is Active, else none (AC-012.3). "The Jira check" is the check of AC-012.7.
+- Acceptance:
+  - AC-012.1: WHEN an Admin sends `GET /api/v1/departments/{departmentId}` for an Active Department, THE system SHALL answer 200 with `departmentId`, `name`, `defaultProject` (the current default Project as a Project option, or null) and `projects` (every Active Project of that Department as a Project option, ordered by `jiraProjectKey`, empty when it has none).
+  - AC-012.2: WHEN `PUT /api/v1/departments/{departmentId}` succeeds, THE system SHALL answer 200 with the body of AC-012.1 as stored after the save.
+  - AC-012.3: IF the stored default Project is not Active, THEN THE system SHALL answer `defaultProject` null and treat the Department as having no default Project in every check of this story.
+  - AC-012.4: WHEN an Admin sends the PUT with an allowed name and `defaultProjectId` naming an Active Project of this Department that is not the current default Project, and the Jira check passes, THE system SHALL store that Project as the Department's default Project.
+  - AC-012.5: IF `defaultProjectId` names no Project, a Project that is not Active, or a Project of another Department, THEN THE system SHALL answer 400 with code MSG04 and `params` `{}` on field `defaultProjectId`, make no Jira call, and write no Department, Space or audit change.
+  - AC-012.6: WHEN the PUT has `defaultProjectId` null or absent while the Department has a current default Project, THE system SHALL store no default Project for it and make no Jira call.
+  - AC-012.7: WHEN `defaultProjectId` names a Project that is not the current default Project, THE system SHALL, before it opens the write transaction, call Jira as the Workspace's service account (`JiraServiceAccount`, `Authorization: Bearer` on `https://api.atlassian.com/ex/jira/{cloudId}`) and pass the check only when (a) `GET /rest/api/3/mypermissions?projectKey={jiraProjectKey}&permissions=CREATE_ISSUES,MODIFY_REPORTER` answers 200 with `havePermission` true for both, (b) `GET /rest/api/3/issue/createmeta/{jiraProjectKey}/issuetypes` lists an issue type named `Task` (ignoring letter case) that is not a sub-task, and (c) `GET /rest/api/3/issue/createmeta/{jiraProjectKey}/issuetypes/{issueTypeId}` for that type lists no field that is `required`, has `hasDefaultValue` false, and has a `fieldId` other than `summary`, `description`, `project`, `issuetype`, `reporter` and `labels`.
+  - AC-012.8: IF the Workspace has no usable service account (AC-008.1 empty), a permission of (a) is missing, or Jira answers 401, 403, 404 or any other error status, times out or cannot be reached, THEN THE system SHALL answer 400 with code MSG156 and `params` `{tracker_name: "Jira"}` on field `defaultProjectId` and write no Department, Space or audit change.
+  - AC-012.9: IF the Project has no issue type of (b) or a field of (c) is required, THEN THE system SHALL answer 400 with code MSG157 and `params` `{project_name: <jiraProjectKey>}` on field `defaultProjectId` and write no Department, Space or audit change.
+  - AC-012.10: WHILE `defaultProjectId` names the current default Project, or is null or absent while there is none, THE system SHALL make no Jira call and leave the stored default Project unchanged.
+  - AC-012.11: WHEN a save changes the name, the default Project or both, THE system SHALL write one audit entry as in AC-003.5 whose `before` and `after` hold `name` and, when the default Project changed, also `defaultProject` (`{projectId, jiraProjectKey}` or null); `spaceId` is present when the name changed.
+  - AC-012.12: WHEN only the default Project changes, THE system SHALL leave the Department's name and its Space unchanged.
+  - AC-012.13: IF, when the write transaction starts, the chosen Project is no longer an Active Project of this Department, THEN THE system SHALL answer 400 with code MSG04 and `params` `{}` on field `defaultProjectId` and write no Department, Space or audit change.
+  - AC-012.14: IF the request is refused by AC-003.2, AC-003.8, AC-003.9, AC-003.18, AC-003.19 or AC-003.21, THEN THE system SHALL make no Jira call.
+  - AC-012.15: IF the name is refused with MSG43 (AC-003.10 to AC-003.12) or the write fails (AC-003.17), THEN THE system SHALL keep the old name and the old default Project and write no audit entry.
+  - AC-012.16: IF two requests change the default Project of the same Department to two different Projects at the same moment, THEN THE system SHALL apply them one after the other, answer both with 200, keep the Project of the one applied last, and write the second audit entry with a `before.defaultProject` equal to the first entry's `after.defaultProject`.
+  - AC-012.17: THE Jira check SHALL use the timeouts of Non-Functional 6, and no Jira body, token or credential SHALL reach a response, a log line or an audit entry.
+
+### STORY-013: Default Project on 2.3 Department Detail
+- As an Admin, I want a Default Project field on Department Detail so that I choose, change or clear it with the name.
+- Acceptance:
+  - AC-013.1: WHEN an Admin opens 2.3 Department Detail, THE web app SHALL show below the name a "Default Project" item holding the `jiraProjectKey` of `defaultProject`, or "None" when it is null.
+  - AC-013.2: WHEN the Admin clicks "Edit", THE web app SHALL show, below "Department name", an optional select "Default Project" holding the current default Project (or "None"), whose options are "None" followed by the `jiraProjectKey` of each entry of `projects` in the order received.
+  - AC-013.3: WHERE the Department has no Active Project, THE select SHALL offer only "None".
+  - AC-013.4: THE select SHALL carry the help text "Leave it as None for a Department that does not handle support requests. Issues from the Knowledge Chatbot are created in this Project with the type Task."
+  - AC-013.5: WHEN the Admin clicks Save with an allowed name, THE web app SHALL send in one `PUT /api/v1/departments/{departmentId}` the trimmed name and `defaultProjectId` set to the chosen Project's `projectId`, or null for "None".
+  - AC-013.6: WHEN the server answers 200, THE web app SHALL close the form, show "Changes saved successfully." (MSG05) and show the stored default Project on 2.3.
+  - AC-013.7: IF the server answers 400 with MSG04, MSG156 or MSG157 on field `defaultProjectId`, THEN THE web app SHALL show that message with its `params` filled in below the "Default Project" select and keep the form open with the typed name and the chosen Project.
+  - AC-013.8: WHEN the Admin clicks Cancel while no save is running, THE web app SHALL show the stored default Project, and the next "Edit" SHALL show the stored default Project in the select.
+  - AC-013.9: WHILE a save is running, THE "Default Project" select SHALL be disabled.
+  - AC-013.10: THE web app's message catalog SHALL hold MSG157 as a field message with the text `{project_name} cannot receive Chatbot issues: it has no issue type Task or requires other fields. Choose another Project.`
+
 ## Out of Scope
 - UC-14 and UC-15: Delete and Restore Department. Each comes through Change Mode when its Jira story starts (KAN-122, KAN-123).
-- The default Project of UC-13 (steps 2 and 3, screen 2.3 "Default Project", GBR-40, MSG156, MSG157), which KAN-121's Jira criteria ask for. No Project can exist until Add Project (UC-16, KAN-127) is built, and the Jira checks and the stored service account (KAN-119) do not exist. It comes through Change Mode once KAN-127 is done; KAN-121 stays open in Jira until then (decision D4). Screen 2.3 has no Default Project field until then.
+- The reader of the default Project: the Knowledge Chatbot issue form (UC-58, KAN-241 and KAN-242). It must offer only Departments whose default Project is Active (AC-012.3).
+- The writes that clear a default Project when its Project is Removed (GBR-21, the remove-Project story of `project-integration`) or its Department is Deleted (GBR-17, KAN-122). Neither removal exists yet; until those stories set `default_project_id` to NULL, a default Project that is not Active reads as none (AC-012.3).
 - The Managers tab and the Delete button of screen 2.3 (no story owns the tab; Delete is KAN-122).
 - The Departments table columns Project Managers, Projects, Members and Tickets, the "Show deleted" switch and the Restore button. No story owns them yet.
 - A Knowledge Manager, permission row, folder or document for the new Space. The Admin assigns a Knowledge Manager in UC-05, UC-07 and UC-09; GBR-30's own-Department View is derived, not stored.
@@ -330,7 +376,6 @@ These are known limits of the code this story builds on. They are not defects of
   AC-004.20/24): platform Task 18 `jira-site-link`. Until then the interim linker of AC-011.4 cannot detect a site
   linked elsewhere; AC-005.9 is tested with a refusing test double. **[Interim]**
 - `/me` itself (be-foundation `me-session`): this module only implements `WorkspaceStatusLookup`.
-- The per-Project Create Issues / Modify Reporter check when a default Project is chosen (UC-13).
 - Hiding the side menu on 2.1 Workspace Setup (SRS screen 2.1 "It has no menu"): a layout change in `fe-foundation`
   (`AppShell`), requested there.
 - `token_expiry_date`: stays null; Jira has no API to read it.
@@ -378,19 +423,43 @@ Message texts come from `frontend/src/shared/messages/catalog.ts`, with the `par
 
 Service interface for later modules: `vn.tsolve.workspace.service.DepartmentService`, method `create(CreateDepartmentRequest)` returning `DepartmentRefResponse`.
 
-`GET /api/v1/departments/{departmentId}`, operationId `getDepartment`, tag `departments`, role Admin. Response 200, schema `DepartmentRef`, for an Active Department. Errors 401 MSG07, 403 MSG08, 404 MSG04 (unknown, Deleted, or a path id that is not a UUID), 500 MSG06.
+`GET /api/v1/departments/{departmentId}`, operationId `getDepartment`, tag `departments`, role Admin. Response 200, schema `DepartmentDetail` (default Project, below), for an Active Department. Errors 401 MSG07, 403 MSG08, 404 MSG04 (unknown, Deleted, or a path id that is not a UUID), 500 MSG06.
 
-`PUT /api/v1/departments/{departmentId}`, operationId `updateDepartment`, tag `departments`, role Admin. Request `application/json`, schema `UpdateDepartmentRequest`, with the same `name` field and rules as `CreateDepartmentRequest`:
+`PUT /api/v1/departments/{departmentId}`, operationId `updateDepartment`, tag `departments`, role Admin. Request `application/json`, schema `UpdateDepartmentRequest`, with the same `name` field and rules as `CreateDepartmentRequest`, and `defaultProjectId` (STORY-012):
 
 ```json
-{ "name": "IT Service Desk" }
+{ "name": "IT Service Desk", "defaultProjectId": "7c1e3f2a-52d1-4b7e-9d1f-0a4ab3c1d301" }
 ```
 
-Response 200, schema `DepartmentRef`, with the stored name. Errors as for `createDepartment` (400 MSG01, 400 MSG02, 401 MSG07, 403 MSG08, 409 MSG43, 500 MSG06), plus 404 MSG04 with `params` `{}` and no `fieldErrors` for an unknown or Deleted Department or a path id that is not a UUID. Both paths are added to `frontend/openapi/tsolve-api.yaml` before the code; the tag description becomes "Create, read and rename a Department and its Space (SRS UC-12, UC-13)".
+Response 200, schema `DepartmentDetail`, with the stored name and default Project. Errors as for `createDepartment` (400 MSG01, 400 MSG02, 401 MSG07, 403 MSG08, 409 MSG43, 500 MSG06), plus 404 MSG04 with `params` `{}` and no `fieldErrors` for an unknown or Deleted Department or a path id that is not a UUID. Both paths are added to `frontend/openapi/tsolve-api.yaml` before the code; the tag description becomes "Create, read and rename a Department and its Space (SRS UC-12, UC-13)".
 
 MSG04 "No results found."
 
-`DepartmentService` gains `get(UUID departmentId)` and `update(UUID departmentId, UpdateDepartmentRequest request)`, both returning `DepartmentRefResponse`.
+`DepartmentService` gains `get(UUID departmentId)` and `update(UUID departmentId, UpdateDepartmentRequest request)`, both returning `DepartmentDetailResponse` (default Project, below).
+
+Default Project (KAN-121, STORY-012):
+
+| Field of `UpdateDepartmentRequest` | Type | Rules |
+|-------|------|-------|
+| `defaultProjectId` | string `uuid`, nullable, not required | The chosen Project's `projectId`. Null or absent: no default Project. An id that is not an Active Project of this Department: 400 MSG04 on `defaultProjectId` |
+
+```json
+{ "departmentId": "3f2a7c1e-52d1-4b7e-9d1f-0a4ab3c1d201", "name": "Customer Support",
+  "defaultProject": { "projectId": "7c1e3f2a-52d1-4b7e-9d1f-0a4ab3c1d301", "jiraProjectKey": "SUP" },
+  "projects": [ { "projectId": "7c1e3f2a-52d1-4b7e-9d1f-0a4ab3c1d301", "jiraProjectKey": "SUP" } ] }
+```
+
+Schemas (above, a `DepartmentDetail`): `DepartmentDetail { departmentId (uuid), name, defaultProject (DepartmentProjectOption, nullable), projects (DepartmentProjectOption[]) }`, all required; `DepartmentProjectOption { projectId (uuid), jiraProjectKey }`, both required. `DepartmentRef` is unchanged.
+
+Added errors of `updateDepartment`, all with `fieldErrors[0].field` `defaultProjectId`:
+
+| Status | `code` | `params` | When |
+|--------|--------|----------|------|
+| 400 | MSG04 | `{}` | Not an Active Project of this Department (AC-012.5, AC-012.13) |
+| 400 | MSG156 | `{tracker_name: "Jira"}` | No usable service account, a permission missing, or Jira refused, timed out or could not be reached (AC-012.8) |
+| 400 | MSG157 | `{project_name: <jiraProjectKey>}` | No issue type Task, or another field required (AC-012.9) |
+
+MSG156 `The service account could not connect to {tracker_name} or lacks the required permissions.` MSG157 `{project_name} cannot receive Chatbot issues: it has no issue type Task or requires other fields. Choose another Project.`
 
 Workspace information (KAN-119):
 
@@ -421,6 +490,7 @@ stays in the table for rows written before KAN-344 and is no longer written or r
 - `identity`: `TenantScope.currentWorkspaceId()` (the bound Workspace of the request), `Roles.ADMIN`.
 - `worker`: `WorkerTenantService.currentWorkspaceId()` (the Workspace a worker job binds, AC-008.1), optional bean.
 - `tracker`: `TicketTrackerClient` gains `checkServiceAccount(JiraAccount)` (implemented in `JiraClient`).
+- `tracker` (KAN-121, D39): `TrackerProjectService.checkChatbotProject(String projectKey)` returning `vn.tsolve.tracker.dto.ChatbotProjectCheck` (`READY`, `NOT_READY`, `DENIED`, `UNAVAILABLE`): the check of AC-012.7 as the current service account; it never throws for a Jira failure.
 - `platform`: `WorkspaceCatalog.linkJiraSite(siteUrl)` (platform AC-004.19..24). Until it exists, the
   workspace-owned port `JiraSiteLinker` with the same contract is answered by an interim adapter **[Interim]**.
   Change requests for platform (not made here): AC-004.21 should use `MSG61` (baseline System_Messages) instead of
@@ -432,11 +502,12 @@ stays in the table for rows written before KAN-344 and is no longer written or r
 ## Definition of Done
 - [ ] Every acceptance criterion has a test whose name cites its AC id (backend suffix `_AC_001_7`, frontend prefix `AC-002.6`)
 - [ ] KAN-121: no new changeset; the rename works on an empty database and on one that holds the existing tables
+- [ ] KAN-121 default Project: no new changeset; the Jira calls of AC-012.7 are made once by hand against the staging site and the result noted in the task log
 - [ ] `sdd.ts trace workspace` passes
 - [ ] Backend: `mvn verify` passes, including the new IT on real PostgreSQL
 - [ ] Frontend: `format:check`, `lint`, `typecheck`, `test` and `build` pass, and `generate:api` leaves no diff
 - [ ] Both changesets apply on an empty database and on one that holds the existing tables
 - [ ] Each task is committed on its own after the user agrees
 - [ ] `WORKSPACE_SECRET_KEY` documented in `.env.example`; no secret committed
-- [ ] The web app's message catalog holds `MSG61`, `MSG153` and `MSG156` as System_Messages v3460 gives them (`MSG61` is
+- [ ] The web app's message catalog holds `MSG61`, `MSG153`, `MSG156` and `MSG157` as System_Messages v3460 gives them (`MSG61` is
       no longer treated as Retired)
