@@ -171,11 +171,11 @@
         "workspace-token-hint": "pending",
         "jira-cloud-id": "evaluating",
         "workspace-form-no-email": "evaluating",
-        "jira-app-token": "pending",
-        "workspace-without-service-account": "pending",
-        "workspace-jira-app-status-screen": "pending"
+        "jira-app-token": "evaluating",
+        "workspace-without-service-account": "evaluating",
+        "workspace-jira-app-status-screen": "evaluating"
       },
-      "lastUpdated": "2026-11-16T20:11:32.830Z",
+      "lastUpdated": "2026-11-16T20:49:30.612Z",
       "branch": "feat/workspace",
       "repos": [
         "default"
@@ -383,9 +383,9 @@
         "resubmit-forge": "evaluating",
         "panel-rejected": "evaluating",
         "panel-published": "evaluating",
-        "app-token-trigger": "pending"
+        "app-token-trigger": "evaluating"
       },
-      "lastUpdated": "2026-11-16T20:11:33.175Z",
+      "lastUpdated": "2026-11-16T20:49:31.048Z",
       "branch": "feat/KAN-337-jira-app-reject-reason",
       "repos": [
         "default"

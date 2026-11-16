@@ -1888,3 +1888,11 @@
 {"ts":"2026-11-16T20:11:32.446Z","type":"feature-status","module":"workspace","feature":"workspace-without-service-account","from":null,"to":"pending"}
 {"ts":"2026-11-16T20:11:32.831Z","type":"feature-status","module":"workspace","feature":"workspace-jira-app-status-screen","from":null,"to":"pending"}
 {"ts":"2026-11-16T20:11:33.177Z","type":"feature-status","module":"jira-app","feature":"app-token-trigger","from":null,"to":"pending"}
+{"ts":"2026-11-16T20:49:29.527Z","type":"feature-status","module":"workspace","feature":"jira-app-token","from":"pending","to":"in-progress"}
+{"ts":"2026-11-16T20:49:29.745Z","type":"feature-status","module":"workspace","feature":"jira-app-token","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-16T20:49:29.958Z","type":"feature-status","module":"workspace","feature":"workspace-without-service-account","from":"pending","to":"in-progress"}
+{"ts":"2026-11-16T20:49:30.173Z","type":"feature-status","module":"workspace","feature":"workspace-without-service-account","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-16T20:49:30.390Z","type":"feature-status","module":"workspace","feature":"workspace-jira-app-status-screen","from":"pending","to":"in-progress"}
+{"ts":"2026-11-16T20:49:30.613Z","type":"feature-status","module":"workspace","feature":"workspace-jira-app-status-screen","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-16T20:49:30.839Z","type":"feature-status","module":"jira-app","feature":"app-token-trigger","from":"pending","to":"in-progress"}
+{"ts":"2026-11-16T20:49:31.049Z","type":"feature-status","module":"jira-app","feature":"app-token-trigger","from":"in-progress","to":"evaluating"}
