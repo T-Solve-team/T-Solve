@@ -9,6 +9,7 @@ type FolderTreeProps = {
 
 /** Browse only. Folder mutations belong to Task 5. */
 export function FolderTree({ folders, folderId, onSelect }: FolderTreeProps) {
+  // ponytail: re-filters all folders per node (O(n²)); fine for dozens, group by parentId if trees grow.
   function children(parentId: string | null): TreeDataNode[] {
     return folders
       .filter((folder) => folder.parentId === parentId)
