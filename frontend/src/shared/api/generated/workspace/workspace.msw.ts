@@ -18,6 +18,11 @@ export const getSetupWorkspaceResponseMock = (
 ): WorkspaceInfo => ({
   companyName: faker.string.alpha({ length: { min: 10, max: 20 } }),
   jiraSiteUrl: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  jiraAppConnected: faker.datatype.boolean(),
+  jiraAppTokenReceivedAt: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + 'Z',
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -26,6 +31,11 @@ export const getGetWorkspaceResponseMock = (
 ): WorkspaceInfo => ({
   companyName: faker.string.alpha({ length: { min: 10, max: 20 } }),
   jiraSiteUrl: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  jiraAppConnected: faker.datatype.boolean(),
+  jiraAppTokenReceivedAt: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + 'Z',
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -34,6 +44,11 @@ export const getUpdateWorkspaceResponseMock = (
 ): WorkspaceInfo => ({
   companyName: faker.string.alpha({ length: { min: 10, max: 20 } }),
   jiraSiteUrl: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  jiraAppConnected: faker.datatype.boolean(),
+  jiraAppTokenReceivedAt: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + 'Z',
+    null,
+  ]),
   ...overrideResponse,
 });
 

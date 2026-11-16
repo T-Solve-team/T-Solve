@@ -305,6 +305,74 @@ export const useReceiveIssueCreated = <TError = ErrorType<ProblemResponse>, TCon
 > => {
   return useMutation(getReceiveIssueCreatedMutationOptions(options), queryClient);
 };
+export const getReceiveJiraAppTokenUrl = () => {
+  return `/api/v1/jira-app/app-token`;
+};
+
+/**
+ * @summary Forge scheduled and install/upgrade triggers hand the app system token to the backend (workspace STORY-012, KAN-349).
+ */
+export const receiveJiraAppToken = async (options?: Parameters<typeof http>[1]): Promise<void> => {
+  return http<void>(getReceiveJiraAppTokenUrl(), {
+    ...options,
+    method: 'POST',
+  });
+};
+
+export const getReceiveJiraAppTokenMutationKey = () => ['receiveJiraAppToken'] as const;
+
+export const getReceiveJiraAppTokenMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof receiveJiraAppToken>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof receiveJiraAppToken>>, TError, void, TContext> => {
+  const mutationKey = getReceiveJiraAppTokenMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof receiveJiraAppToken>>,
+    void
+  > = () => {
+    return receiveJiraAppToken(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReceiveJiraAppTokenMutationResult = NonNullable<
+  Awaited<ReturnType<typeof receiveJiraAppToken>>
+>;
+
+export type ReceiveJiraAppTokenMutationError = ErrorType<ProblemResponse>;
+
+/**
+ * @summary Forge scheduled and install/upgrade triggers hand the app system token to the backend (workspace STORY-012, KAN-349).
+ */
+export const useReceiveJiraAppToken = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof receiveJiraAppToken>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof receiveJiraAppToken>>, TError, void, TContext> => {
+  return useMutation(getReceiveJiraAppTokenMutationOptions(options), queryClient);
+};
 export const getGetJiraAskerEligibilityUrl = () => {
   return `/api/v1/jira-app/questions/eligibility`;
 };
