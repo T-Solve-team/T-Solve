@@ -1864,3 +1864,7 @@
 {"ts":"2026-11-16T15:53:06.597Z","type":"feature-status","module":"workspace","feature":"jira-check-reason","from":null,"to":"pending"}
 {"ts":"2026-11-16T15:53:06.878Z","type":"feature-status","module":"workspace","feature":"jira-check-reason-screen","from":null,"to":"pending"}
 {"ts":"2026-11-16T15:53:29.581Z","type":"spec-approved","module":"workspace","specHash":"4ba54cb5b8cbfb3157e105736a1bdc947a9dac13a39e26b1a3f9f57f23b4e3dc"}
+{"ts":"2026-11-16T15:55:58.181Z","type":"feature-status","module":"workspace","feature":"jira-check-reason","from":"pending","to":"in-progress"}
+{"ts":"2026-11-16T15:55:58.431Z","type":"feature-status","module":"workspace","feature":"jira-check-reason","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-16T15:55:58.697Z","type":"feature-status","module":"workspace","feature":"jira-check-reason-screen","from":"pending","to":"in-progress"}
+{"ts":"2026-11-16T16:11:56.261Z","type":"feature-status","module":"workspace","feature":"jira-check-reason-screen","from":"in-progress","to":"evaluating"}
