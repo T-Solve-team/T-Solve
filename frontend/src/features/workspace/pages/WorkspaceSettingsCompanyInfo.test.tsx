@@ -11,11 +11,9 @@ import { renderApp } from '@/test/render';
 const INFO: WorkspaceInfo = {
   companyName: 'Example Company',
   jiraSiteUrl: 'https://company.atlassian.net',
-  serviceAccountEmail: 'service@company.example',
 };
 const LABELS = {
   companyName: 'Company name',
-  serviceAccountEmail: 'Service account email',
   serviceAccountToken: 'Service account API token',
 } as const;
 const HINT = 'Leave empty to keep the current token.';
@@ -55,13 +53,12 @@ describe('WorkspaceSettingsPage company information', () => {
     );
   });
 
-  it('AC-010.1 loads the Workspace: editable company name and email, read-only Jira site', async () => {
+  it('AC-010.1 loads the Workspace: editable company name, read-only Jira site, no email field', async () => {
     renderApp(paths.workspaceSettings, { role: 'ADMIN' });
     await findSave();
     expect(screen.getByLabelText(LABELS.companyName)).toHaveValue(INFO.companyName);
     expect(screen.getByLabelText(LABELS.companyName)).toBeEnabled();
-    expect(screen.getByLabelText(LABELS.serviceAccountEmail)).toHaveValue(INFO.serviceAccountEmail);
-    expect(screen.getByLabelText(LABELS.serviceAccountEmail)).toBeEnabled();
+    expect(screen.queryByLabelText('Service account email')).not.toBeInTheDocument();
     expect(screen.getByText(INFO.jiraSiteUrl)).toBeInTheDocument();
     expect(screen.queryByDisplayValue(INFO.jiraSiteUrl)).not.toBeInTheDocument();
     expect(getCalls).toBe(1);
@@ -89,14 +86,12 @@ describe('WorkspaceSettingsPage company information', () => {
     renderApp(paths.workspaceSettings, { role: 'ADMIN' });
     await findSave();
     await replace(user, LABELS.companyName, 'New Company');
-    await replace(user, LABELS.serviceAccountEmail, 'new@company.example');
     await replace(user, LABELS.serviceAccountToken, 'new-fake-token');
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
     expect(putBodies).toEqual([
       {
         companyName: 'New Company',
-        serviceAccountEmail: 'new@company.example',
         serviceAccountToken: 'new-fake-token',
       },
     ]);
@@ -112,17 +107,13 @@ describe('WorkspaceSettingsPage company information', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
     expect(putBodies).toHaveLength(1);
-    expect(putBodies[0]).toEqual({
-      companyName: 'New Company',
-      serviceAccountEmail: INFO.serviceAccountEmail,
-    });
+    expect(putBodies[0]).toEqual({ companyName: 'New Company' });
     expect(putBodies[0]).not.toHaveProperty('serviceAccountToken');
   });
 
   it.each([
     ['MSG01', 'companyName', { field_name: LABELS.companyName }],
     ['MSG02', 'companyName', { field_name: LABELS.companyName, max_length: 100 }],
-    ['MSG03', 'serviceAccountEmail', {}],
     ['MSG156', 'serviceAccountToken', { tracker_name: 'Jira' }],
   ] as const)(
     'AC-010.4 displays server %s under %s and keeps the values entered',
@@ -148,9 +139,6 @@ describe('WorkspaceSettingsPage company information', () => {
         ),
       );
       expect(screen.getByLabelText(LABELS.companyName)).toHaveValue('Typed Company');
-      expect(screen.getByLabelText(LABELS.serviceAccountEmail)).toHaveValue(
-        INFO.serviceAccountEmail,
-      );
       expect(screen.getByLabelText(LABELS.serviceAccountToken)).toHaveValue('typed-fake-token');
       expect(screen.queryByText(msg('MSG05'))).not.toBeInTheDocument();
       expect(screen.queryByText(msg('MSG06'))).not.toBeInTheDocument();
@@ -162,11 +150,9 @@ describe('WorkspaceSettingsPage company information', () => {
     renderApp(paths.workspaceSettings, { role: 'ADMIN' });
     await findSave();
     await replace(user, LABELS.companyName, 'Changed Company');
-    await replace(user, LABELS.serviceAccountEmail, 'changed@company.example');
     await replace(user, LABELS.serviceAccountToken, 'changed-fake-token');
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(screen.getByLabelText(LABELS.companyName)).toHaveValue(INFO.companyName);
-    expect(screen.getByLabelText(LABELS.serviceAccountEmail)).toHaveValue(INFO.serviceAccountEmail);
     expect(screen.getByLabelText(LABELS.serviceAccountToken)).toHaveValue('');
     expect(putBodies).toHaveLength(0);
   });

@@ -19,11 +19,8 @@ function toRequest({
 export function WorkspaceInfoForm({ workspace }: WorkspaceInfoFormProps) {
   const [form] = Form.useForm<WorkspaceUpdateRequest>();
   const update = useUpdateWorkspaceInfo();
-  // Only these two fields: a stored token is never put into the form (AC-010.2).
-  const loaded = {
-    companyName: workspace.companyName,
-    serviceAccountEmail: workspace.serviceAccountEmail,
-  };
+  // Only the company name: a stored token is never put into the form (AC-010.2), and there is no email (KAN-344).
+  const loaded = { companyName: workspace.companyName };
 
   function submit(values: WorkspaceUpdateRequest) {
     update.mutate(
@@ -54,17 +51,6 @@ export function WorkspaceInfoForm({ workspace }: WorkspaceInfoFormProps) {
         </FormField>
         <FormField<WorkspaceUpdateRequest> label="Jira site address">
           <Typography.Text>{workspace.jiraSiteUrl}</Typography.Text>
-        </FormField>
-        <FormField<WorkspaceUpdateRequest>
-          name="serviceAccountEmail"
-          label="Service account email"
-          rules={[
-            rules.required('Service account email'),
-            rules.maxLength('Service account email', 100),
-            rules.email(),
-          ]}
-        >
-          <Input autoComplete="username" count={{ show: true, max: 100 }} />
         </FormField>
         <FormField<WorkspaceUpdateRequest>
           name="serviceAccountToken"

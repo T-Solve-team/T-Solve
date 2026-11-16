@@ -13,11 +13,6 @@ export interface WorkspaceUpdateRequest {
    * @maxLength 100
    */
   companyName: string;
-  /**
-   * @minLength 1
-   * @maxLength 100
-   */
-  serviceAccountEmail: string;
   /** Absent or blank keeps the stored token. */
   serviceAccountToken?: string;
 }

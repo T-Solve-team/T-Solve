@@ -13,16 +13,14 @@ import vn.tsolve.workspace.dto.WorkspaceUpdateRequest;
 
 class WorkspaceOpenApiTest {
     @Test
-    @DisplayName("AC-007.1 OpenAPI describes updateWorkspace with two required fields and optional write-only token")
+    @DisplayName(
+            "AC-007.1 OpenAPI describes updateWorkspace with the required company name and optional write-only token")
     void describesUpdate() throws Exception {
         Schema<?> schema =
                 ModelConverters.getInstance().read(WorkspaceUpdateRequest.class).get("WorkspaceUpdateRequest");
-        assertThat(schema.getProperties())
-                .containsOnlyKeys("companyName", "serviceAccountEmail", "serviceAccountToken");
-        assertThat(schema.getRequired()).containsExactlyInAnyOrder("companyName", "serviceAccountEmail");
+        assertThat(schema.getProperties()).containsOnlyKeys("companyName", "serviceAccountToken");
+        assertThat(schema.getRequired()).containsExactlyInAnyOrder("companyName");
         assertThat(schema.getProperties().get("companyName").getMaxLength()).isEqualTo(100);
-        assertThat(schema.getProperties().get("serviceAccountEmail").getMaxLength())
-                .isEqualTo(100);
         assertThat(schema.getProperties().get("serviceAccountToken").getWriteOnly())
                 .isTrue();
         assertThat(schema.getProperties().get("serviceAccountToken").getMinLength())
@@ -35,18 +33,14 @@ class WorkspaceOpenApiTest {
     }
 
     @Test
-    @DisplayName("AC-005.1 OpenAPI describes the four required setup fields and write-only token")
+    @DisplayName("AC-005.1 OpenAPI describes the three required setup fields, no email, and the write-only token")
     void describesSetup() throws Exception {
         Schema<?> schema =
                 ModelConverters.getInstance().read(WorkspaceSetupRequest.class).get("WorkspaceSetupRequest");
-        assertThat(schema.getProperties())
-                .containsOnlyKeys("companyName", "jiraSiteUrl", "serviceAccountEmail", "serviceAccountToken");
-        assertThat(schema.getRequired())
-                .containsExactlyInAnyOrder("companyName", "jiraSiteUrl", "serviceAccountEmail", "serviceAccountToken");
+        assertThat(schema.getProperties()).containsOnlyKeys("companyName", "jiraSiteUrl", "serviceAccountToken");
+        assertThat(schema.getRequired()).containsExactlyInAnyOrder("companyName", "jiraSiteUrl", "serviceAccountToken");
         assertThat(schema.getProperties().get("companyName").getMaxLength()).isEqualTo(100);
         assertThat(schema.getProperties().get("jiraSiteUrl").getMaxLength()).isEqualTo(200);
-        assertThat(schema.getProperties().get("serviceAccountEmail").getFormat())
-                .isEqualTo("email");
         assertThat(schema.getProperties().get("serviceAccountToken").getWriteOnly())
                 .isTrue();
         assertThat(WorkspaceController.class
@@ -57,12 +51,12 @@ class WorkspaceOpenApiTest {
     }
 
     @Test
-    @DisplayName("AC-006.2 OpenAPI exposes exactly three required public Workspace fields and getWorkspace")
+    @DisplayName("AC-006.2 OpenAPI exposes exactly the two public Workspace fields, no email, and getWorkspace")
     void describesWorkspaceInfo() throws Exception {
         Schema<?> schema =
                 ModelConverters.getInstance().read(WorkspaceInfoResponse.class).get("WorkspaceInfo");
-        assertThat(schema.getProperties()).containsOnlyKeys("companyName", "jiraSiteUrl", "serviceAccountEmail");
-        assertThat(schema.getRequired()).containsExactlyInAnyOrder("companyName", "jiraSiteUrl", "serviceAccountEmail");
+        assertThat(schema.getProperties()).containsOnlyKeys("companyName", "jiraSiteUrl");
+        assertThat(schema.getRequired()).containsExactlyInAnyOrder("companyName", "jiraSiteUrl");
         assertThat(WorkspaceController.class
                         .getMethod("get")
                         .getAnnotation(Operation.class)

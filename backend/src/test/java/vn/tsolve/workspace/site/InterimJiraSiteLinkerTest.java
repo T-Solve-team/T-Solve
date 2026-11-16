@@ -54,9 +54,45 @@ class InterimJiraSiteLinkerTest {
         jira.expect(requestTo(TENANT_INFO))
                 .andExpect(method(HttpMethod.GET))
                 .andExpect(headerDoesNotExist("Authorization"))
-                .andRespond(withSuccess("{\"cloudId\":\"fake-cloud-id\"}", MediaType.APPLICATION_JSON));
+                .andRespond(withSuccess(
+                        "{\"cloudId\":\"1324A887-45DB-1BF4-1E99-EF0FF456D421\"}", MediaType.APPLICATION_JSON));
 
-        assertThat(linker.linkJiraSite(SITE)).isEqualTo("fake-cloud-id");
+        assertThat(linker.linkJiraSite(SITE)).isEqualTo("1324a887-45db-1bf4-1e99-ef0ff456d421");
+        jira.verify();
+    }
+
+    @Test
+    @DisplayName("AC-011.8 readCloudId reads the same public tenant information before any link")
+    void readsCloudIdWithoutLinking() {
+        jira.expect(requestTo(TENANT_INFO))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(headerDoesNotExist("Authorization"))
+                .andRespond(withSuccess(
+                        "{\"cloudId\":\"1324a887-45db-1bf4-1e99-ef0ff456d421\"}", MediaType.APPLICATION_JSON));
+
+        assertThat(linker.readCloudId(SITE)).isEqualTo("1324a887-45db-1bf4-1e99-ef0ff456d421");
+        jira.verify();
+    }
+
+    @DisplayName("AC-011.8 refuses a cloudId that is not a canonical UUID, so it can never change the gateway path")
+    @ParameterizedTest(name = "AC-011.8 refuses cloudId [{0}]")
+    @ValueSource(
+            strings = {
+                "fake-cloud-id",
+                "../admin",
+                "1324a887-45db-1bf4-1e99-ef0ff456d421/../x",
+                "1324a887-45db-1bf4-1e99-ef0ff456d42",
+                "1324a887-45db-1bf4-1e99-ef0ff456d421?x=1",
+                "1324a88745db1bf41e99ef0ff456d421"
+            })
+    void refusesNonUuidCloudId(String cloudId) {
+        jira.expect(requestTo(TENANT_INFO))
+                .andRespond(withSuccess("{\"cloudId\":\"" + cloudId + "\"}", MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> linker.readCloudId(SITE))
+                .isInstanceOfSatisfying(JiraSiteLinkRefusedException.class, error -> assertThat(error.getReason())
+                        .isEqualTo(JiraSiteLinkRefusedException.Reason.UNREADABLE))
+                .hasNoCause();
         jira.verify();
     }
 

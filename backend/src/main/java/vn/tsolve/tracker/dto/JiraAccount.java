@@ -1,10 +1,11 @@
 package vn.tsolve.tracker.dto;
 
 /**
- * The Workspace's Jira service account (STORY-012): its site and the email + API token T-Solve signs in with. The
- * email and the token never reach a log line (Non-Functional 9), so {@link #toString()} leaves them out.
+ * The Workspace's Jira service account (STORY-012, KAN-344): its site (for issue links), the site's cloud id and the
+ * scoped API token T-Solve sends as Bearer through the Atlassian gateway. The token never reaches a log line
+ * (Non-Functional 9), so {@link #toString()} leaves it out.
  */
-public record JiraAccount(String siteUrl, String email, String apiToken) {
+public record JiraAccount(String siteUrl, String cloudId, String apiToken) {
 
     @Override
     public String toString() {

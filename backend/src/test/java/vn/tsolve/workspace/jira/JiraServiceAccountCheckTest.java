@@ -11,8 +11,6 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import java.net.SocketTimeoutException;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,13 +34,13 @@ import vn.tsolve.tracker.exception.JiraUnavailableException;
 @ExtendWith(OutputCaptureExtension.class)
 class JiraServiceAccountCheckTest {
 
-    private static final JiraAccount ACCOUNT =
-            new JiraAccount("https://acme.atlassian.net", "bot@acme.test", "secret-token");
-    private static final String BASIC = "Basic "
-            + Base64.getEncoder().encodeToString("bot@acme.test:secret-token".getBytes(StandardCharsets.UTF_8));
-    private static final String MYSELF = "https://acme.atlassian.net/rest/api/3/myself";
-    private static final String PERMISSIONS = "https://acme.atlassian.net/rest/api/3/mypermissions"
-            + "?permissions=BROWSE_PROJECTS,CREATE_ISSUES,MODIFY_REPORTER";
+    private static final String CLOUD_ID = "1324a887-45db-1bf4-1e99-ef0ff456d421";
+    private static final JiraAccount ACCOUNT = new JiraAccount("https://acme.atlassian.net", CLOUD_ID, "secret-token");
+    private static final String BEARER = "Bearer secret-token";
+    private static final String GATEWAY = "https://api.atlassian.com/ex/jira/" + CLOUD_ID;
+    private static final String MYSELF = GATEWAY + "/rest/api/3/myself";
+    private static final String PERMISSIONS =
+            GATEWAY + "/rest/api/3/mypermissions" + "?permissions=BROWSE_PROJECTS,CREATE_ISSUES,MODIFY_REPORTER";
     private static final String ALL_PERMISSIONS = """
             {"permissions": {
               "BROWSE_PROJECTS": {"havePermission": true},
@@ -62,15 +60,15 @@ class JiraServiceAccountCheckTest {
     }
 
     @Test
-    @DisplayName("AC-011.1 checks identity then all three permissions with Basic auth")
-    void checksServiceAccountWithBasicAuth() {
+    @DisplayName("AC-011.1 checks identity then all three permissions through the gateway with Bearer")
+    void checksServiceAccountThroughTheGatewayWithBearer() {
         jira.expect(requestTo(MYSELF))
                 .andExpect(method(HttpMethod.GET))
-                .andExpect(header("Authorization", BASIC))
+                .andExpect(header("Authorization", BEARER))
                 .andRespond(withSuccess("{\"accountId\":\"bot-1\"}", MediaType.APPLICATION_JSON));
         jira.expect(requestTo(PERMISSIONS))
                 .andExpect(method(HttpMethod.GET))
-                .andExpect(header("Authorization", BASIC))
+                .andExpect(header("Authorization", BEARER))
                 .andRespond(withSuccess(ALL_PERMISSIONS, MediaType.APPLICATION_JSON));
 
         TicketTrackerClient tracker = client;
@@ -84,15 +82,14 @@ class JiraServiceAccountCheckTest {
     void rejectsAuthenticationAndAuthorizationErrors(String endpoint, int status, CapturedOutput output) {
         expectIdentityBefore(endpoint);
         jira.expect(requestTo(endpoint.equals("myself") ? MYSELF : PERMISSIONS))
-                .andRespond(withStatus(HttpStatus.valueOf(status))
-                        .body("private-jira-body " + ACCOUNT.email() + " " + ACCOUNT.apiToken()));
+                .andRespond(withStatus(HttpStatus.valueOf(status)).body("private-jira-body " + ACCOUNT.apiToken()));
 
         assertThatThrownBy(() -> client.checkServiceAccount(ACCOUNT))
                 .isInstanceOfSatisfying(JiraRejectedException.class, error -> assertThat(error.getStatus())
                         .isEqualTo(status))
                 .hasMessage("Jira rejected the call: " + status)
                 .hasNoCause();
-        assertThat(output).doesNotContain("private-jira-body", ACCOUNT.email(), ACCOUNT.apiToken(), BASIC);
+        assertThat(output).doesNotContain("private-jira-body", ACCOUNT.apiToken(), BEARER);
         jira.verify();
     }
 
@@ -102,14 +99,14 @@ class JiraServiceAccountCheckTest {
     void treatsServerErrorsAsUnavailable(String endpoint, CapturedOutput output) {
         expectIdentityBefore(endpoint);
         jira.expect(requestTo(endpoint.equals("myself") ? MYSELF : PERMISSIONS))
-                .andRespond(withServerError().body("private-jira-body " + ACCOUNT.email() + " " + ACCOUNT.apiToken()));
+                .andRespond(withServerError().body("private-jira-body " + ACCOUNT.apiToken()));
 
         assertThatThrownBy(() -> client.checkServiceAccount(ACCOUNT))
                 .isInstanceOfSatisfying(JiraUnavailableException.class, error -> assertThat(error.getStatus())
                         .isEqualTo(500))
                 .hasMessage("Jira unavailable: 500")
                 .hasNoCause();
-        assertThat(output).doesNotContain("private-jira-body", ACCOUNT.email(), ACCOUNT.apiToken(), BASIC);
+        assertThat(output).doesNotContain("private-jira-body", ACCOUNT.apiToken(), BEARER);
         jira.verify();
     }
 
@@ -159,7 +156,7 @@ class JiraServiceAccountCheckTest {
     void treatsCheckTimeoutAsUnavailable(String endpoint, CapturedOutput output) {
         expectIdentityBefore(endpoint);
         jira.expect(requestTo(endpoint.equals("myself") ? MYSELF : PERMISSIONS)).andRespond(request -> {
-            throw new SocketTimeoutException("private-jira-body " + ACCOUNT.email() + " " + ACCOUNT.apiToken());
+            throw new SocketTimeoutException("private-jira-body " + ACCOUNT.apiToken());
         });
 
         assertThatThrownBy(() -> client.checkServiceAccount(ACCOUNT))
@@ -167,7 +164,7 @@ class JiraServiceAccountCheckTest {
                         .isZero())
                 .hasMessage("Jira unavailable: 0")
                 .hasNoCause();
-        assertThat(output).doesNotContain("private-jira-body", ACCOUNT.email(), ACCOUNT.apiToken(), BASIC);
+        assertThat(output).doesNotContain("private-jira-body", ACCOUNT.apiToken(), BEARER);
         jira.verify();
     }
 

@@ -588,7 +588,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/WorkspaceInfo' }
         '400':
-          description: Field error MSG01, MSG02, MSG03, MSG61, MSG153 or MSG156.
+          description: Field error MSG01, MSG02, MSG61, MSG153 or MSG156 (MSG03 for a malformed body).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ProblemDetail' }
@@ -2959,7 +2959,7 @@ components:
             inTrash: { type: boolean, description: True only on the Knowledge Manager's read of a trashed document. }
     WorkspaceSetupRequest:
       type: object
-      required: [companyName, jiraSiteUrl, serviceAccountEmail, serviceAccountToken]
+      required: [companyName, jiraSiteUrl, serviceAccountToken]
       properties:
         companyName: { type: string, minLength: 1, maxLength: 100 }
         jiraSiteUrl:
@@ -2967,14 +2967,17 @@ components:
           minLength: 1
           maxLength: 200
           description: HTTPS Jira Cloud site; a single label followed by .atlassian.net, optionally a trailing slash.
-        serviceAccountEmail: { type: string, format: email, minLength: 1, maxLength: 100 }
-        serviceAccountToken: { type: string, format: password, minLength: 1, writeOnly: true }
+        serviceAccountToken:
+          type: string
+          format: password
+          minLength: 1
+          writeOnly: true
+          description: Scoped API token of an Atlassian service account, sent as Bearer through the API gateway.
     WorkspaceUpdateRequest:
       type: object
-      required: [companyName, serviceAccountEmail]
+      required: [companyName]
       properties:
         companyName: { type: string, minLength: 1, maxLength: 100 }
-        serviceAccountEmail: { type: string, format: email, minLength: 1, maxLength: 100 }
         serviceAccountToken:
           type: string
           format: password
@@ -2982,11 +2985,10 @@ components:
           description: Absent or blank keeps the stored token.
     WorkspaceInfo:
       type: object
-      required: [companyName, jiraSiteUrl, serviceAccountEmail]
+      required: [companyName, jiraSiteUrl]
       properties:
         companyName: { type: string }
         jiraSiteUrl: { type: string }
-        serviceAccountEmail: { type: string, format: email }
     KnowledgeDashboard:
       type: object
       required: [period, options, outcomes, coverage, feedback, gaps, suggestions]
