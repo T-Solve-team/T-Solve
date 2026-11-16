@@ -37,6 +37,7 @@ an issue has at most one.
 | 2026-11-14 | STORY-008, STORY-012 | AC-008.7: the Jira App shows MSG64 without its last sentence, as `Changes requested by {manager_name}: "{comment}".` (the SRS adds "Update the solution and resubmit."); AC-012.1 and AC-012.2 show the same text. The web app keeps the SRS text | User in the KAN-130 dev-site test (14/11): the panel already shows "Edit and resubmit", so the last sentence repeats it. Deviation from the SRS text of MSG64, Jira App only, to agree with the team |
 | 2026-11-15 | STORY-008 | New AC-008.9: while the issue's Solution Form ticket written by the user is Rejected, the panel shows `Rejected by {manager_name}: "{reason}".` from `ticket-review`'s feedback endpoint (its AC-009.13), with no button | User in the KAN-130 dev-site test (15/11): the panel was empty after a Reject. The SRS has no message for it, so the text is a Jira App label like "Edit and resubmit"; the user chose the feedback endpoint over a new panel field |
 | 2026-11-15 | STORY-008 | New AC-008.10: while the issue's ticket is Published, whatever its source, the panel shows "Solution approved and published." with no button | User in the KAN-337 dev-site test (15/11): the panel was empty after an Approve. The SRS has no message for it, so the text is a Jira App label; the user chose the status alone, without the Project Manager's name, so no server change |
+| 2026-11-17 | STORY-013 | New STORY-013 (KAN-349): the Forge app sends its app system token to the backend — hourly scheduled trigger plus install/upgrade, straight to the remote with `appSystemToken`; scope `write:jira-work` added for the MSG80 comment and issue creation | RESEARCH-005 option D, user decision 17/11: T-Solve calls Jira as its Jira App instead of a customer service account |
 
 ## Requirements
 
@@ -143,6 +144,18 @@ an issue has at most one.
   - AC-012.5: IF at Finish the ticket is no longer resubmittable (for example it expired meanwhile), THEN THE server SHALL change nothing and answer 409 MSG06, and THE Jira App SHALL show MSG06 and keep the form open with its content.
   - AC-012.6: WHEN the user closes the resubmission form, THE server SHALL store the five sections as the user's Draft for the issue as in AC-005.1, the ticket SHALL stay in Changes requested, and THE Jira App SHALL show the flag "Saved as draft".
   - AC-012.7: THE resubmission form SHALL check, rewrite and retry as the first submission does (AC-002.3, AC-002.4, AC-004.4, STORY-007).
+
+### STORY-013: Hand the app token to the backend (KAN-349)
+- As the T-Solve backend, I want the Jira App to send me its app token regularly, so that I can call Jira for the
+  Workspace when nobody is inside Jira (workspace STORY-012).
+- Acceptance:
+  - AC-013.1: THE manifest SHALL declare a scheduled trigger with interval `hour` and a trigger on the app's install and
+    upgrade events, each invoking the remote endpoint of `POST /api/v1/jira-app/app-token` directly (not through a
+    Forge function), with `auth` `appSystemToken: true` and no user token.
+  - AC-013.2: THE manifest SHALL request the scopes `read:jira-work` and `write:jira-work` and no administration scope
+    (`manage:*`), so the app token can read issues, projects and comments and add comments and issues only.
+  - AC-013.3: WHEN the backend answers the token call with an error, THE Jira App SHALL do nothing else; the next run
+    sends a new call (no retry loop in the app).
 
 ## Out of Scope
 - Evidence in the Jira App (attach, MSG34, MSG72, the Evidence list of 3.4): Forge UI calls carry at most 500 KB

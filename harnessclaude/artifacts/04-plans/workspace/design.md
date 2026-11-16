@@ -572,3 +572,18 @@ Open questions for the spec owner: none.
 | Reading the cloud id | `JiraSiteLinker` gains `readCloudId(site)`: the same no-redirect `/_edge/tenant_info` read as `linkJiraSite`, called **before** the check and outside the transaction; only a canonical UUID is accepted (AC-011.8) | Call `linkJiraSite` before the check | The check needs the cloud id first; `linkJiraSite` stays the in-transaction link of AC-005.8 for the future catalog |
 | Old rows | `current()` answers empty while `jira_cloud_id` is null (AC-008.4); the Admin enters a new (scoped) token, which fills it (AC-007.11) | Backfill by a job | Old rows hold classic tokens that cannot work with Bearer anyway; the Admin must re-enter the token |
 | PR | Workspace and tracker in one PR (KAN-344); the import follows in its own PR | Separate PRs | The check is `JiraClient.checkServiceAccount` and `JiraAccount` is tracker's type; one `http()` builder serves every call |
+
+## Change 2026-11-17: Jira access as the T-Solve Jira App (KAN-349)
+
+Supersedes the service-account parts of "Change 2026-11-16" (KAN-344). RESEARCH-005 (option D + probe).
+
+| Decision | Chosen | Alternatives | Rationale |
+|---|---|---|---|
+| Identity | The Forge app system token (`x-forge-oauth-system`, ≤ 4 h) | Service account + scoped token (KAN-344), OAuth client credentials | No customer secret, no per-project grant (probe), fits Marketplace rules (user decision 17/11) |
+| Delivery | `POST /api/v1/jira-app/app-token` on the existing FIT chain (`JiraAppSecurityConfig`, role `JIRA_APP`); hourly scheduled trigger + install/upgrade trigger call the remote directly | Pull from a Forge function via `invokeRemote` | Forge docs: a function hop may deliver a token with much less than 2 h left |
+| Store | Redis key `tsolve:jira-app-token:<workspaceId>`, value = `TokenCipher.encrypt(workspaceId, json{token, cloudId, receivedAt, exp})`, TTL = `exp − now` | In memory; tenant DB | Survives restarts, shared by web and worker (user decision 17/11) |
+| Workspace of a call | `jiraapp.service.JiraWorkspaceLookup.workspaceOf(cloudId)` then `TenantScope.runIn` | A new lookup | Same mapping every Jira App endpoint uses (stub `TSOLVE_STUB_JIRA_SITES` until the platform catalog) |
+| `exp` | Read from the token's JWT payload (Base64URL JSON, no signature check) | Trust a fixed 4 h | Forge sends tokens with 2–4 h left; the key must not outlive the token |
+| Status for 2.2 | `WorkspaceInfoResponse(companyName, jiraSiteUrl, jiraAppConnected, jiraAppTokenReceivedAt)` built by the service from the row and the store | A separate endpoint | One read for the screen |
+| Old credentials | Changeset 043 sets `service_account_email` and `service_account_api_token` to NULL; columns kept | Drop the columns | Forward-only, no entity churn; no customer secret left |
+| Dead code | `TicketTrackerClient.checkServiceAccount` and its tests removed | Keep | Nothing calls it after AC-011.1 is removed |

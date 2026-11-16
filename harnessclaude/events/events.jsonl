@@ -1880,3 +1880,11 @@
 {"ts":"2026-11-15T19:54:14.192Z","type":"feature-status","module":"ticket-repository","feature":"drop-legacy-solution-tables","from":"evaluating","to":"passing"}
 {"ts":"2026-11-15T19:54:14.490Z","type":"feature-status","module":"platform","feature":"file-storage","from":"evaluating","to":"passing"}
 {"ts":"2026-11-16T17:48:57.783Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-workspace-account","from":"evaluating","to":"passing"}
+{"ts":"2026-11-16T20:09:57.295Z","type":"spec-approved","module":"workspace","specHash":"fc089a4f44cc5d8a7266c577bcd007b1afad2c5aa7f5ad017273f7073c006915"}
+{"ts":"2026-11-16T20:10:03.405Z","type":"spec-approved","module":"jira-app","specHash":"0d2fc15ed26b64f93d630e2235933ffa94e9596a4a71e0b3fe6d7c53ad1cf5db"}
+{"ts":"2026-11-16T20:10:06.920Z","type":"spec-approved","module":"tracker","specHash":"54dc546df8d1e14c405003e452f551684e1e7d6e56e9211eae3bad736c79987b"}
+{"ts":"2026-11-16T20:10:10.423Z","type":"spec-approved","module":"ticket-repository","specHash":"e68f238274c7ce54fee268676117b04f4c8a1a803a3a2d2203a50a0ccf4e496b"}
+{"ts":"2026-11-16T20:11:32.077Z","type":"feature-status","module":"workspace","feature":"jira-app-token","from":null,"to":"pending"}
+{"ts":"2026-11-16T20:11:32.446Z","type":"feature-status","module":"workspace","feature":"workspace-without-service-account","from":null,"to":"pending"}
+{"ts":"2026-11-16T20:11:32.831Z","type":"feature-status","module":"workspace","feature":"workspace-jira-app-status-screen","from":null,"to":"pending"}
+{"ts":"2026-11-16T20:11:33.177Z","type":"feature-status","module":"jira-app","feature":"app-token-trigger","from":null,"to":"pending"}
