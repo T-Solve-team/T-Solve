@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -197,7 +198,7 @@ class ImportHistoryDateRangeIT {
     @Test
     @DisplayName("AC-007.8 failed Jira pull persists the requested resolved range")
     void failedPull_AC_007_8() {
-        JiraIssueSource jira = mock(JiraIssueSource.class);
+        JiraIssueSource jira = mock(JiraIssueSource.class, CALLS_REAL_METHODS);
         when(jira.resolvedIssues(anyString(), any(), any(), any(), any()))
                 .thenThrow(new JiraUnavailableException("HTTP 503"));
         JiraImportServiceImpl service = new JiraImportServiceImpl(
