@@ -106,12 +106,6 @@ public class JiraRestIssueSource implements JiraIssueSource {
         return RestClient.builder().requestFactory(factory);
     }
 
-    @Override
-    public JiraIssuePage resolvedIssues(
-            String projectKey, LocalDate from, LocalDate to, String pageToken, Instant deadline) {
-        return pull(projectKey, from, to, deadline).page(pageToken);
-    }
-
     /** Reads the account once; every page of the pull uses it (AC-001.12, BUG-311). */
     @Override
     public Pull pull(String projectKey, LocalDate from, LocalDate to, Instant deadline) {
