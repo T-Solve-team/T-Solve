@@ -233,8 +233,8 @@
     }
   },
   "chatbot": {
-    "specHash": "3fc076bfe77ee4df86c02fcb2e9463194212f6272dc6b99c6f7b882299cad766",
-    "approvedAt": "2026-11-17T10:17:21.902Z",
+    "specHash": "39bed7087d59a8523f2e824abbbda58426626f170174e9e34b4f5cfa48b98805",
+    "approvedAt": "2026-11-17T11:01:30.946Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",
@@ -1312,8 +1312,8 @@
     }
   },
   "jira-app": {
-    "specHash": "0ebec8741349ab6902b25271edc4a86012cfa4d974a1c8c04a0f5090444cf70e",
-    "approvedAt": "2026-11-17T10:17:10.946Z",
+    "specHash": "9baeec2f97f4ce3420231f04e6ae33da51450cc9e086676e99c940170bfcd33b",
+    "approvedAt": "2026-11-17T11:01:28.175Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the issue being viewed changes to a status of the Done status category, THE Jira App SHALL ask the server whether the form may open and open the form when it may.",
@@ -1348,17 +1348,17 @@
       "AC-010.1": "THE Jira App SHALL show a project page titled \"Ask T-Solve\" in every Jira project of the site, with a question box, a send button and the note \"Answers from T-Solve Solutions and Wiki\".",
       "AC-010.2": "IF the open Jira project is not the Jira project of an Active T-Solve Project, THEN THE page SHALL show \"This Jira project is not connected to T-Solve.\" (a Jira App text, not an SRS message — user, 2026-11-17) instead of the question box, or MSG124 instead when the Jira site belongs to no Workspace, and SHALL still show \"Not solved, create ticket\", which opens the Create dialog of AC-010.9 with nothing prefilled.",
       "AC-010.3": "WHEN the user sends a question, THE Jira App SHALL call  with the question and, as history, the earlier turns of the conversation — at most the last 10.",
-      "AC-010.4": "WHEN the server receives a valid question from a Jira project of an Active T-Solve Project, THE server SHALL return the chatbot answer for that Project (chatbot STORY-012) — the same citations and outcomes as the web Knowledge Chatbot, from the Published Solutions and the Wiki documents of the Project's Department — whoever the Jira user is, linked to T-Solve or not.",
+      "AC-010.4": "WHEN the server receives a valid question from a Jira project of an Active T-Solve Project, THE server SHALL return the chatbot answer for that Project (chatbot STORY-012) — the same citations and outcomes as the web Knowledge Chatbot, from the Published Solutions of the Project's Department and the Company-wide Wiki documents, as the MSG80 suggestion does (UC-36) — whoever the Jira user is, linked to T-Solve or not.",
       "AC-010.5": "IF the question is empty or only white space, THEN THE Jira App SHALL show MSG01 under the box and send nothing; IF it is longer than 1,000 characters, THEN THE Jira App SHALL show MSG02 and send nothing; THE server SHALL answer 400 with the same codes whatever the Jira App checked.",
       "AC-010.6": "WHEN the answer has outcome , THE page SHALL show its text, its sources in number order — a Wiki document as \"[n] <title> · Wiki document\", a ticket source as \"[n] Solution from a ticket\" with its Solution, never the ticket's id, link or Project (GBR-36) — and the buttons \"Solved\" and \"Not solved, create ticket\".",
       "AC-010.7": "WHEN the answer has outcome , THE page SHALL show MSG109 and the buttons \"Solved\" and \"Not solved, create ticket\".",
       "AC-010.8": "IF the answer request fails, does not answer within 20 seconds, or the server answers 5xx, THEN THE page SHALL show MSG06, keep the question in the box and still show \"Not solved, create ticket\" (GBR-12).",
       "AC-010.9": "WHEN the user clicks \"Not solved, create ticket\", THE Jira App SHALL open Jira's Create issue dialog for the open Jira project with Summary = the first question of the conversation cut to 255 characters, Description = every question of the conversation followed by a part \"Tried with T-Solve:\" with the last answer and, after \"Sources:\", its sources labelled as in AC-010.6 (no Solution text), and the label ; the user can change every field before clicking Create.",
       "AC-010.10": "WHEN the user clicks \"Solved\", THE page SHALL end the conversation, show the text \"Your problem is solved. Thank you!\" (a Jira App label, not an SRS message — user, 2026-11-07), create no issue and store nothing.",
-      "AC-010.11": "IF the Jira site belongs to no Workspace, THEN THE server SHALL answer  with 403 MSG124; IF the FIT has no project, or its project is not the Jira project of an Active T-Solve Project, THEN with 403 MSG08; in both cases it SHALL call no AI and store nothing.",
+      "AC-010.11": "IF the Jira site belongs to no Workspace, THEN THE server SHALL answer  with 403 MSG124; IF the FIT has no Jira user () or no project, or its project is not the Jira project of an Active T-Solve Project, THEN with 403 MSG08; in both cases it SHALL call no AI and store nothing.",
       "AC-010.12": "THE Jira App SHALL keep the conversation only while the page is open; it SHALL store no question or answer itself and SHALL log no question or answer text; THE server stores each answered question without a user, with its Project (chatbot AC-012.2).",
       "AC-010.13": "THE server SHALL take the Jira project of a question only from the verified FIT's  (its key), never from the request body, a parameter or a header, so a user cannot ask in another Department's scope.",
-      "AC-010.14": "WHEN the page opens, THE Jira App SHALL call , which SHALL answer  ,  (the site belongs to no Workspace) or  (AC-010.11) for the FIT's site and project and SHALL call no AI.",
+      "AC-010.14": "WHEN the page opens, THE Jira App SHALL call , which SHALL answer  ,  (the site belongs to no Workspace) or  (AC-010.11, also for a FIT without a Jira user) for the FIT's site and project and SHALL call no AI.",
       "AC-010.15": "WHEN the user clicks \"Solved\" or \"Not solved, create ticket\" after an answer, THE Jira App SHALL send  with  for \"Solved\" or  for \"Not solved, create ticket\" for the last answer of the conversation, and THE server SHALL store it as the rating of that answer (chatbot AC-012.7); IF the call fails, THEN THE page SHALL go on as AC-010.9 and AC-010.10 say and show no message.",
       "AC-012.1": "WHILE the issue's ticket is resubmittable, THE panel SHALL show MSG64 (AC-008.7) and a button \"Edit and resubmit\" (a Jira App label, not an SRS message — user, 2026-11-14).",
       "AC-012.2": "WHEN the user clicks \"Edit and resubmit\", THE server SHALL allow the form only while the ticket is resubmittable and SHALL fill it from the user's Draft for the issue when there is one, otherwise from the ticket's current Solution; THE Jira App SHALL show MSG64 with the Project Manager's name and comment above the five sections.",
@@ -1527,8 +1527,8 @@
     }
   },
   "wiki": {
-    "specHash": "bfc30631c3e85857675b1ef59a1a94345571d44c81ac9c359a9b7a773ce3a5ca",
-    "approvedAt": "2026-11-17T10:12:33.826Z",
+    "specHash": "d4844089023e6171ff68a8399886e37122a1b37f2381a70a3aa6c3afd93f1cbe",
+    "approvedAt": "2026-11-17T11:01:33.589Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the view rule is evaluated for a user and a Space, THE system SHALL grant View only if the user is Active, the Space is Active, its Department is Active, and one of these holds: the user is the Space's Knowledge Manager (a  row and the role ); one of the user's Departments (AC-001.2) is the Space's Department; one of the user's Departments has a permission on the Space; the user has their own permission on the Space.",
@@ -1542,7 +1542,7 @@
       "AC-001.9": "WHEN identity calls , THE system SHALL return the Active Spaces of Active Departments that the user manages, only when the user has the role , sorted by name.",
       "AC-001.10": "WHEN identity calls , THE system SHALL return every Space the user can view by AC-001.1, sorted by name.",
       "AC-001.11": "WHILE a document is not yet indexed, or its indexing failed, THE system SHALL leave it out of AC-001.5 and AC-001.7 and keep it in every list and keyword search.",
-      "AC-001.12": "WHEN the Knowledge Chatbot calls  for a question asked in Jira (chatbot STORY-012), THE system SHALL return, as AC-001.5 does, the best passage of each Published document of an Active Space of an Active Department that is Company-wide, or whose Space belongs to the Department of that Project, or whose Space is shared with that Department (); an unknown Project SHALL get no passage.",
+      "AC-001.12": "WHEN the Knowledge Chatbot calls  for a question asked in Jira (chatbot STORY-012), THE system SHALL return, as AC-001.7 does, only the best passage of each Published Company-wide document of an Active Space of an Active Department.",
       "AC-002.1": "WHEN a signed-in user calls , THE system SHALL answer 200 with the Spaces the user can view, sorted by name, each with , ,  and  ( for the Space's Knowledge Manager, otherwise ).",
       "AC-002.2": "WHEN a signed-in user calls , THE system SHALL answer 200 with every Published Company-wide document of every Active Space of an Active Department, sorted by Space name and then title.",
       "AC-002.3": "WHEN a user who can view a Space calls , THE system SHALL answer 200 with all folders of the Space as a flat list of ,  (null at the top level),  and  (1 to 3), sorted by name.",

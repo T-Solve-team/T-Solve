@@ -244,7 +244,7 @@ Order: search Task 19 → Task 6 → Task 7 → Task 8 → Task 9 → Task 10.
 **Story:** STORY-012
 **Feature:** chatbot-ask-for-project
 **Description:** `ChatbotAnswerService.askForProject(projectId, request)` (AC-012.1, AC-012.4, AC-012.6): the same answer
-flow with search's `SolutionRetrieval.nearestInProjectDepartment` and `WikiSources.nearestInProjectDepartment`; an
+flow with search's `SolutionRetrieval.nearestInProjectDepartment` and `WikiSources.nearestCompanyWide`; an
 unknown or inactive Project throws before any AI call. Changeset `045-chatbot-answer-jira-app`: `user_id` nullable,
 `source` (`WEB`/`JIRA_APP`, default `WEB`), `project_id`, the source check, rollback (AC-012.5). The entity stores a
 `JIRA_APP` row without a user (AC-012.2); rating, prefill and create find only the caller's own `WEB` rows, so a

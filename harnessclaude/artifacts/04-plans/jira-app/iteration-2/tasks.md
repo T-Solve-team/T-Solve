@@ -277,7 +277,7 @@ three ACs read from the parsed manifest); `forge lint`.
 **Feature:** ask-without-sign-in
 **Description:** Backend: the FIT's `context.extension.project.key` becomes part of `JiraAppPrincipal` (AC-010.13);
 `JiraAppQuestionServiceImpl` binds the site's Workspace, finds the Active Project of that key and calls
-`ChatbotAnswerService.askForProject` (AC-010.4); a site with no Workspace answers 403 MSG124, no or an unknown project
+`ChatbotAnswerService.askForProject` (AC-010.4); a site with no Workspace answers 403 MSG124, no Jira user, no or an unknown project
 403 MSG08, with no AI call (AC-010.11); `GET /questions/eligibility` answers `status` (AC-010.14). Contract first:
 `JiraAskerEligibility` becomes `{ status }`. Forge page: `CONNECTED` shows the box for everyone; `PROJECT_NOT_CONNECTED`
 shows "This Jira project is not connected to T-Solve."; `SITE_NOT_CONNECTED` shows MSG124; both keep "Not solved,

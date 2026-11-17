@@ -177,10 +177,9 @@ Blockers: Tasks 6 and 9 need `FileStorage` (KAN-96) on `main`. AC-001.7 needs tr
 
 **Story:** STORY-001
 **Feature:** wiki-project-department-sources
-**Description:** `WikiSources.nearestInProjectDepartment(projectId, vector, minSimilarity, limit)` (AC-001.12): a new
-`AccessRepository.nearestInProjectDepartment` query (`BEST_PASSAGES` + `PUBLISHED_DOCUMENT` + Company-wide, or the
-Space's Department is the Project's, or `space_permission.department_id` is the Project's Department) and its
-`WikiSourcesImpl` method. An unknown Project gives no passage. For the Jira App's Ask T-Solve page (the chatbot's answer for a Jira project).
+**Description:** `WikiSources.nearestCompanyWide(vector, minSimilarity, limit)` (AC-001.12): the existing
+`AccessRepository.nearestCompanyWide` query (Published Company-wide documents of Active Spaces), mapped by
+`WikiSourcesImpl` (risk review of 17/11: no Department-only document for a page without a T-Solve user). For the Jira App's Ask T-Solve page (the chatbot's answer for a Jira project).
 **Files:** Modify `backend/src/main/java/vn/tsolve/chatbot/source/service/WikiSources.java` (the chatbot-owned port),
 `backend/src/main/java/vn/tsolve/wiki/repository/AccessRepository.java`,
 `backend/src/main/java/vn/tsolve/wiki/service/impl/WikiSourcesImpl.java`; tests `WikiPortsTest` (mapping, arguments) and
