@@ -40,7 +40,11 @@ Official integration references: [JobRequest and handlers](https://www.jobrunr.i
 
 ## Shared email outbox — KAN-162
 
-The queue is available in both API and worker processes when `tsolve.worker.enabled=true`.
+The queue is available in both API and worker processes when `tsolve.worker.enabled=true`. A web process
+that only queues mail (staging's `backend` service) sets `tsolve.worker.outbox-enabled=true` instead
+(`OutboxOnlyConfiguration`, BUG-339): the outbox with its own Jobs pool and migration, taking the Workspace from the
+request's `TenantContext`. It starts no JobRunr, registers no handler, needs no `worker-mock`, and is ignored when
+`tsolve.worker.enabled=true`; the worker process still sends the mail.
 Inject `ObjectProvider<EmailOutboxService>` into a consuming module's after-commit listener.
 While its Workspace is still bound, build an `OutboundEmail` and call `queue`:
 
@@ -63,7 +67,7 @@ decision's Workspace it loads the committed notification, renders the subject, p
 with `ReviewEmailRenderer`, and queues one `OutboundEmail` per writer. Approve and missing writer
 accounts queue nothing. Each decision is isolated: a lookup, rendering or queue failure logs only
 counts and the exception class, and the remaining decisions continue. A missing outbox bean skips
-queueing. Delivery and retry use this shared outbox; no review-specific job handler remains.
+queueing and logs a WARN with the counts. Delivery and retry use this shared outbox; no review-specific job handler remains.
 Existing review notification jobs in JobRunr storage will fail as unknown handlers; this is accepted
 for the demo data. `ReviewNotificationIT` covers commit/rollback, stored content and SMTP retry
 without changing the committed decision.
