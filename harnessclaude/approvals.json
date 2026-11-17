@@ -738,8 +738,8 @@
     }
   },
   "search": {
-    "specHash": "a5a63c6de4269f0a6535e5c37b2c1f21f34f2f2758b35282029a93be35103a95",
-    "approvedAt": "2026-11-07T19:09:11.462Z",
+    "specHash": "873621aaf1127691e6fd80621d23de0c1f620f6d4ef0a79a3ab57a6a44ab7156",
+    "approvedAt": "2026-11-17T12:26:04.316Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Ticket Resolver or Project Manager opens , THE web app SHALL show 6.2 Ticket List",
@@ -796,7 +796,7 @@
       "AC-005.8": "IF an id of the event names no ticket, or a ticket that is no longer , THEN THE backend SHALL",
       "AC-005.9": "IF the embedding of a ticket id fails 3 times in a row, THEN THE catch-up job SHALL skip that id until the",
       "AC-006.1": "WHEN a user holding TICKET_RESOLVER or PROJECT_MANAGER calls , THE backend SHALL",
-      "AC-006.2": "THE backend SHALL take the user's Departments, managed Projects and writer only from the port",
+      "AC-006.2": "THE backend SHALL take the user's Departments, managed Projects and writer id only from the port",
       "AC-006.3": "WHEN no page, size or sort is given, THE backend SHALL return page 0 of 20 rows sorted by",
       "AC-006.4": "WHEN , ,  or  is given, THE backend SHALL combine them with AND",
       "AC-006.5": "THE backend SHALL return each row's ,  and  as",
@@ -835,7 +835,13 @@
       "AC-011.2": "THE backend SHALL return each hit with the ticket's , Symptoms, Root cause, Resolution steps,",
       "AC-011.3": "IF a ticket is unpublished, of another Department, of an inactive Department or below , THEN THE backend SHALL leave it out, and SHALL return an empty list when no Project has  .",
       "AC-011.4": "IF an argument is out of range, THEN THE service SHALL throw  and SHALL run",
-      "AC-011.5": "THE service SHALL take no user argument and SHALL call no , write no"
+      "AC-011.5": "THE service SHALL take no user argument and SHALL call no , write no",
+      "AC-012.1": "WHEN  is called, THE backend SHALL answer as the user's Departments, by",
+      "AC-012.2": "THE backend SHALL answer as the user's managed Projects, by internal id, the Projects of",
+      "AC-012.3": "THE backend SHALL answer as the writer id the user's account id (), and the Ticket List",
+      "AC-012.4": "IF identity grants the user no Department and the user manages no Project, THEN THE backend SHALL",
+      "AC-012.5": "THE backend SHALL read the scope from the Workspace database of the request on every call, with no",
+      "AC-012.6": "WHILE  is not , THE backend SHALL have  as its only"
     }
   },
   "dashboard-audit": {

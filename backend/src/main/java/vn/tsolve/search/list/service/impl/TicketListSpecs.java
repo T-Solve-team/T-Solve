@@ -23,7 +23,7 @@ final class TicketListSpecs {
             if (!scope.managedProjectIds().isEmpty()) {
                 related.add(ticket.get("projectId").in(scope.managedProjectIds()));
             }
-            scope.writer().ifPresent(writer -> related.add(builder.equal(ticket.get("writer"), writer)));
+            scope.writerId().ifPresent(writerId -> related.add(builder.equal(ticket.get("writerId"), writerId)));
             if (!related.isEmpty()) {
                 visible.add(builder.and(
                         builder.notEqual(ticket.get("status"), "PUBLISHED"),
