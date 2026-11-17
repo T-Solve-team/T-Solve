@@ -1936,3 +1936,5 @@
 {"ts":"2026-11-17T10:01:35.353Z","type":"feature-status","module":"triage","feature":"jira-site","from":null,"to":"pending"}
 {"ts":"2026-11-17T10:01:43.526Z","type":"feature-status","module":"triage","feature":"managed-projects","from":null,"to":"pending"}
 {"ts":"2026-11-17T10:01:43.910Z","type":"feature-status","module":"triage","feature":"managed-projects","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T10:14:41.189Z","type":"feature-status","module":"triage","feature":"managed-projects","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T10:17:19.680Z","type":"feature-status","module":"triage","feature":"managed-projects","from":"evaluating","to":"passing"}

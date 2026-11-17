@@ -328,9 +328,9 @@
         "suggestion-history-api": "passing",
         "suggestion-generation": "passing",
         "jira-site": "pending",
-        "managed-projects": "in-progress"
+        "managed-projects": "passing"
       },
-      "lastUpdated": "2026-11-17T10:01:43.908Z",
+      "lastUpdated": "2026-11-17T10:17:19.679Z",
       "branch": "feat/triage",
       "repos": [
         "default"
