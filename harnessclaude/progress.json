@@ -364,17 +364,17 @@
         "classify-outcome-schema": "evaluating",
         "classify-question": "passing",
         "classify-question-ui": "passing",
-        "conversation-store": "pending",
+        "conversation-store": "in-progress",
         "conversation-api": "pending",
         "conversation-ui": "pending"
       },
-      "lastUpdated": "2026-11-17T15:45:14.980Z",
+      "lastUpdated": "2026-11-17T19:09:16.976Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "2a4ee7865dae626ee19cddc25badf9515d706f2c"
+        "default": "4967050af284e74c4c304f7eb91e2899e052b4e6"
       }
     },
     "jira-app": {
