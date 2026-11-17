@@ -149,9 +149,16 @@ describe('TicketListPage', () => {
 
   it('AC-001.3 numbers page 2 from 21 and links the Title to the ticket detail', async () => {
     await openList('/tickets?page=2');
-    expect(
-      dataRows().map((row) => within(row).getAllByRole('cell', { hidden: true })[0]?.textContent),
-    ).toEqual(['21', '22', '23', '24', '25', '26', '27', '28']);
+    expect(dataRows().map((row) => within(row).getAllByRole('cell')[0]?.textContent)).toEqual([
+      '21',
+      '22',
+      '23',
+      '24',
+      '25',
+      '26',
+      '27',
+      '28',
+    ]);
     expect(
       screen.getByRole('link', { name: 'Insurance card request form returns an error' }),
     ).toHaveAttribute('href', '/tickets/7a1c0000-0000-4000-8000-000000000021');
@@ -369,6 +376,12 @@ describe('TicketListPage', () => {
   it('AC-001.10 uses the default sort for an unsupported field in a shared link (BUG-161)', async () => {
     const requests = recordRequests();
     await openList('/tickets?sort=writer%2Casc');
+    expect(requests[0]?.getAll('sort')).toEqual(['updatedAt,desc']);
+  });
+
+  it('AC-001.8 uses the default sort for the removed Ticket ID column in a shared link (BUG-334)', async () => {
+    const requests = recordRequests();
+    await openList('/tickets?sort=sourceTicketId%2Casc');
     expect(requests[0]?.getAll('sort')).toEqual(['updatedAt,desc']);
   });
 
