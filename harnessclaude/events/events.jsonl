@@ -1885,3 +1885,6 @@
 {"ts":"2026-11-17T05:11:16.882Z","type":"feature-status","module":"chatbot","feature":"classify-question","from":null,"to":"pending"}
 {"ts":"2026-11-17T05:11:17.156Z","type":"feature-status","module":"chatbot","feature":"classify-question-ui","from":null,"to":"pending"}
 {"ts":"2026-11-17T05:13:43.306Z","type":"spec-approved","module":"chatbot","specHash":"6ca54b5072fa049cdd13b137ad24a4486891f7239fc00f2ef933930a47710609"}
+{"ts":"2026-11-17T05:14:03.583Z","type":"feature-status","module":"chatbot","feature":"classify-outcome-schema","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T06:07:34.838Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"807452ffd9ccc63e9e0743a0a5e7274887e456c8"}
+{"ts":"2026-11-17T06:07:35.116Z","type":"feature-status","module":"chatbot","feature":"classify-outcome-schema","from":"in-progress","to":"evaluating"}
