@@ -1,3 +1,10 @@
+---
+module: identity
+feature: user-roles
+task: 4
+verdict: pass
+---
+
 # Task 4 review — User roles (KAN-110)
 
 **Module:** identity

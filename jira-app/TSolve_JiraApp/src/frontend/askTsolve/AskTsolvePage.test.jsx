@@ -244,6 +244,17 @@ describe('AskTsolvePage', () => {
     expect(open).toHaveBeenCalled();
   });
 
+  it('does not rate a GREETING answer from "Solved" or "Not solved, create ticket" (BUG-328)', async () => {
+    await renderLinked();
+    await ask('hi', { answerId: 'a-3', outcome: 'GREETING', text: '', citations: [] });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Not solved, create ticket' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Solved' }));
+
+    expect(rateAnswer).not.toHaveBeenCalled();
+    expect(open).toHaveBeenCalled();
+  });
+
   it('AC-010.15 a failed rating changes nothing on the page and shows no message', async () => {
     rateAnswer.mockRejectedValue(failure('MSG06'));
     await renderLinked();
@@ -264,5 +275,25 @@ describe('AskTsolvePage', () => {
 
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(message('MSG02')));
     expect(box()).toHaveValue('VPN fails');
+  });
+});
+
+describe('AskTsolvePage with a Vietnamese input method', () => {
+  it('BUG-332 keeps what the input method wrote when the page renders again', async () => {
+    await renderLinked();
+    // An input method rewrites the box (Qua → Quân) before the app has seen the change.
+    box().value = 'Quân';
+
+    send(); // the app's draft is still empty: MSG01 renders the page again
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('The Question field is required.'));
+
+    expect(box()).toHaveValue('Quân');
+  });
+
+  it('BUG-332 empties the box after an answer', async () => {
+    await renderLinked();
+    await ask('Mất kết nối VPN', ANSWERED);
+
+    await waitFor(() => expect(box()).toHaveValue(''));
   });
 });

@@ -54,6 +54,23 @@ describe('chatbot-storage', () => {
     expect(sessionStorage.getItem(CONVERSATIONS_KEY)).toBeNull();
   });
 
+  it.each(['ANSWERED', 'NO_SOURCE', 'GREETING', 'OFF_TOPIC', 'INJECTION'] as const)(
+    'AC-002.7 keeps a stored %s turn and its conversation after reload (Q7)',
+    (outcome) => {
+      const conversation: Conversation = {
+        ...CONVERSATION,
+        turns: [
+          ...CONVERSATION.turns,
+          { question: 'Hello', answer: { ...ANSWER, outcome, text: '', citations: [] } },
+        ],
+      };
+      sessionStorage.setItem(CONVERSATIONS_KEY, stored([conversation]));
+
+      expect(readConversations(USER_A)).toEqual([conversation]);
+      expect(sessionStorage.getItem(CONVERSATIONS_KEY)).not.toBeNull();
+    },
+  );
+
   it.each([
     ['a version 2 value', { version: 2, userId: 7, conversations: [CONVERSATION] }],
     [
@@ -121,6 +138,15 @@ describe('chatbot-storage', () => {
     ['an older version', JSON.stringify({ version: 0, userId: USER_A, conversations: [] })],
     ['a wrong shape', JSON.stringify({ version: 2, userId: USER_A, conversations: [{ id: 1 }] })],
     ['a conversation without turns', stored([{ ...CONVERSATION, turns: [] }])],
+    [
+      'an unknown outcome',
+      stored([
+        {
+          ...CONVERSATION,
+          turns: [{ question: 'Hello', answer: { ...ANSWER, outcome: 'UNKNOWN' } }],
+        },
+      ]),
+    ],
     [
       'a citation of a wrong shape',
       stored([withCitations([{ number: 1, type: 'WIKI_DOCUMENT' }])]),

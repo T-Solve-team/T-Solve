@@ -25,9 +25,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -113,8 +115,27 @@ class ProjectConnectionSecrecyTest {
                 .setAuthentication(UsernamePasswordAuthenticationToken.authenticated(user, null, user.authorities()));
         previousLevel = root.getLevel();
         root.setLevel(Level.ALL);
+        // The fake Jira's threads keep logging to the root logger while a test reads the list (BUG-334).
+        logs.list = new CopyOnWriteArrayList<>();
         logs.start();
         root.addAppender(logs);
+    }
+
+    @Test
+    void readsTheCapturedLogsWhileAnotherThreadStillLogs_BUG_334() {
+        LoggerFactory.getLogger("vn.tsolve.tracker").info("first");
+        List<String> read = new ArrayList<>();
+
+        // A log line that arrives while the list is being read, as the fake Jira's threads do.
+        logs.list.stream().forEach(event -> {
+            read.add(event.getFormattedMessage());
+            if (read.size() == 1) {
+                LoggerFactory.getLogger("vn.tsolve.tracker").info("late");
+            }
+        });
+
+        assertThat(read).contains("first");
+        assertThat(logs.list).extracting(ILoggingEvent::getFormattedMessage).contains("first", "late");
     }
 
     @AfterEach

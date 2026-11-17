@@ -64,8 +64,17 @@ describe('message catalog', () => {
     expect(Object.keys(report3)).toHaveLength(143);
   });
 
-  it.each(webMessages)('AC-006.1 holds %s with the exact Report3 text', (code, { text }) => {
-    expect(entry(code)?.text).toBe(text);
+  it.each(webMessages.filter(([code]) => code !== 'MSG117'))(
+    'AC-006.1 holds %s with the exact Report3 text',
+    (code, { text }) => {
+      expect(entry(code)?.text).toBe(text);
+    },
+  );
+
+  it('AC-006.1 holds MSG117 with the KAN-362 text instead of Report3', () => {
+    expect(entry('MSG117')?.text).toBe(
+      '{space_name} already has the maximum of 3 Knowledge Managers.',
+    );
   });
 
   it('AC-006.1 leaves out the Jira App messages, the Retired codes, the Platform Console codes and the codes of D2 and D3', () => {
@@ -179,12 +188,15 @@ describe('message catalog', () => {
     );
   });
 
-  it('AC-006.7 holds no code other than the Report3 web codes, MSG_NEW_2, MSG_NEW_3, MSG_NEW_4, MSG142, MSG143 and MSG157', () => {
+  it('AC-006.7 holds no code other than the Report3 web codes, MSG_NEW_2 to MSG_NEW_7, MSG142, MSG143 and MSG157', () => {
     const expected: string[] = [
       ...webMessages.map(([code]) => code),
       'MSG_NEW_2',
       'MSG_NEW_3',
       'MSG_NEW_4',
+      'MSG_NEW_5',
+      'MSG_NEW_6',
+      'MSG_NEW_7',
       ...NOT_IN_REPORT3,
       // K121-D41: numbered in the Messages file, not yet in report3-messages.json.
       'MSG157',

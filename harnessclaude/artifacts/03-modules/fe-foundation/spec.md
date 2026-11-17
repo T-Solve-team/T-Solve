@@ -10,6 +10,7 @@ owner: BA
 
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
+| 2026-11-17 | STORY-006 | **MSG117 text (identity KAN-362).** AC-006.1 adds one exception: MSG117 holds "`{space_name}` already has the maximum of 3 Knowledge Managers." instead of the Report3 text, because a Space may now have up to three Knowledge Managers. No criterion added or removed | User (Dương), 2026-11-17 |
 | 2026-10-22 | STORY-001..STORY-010 | Initial spec from Report3 and decisions D1–D6 | Bring the web app base in line with Report3 (KAN-57, KAN-58) |
 | 2026-10-23 | STORY-005 | AC-005.3: a placeholder only while its module has not built the screen | 12.1 is built by `chatbot` (KAN-71); later modules remove their test row with a quick change (FE Lead, 23/10) |
 | 2026-10-25 | STORY-011, STORY-012, STORY-013 | New: the Workspace comes from the Workspace site (AC-011.1–AC-011.6), sign-in through the central sign-in, MSG123 and the background-request header (AC-012.1–AC-012.7), the route tree chosen by host (AC-013.1–AC-013.4) | Multi-tenant pool model: GBR-03, GBR-37, ADR-0001, D9, CR-01, CR-02 (KAN-198; Stories KAN-103, KAN-104); identity decision on the idle time (KAN-197, Q6 = B); module-map decision "Platform Console in the same web app" (KAN-195, Q4 = A) (Hiếu, 25/10) |
@@ -20,6 +21,7 @@ owner: BA
 | 2026-11-01 | STORY-006 | AC-006.3 also holds MSG142 "No Spaces found" and MSG143 "Not a member of any Project." (type inline); AC-006.7 lists them | Identity STORY-003 (AC-003.15, AC-003.16) needs two empty-state messages; numbered by incrementing from MSG141, Report3 System_Messages updated later (KAN-237, Hiếu, 1/11) |
 | 2026-11-01 | STORY-006 | New AC-006.9 (`MSG_NEW_3`, a duplicate Ticket ID inside one CSV file); AC-006.7 also allows `MSG_NEW_3` | import-ticket-list asked for MSG78 as a new code, but System_Messages v3460 gave MSG78 to another message; the Import Preview shows the row error from the catalog (import-ticket-list D14, user decision 2026-11-01) |
 | 2026-11-12 | STORY-008 | AC-008.1 reworded (order: call, then clear); AC-008.2 reworded (navigate the browser to `logoutUrl`, full page load); new AC-008.4 (no usable `logoutUrl` or old 204: clear and go to Login, no error); AC-008.3 says Login inside the app; Interface: logout answers 200 `{ logoutUrl }` | `POST /api/v1/auth/logout` answers 200 `{ logoutUrl }` instead of 204 (identity Task 27, AC-002.1, AC-002.8; KAN-311, KAN-106) so Keycloak ends its own SSO session |
+| 2026-11-17 | STORY-006 | AC-006.7 reworded: the catalog also holds the provisional codes `MSG_NEW_5`, `MSG_NEW_6`, `MSG_NEW_7` (Chatbot greeting, off-topic, injection replies), and the list names `MSG_NEW_2` to `MSG_NEW_7` (`MSG_NEW_4` was already in the catalog and its test) | Chatbot KAN-243 needs three replies that System_Messages does not number; decision D3 gives them provisional keys (user, 17/11). MSG157/MSG158 are not used: the workspace spec plans them |
 
 ## Requirements
 
@@ -172,7 +174,8 @@ owner: BA
     whose type is "Inline (tracker panel)", "Toast (tracker panel)", "Banner (tracker panel)" or "Tracker comment"
     (Jira App only), the codes whose Context is "Retired", the Platform Console codes MSG125 to MSG133 and MSG135
     to MSG140 (UC-54 to UC-56, module `platform-console`), MSG20 and MSG70 (decision D2), and MSG58 and MSG79
-    (replaced by the Hand Over popup, D3).
+    (replaced by the Hand Over popup, D3); MSG117 holds the text set by identity KAN-362, "`{space_name}` already has
+    the maximum of 3 Knowledge Managers.", instead of the Report3 text.
   - AC-006.2: THE catalog SHALL give each code the type of its Report3 type: "Red text below the field" and "Red text
     below the upload area" → field · "Inline", "Inline (row)", "Inline (error row in the preview)", "Inline (chat
     answer)" → inline · "Toast" → toast · "Confirmation dialog" → confirm · "Tooltip" → tooltip.
@@ -185,8 +188,10 @@ owner: BA
   - AC-006.5: WHEN a message is shown with parameters, THE web app SHALL replace each `{name}` placeholder with its
     value.
   - AC-006.6: IF a placeholder has no value, THEN THE web app SHALL leave the placeholder text as it is.
-  - AC-006.7: THE catalog SHALL hold no code other than the Report3 codes of AC-006.1, `MSG_NEW_2`, `MSG_NEW_3`,
-    MSG142 and MSG143 (AC-006.3), so every code the app uses (review included) is a Report3 code or one of these four.
+  - AC-006.7: THE catalog SHALL hold no code other than the Report3 codes of AC-006.1, the provisional codes
+    `MSG_NEW_2` to `MSG_NEW_7`, and MSG142 and MSG143 (AC-006.3), so every code the app uses (review included) is a
+    Report3 code or one of these. `MSG_NEW_5`, `MSG_NEW_6` and `MSG_NEW_7` are the Chatbot greeting, off-topic and
+    injection replies (chatbot KAN-243), with their text in the chatbot spec.
   - AC-006.8: THE catalog SHALL hold the multi-tenant web codes with their exact Report3 text: MSG119, MSG120,
     MSG122, MSG123 and MSG141 (type inline) and MSG134 (type field, adding a user, UC-05).
   - AC-006.9: THE catalog SHALL hold `MSG_NEW_3` (type inline) until System_Messages numbers it (import-ticket-list

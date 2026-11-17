@@ -204,6 +204,8 @@ public class KeycloakAdminClient {
         config.put("clientId", properties.googleClientId());
         config.put("clientSecret", properties.googleClientSecret());
         config.put("hostedDomain", domain);
+        // Logout ends only the Keycloak session; without this Google reuses its own session and skips the chooser
+        config.put("prompt", "select_account");
         config.put("syncMode", "IMPORT");
         config.put("kc.org.domain", domain);
         config.put(WORKSPACE_TAG, workspaceId.toString());

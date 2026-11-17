@@ -100,9 +100,9 @@ export const handlers: HttpHandler[] = [
     const occupied = SPACES.find(
       (space) =>
         spaceIds.includes(space.spaceId) &&
-        store.users.some(
+        store.users.filter(
           (user) => user.workspaceId === WORKSPACE_ID && user.spaceIds.includes(space.spaceId),
-        ),
+        ).length >= 3,
     );
     if (occupied) return fieldError('spaceIds', 'MSG117', { space_name: occupied.name }, 409);
     const user: UserAccount = {

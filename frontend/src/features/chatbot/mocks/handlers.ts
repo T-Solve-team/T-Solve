@@ -2,7 +2,7 @@ import { delay, http, HttpResponse, type HttpHandler } from 'msw';
 import type { ChatbotAnswer, ChatbotQuestion, UnavailableDocuments } from '@/shared/api';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
 import { QUESTION_MAX_LENGTH } from '../model';
-import { findMockAnswer, UNAVAILABLE_DOCUMENT_IDS } from './data';
+import { classifyMockQuestion, findMockAnswer, UNAVAILABLE_DOCUMENT_IDS } from './data';
 
 /**
  * MSW mock handlers of the "chatbot" feature (guideline 10 §5). Hand-written handlers with realistic data go here;
@@ -26,6 +26,15 @@ export const handlers: HttpHandler[] = [
             params: { field_name: 'Question', max_length: QUESTION_MAX_LENGTH },
           },
         ],
+      });
+    }
+    const outcome = classifyMockQuestion(question);
+    if (outcome) {
+      return HttpResponse.json<ChatbotAnswer>({
+        answerId: crypto.randomUUID(),
+        outcome,
+        text: '',
+        citations: [],
       });
     }
     const match = findMockAnswer(question);

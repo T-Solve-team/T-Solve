@@ -10,7 +10,7 @@ import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
 import { MOCK_PROJECT_IDS } from '../mocks/handlers';
 
-const HEADINGS = ['Project ID', 'Jira project key', 'Project Manager', 'Members', 'Status'];
+const HEADINGS = ['No.', 'Jira project key', 'Project Manager', 'Members', 'Status'];
 
 /** Counts every `GET /api/v1/projects` the app sends during one test. */
 function countListRequests() {
@@ -56,14 +56,8 @@ describe('JiraIntegrationPage', () => {
     expect(screen.getAllByRole('columnheader').map((h) => h.textContent)).toEqual(HEADINGS);
     const rows = screen.getAllByRole('row').slice(1);
     expect(rows.map((row) => cellsOf(row)[1])).toEqual(['OLD', 'OPS']);
-    expect(cellsOf(oldRow)).toEqual([MOCK_PROJECT_IDS.OLD, 'OLD', 'Đỗ Minh Quân', '2', 'Removed']);
-    expect(cellsOf(await findRow('OPS'))).toEqual([
-      MOCK_PROJECT_IDS.OPS,
-      'OPS',
-      'Đỗ Minh Quân',
-      '3',
-      'Active',
-    ]);
+    expect(cellsOf(oldRow)).toEqual(['1', 'OLD', 'Đỗ Minh Quân', '2', 'Removed']);
+    expect(cellsOf(await findRow('OPS'))).toEqual(['2', 'OPS', 'Đỗ Minh Quân', '3', 'Active']);
     expect(screen.queryByRole('row', { name: /\bSUP\b/ })).not.toBeInTheDocument();
   });
 
@@ -85,7 +79,10 @@ describe('JiraIntegrationPage', () => {
 
     await findRow('ZED');
     const rows = screen.getAllByRole('row').slice(1);
-    expect(rows.map((r) => cellsOf(r)[1])).toEqual(['ZED', 'ABC']);
+    expect(rows.map((r) => cellsOf(r).slice(0, 2))).toEqual([
+      ['1', 'ZED'],
+      ['2', 'ABC'],
+    ]);
   });
 
   it('AC-008.4 shows MSG54 when a Project has no Project Manager', async () => {
@@ -105,13 +102,49 @@ describe('JiraIntegrationPage', () => {
     );
     renderApp('/jira-integration', { role: 'PROJECT_MANAGER' });
 
-    expect(cellsOf(await findRow('NOPM'))).toEqual([
-      '00000000-0000-4000-8000-0000000003a9',
-      'NOPM',
-      msg('MSG54'),
-      '0',
-      'Active',
-    ]);
+    expect(cellsOf(await findRow('NOPM'))).toEqual(['1', 'NOPM', msg('MSG54'), '0', 'Active']);
+  });
+
+  it('AC-008.11 links the Jira project key when the signed-in user is its Project Manager', async () => {
+    renderApp('/jira-integration', { role: 'PROJECT_MANAGER' });
+    const row = await findRow('OPS');
+    expect(within(row).getByRole('link', { name: 'OPS' })).toHaveAttribute(
+      'href',
+      '/jira-integration/projects/' + MOCK_PROJECT_IDS.OPS,
+    );
+  });
+
+  it('AC-008.11 shows the key as plain text for another Project Manager or no Project Manager', async () => {
+    server.use(
+      getListProjectsMockHandler({
+        department: { departmentId: '00000000-0000-4000-8000-0000000003d1', name: 'IT Operations' },
+        projects: [
+          {
+            projectId: MOCK_PROJECT_IDS.OPS,
+            jiraProjectKey: 'OTHER',
+            projectManager: {
+              userId: MOCK_USERS.admin.user.id,
+              fullName: MOCK_USERS.admin.user.fullName,
+            },
+            memberCount: 1,
+            status: 'ACTIVE',
+          },
+          {
+            projectId: MOCK_PROJECT_IDS.OLD,
+            jiraProjectKey: 'NOPM',
+            projectManager: null,
+            memberCount: 0,
+            status: 'ACTIVE',
+          },
+        ],
+      }),
+    );
+    renderApp('/jira-integration', { role: 'PROJECT_MANAGER' });
+    for (const key of ['OTHER', 'NOPM']) {
+      const row = await findRow(key);
+      expect(within(row).getByText(key)).toBeInTheDocument();
+      expect(within(row).queryByRole('link')).not.toBeInTheDocument();
+    }
   });
 
   it('AC-008.6 shows the loading state in place of the table while the first request runs', async () => {
@@ -136,7 +169,7 @@ describe('JiraIntegrationPage', () => {
     // Only once the page's own request is held, so the route's loading view cannot pass the check.
     await waitFor(() => expect(request.started).toBe(true), { timeout: 5000 });
     expect(screen.getByText('Loading ...')).toBeInTheDocument();
-    expect(screen.queryByRole('columnheader', { name: 'Project ID' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'No.' })).not.toBeInTheDocument();
     release();
     expect(await findRow('OPS')).toBeInTheDocument();
     expect(screen.queryByText('Loading ...')).not.toBeInTheDocument();
@@ -159,7 +192,7 @@ describe('JiraIntegrationPage', () => {
 
     const alert = await screen.findByRole('alert', {}, { timeout: 5000 });
     expect(alert).toHaveTextContent(msg('MSG48', { tracker_name: 'Jira' }));
-    expect(screen.queryByRole('columnheader', { name: 'Project ID' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'No.' })).not.toBeInTheDocument();
 
     await user.click(within(alert).getByRole('button', { name: 'Try again' }));
     expect(await findRow('OPS')).toBeInTheDocument();
@@ -184,7 +217,7 @@ describe('JiraIntegrationPage', () => {
 
     expect(await screen.findByText(msg('MSG04'), {}, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.getByLabelText('Department')).toHaveValue('IT Operations');
-    expect(screen.queryByRole('columnheader', { name: 'Project ID' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'No.' })).not.toBeInTheDocument();
   });
 
   it('AC-008.9 keeps the placeholder for an Admin without the Project Manager role, with no request and no Add project', async () => {

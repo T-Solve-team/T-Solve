@@ -1,23 +1,16 @@
 import type { ApiError, TicketSummary } from '@/shared/api';
-import { TICKET_SOURCE_LABELS, type TableSort } from '@/shared/lib';
+import { PAGE_SIZE, TICKET_SOURCE_LABELS, type TableSort } from '@/shared/lib';
 import { paths } from '@/shared/routing';
 import { cells, DataTable, type DataTableColumn } from '@/shared/ui';
 
 /** Figma 6.2 columns and widths (callout 3). Sort keys are the API field names. */
 const COLUMNS: DataTableColumn<TicketSummary>[] = [
   {
-    key: 'sourceTicketId',
-    title: 'Ticket ID',
-    width: 110,
-    sortable: true,
-    render: (_, t) => cells.link(paths.ticketDetail(t.ticketId), t.sourceTicketId),
-  },
-  {
     key: 'title',
     title: 'Title',
     width: 212,
     sortable: true,
-    render: (_, t) => cells.text(t.title),
+    render: (_, t) => cells.link(paths.ticketDetail(t.ticketId), t.title),
   },
   {
     key: 'project',
@@ -59,7 +52,7 @@ const COLUMNS: DataTableColumn<TicketSummary>[] = [
     render: (_, t) => cells.dateTime(t.updatedAt),
   },
 ];
-const TABLE_WIDTH = 110 + 212 + 110 + 100 + 110 + 150 + 150 + 150; // Figma: 1092
+const TABLE_WIDTH = 64 + 212 + 110 + 100 + 110 + 150 + 150 + 150;
 
 type TicketListTableProps = {
   rows: TicketSummary[] | undefined;
@@ -88,7 +81,16 @@ export function TicketListTable({
   return (
     <DataTable<TicketSummary>
       label="Tickets"
-      columns={COLUMNS}
+      columns={[
+        {
+          key: 'rowNumber',
+          title: 'No.',
+          width: 64,
+          ellipsis: false,
+          render: (_, _t, index) => (page - 1) * PAGE_SIZE + index + 1,
+        },
+        ...COLUMNS,
+      ]}
       rows={rows}
       rowKey={(t) => t.ticketId}
       loading={isLoading}

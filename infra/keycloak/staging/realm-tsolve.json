@@ -178,6 +178,7 @@
         "clientId": "${GOOGLE_CLIENT_ID}",
         "clientSecret": "${GOOGLE_CLIENT_SECRET}",
         "hostedDomain": "${TSOLVE_DEMO_GOOGLE_DOMAIN}",
+        "prompt": "select_account",
         "syncMode": "IMPORT",
         "kc.org.domain": "${TSOLVE_DEMO_GOOGLE_DOMAIN}"
       }

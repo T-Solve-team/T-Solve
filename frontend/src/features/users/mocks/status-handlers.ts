@@ -72,6 +72,7 @@ export const statusHandlers: HttpHandler[] = [
       const invalid = validateHandover(handoverOptions(id), projectHandovers, spaceHandovers);
       if (invalid) return invalid;
       applyHandover(id, projectHandovers, spaceHandovers);
+      target.spaceIds = [];
     } else if (projectHandovers.length > 0 || spaceHandovers.length > 0)
       return problem(400, 'MSG06');
     target.status = body.status;

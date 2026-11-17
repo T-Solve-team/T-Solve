@@ -663,3 +663,31 @@ Spec: STORY-005 to STORY-009 · Design: master section "Backend". Rules: `backen
 **Covers:** AC-011.1 – AC-011.5
 **Dependencies:** Task 19 (`SolutionRetrieval`)
 **Estimated size:** small
+
+## Task 21: Visible scope from Workspace membership
+
+**Story:** STORY-012
+**Feature:** membership-visible-scope
+**Jira:** KAN-354 · branch `fix/KAN-354-search-visible-scope`
+**Description:**
+- `VisibleScope.Scope`: `Optional<String> writer` → `Optional<UUID> writerId`; `TicketListSpecs.visible` compares
+  `writerId` with `SearchTicket.writerId` (new column `t.writer_id` in the `@Subselect`).
+- New `MembershipVisibleScope` (`@ConditionalOnExpression("'${SEARCH_DEV_SCOPE:}' != 'all'")`): Departments =
+  `ScopeTicketRepository.activeDepartmentIds()` (native: `department_id`, `public_id` of `ACTIVE` Departments)
+  filtered by `ScopeAccessService.canAccessDepartment(user.id(), publicId)`; managed Projects =
+  `ProjectMembershipLookup.findProjects(user.id())` with `PROJECT_MANAGER`, mapped by
+  `ScopeTicketRepository.projectIds(publicIds)`; writerId = `user.id()`. No cache.
+- Delete `NoVisibleScope`; update every test that builds a `Scope` with a writer string; `IsolationFixtures` keeps its
+  own `@Primary` scope.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/search/scope/service/impl/MembershipVisibleScope.java`
+- Modify: `…/search/scope/service/VisibleScope.java`, `…/search/scope/entity/SearchTicket.java`,
+  `…/search/scope/repository/ScopeTicketRepository.java`, `…/search/list/service/impl/TicketListSpecs.java`
+- Delete: `…/search/scope/service/impl/NoVisibleScope.java`
+- Test: `…/test/search/scope/service/impl/MembershipVisibleScopeTest.java` (AC-012.1 – AC-012.5),
+  `…/test/search/scope/service/impl/VisibleScopeSelectionTest.java` (AC-006.11, AC-006.12, AC-012.6),
+  `…/test/search/list/repository/TicketListRepositoryIT.java` (writer by `writer_id`, AC-006.1, AC-012.3),
+  `…/test/search/scope/repository/ScopeTicketRepositoryIT.java` (Active Departments and Project ids, AC-012.1, AC-012.2)
+**Covers:** AC-012.1 – AC-012.6, AC-006.1, AC-006.2, AC-006.11, AC-006.12
+**Dependencies:** identity `ScopeAccessService`, `ProjectMembershipLookup` (on `main`)
+**Estimated size:** small

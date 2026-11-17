@@ -12,6 +12,7 @@ Covers UC-38 to UC-50, Wiki Space and Wiki Document Management (Jira epic KAN-91
 
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
+| 2026-11-17 | STORY-006 | **Several Knowledge Managers per Space (KAN-362).** A Space has one to three Knowledge Managers (identity AC-005.13, AC-007.14). Requirement 4: "the Space's Knowledge Manager" means any of them, so every Knowledge Manager of the Space manages it. AC-006.11 reworded: the Space header lists all Active Knowledge Managers. Interface: `WikiSpaceSettings.knowledgeManager` (one nullable name) becomes `knowledgeManagers` (a list of names). No criterion added or removed | User (Dương), 2026-11-17: several Knowledge Managers per Space; Space Settings shows them as a list |
 | 2026-11-13 | STORY-001 to STORY-006 | Initial spec: UC-38 to UC-50 | KAN-91 |
 | 2026-11-13 | STORY-002 to STORY-004 | Builder check: AC-002.13 leaves the trash read to AC-005.4; `q` limits as received (AC-002.7, AC-002.9); AC-003.7 covers an unknown `folderId`; AC-004.10 names its code; AC-004.12 in the same transaction | Inline builder check |
 | 2026-11-14 | STORY-005 | AC-005.2 excepts the Knowledge Manager's read of AC-005.4; new AC-005.17: a restore that loses its title to a concurrent request answers 409 MSG84; pull request numbers replaced by Jira keys | Review of #223 (findings 1, 4, 8) |
@@ -26,7 +27,7 @@ Covers UC-38 to UC-50, Wiki Space and Wiki Document Management (Jira epic KAN-91
 1. Every Department has exactly one Space (workspace, GBR-29). Wiki adds folders (at most three levels), Wiki documents, their trash and the View permissions of the Space.
 2. A user can view a Space when they are its Knowledge Manager, when one of their Departments has View on it, or when they have their own View permission on it (GBR-30). The Space's own Department always has View; it is shown, not stored, and cannot be removed.
 3. A user can view a Wiki document when it is Published and either Company-wide or in a Space the user can view (GBR-31). The Spaces and documents of a Hidden Space or a Deleted Department are not shown to anyone (GBR-17).
-4. Only the Knowledge Manager of a Space manages its folders, documents, trash and permissions (GBR-32).
+4. Only a Knowledge Manager of a Space manages its folders, documents, trash and permissions (GBR-32). A Space has one to three Knowledge Managers (identity, KAN-362); "the Space's Knowledge Manager" in this spec means any of them.
 5. Uploaded PDF and DOCX files are stored as the original file plus their extracted text. A document is Published at once and indexed in the background for meaning-based retrieval (GBR-12).
 6. Wiki provides the Wiki sources of the Knowledge Chatbot (all documents the user can view) and of AI Solution Suggestion (Company-wide documents only, GBR-35), and answers whether a cited document is still available (MSG110).
 7. Every change to a folder, document or permission is recorded in the audit log.
@@ -173,7 +174,7 @@ These are known limits of the code this module builds on. They are not defects o
   - AC-006.8: IF anyone other than the Space's Knowledge Manager calls an endpoint of this story, THEN THE system SHALL answer 403 with code MSG08 and change nothing.
   - AC-006.9: WHEN a permission is granted or revoked, THE system SHALL write one audit entry per permission in the same transaction with action `PERMISSION_CHANGE`, target type `WIKI_SPACE`, target id the Space id, and details `operation` (`GRANT` or `REVOKE`), `granteeType` (`DEPARTMENT` or `USER`) and `granteeId`.
   - AC-006.10: WHEN a permission is granted or revoked, THE view rule of AC-001.1 SHALL reflect it from the next request on.
-  - AC-006.11: WHEN the Knowledge Manager opens 11.5 Space Settings, THE web app SHALL show the Space header and the Permissions tab with a Departments table (Department, Granted by, Date, Remove) whose first row is the own Department without Remove and with the MSG107 tooltip, and a Users table (Full name, Email, Home Department, Granted by, Date, Remove) with deactivated users greyed out, or MSG04 when it has no row.
+  - AC-006.11: WHEN the Knowledge Manager opens 11.5 Space Settings, THE web app SHALL show the Space header (name, Department, and the full names of the Space's Active Knowledge Managers in name order, separated by commas, or "—" when it has none) and the Permissions tab with a Departments table (Department, Granted by, Date, Remove) whose first row is the own Department without Remove and with the MSG107 tooltip, and a Users table (Full name, Email, Home Department, Granted by, Date, Remove) with deactivated users greyed out, or MSG04 when it has no row.
   - AC-006.12: WHEN the Knowledge Manager clicks "Grant access", THE web app SHALL show a selector of the candidates of AC-006.2, or MSG04 when there is none, and after Save show MSG05 and refresh the tables.
   - AC-006.13: WHEN the Knowledge Manager clicks Remove, THE web app SHALL ask MSG106 with the grantee and Space name; on confirm it SHALL show MSG05 and refresh the tables.
   - AC-006.14: IF a user who is not the Knowledge Manager of the Space opens 11.5, THEN THE web app SHALL show the no-permission page with MSG08.
@@ -229,7 +230,7 @@ Schemas:
 | `WikiDocumentRef` | `documentId`, `title` |
 | `WikiTrashItem` | `documentId`, `title`, `folderName` (nullable), `owner`, `deletedBy`, `deletedAt` |
 | `WikiRestoreResult` | `title`, `renamed` |
-| `WikiSpaceSettings` | `spaceId`, `name`, `departmentName`, `knowledgeManager` (nullable), `ownDepartment` `{ departmentId, name, locked: true }`, `departments`: `{ permissionId, departmentId, name, grantedBy, grantedAt }[]`, `users`: `{ permissionId, userId, fullName, email, homeDepartment, active, grantedBy, grantedAt }[]` |
+| `WikiSpaceSettings` | `spaceId`, `name`, `departmentName`, `knowledgeManagers` (full names of the Space's Active Knowledge Managers, ordered by name ignoring case; empty when none), `ownDepartment` `{ departmentId, name, locked: true }`, `departments`: `{ permissionId, departmentId, name, grantedBy, grantedAt }[]`, `users`: `{ permissionId, userId, fullName, email, homeDepartment, active, grantedBy, grantedAt }[]` |
 | `WikiPermissionCandidates` | `departments`: `{ departmentId, name }[]`, `users`: `{ userId, fullName, email, homeDepartment }[]` |
 | `GrantWikiPermissionsRequest` | `departmentIds`, `userIds` |
 | `CreateWikiFolderRequest` | `name`, `parentId` (nullable) |

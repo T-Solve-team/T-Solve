@@ -170,9 +170,11 @@ export function SolutionFormModal({ issueKey, summary, form, onDone, resubmit = 
               SECTIONS.map(({ field, label, required }) => (
                 <Stack key={field} space="space.050">
                   <Label labelFor={`solution-${field}`}>{required ? `${label} *` : label}</Label>
+                  {/* Uncontrolled: a value sent back through the Forge bridge arrives late and undoes what a
+                      Vietnamese input method rewrites (BUG-332). The boxes remount with the rewrite on Accept. */}
                   <TextArea
                     id={`solution-${field}`}
-                    value={sections[field]}
+                    defaultValue={sections[field]}
                     onChange={(event) => edit(field, event.target.value)}
                     isDisabled={busy}
                     isInvalid={fieldError?.field === field}

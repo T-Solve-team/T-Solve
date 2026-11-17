@@ -1845,6 +1845,56 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/account-link:
+    get:
+      tags: [jira-app]
+      operationId: getJiraAccountLink
+      summary: Whether the Jira user is linked to a T-Solve Account (STORY-014, AC-014.2).
+      description: >
+        The site and the Jira account come only from the verified FIT (`context.cloudId`, `principal`). LINKED carries
+        the linked Active Account's full name and email and the link time; NOT_LINKED when there is no link or the
+        Account is not Active; SITE_NOT_CONNECTED when the site belongs to no Workspace. A FIT without a Jira user →
+        403 MSG08. Calls no AI and stores nothing.
+      security:
+        - forgeInvocationToken: []
+      responses:
+        '200':
+          description: LINKED, NOT_LINKED or SITE_NOT_CONNECTED.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JiraAccountLinkStatus'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags: [jira-app]
+      operationId: startJiraAccountLink
+      summary: Starts linking the Jira user to a T-Solve Account (STORY-014, AC-014.6).
+      description: >
+        No body. The site and the Jira account come only from the verified FIT (AC-014.10). The server reads the Jira
+        display name with the Workspace's app token and asks identity for a single-use link request (10 minutes,
+        identity AC-001.69); the answer is the `/jira-link?request=<id>` link on the Workspace's site. A site of no
+        Workspace → 403 MSG124; no Jira user → 403 MSG08; Jira, the app token or the link request store unavailable,
+        or no display name → 503 MSG06; no link request is created in these cases (AC-014.9).
+      security:
+        - forgeInvocationToken: []
+      responses:
+        '200':
+          description: The link to open in a new tab.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JiraAccountLinkStart'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
   /api/v1/jira-app/questions/eligibility:
     get:
       tags: [jira-app]
@@ -3087,12 +3137,15 @@ components:
   schemas:
     WikiSpaceSettings:
       type: object
-      required: [spaceId, name, departmentName, knowledgeManager, ownDepartment, departments, users]
+      required: [spaceId, name, departmentName, knowledgeManagers, ownDepartment, departments, users]
       properties:
         spaceId: { type: string, format: uuid }
         name: { type: string }
         departmentName: { type: string }
-        knowledgeManager: { type: [string, 'null'], description: Knowledge Manager's full name. }
+        knowledgeManagers:
+          type: array
+          description: Full names of the Space's Active Knowledge Managers, ordered by name ignoring case; empty when none.
+          items: { type: string }
         ownDepartment:
           type: object
           required: [departmentId, name, locked]
@@ -4414,6 +4467,33 @@ components:
         canDecide:
           type: boolean
           description: Whether the current user may decide this pending Solution Form ticket in its managed Project.
+    JiraAccountLinkStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [LINKED, NOT_LINKED, SITE_NOT_CONNECTED]
+          description: >
+            LINKED shows "Linked to T-Solve as {full_name} ({email})." and "Link another account"; NOT_LINKED shows
+            "Sign in to T-Solve"; SITE_NOT_CONNECTED shows MSG124 (AC-014.3 to AC-014.5).
+        fullName:
+          type: string
+          description: The linked Account's full name; only when LINKED.
+        email:
+          type: string
+          description: The linked Account's email; only when LINKED.
+        linkedAt:
+          type: string
+          format: date-time
+          description: When the link was recorded; only when LINKED. The page waits for a later one (AC-014.8).
+    JiraAccountLinkStart:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          description: The Workspace site's `/jira-link?request=<id>` link (identity AC-001.69).
     JiraAskerEligibility:
       type: object
       required: [status]
@@ -5010,10 +5090,10 @@ components:
           type: string
         answer:
           type: string
-          description: The answer text; empty for a NO_SOURCE turn.
+          description: The answer text; empty for a turn that is not ANSWERED.
     ChatbotAnswerOutcome:
       type: string
-      enum: [ANSWERED, NO_SOURCE]
+      enum: [ANSWERED, NO_SOURCE, GREETING, OFF_TOPIC, INJECTION]
     ChatbotAnswer:
       type: object
       required: [answerId, outcome, text, citations]
@@ -5026,10 +5106,10 @@ components:
           $ref: '#/components/schemas/ChatbotAnswerOutcome'
         text:
           type: string
-          description: Plain text with numbered markers [1], [2] …; empty when NO_SOURCE.
+          description: Plain text with numbered markers [1], [2] …; empty unless ANSWERED.
         citations:
           type: array
-          description: In number order; empty when NO_SOURCE.
+          description: In number order; empty unless ANSWERED.
           items:
             $ref: '#/components/schemas/ChatbotCitation'
     ChatbotCitation:

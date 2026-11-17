@@ -21,7 +21,7 @@ const settings: WikiSpaceSettings = {
   spaceId: SPACE,
   name: 'IT Space',
   departmentName: 'IT',
-  knowledgeManager: 'Le Thu Huong',
+  knowledgeManagers: ['Le Thu Huong', 'Nguyen Van An'],
   ownDepartment: { departmentId: '00000000-0000-4000-8000-0000000000d1', name: 'IT', locked: true },
   departments: [
     {
@@ -68,6 +68,18 @@ async function openGrant() {
 }
 
 describe('SpaceSettingsPage permissions', () => {
+  it('AC-006.11 joins every Knowledge Manager name with a comma', async () => {
+    renderApp(paths.spaceSettings(SPACE), { role: 'KNOWLEDGE_MANAGER' });
+    expect(await screen.findByText('Le Thu Huong, Nguyen Van An')).toBeInTheDocument();
+  });
+
+  it('AC-006.11 shows a dash in the header when there are no Knowledge Managers', async () => {
+    server.use(getGetWikiSpaceSettingsMockHandler({ ...settings, knowledgeManagers: [] }));
+    renderApp(paths.spaceSettings(SPACE), { role: 'KNOWLEDGE_MANAGER' });
+    const label = await screen.findByText('Knowledge Manager');
+    expect(label.closest('tr')).toHaveTextContent('Knowledge Manager—');
+  });
+
   it('AC-006.12 AC-006.13 grants and revokes through stateful mocks and offers the revoked Department again (BUG-284)', async () => {
     server.resetHandlers();
     const { user, dialog } = await openGrant();
