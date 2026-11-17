@@ -5,6 +5,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
+import org.springframework.web.context.request.RequestContextHolder;
 import vn.tsolve.worker.service.WorkerTenantService;
 
 /** Temporary platform mock: never routes queries or grants access to business data. */
@@ -13,9 +15,17 @@ public class MockWorkerTenantService implements WorkerTenantService {
     private final Set<UUID> active;
     private final Set<UUID> suspended;
 
+    private final Supplier<Optional<UUID>> requestWorkspace;
+
     public MockWorkerTenantService(Set<UUID> active, Set<UUID> suspended) {
+        this(active, suspended, Optional::empty);
+    }
+
+    /** {@code requestWorkspace} is the platform TenantContext's Workspace (BUG-324). */
+    public MockWorkerTenantService(Set<UUID> active, Set<UUID> suspended, Supplier<Optional<UUID>> requestWorkspace) {
         this.active = Set.copyOf(active);
         this.suspended = Set.copyOf(suspended);
+        this.requestWorkspace = Objects.requireNonNull(requestWorkspace, "requestWorkspace");
         if (!Collections.disjoint(this.active, this.suspended)) {
             throw new IllegalArgumentException("Mock workspace cannot be both active and suspended");
         }
@@ -26,11 +36,19 @@ public class MockWorkerTenantService implements WorkerTenantService {
         return Optional.ofNullable(workspace.get());
     }
 
-    /** Single-Workspace local/demo stacks only; with several Workspaces it refuses, never guesses. */
+    /**
+     * Local/demo stacks only: the single Active Workspace, else the request's TenantContext Workspace when it is
+     * Active; otherwise it refuses, never guesses.
+     */
     @Override
     public Optional<UUID> enqueueWorkspaceId() {
         return currentWorkspaceId()
-                .or(() -> active.size() == 1 ? active.stream().findFirst() : Optional.empty());
+                .or(() -> active.size() == 1 ? active.stream().findFirst() : Optional.empty())
+                // ponytail: StubTenantContext answers on every thread, so only a request thread may use it; drop the
+                // request check when ThreadLocalTenantContext (platform Task 6) binds per request
+                .or(() -> RequestContextHolder.getRequestAttributes() == null
+                        ? Optional.empty()
+                        : requestWorkspace.get().filter(active::contains));
     }
 
     @Override

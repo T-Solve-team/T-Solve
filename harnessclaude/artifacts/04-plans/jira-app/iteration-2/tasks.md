@@ -288,3 +288,51 @@ create ticket" with nothing prefilled (AC-010.2). MSG62 is no longer used on the
 `jira-app/TSolve_JiraApp/src/frontend/askTsolve/*`, `jira-app/TSolve_JiraApp/src/frontend/messages.js`; tests
 `JiraAppQuestionServiceImplTest`, `JiraAppQuestionControllerTest`, the FIT conversion test, the Ask page tests.
 **Estimated size:** medium
+
+---
+
+## Task 19: Read the linked Account instead of the stub (STORY-014)
+
+**Story:** STORY-014
+**Feature:** linked-asker-lookup
+**Description:** Design "Change 2026-11-17: link the Jira account". `LinkedJiraAskerLookup implements JiraAskerLookup`
+over identity's `JiraAccountLinkLookup` (identity Task 37); delete `ConfigJiraAskerLookup`, its test and the
+`TSOLVE_STUB_JIRA_ASKERS` line of `.env.example` (AC-014.11); the staging `.env` line is removed on the VPS after deploy.
+**Files:** Create `jiraapp/service/impl/LinkedJiraAskerLookup.java`; delete `jiraapp/service/impl/ConfigJiraAskerLookup.java`;
+modify `.env.example`; tests `LinkedJiraAskerLookupTest` (AC-014.11)
+and the existing callers' tests.
+**Dependencies:** identity Task 37
+**Estimated size:** small
+
+---
+
+## Task 20: Account link endpoints (STORY-014)
+
+**Story:** STORY-014
+**Feature:** account-link-endpoints
+**Description:** Contract first: `GET` and `POST /api/v1/jira-app/account-link` in `frontend/openapi/tsolve-api.yaml`
+(`JiraAccountLinkStatus { status, fullName?, email?, linkedAt? }`, `JiraAccountLinkStart { url }`), then
+`npm run generate:api`. `JiraAccountLinkController`, `JiraAccountLinkPageService` (+ impl) and
+`jiraapp/client/JiraUserClient` as the design says; AC-014.2, AC-014.6, AC-014.9, AC-014.10.
+**Files:** Create `jiraapp/controller/JiraAccountLinkController.java`, `jiraapp/service/JiraAccountLinkPageService.java`,
+`jiraapp/service/impl/JiraAccountLinkPageServiceImpl.java`, `jiraapp/client/JiraUserClient.java`,
+`jiraapp/dto/JiraAccountLinkStatus.java`, `jiraapp/dto/JiraAccountLinkStart.java`; modify
+`frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`; tests
+`JiraAccountLinkPageServiceImplTest`, `JiraAccountLinkControllerTest`, `JiraUserClientTest`.
+**Dependencies:** Task 19
+**Estimated size:** medium
+
+---
+
+## Task 21: T-Solve account page and the panel link (STORY-014)
+
+**Story:** STORY-014
+**Feature:** account-settings-page
+**Description:** Manifest: `jira:personalSettingsPage` "T-Solve account" (AC-014.1) and scope `read:jira-user`
+(AC-013.2). The page: states of AC-014.3 to AC-014.5, the click of AC-014.6 and AC-014.7, polling of AC-014.8,
+failures of AC-014.9. The panel's MSG62 state adds "Open T-Solve account settings" (AC-008.1).
+**Files:** Modify `jira-app/TSolve_JiraApp/manifest.yml`, `src/frontend/api/tsolveClient.js`,
+`src/frontend/messages.js`, the issue panel component; create `src/frontend/accountSettings/*`; tests
+`AccountSettingsPage.test.jsx`, the panel test, `test/manifest.test.js`; `forge lint`.
+**Dependencies:** Task 20
+**Estimated size:** medium
