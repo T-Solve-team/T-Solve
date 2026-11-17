@@ -32,6 +32,7 @@ import org.springframework.orm.jpa.SharedEntityManagerCreator;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import vn.tsolve.ai.client.LlmClient;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
+import vn.tsolve.chatbot.issue.client.JiraIssueCreator;
 import vn.tsolve.chatbot.issue.dto.ChatbotIssueDraftRequest;
 import vn.tsolve.chatbot.issue.dto.ChatbotIssueDraftResponse;
 import vn.tsolve.chatbot.issue.dto.IssueDepartment;
@@ -42,6 +43,7 @@ import vn.tsolve.chatbot.issue.service.impl.ChatbotIssueServiceImpl;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.identity.TwoTenantDatabases;
+import vn.tsolve.tracker.service.JiraServiceAccount;
 
 class IssueTargetRepositoryIT {
     private static JdbcTemplate jdbc;
@@ -123,7 +125,15 @@ class IssueTargetRepositoryIT {
         assertThat(answers.findByIdAndUserId(id, other.id())).isEmpty();
         LlmClient llm = mock(LlmClient.class);
         when(llm.chat(any(), any())).thenReturn("{\"summary\":\"Help\",\"description\":\"Details\",\"department\":1}");
-        var service = new ChatbotIssueServiceImpl(answers, targets, llm, new ObjectMapper(), Runnable::run, "60s");
+        var service = new ChatbotIssueServiceImpl(
+                answers,
+                targets,
+                llm,
+                new ObjectMapper(),
+                Runnable::run,
+                "60s",
+                mock(JiraServiceAccount.class),
+                mock(JiraIssueCreator.class));
         var before = snapshot();
         assertThatThrownBy(() -> service.draft(other, id.toString(), new ChatbotIssueDraftRequest(List.of())))
                 .isInstanceOf(NotFoundException.class)
@@ -155,6 +165,8 @@ class IssueTargetRepositoryIT {
                 .withBean(ChatbotAnswerRepository.class, () -> answers)
                 .withBean(IssueTargetRepository.class, () -> targets)
                 .withBean(LlmClient.class, () -> llm)
+                .withBean(JiraServiceAccount.class, () -> mock(JiraServiceAccount.class))
+                .withBean(JiraIssueCreator.class, () -> mock(JiraIssueCreator.class))
                 .withBean(ObjectMapper.class, ObjectMapper::new)
                 .withBean("applicationTaskExecutor", Executor.class, () -> stalled)
                 .run(context -> {

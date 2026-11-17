@@ -3,6 +3,7 @@ package vn.tsolve.chatbot.issue.service.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -24,11 +25,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Transactional;
 import vn.tsolve.ai.client.ChatMessage;
 import vn.tsolve.ai.client.ChatMessage.Role;
 import vn.tsolve.ai.client.LlmClient;
@@ -36,15 +41,25 @@ import vn.tsolve.ai.exception.AiUnavailableException;
 import vn.tsolve.chatbot.answer.dto.ChatbotTurnRequest;
 import vn.tsolve.chatbot.answer.entity.ChatbotAnswer;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
+import vn.tsolve.chatbot.exception.ChatbotJiraException;
 import vn.tsolve.chatbot.exception.InvalidChatbotRequestException;
+import vn.tsolve.chatbot.issue.client.JiraIssueCreator;
+import vn.tsolve.chatbot.issue.client.JiraIssueCreator.CreatedIssue;
+import vn.tsolve.chatbot.issue.client.JiraIssueCreator.NewIssue;
+import vn.tsolve.chatbot.issue.dto.ChatbotIssueCreateResult;
 import vn.tsolve.chatbot.issue.dto.ChatbotIssueDraftRequest;
 import vn.tsolve.chatbot.issue.dto.ChatbotIssueDraftResponse;
+import vn.tsolve.chatbot.issue.dto.ChatbotIssueRequest;
+import vn.tsolve.chatbot.issue.dto.ChatbotJiraIssueResponse;
 import vn.tsolve.chatbot.issue.dto.IssueDepartment;
 import vn.tsolve.chatbot.issue.repository.IssueTargetRepository;
 import vn.tsolve.chatbot.issue.repository.IssueTargetRepository.IssueTarget;
 import vn.tsolve.common.exception.BusinessRuleException;
+import vn.tsolve.common.exception.MessageCodeException;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.common.security.TSolveUser;
+import vn.tsolve.tracker.dto.JiraAccount;
+import vn.tsolve.tracker.service.JiraServiceAccount;
 
 @ExtendWith(OutputCaptureExtension.class)
 class ChatbotIssueServiceImplTest {
@@ -57,6 +72,12 @@ class ChatbotIssueServiceImplTest {
     private final ChatbotAnswerRepository answers = mock(ChatbotAnswerRepository.class);
     private final IssueTargetRepository targets = mock(IssueTargetRepository.class);
     private final LlmClient llm = mock(LlmClient.class);
+    private final JiraServiceAccount accounts = mock(JiraServiceAccount.class);
+    private final JiraIssueCreator creator = mock(JiraIssueCreator.class);
+    private static final JiraAccount ACCOUNT = new JiraAccount("https://workspace.atlassian.net/", "cloud-id", "token");
+    private static final ChatbotIssueRequest CREATE =
+            new ChatbotIssueRequest("Reviewed summary", "Reviewed description", 7L);
+    private ChatbotAnswer createAnswer;
     private final ObjectMapper mapper = new ObjectMapper();
     private ChatbotIssueServiceImpl service;
 
@@ -66,6 +87,9 @@ class ChatbotIssueServiceImplTest {
         when(answers.findByIdAndUserId(ANSWER_ID, USER.id())).thenReturn(Optional.of(answer("ANSWERED")));
         when(targets.linkedJiraAccountId(USER.id())).thenReturn(Optional.of("jira-user"));
         when(targets.offeredDepartments()).thenReturn(TARGETS);
+        createAnswer = answer("ANSWERED");
+        when(answers.findForUpdateByIdAndUserId(ANSWER_ID, USER.id())).thenReturn(Optional.of(createAnswer));
+        when(accounts.current()).thenReturn(Optional.of(ACCOUNT));
     }
 
     @ParameterizedTest
@@ -262,7 +286,152 @@ class ChatbotIssueServiceImplTest {
     }
 
     private ChatbotIssueServiceImpl service(Executor executor) {
-        return new ChatbotIssueServiceImpl(answers, targets, llm, mapper, executor, Duration.ofSeconds(60));
+        return new ChatbotIssueServiceImpl(
+                answers, targets, llm, mapper, executor, Duration.ofSeconds(60), accounts, creator);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"ANSWERED", "NO_SOURCE"})
+    void createsEitherOwnAnswerUsingReviewedFieldsAndDefaultProject_AC_011_1(String outcome) {
+        createAnswer = answer(outcome);
+        when(answers.findForUpdateByIdAndUserId(ANSWER_ID, USER.id())).thenReturn(Optional.of(createAnswer));
+        when(creator.create(any(), any()))
+                .thenReturn(new CreatedIssue("HELP-12", "https://workspace.atlassian.net/browse/HELP-12"));
+        assertThat(create())
+                .isEqualTo(new ChatbotIssueCreateResult(
+                        new ChatbotJiraIssueResponse("HELP-12", "https://workspace.atlassian.net/browse/HELP-12"),
+                        true));
+        var order = inOrder(answers, targets, accounts, creator);
+        order.verify(answers).findForUpdateByIdAndUserId(ANSWER_ID, USER.id());
+        order.verify(targets).linkedJiraAccountId(USER.id());
+        order.verify(targets).offeredDepartments();
+        order.verify(accounts).current();
+        order.verify(creator)
+                .create(ACCOUNT, new NewIssue("HELP", CREATE.summary(), CREATE.description(), "jira-user"));
+        verifyNoInteractions(llm);
+    }
+
+    @Test
+    void recordsCreatedKeyOnTheLockedAnswer_AC_011_2() throws Exception {
+        when(creator.create(any(), any()))
+                .thenReturn(new CreatedIssue("HELP-12", "https://workspace.atlassian.net/browse/HELP-12"));
+        assertThat(create().created()).isTrue();
+        assertThat(createAnswer.getJiraIssueKey()).isEqualTo("HELP-12");
+        assertThat(ChatbotIssueServiceImpl.class
+                        .getMethod("create", TSolveUser.class, String.class, ChatbotIssueRequest.class)
+                        .getAnnotation(Transactional.class))
+                .isNotNull();
+    }
+
+    @Test
+    void wiresRequiredJiraPortsForCreation_AC_011_1() {
+        when(creator.create(any(), any()))
+                .thenReturn(new CreatedIssue("HELP-12", "https://workspace.atlassian.net/browse/HELP-12"));
+        new ApplicationContextRunner()
+                .withUserConfiguration(ChatbotIssueServiceImpl.class)
+                .withBean(ChatbotAnswerRepository.class, () -> answers)
+                .withBean(IssueTargetRepository.class, () -> targets)
+                .withBean(LlmClient.class, () -> llm)
+                .withBean(ObjectMapper.class, () -> mapper)
+                .withBean("applicationTaskExecutor", Executor.class, () -> Runnable::run)
+                .withBean(JiraServiceAccount.class, () -> accounts)
+                .withBean(JiraIssueCreator.class, () -> creator)
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    var wired = context.getBean(vn.tsolve.chatbot.issue.service.ChatbotIssueService.class);
+                    assertThat(wired.create(USER, ANSWER_ID.toString(), CREATE).created())
+                            .isTrue();
+                    verify(accounts).current();
+                    verify(creator).create(any(), any());
+                });
+    }
+
+    @Test
+    void returnsExistingIssueBeforeLinkAndDepartmentChecksWithoutCallingJira_AC_011_3() {
+        createAnswer.recordJiraIssue("HELP-12");
+        when(targets.linkedJiraAccountId(USER.id())).thenReturn(Optional.empty());
+        when(targets.offeredDepartments()).thenReturn(List.of());
+        assertThat(create())
+                .isEqualTo(new ChatbotIssueCreateResult(
+                        new ChatbotJiraIssueResponse("HELP-12", "https://workspace.atlassian.net/browse/HELP-12"),
+                        false));
+        verifyNoInteractions(targets, creator, llm);
+    }
+
+    @Test
+    void retainsExistingKeyWhenSiteAccountHasBeenRemoved_AC_011_3_AC_011_6() {
+        createAnswer.recordJiraIssue("HELP-12");
+        when(accounts.current()).thenReturn(Optional.empty());
+        assertThatThrownBy(this::create).isInstanceOfSatisfying(MessageCodeException.class, failure -> {
+            assertThat(failure.getCode()).isEqualTo("MSG148");
+            assertThat(failure.getStatus()).isEqualTo(HttpStatus.BAD_GATEWAY);
+        });
+        assertThat(createAnswer.getJiraIssueKey()).isEqualTo("HELP-12");
+        verifyNoInteractions(targets, creator, llm);
+    }
+
+    @Test
+    void refusesUnlinkedAccountBeforeDepartmentOrServiceAccountChecks_AC_011_4() {
+        when(targets.linkedJiraAccountId(USER.id())).thenReturn(Optional.empty());
+        assertThatThrownBy(this::create)
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("MSG146");
+        verify(targets).linkedJiraAccountId(USER.id());
+        verifyNoMoreInteractions(targets);
+        verifyNoInteractions(accounts, creator, llm);
+        assertThat(createAnswer.getJiraIssueKey()).isNull();
+    }
+
+    @Test
+    void rechecksDeactivatedDepartmentBeforeServiceAccountAndJira_AC_011_5() {
+        when(targets.offeredDepartments()).thenReturn(List.of(TARGETS.getLast()));
+        assertThatThrownBy(this::create).isInstanceOfSatisfying(MessageCodeException.class, failure -> {
+            assertThat(failure.getCode()).isEqualTo("MSG06");
+            assertThat(failure.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(failure.getField()).isNull();
+        });
+        assertThat(createAnswer.getJiraIssueKey()).isNull();
+        verifyNoInteractions(accounts, creator, llm);
+    }
+
+    @Test
+    void refusesMissingServiceAccountWithoutJiraOrStoredKey_AC_011_6() {
+        when(accounts.current()).thenReturn(Optional.empty());
+        assertThatThrownBy(this::create).isInstanceOfSatisfying(ChatbotJiraException.class, failure -> {
+            assertThat(failure.getCode()).isEqualTo("MSG148");
+            assertThat(failure.getStatus()).isEqualTo(HttpStatus.BAD_GATEWAY);
+        });
+        assertThat(createAnswer.getJiraIssueKey()).isNull();
+        verifyNoInteractions(creator, llm);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"MSG148,502", "MSG157,502", "MSG149,503"})
+    void propagatesJiraRefusalAndStoresNothing_AC_011_6_AC_011_7_AC_011_8(String code, int status) {
+        var refusal = new ChatbotJiraException(HttpStatus.valueOf(status), code);
+        when(creator.create(any(), any())).thenThrow(refusal);
+        assertThatThrownBy(this::create).isSameAs(refusal);
+        assertThat(createAnswer.getJiraIssueKey()).isNull();
+        verify(creator).create(any(), any());
+        verifyNoMoreInteractions(creator);
+        verify(answers).findForUpdateByIdAndUserId(ANSWER_ID, USER.id());
+        verifyNoMoreInteractions(answers);
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {"not-a-uuid", "70000000-0000-0000-0000-000000000099", "70000000-0000-0000-0000-000000000001"})
+    void refusesMalformedUnknownAndOtherUsersAnswersWithoutJira_AC_011_9(String id) {
+        when(answers.findForUpdateByIdAndUserId(ANSWER_ID, USER.id())).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.create(USER, id, CREATE))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessage("MSG04");
+        verifyNoInteractions(targets, accounts, creator, llm);
+        assertThat(createAnswer.getJiraIssueKey()).isNull();
+    }
+
+    private ChatbotIssueCreateResult create() {
+        return service.create(USER, ANSWER_ID.toString(), CREATE);
     }
 
     private ChatbotIssueDraftResponse draft() {

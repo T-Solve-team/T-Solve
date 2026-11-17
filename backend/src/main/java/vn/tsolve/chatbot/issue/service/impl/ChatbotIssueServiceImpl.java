@@ -17,18 +17,29 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.convert.DurationStyle;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import vn.tsolve.ai.client.LlmClient;
 import vn.tsolve.ai.exception.AiUnavailableException;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
+import vn.tsolve.chatbot.exception.ChatbotJiraException;
+import vn.tsolve.chatbot.exception.InvalidChatbotRequestException;
+import vn.tsolve.chatbot.issue.client.JiraIssueCreator;
+import vn.tsolve.chatbot.issue.client.JiraIssueCreator.NewIssue;
+import vn.tsolve.chatbot.issue.dto.ChatbotIssueCreateResult;
 import vn.tsolve.chatbot.issue.dto.ChatbotIssueDraftRequest;
 import vn.tsolve.chatbot.issue.dto.ChatbotIssueDraftResponse;
+import vn.tsolve.chatbot.issue.dto.ChatbotIssueRequest;
+import vn.tsolve.chatbot.issue.dto.ChatbotJiraIssueResponse;
 import vn.tsolve.chatbot.issue.dto.IssueDepartment;
 import vn.tsolve.chatbot.issue.repository.IssueTargetRepository;
 import vn.tsolve.chatbot.issue.service.ChatbotIssueService;
 import vn.tsolve.common.exception.BusinessRuleException;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.common.security.TSolveUser;
+import vn.tsolve.tracker.dto.JiraAccount;
+import vn.tsolve.tracker.service.JiraServiceAccount;
 
 @Service
 public class ChatbotIssueServiceImpl implements ChatbotIssueService {
@@ -38,6 +49,8 @@ public class ChatbotIssueServiceImpl implements ChatbotIssueService {
     private final ObjectMapper mapper;
     private final Executor executor;
     private final long timeoutNanos;
+    private final JiraServiceAccount accounts;
+    private final JiraIssueCreator creator;
 
     @Autowired
     public ChatbotIssueServiceImpl(
@@ -46,8 +59,10 @@ public class ChatbotIssueServiceImpl implements ChatbotIssueService {
             LlmClient llm,
             ObjectMapper mapper,
             @Qualifier("applicationTaskExecutor") Executor executor,
-            @Value("${CHATBOT_ASK_TIMEOUT:60s}") String timeout) {
-        this(answers, targets, llm, mapper, executor, DurationStyle.detectAndParse(timeout));
+            @Value("${CHATBOT_ASK_TIMEOUT:60s}") String timeout,
+            JiraServiceAccount accounts,
+            JiraIssueCreator creator) {
+        this(answers, targets, llm, mapper, executor, DurationStyle.detectAndParse(timeout), accounts, creator);
     }
 
     ChatbotIssueServiceImpl(
@@ -56,7 +71,9 @@ public class ChatbotIssueServiceImpl implements ChatbotIssueService {
             LlmClient llm,
             ObjectMapper mapper,
             Executor executor,
-            Duration timeout) {
+            Duration timeout,
+            JiraServiceAccount accounts,
+            JiraIssueCreator creator) {
         if (timeout.isNegative() || timeout.isZero()) {
             throw new IllegalArgumentException("Invalid chatbot settings");
         }
@@ -66,6 +83,8 @@ public class ChatbotIssueServiceImpl implements ChatbotIssueService {
         this.mapper = mapper;
         this.executor = executor;
         this.timeoutNanos = timeout.toNanos();
+        this.accounts = accounts;
+        this.creator = creator;
     }
 
     @Override
@@ -121,6 +140,43 @@ public class ChatbotIssueServiceImpl implements ChatbotIssueService {
         } catch (AiUnavailableException | JsonProcessingException failure) {
             return empty;
         }
+    }
+
+    @Override
+    @Transactional
+    public ChatbotIssueCreateResult create(TSolveUser user, String answerId, ChatbotIssueRequest request) {
+        UUID id;
+        try {
+            id = UUID.fromString(answerId);
+        } catch (IllegalArgumentException invalid) {
+            throw new NotFoundException("MSG04", Map.of());
+        }
+        var answer = answers.findForUpdateByIdAndUserId(id, user.id())
+                .orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
+        if (answer.getJiraIssueKey() != null) {
+            String site = account().siteUrl().replaceAll("/+$", "");
+            return new ChatbotIssueCreateResult(
+                    new ChatbotJiraIssueResponse(
+                            answer.getJiraIssueKey(), site + "/browse/" + answer.getJiraIssueKey()),
+                    false);
+        }
+        String reporter =
+                targets.linkedJiraAccountId(user.id()).orElseThrow(() -> new BusinessRuleException("MSG146", Map.of()));
+        var target = targets.offeredDepartments().stream()
+                .filter(offered -> request.departmentId().equals(offered.departmentId()))
+                .findFirst()
+                .orElseThrow(InvalidChatbotRequestException::new);
+        JiraAccount account = account();
+        // ponytail: The answer row stays locked during the Jira call (10 s timeout); upgrade to a "creating" state if
+        // this blocks.
+        var created = creator.create(
+                account, new NewIssue(target.jiraProjectKey(), request.summary(), request.description(), reporter));
+        answer.recordJiraIssue(created.issueKey());
+        return new ChatbotIssueCreateResult(new ChatbotJiraIssueResponse(created.issueKey(), created.issueUrl()), true);
+    }
+
+    private JiraAccount account() {
+        return accounts.current().orElseThrow(() -> new ChatbotJiraException(HttpStatus.BAD_GATEWAY, "MSG148"));
     }
 
     private <T> T callAi(Supplier<T> call, long deadline) {
