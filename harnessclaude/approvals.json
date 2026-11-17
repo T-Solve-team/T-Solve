@@ -1,7 +1,7 @@
 {
   "fe-foundation": {
-    "specHash": "6aef3f501ac532c7dbd01e18dadf819752bf01bb6837f8c278089960be7765d6",
-    "approvedAt": "2026-11-12T16:56:54.365Z",
+    "specHash": "f3736c582e96d8e787befb7d0dabd18457988ace7dad0a6633c34422d110a634",
+    "approvedAt": "2026-11-17T06:43:42.056Z",
     "by": "user",
     "acs": {
       "AC-001.1": "THE web app SHALL know exactly five roles — , , ,",
@@ -36,7 +36,7 @@
       "AC-006.4": "WHEN a message has the placeholder , THE web app SHALL fill it with the one configured",
       "AC-006.5": "WHEN a message is shown with parameters, THE web app SHALL replace each  placeholder with its",
       "AC-006.6": "IF a placeholder has no value, THEN THE web app SHALL leave the placeholder text as it is.",
-      "AC-006.7": "THE catalog SHALL hold no code other than the Report3 codes of AC-006.1, , ,",
+      "AC-006.7": "THE catalog SHALL hold no code other than the Report3 codes of AC-006.1, the provisional codes",
       "AC-006.8": "THE catalog SHALL hold the multi-tenant web codes with their exact Report3 text: MSG119, MSG120,",
       "AC-006.9": "THE catalog SHALL hold  (type inline) until System_Messages numbers it (import-ticket-list",
       "AC-007.1": "THE Status Tag SHALL have the values Simple and Complex for the triage class (GBR-35), next to the six",
@@ -233,8 +233,8 @@
     }
   },
   "chatbot": {
-    "specHash": "9e4ced8a57eedc16824ddc9ef0aca924b2ecdf7c5d27598b84d97e9ccc12b28c",
-    "approvedAt": "2026-11-17T11:12:12.053Z",
+    "specHash": "dd32f6721cc04e3daa484635f18ad9e760e28a3b15fe06e8af96e65df4db22bb",
+    "approvedAt": "2026-11-17T15:40:42.152Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",
@@ -251,6 +251,7 @@
       "AC-001.12": "WHEN the answer arrives with  , THE web app SHALL show MSG109 as the answer, with",
       "AC-001.13": "IF the request fails, not with a 401 or a field error on the question, THEN THE web app SHALL show",
       "AC-001.14": "IF the answer request fails with field errors (400), THEN THE web app SHALL show the field's MSG under",
+      "AC-001.15": "WHEN the answer arrives with  ,  or , THE web app SHALL show",
       "AC-002.1": "WHILE the session has no conversation, THE web app SHALL show an empty conversation, titled \"New",
       "AC-002.2": "WHEN the first answer of a conversation arrives, THE web app SHALL save the conversation with its",
       "AC-002.3": "THE conversation list SHALL show the conversations of the session newest first, by the time each was",
@@ -263,7 +264,7 @@
       "AC-002.10": "IF that availability request fails, THEN THE web app SHALL show the Wiki citations as links.",
       "AC-002.11": "IF storage is blocked, THEN THE web app SHALL still answer questions and keep the conversations",
       "AC-002.12": "THE web app SHALL keep the user id and every Wiki document id as UUID strings, in memory, in",
-      "AC-003.1": "THE web app SHALL show Helpful and Not helpful buttons under every answer, the MSG109 answer included.",
+      "AC-003.1": "THE web app SHALL show Helpful and Not helpful buttons under every  and  answer",
       "AC-003.2": "WHEN the user clicks Helpful or Not helpful on an unrated answer, THE web app SHALL call",
       "AC-003.3": "WHEN the user clicks the other button of a rated answer, THE web app SHALL send the new rating, which",
       "AC-003.4": "WHEN a rated answer is shown again in the session (STORY-002), THE web app SHALL highlight its rating,",
@@ -275,7 +276,8 @@
       "AC-004.4": "WHEN the mock is asked which Wiki documents are unavailable, THE mock SHALL list the ids of its",
       "AC-004.5": "WHEN  runs, THE mock SHALL return to its initial data.",
       "AC-004.6": "WHEN the mock is asked to save a rating, or to remove one, THE mock SHALL answer 204.",
-      "AC-005.1": "WHEN a signed-in user sends  with a valid body, THE backend SHALL embed",
+      "AC-004.7": "WHEN a question matches a classification mock, THE mock SHALL answer its outcome with an empty",
+      "AC-005.1": "WHEN STORY-009 classifies a valid  as a question, THE backend SHALL embed",
       "AC-005.2": "THE backend SHALL keep at most  (default 5) sources of both kinds together, most",
       "AC-005.3": "WHEN at least one source is kept, THE backend SHALL call the  module's  once with a",
       "AC-005.4": "IF no source reaches , THEN THE backend SHALL not call the chat model and",
@@ -293,7 +295,7 @@
       "AC-006.5": "WHEN a signed-in user asks which cited documents are unavailable, THE backend SHALL answer",
       "AC-006.6": "IF  is invalid, THEN THE backend SHALL answer 400 with code MSG06 and no field error",
       "AC-006.7": "WHILE no module implements , THE stand-in  SHALL return no passage and SHALL",
-      "AC-007.1": "WHEN  is not empty, THE backend SHALL use as retrieval text the trimmed question of the last",
+      "AC-007.1": "WHEN the classifier gives no usable query (AC-009.6) and  is not empty, THE backend SHALL use",
       "AC-007.2": "THE backend SHALL send the turns of  to the chat model, oldest first, as earlier user and",
       "AC-007.3": "IF  is missing, holds more than 10 turns, or a turn is too long, THEN THE backend SHALL answer",
       "AC-007.4": "THE backend SHALL store only the new question in , never the earlier turns.",
@@ -303,6 +305,14 @@
       "AC-008.4": "IF the rating body is missing or its rating is missing or unknown, THEN THE backend SHALL answer 400",
       "AC-008.5": "IF the request has no web session, THEN THE backend SHALL answer 401 with MSG07; every signed-in user",
       "AC-008.6": "THE chatbot changeset SHALL add to  the nullable columns  ( or",
+      "AC-009.1": "WHEN the question is a greeting phrase of Interface Contracts, THE backend SHALL answer",
+      "AC-009.2": "WHEN the question is not a greeting phrase, THE backend SHALL call the  module's",
+      "AC-009.3": "WHEN the classifier answers  or , THE backend SHALL answer that  with an",
+      "AC-009.4": "WHEN the backend answers ,  or , THE backend SHALL store one",
+      "AC-009.5": "WHEN the classifier answers  with a non-blank  for a follow-up, THE backend SHALL use",
+      "AC-009.6": "IF the classifier gives no usable answer, THEN THE backend SHALL continue as for a question with the",
+      "AC-009.7": "IF the ask times out, THEN THE backend SHALL answer 503 with MSG06 as in AC-005.7 and store no row",
+      "AC-009.8": "THE chatbot changeset SHALL widen the  check to , ,",
       "AC-010.1": "WHEN a signed-in user sends  () for an  or  answer of their own, THE backend SHALL answer 200  with , ,  (the suggested Department, or null) and .",
       "AC-010.2": "THE backend SHALL offer as  exactly the  Departments whose default Project is an",
       "AC-010.3": "WHEN at least one Department is offered, THE backend SHALL call the  module's",
@@ -333,8 +343,8 @@
     }
   },
   "identity": {
-    "specHash": "7680f68b9cb8b19f9d40f1b687f3dee0b3b61c4acb8680ef1323f5c93537287e",
-    "approvedAt": "2026-11-12T18:30:09.009Z",
+    "specHash": "2c6bdebe511b181032454bcd8277dfd1e62cfebab2075267140b439993608137",
+    "approvedAt": "2026-11-17T14:23:21.612Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a browser opens  on a Workspace site whose Workspace passes AC-001.48, THE backend SHALL save an authorization request for the Workspace that the platform resolved from the host (AC-001.53) and answer 302 to the authorization endpoint of the Keycloak realm  ( + ;  in production), without a signed-in user.",
@@ -396,6 +406,7 @@
       "AC-001.72": "IF the link request is missing, expired, already used or made for another Workspace, THEN THE backend SHALL record no link and answer 400 with  , on the confirm POST and on the  of AC-001.75 alike; IF the request has no valid session, THEN THE backend SHALL answer 401 with  , and IF the confirm POST has no valid CSRF token, THEN 403 (be-foundation AC-002.11); the checks SHALL run in the order session, then CSRF token, then link request (401 before 403 before 400), so the session filter SHALL run before the CSRF filter; the confirm POST SHALL read and delete the link request in one step whatever the outcome, so a confirm for another Workspace's request uses it up; in every case no link SHALL be recorded.",
       "AC-001.75": "WHEN a signed-in person of a Workspace sends  for a link request made for that Workspace, THE backend SHALL answer 200 with  (the Jira site's name, not the Workspace's) taken from the stored link request, SHALL leave the request in Redis (the GET does not consume it) and SHALL record nothing.",
       "AC-001.76": "WHEN a request carries a valid Workspace session, THE backend SHALL bind the Workspace of that session (the Workspace id the session holds, after the host check of AC-001.20 has passed) through  for the rest of that request and SHALL remove the binding when the request ends, also when the endpoint throws, so the endpoint reads only that Workspace's database. A request with no valid Workspace session (anonymous, an Operator session, or the hosts  and ) SHALL get no binding, and no default Workspace is ever bound. IF a signed-in request reaches code that needs the Workspace and none is bound, THEN THE backend SHALL answer 500 with  , never another Workspace's data (decision of KAN-298:  makes the binding; AC-004.16 states the same 500 for the user list).",
+      "AC-001.77": "WHEN another module asks  for the Account linked to a ticket tracker account, THE backend SHALL answer, in the Workspace bound by , the Account of that ticket tracker account's  row when the Account is Active, and nothing when there is no row or the Account is not Active.",
       "AC-002.1": "WHEN a signed-in user sends  with a valid CSRF token, on a Workspace site or on , THE backend SHALL end the Redis session, expire the cookie  (, with  and  and no ) and answer 200 with , the Keycloak end-session URL of the realm that signed the person in (, or  on ) carrying the kept  and  set to  on the same site (K10, Q7).",
       "AC-002.2": "WHEN a session has been ended by logout, THE backend SHALL answer every later request that carries its cookie with 401 and  .",
       "AC-002.3": "WHEN a Workspace session ends, THE backend SHALL publish exactly one  event with the Account id, the Workspace id, the session id and the reason, after the session is gone. The reason SHALL be  (AC-002.1),  (AC-001.23) or  (AC-001.27). The reason is also  when the Account no longer exists. The reason is also  when a new sign-in in the same browser ends a session that is still inside the limits of AC-001.23 (AC-001.18).",
@@ -1318,8 +1329,8 @@
     }
   },
   "jira-app": {
-    "specHash": "1377a3a4a44017590a35033d09cd45a766b47e5faa11be46259a48767d56308d",
-    "approvedAt": "2026-11-17T11:12:08.811Z",
+    "specHash": "f644e8ebaeb49390806de4e2bf46c4620648caa820dd7fff3dce0802cd94e106",
+    "approvedAt": "2026-11-17T15:50:14.518Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the issue being viewed changes to a status of the Done status category, THE Jira App SHALL ask the server whether the form may open and open the form when it may.",
@@ -1345,7 +1356,7 @@
       "AC-007.2": "WHEN the user clicks Accept, THE Jira App SHALL replace the form's five sections with the rewritten ones and go back to the form.",
       "AC-007.3": "WHEN the user clicks Discard, THE Jira App SHALL go back to the form with the Solution unchanged.",
       "AC-007.4": "IF the rewrite fails, is unavailable or takes longer than the UI call allows, THEN THE Jira App SHALL show MSG68 and leave the Solution unchanged.",
-      "AC-008.1": "IF the Jira account is not linked to an active T-Solve Account, THEN THE panel SHALL show MSG62 and nothing else.",
+      "AC-008.1": "IF the Jira account is not linked to an active T-Solve Account, THEN THE panel SHALL show MSG62 and a link \"Open T-Solve account settings\" (a Jira App label — user, 2026-11-17) that opens the settings page of STORY-014, and nothing else.",
       "AC-008.2": "WHILE the issue's ticket is in Pending review, THE panel SHALL show MSG65.",
       "AC-008.3": "WHILE the user has a Draft for the issue and the issue's ticket does not exist, THE panel SHALL show MSG77 with a button that reopens the form with the Draft.",
       "AC-008.7": "WHILE the issue's Solution Form ticket written by the user is in Changes requested, THE panel SHALL show MSG64 with the Project Manager's name and comment, read from 's , as  — the SRS text without its last sentence \"Update the solution and resubmit.\" (user, 2026-11-14).",
@@ -1374,8 +1385,19 @@
       "AC-012.6": "WHEN the user closes the resubmission form, THE server SHALL store the five sections as the user's Draft for the issue as in AC-005.1, the ticket SHALL stay in Changes requested, and THE Jira App SHALL show the flag \"Saved as draft\".",
       "AC-012.7": "THE resubmission form SHALL check, rewrite and retry as the first submission does (AC-002.3, AC-002.4, AC-004.4, STORY-007).",
       "AC-013.1": "THE manifest SHALL declare a scheduled trigger with interval  and a trigger on the app's install and",
-      "AC-013.2": "THE manifest SHALL request the scopes  and  and no administration scope",
-      "AC-013.3": "WHEN the backend answers the token call with an error, THE Jira App SHALL do nothing else; the next run"
+      "AC-013.2": "THE manifest SHALL request the scopes ,  and  and no",
+      "AC-013.3": "WHEN the backend answers the token call with an error, THE Jira App SHALL do nothing else; the next run",
+      "AC-014.1": "THE Jira App SHALL add a page titled \"T-Solve account\" (Forge ) to the Apps section of Jira's navigation for every Jira user of the site.",
+      "AC-014.2": "WHEN the settings page opens, THE Jira App SHALL call , which SHALL answer, for the FIT's site and Jira user only,   with the linked Account's full name and email and the link time, , or  (the site belongs to no Workspace), and SHALL call no AI and store nothing.",
+      "AC-014.3": "WHILE the status is , THE settings page SHALL show \"Your Jira account is not linked to T-Solve.\" and a button \"Sign in to T-Solve\" (Jira App labels — user, 2026-11-17).",
+      "AC-014.4": "WHILE the status is , THE settings page SHALL show  with the linked Account's full name and email, and a button \"Link another account\" (Jira App labels — user, 2026-11-17), and SHALL offer no unlink.",
+      "AC-014.5": "WHILE the status is , THE settings page SHALL show MSG124 and no button.",
+      "AC-014.6": "WHEN the user clicks \"Sign in to T-Solve\" or \"Link another account\", THE Jira App SHALL call ; THE server SHALL read the display name of the FIT's Jira account from Jira () with the Workspace's app token (STORY-013), ask identity's  for a link request with the Workspace of the FIT's site, the FIT's Jira account, that display name and the Jira site name (the host of the Workspace's Jira site URL) (identity AC-001.69), and answer with the link it returns.",
+      "AC-014.7": "WHEN the link arrives, THE Jira App SHALL open it in a new browser tab and, instead of the button, show MSG74 with \"page\" in place of \"panel\": \"Finish signing in in the new tab. This page will update when you are done.\" (user, 2026-11-17).",
+      "AC-014.8": "WHILE MSG74 is shown, THE Jira App SHALL call  every 5 seconds and SHALL show the state of AC-014.4 as soon as the answer is  with a link time later than the click; WHEN 10 minutes have passed without that answer (the link request has expired), THE Jira App SHALL stop calling and show the state of the last answer again, with its button.",
+      "AC-014.9": "IF the site belongs to no Workspace, THEN THE server SHALL answer  with 403 MSG124; IF the FIT has no Jira user (), THEN with 403 MSG08; IF Jira or the link request store cannot be reached, or Jira returns no display name, THEN with 503 MSG06; in every case THE server SHALL create no link request, and THE Jira App SHALL show that message, open no tab and keep the button.",
+      "AC-014.10": "THE server SHALL take the site and the Jira account of a link request only from the verified FIT, never from the request body, a parameter or a header (identity AC-001.38, GBR-19).",
+      "AC-014.11": "THE server SHALL find the T-Solve user of every Jira App call — the panel, the Solution Form, the resubmission and the Ask T-Solve answer (AC-010.4) — only as the linked Account (identity AC-001.77): no link, or a link to an Account that is not Active, means not linked; THE server SHALL no longer read the  setting."
     }
   },
   "workspace": {

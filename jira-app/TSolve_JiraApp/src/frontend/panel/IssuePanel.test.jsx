@@ -1,7 +1,7 @@
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useProductContext } from '@forge/react';
-import { events, requestJira } from '@forge/bridge';
+import { events, requestJira, router } from '@forge/bridge';
 import {
   getIssuePanel,
   getReviewFeedback,
@@ -13,9 +13,13 @@ import { PANEL_LABELS, IssuePanel } from './IssuePanel';
 jest.mock('@forge/bridge', () => ({
   events: { on: jest.fn(() => Promise.resolve({ unsubscribe: jest.fn() })) },
   requestJira: jest.fn(),
+  router: { navigate: jest.fn(() => Promise.resolve()) },
   showFlag: jest.fn(),
   invokeRemote: jest.fn(),
 }));
+
+const APP = '0e9fd967-781d-473e-9b2c-9388d71eafbf';
+const ENV = 'a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d';
 jest.mock('../api/tsolveClient', () => {
   const actual = jest.requireActual('../api/tsolveClient');
   return {
@@ -49,11 +53,19 @@ async function show(panel) {
 }
 
 describe('IssuePanel', () => {
-  it('AC-008.1 shows only MSG62 when the account is not linked', async () => {
+  it('AC-008.1 shows only MSG62 and the link to the T-Solve account settings page when not linked', async () => {
+    useProductContext.mockReturnValue({
+      accountId: 'me',
+      extension: { issue: { key: 'ITSUP-12' } },
+      localId: `ari:cloud:ecosystem::extension/${APP}/${ENV}/static/tsolve-issue-panel`,
+      environmentId: ENV,
+    });
     await show({ linked: false, ticketStatus: null, hasDraft: false, mayOpenForm: false });
 
     expect(screen.getByText(message('MSG62'))).toBeInTheDocument();
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: PANEL_LABELS.openAccountSettings }));
+    expect(router.navigate).toHaveBeenCalledWith(`/jira/apps/${APP}/${ENV}`);
   });
 
   it('AC-008.2 shows MSG65 while the ticket is in Pending review', async () => {

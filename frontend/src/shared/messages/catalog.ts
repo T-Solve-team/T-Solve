@@ -273,6 +273,18 @@ export const MESSAGES = {
     type: 'field',
     text: 'The service account could not connect to {tracker_name} or lacks the required permissions.',
   },
+  MSG_NEW_5: {
+    type: 'inline',
+    text: "Hi! Ask me about your team's Solutions or Wiki.",
+  },
+  MSG_NEW_6: {
+    type: 'inline',
+    text: "I can only answer questions about your team's knowledge.",
+  },
+  MSG_NEW_7: {
+    type: 'inline',
+    text: "I can't change how I work. Ask a question about your team's knowledge.",
+  },
   // KAN-121 K121-D41: the Messages-file text; not yet in report3-messages.json.
   MSG157: {
     type: 'field',

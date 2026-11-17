@@ -6,6 +6,14 @@ modules:
         endpoint: tsolve-ui-endpoint
       render: native
       title: Ask T-Solve
+  # STORY-014: link the Jira account to T-Solve from the Apps section of Jira's navigation.
+  jira:globalPage:
+    - key: tsolve-account-settings
+      resource: account-settings
+      resolver:
+        endpoint: tsolve-ui-endpoint
+      render: native
+      title: T-Solve account
   jira:issueViewBackgroundScript:
     - key: tsolve-solution-form-watch
       resource: solution-form-watch
@@ -64,10 +72,14 @@ resources:
     path: src/frontend/askTsolve/index.jsx
   - key: solution-form-watch
     path: src/frontend/background/index.jsx
+  - key: account-settings
+    path: src/frontend/accountSettings/index.jsx
 permissions:
   scopes:
     - read:jira-work
     - write:jira-work
+    # The Jira display name in the account link request (AC-014.6).
+    - read:jira-user
 app:
   runtime:
     name: nodejs24.x

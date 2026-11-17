@@ -141,15 +141,16 @@
         "jira-link-record": "passing",
         "profile-spaces-backend": "passing",
         "my-solutions-backend": "passing",
-        "my-solutions-summary-backend": "pending"
+        "my-solutions-summary-backend": "pending",
+        "jira-account-link-lookup": "evaluating"
       },
-      "lastUpdated": "2026-11-14T18:40:18.990Z",
+      "lastUpdated": "2026-11-17T14:30:06.437Z",
       "branch": "feat/identity",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "ab7e954b31a9ef70bb74ee1d394440064744b01b"
+        "default": "b906c83d1d252fde82b738ccede16c9678cb90e5"
       }
     },
     "workspace": {
@@ -359,15 +360,18 @@
         "answer-rating-api": "passing",
         "jira-issue-draft": "passing",
         "jira-issue-create": "passing",
-        "chatbot-ask-for-project": "evaluating"
+        "chatbot-ask-for-project": "evaluating",
+        "classify-outcome-schema": "evaluating",
+        "classify-question": "passing",
+        "classify-question-ui": "passing"
       },
-      "lastUpdated": "2026-11-17T10:22:27.876Z",
+      "lastUpdated": "2026-11-17T11:52:04.103Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "4f9a94e2fde787153faf115f2f2a6131cb1be94d"
+        "default": "2a4ee7865dae626ee19cddc25badf9515d706f2c"
       }
     },
     "jira-app": {
@@ -395,15 +399,19 @@
         "panel-rejected": "passing",
         "panel-published": "passing",
         "app-token-trigger": "evaluating",
-        "ask-without-sign-in": "evaluating"
+        "ask-without-sign-in": "evaluating",
+        "linked-asker-lookup": "evaluating",
+        "account-link-endpoints": "evaluating",
+        "account-settings-page": "evaluating",
+        "account-page-global": "evaluating"
       },
-      "lastUpdated": "2026-11-17T10:37:55.476Z",
+      "lastUpdated": "2026-11-17T15:51:37.880Z",
       "branch": "feat/KAN-337-jira-app-reject-reason",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "ef1fc5e0db7ee7a071ba4cd4a9ff4932fd7e1f31"
+        "default": "de1b19bf22056e427e1c58592b6da829feeb0a97"
       }
     },
     "dashboard-audit": {
