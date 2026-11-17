@@ -200,8 +200,8 @@ status: draft
 - Production tenant isolation beyond "one database per Workspace" (ADR-0002): the read uses the request's database.
 - Dashboard (STORY-004, STORY-005): the number of ticket views (no view is recorded yet; needs a counter on the
   Ticket Detail, user 09/11), triage classes and routing (`suggestion_result` has neither), opening a filtered
-  Ticket List from an outcome number, and leaving greetings and refused questions out of the gaps (KAN-243 has not
-  built the classification yet: until then every `NO_SOURCE` answer counts).
+  Ticket List from an outcome number. Greetings and refused questions need no dashboard change: chatbot KAN-243
+  stores them as `GREETING`, `OFF_TOPIC` or `INJECTION`, never `NO_SOURCE`, so the gaps leave them out.
 - A chart npm dependency (user 09/11: antd and CSS only).
 - Popup 9.3 Audit Entry Detail, removed by D18/CR-15 and fe-foundation AC-005.2.
 - The keyword filter mentioned by the older SRS field table: this slice follows KAN-153's three requested filters.

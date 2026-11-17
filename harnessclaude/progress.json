@@ -345,9 +345,12 @@
         "cited-documents": "passing",
         "follow-up-context": "passing",
         "answer-rating-schema": "passing",
-        "answer-rating-api": "passing"
+        "answer-rating-api": "passing",
+        "classify-outcome-schema": "pending",
+        "classify-question": "pending",
+        "classify-question-ui": "pending"
       },
-      "lastUpdated": "2026-11-11T09:02:24.623Z",
+      "lastUpdated": "2026-11-17T05:11:17.154Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"

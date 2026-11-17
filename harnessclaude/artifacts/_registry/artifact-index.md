@@ -25,6 +25,7 @@ Master registry of all artifacts in this workspace.
 | REVIEW-IDENTITY-22 | review | identity | pass | artifacts/06-evaluation/identity/task-22-space-handover-review.md |
 | ITER-1 | iteration | — | planned | artifacts/07-iterations/iteration-1.md |
 | ITER-2 | iteration | — | planned | artifacts/07-iterations/iteration-2.md |
+| ITER-3 | iteration | — | planned | artifacts/07-iterations/iteration-3.md |
 | — | architecture | — | draft | artifacts/03-modules/architecture.md |
 | — | context-brief | — | draft | artifacts/02-discovery/context-brief.md |
 | — | module-map | — | draft | artifacts/03-modules/module-map.md |
@@ -88,6 +89,8 @@ Master registry of all artifacts in this workspace.
 | — | tasks | chatbot | draft | artifacts/04-plans/chatbot/iteration-1/tasks.md |
 | — | design | chatbot | draft | artifacts/04-plans/chatbot/iteration-2/design.md |
 | — | tasks | chatbot | draft | artifacts/04-plans/chatbot/iteration-2/tasks.md |
+| — | design | chatbot | draft | artifacts/04-plans/chatbot/iteration-3/design.md |
+| — | tasks | chatbot | draft | artifacts/04-plans/chatbot/iteration-3/tasks.md |
 | — | spec | platform | draft | artifacts/03-modules/platform/spec.md |
 | — | design | platform | draft | artifacts/04-plans/platform/design.md |
 | — | design | platform | draft | artifacts/04-plans/platform/iteration-1/design.md |
@@ -209,6 +212,7 @@ Master registry of all artifacts in this workspace.
 | RESEARCH-002 | research | tracker | in-progress | artifacts/01-research/RESEARCH-002-servicenow-and-zendesk-trackers.md |
 | RESEARCH-004 | research | jira-app | complete | artifacts/01-research/RESEARCH-004-ask-ai-before-creating-a-jira-issue.md |
 | RESEARCH-005 | research | platform | complete | artifacts/01-research/RESEARCH-005-signed-url-route-on-caddy.md |
+| RESEARCH-006 | research | chatbot | complete | artifacts/01-research/RESEARCH-006-chatbot-question-classification.md |
 | MODULE-REVIEW-24 | module | ticket-review | decomposed | artifacts/03-modules/ticket-review/module.md |
 | SPEC-REVIEW-24 | spec | ticket-review | approved | artifacts/03-modules/ticket-review/spec.md |
 | DESIGN-REVIEW-24 | design | ticket-review | approved | artifacts/04-plans/ticket-review/design.md |

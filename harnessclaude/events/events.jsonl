@@ -1880,3 +1880,8 @@
 {"ts":"2026-11-15T19:54:14.192Z","type":"feature-status","module":"ticket-repository","feature":"drop-legacy-solution-tables","from":"evaluating","to":"passing"}
 {"ts":"2026-11-15T19:54:14.490Z","type":"feature-status","module":"platform","feature":"file-storage","from":"evaluating","to":"passing"}
 {"ts":"2026-11-16T17:48:57.783Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-workspace-account","from":"evaluating","to":"passing"}
+{"ts":"2026-11-17T05:11:11.535Z","type":"spec-approved","module":"chatbot","specHash":"f844475db6c736c9ebb04c65735f625909cc5be2b8c4effac21360aa1fcc788e"}
+{"ts":"2026-11-17T05:11:16.605Z","type":"feature-status","module":"chatbot","feature":"classify-outcome-schema","from":null,"to":"pending"}
+{"ts":"2026-11-17T05:11:16.882Z","type":"feature-status","module":"chatbot","feature":"classify-question","from":null,"to":"pending"}
+{"ts":"2026-11-17T05:11:17.156Z","type":"feature-status","module":"chatbot","feature":"classify-question-ui","from":null,"to":"pending"}
+{"ts":"2026-11-17T05:13:43.306Z","type":"spec-approved","module":"chatbot","specHash":"6ca54b5072fa049cdd13b137ad24a4486891f7239fc00f2ef933930a47710609"}
