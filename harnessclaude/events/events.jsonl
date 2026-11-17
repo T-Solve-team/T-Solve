@@ -2012,3 +2012,5 @@
 {"ts":"2026-11-17T15:50:14.525Z","type":"spec-approved","module":"jira-app","specHash":"f644e8ebaeb49390806de4e2bf46c4620648caa820dd7fff3dce0802cd94e106"}
 {"ts":"2026-11-17T15:50:14.791Z","type":"feature-status","module":"jira-app","feature":"account-page-global","from":null,"to":"pending"}
 {"ts":"2026-11-17T15:50:15.033Z","type":"feature-status","module":"jira-app","feature":"account-page-global","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T15:51:37.153Z","type":"feature-status","module":"jira-app","feature":"account-page-global","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T15:51:37.881Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"de1b19bf22056e427e1c58592b6da829feeb0a97"}

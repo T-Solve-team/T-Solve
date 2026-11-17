@@ -400,15 +400,15 @@
         "linked-asker-lookup": "evaluating",
         "account-link-endpoints": "evaluating",
         "account-settings-page": "evaluating",
-        "account-page-global": "in-progress"
+        "account-page-global": "evaluating"
       },
-      "lastUpdated": "2026-11-17T15:50:15.032Z",
+      "lastUpdated": "2026-11-17T15:51:37.880Z",
       "branch": "feat/KAN-337-jira-app-reject-reason",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "95eb7cdec0d37701f47e49d167ed146dfbe8d2b3"
+        "default": "de1b19bf22056e427e1c58592b6da829feeb0a97"
       }
     },
     "dashboard-audit": {
