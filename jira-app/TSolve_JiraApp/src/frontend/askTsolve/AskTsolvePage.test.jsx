@@ -244,6 +244,17 @@ describe('AskTsolvePage', () => {
     expect(open).toHaveBeenCalled();
   });
 
+  it('does not rate a GREETING answer from "Solved" or "Not solved, create ticket" (BUG-328)', async () => {
+    await renderLinked();
+    await ask('hi', { answerId: 'a-3', outcome: 'GREETING', text: '', citations: [] });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Not solved, create ticket' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Solved' }));
+
+    expect(rateAnswer).not.toHaveBeenCalled();
+    expect(open).toHaveBeenCalled();
+  });
+
   it('AC-010.15 a failed rating changes nothing on the page and shows no message', async () => {
     rateAnswer.mockRejectedValue(failure('MSG06'));
     await renderLinked();

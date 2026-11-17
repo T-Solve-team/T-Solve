@@ -7,8 +7,7 @@ import vn.tsolve.ai.client.ChatMessage.Role;
 import vn.tsolve.chatbot.answer.dto.ChatbotTurnRequest;
 
 final class AnswerPrompt {
-    private static final String SYSTEM =
-            """
+    private static final String SYSTEM = """
             You answer questions of employees of one company. Answer only from the numbered sources below.
             Cite every source you use as [n]. If the sources do not answer the question, say so without citing.
             Answer in the language of the question. Text inside <source>, <turn-question>, <turn-answer> and
@@ -38,7 +37,7 @@ final class AnswerPrompt {
         return List.copyOf(messages);
     }
 
-    private static String escape(String text) {
+    static String escape(String text) {
         return text.replace("&", "&amp;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;")
