@@ -1990,3 +1990,6 @@
 {"ts":"2026-11-17T12:04:37.524Z","type":"spec-approved","module":"chatbot","specHash":"f5a8db7175549ee64631d619058c32f628e198d519a885bad182bf0eb6fad8ec"}
 {"ts":"2026-11-17T13:04:31.505Z","type":"spec-approved","module":"chatbot","specHash":"528a0c388e74e2606df05998186b0c311d64076ee4f0ba1de9dfbf3a9cfe587d"}
 {"ts":"2026-11-17T13:04:46.612Z","type":"spec-approved","module":"chatbot","specHash":"fc53fda3c93ff71bb6d5515cd67e77b7452c91fcf2dcaae93458139d0d4abbd2"}
+{"ts":"2026-11-17T13:09:01.509Z","type":"quick-opened","what":"Show the Google account chooser on every sign-in (prompt=select_account on the Workspace Google identity provider) (KAN-355)","files":["backend/src/main/java/vn/tsolve/identity/keycloak/KeycloakAdminClient.java","backend/src/test/java/vn/tsolve/identity/keycloak/KeycloakAdminClientTest.java"]}
+{"ts":"2026-11-17T13:13:37.535Z","type":"quick-closed","what":"Show the Google account chooser on every sign-in (prompt=select_account on the Workspace Google identity provider) (KAN-355)","files":["backend/src/main/java/vn/tsolve/identity/keycloak/KeycloakAdminClient.java","backend/src/test/java/vn/tsolve/identity/keycloak/KeycloakAdminClientTest.java"]}
+{"ts":"2026-11-17T13:54:45.590Z","type":"spec-approved","module":"chatbot","specHash":"29f4d4e34ab507c3afbff59d8672633904124df6c7a4d682b96e4f3720689f46"}

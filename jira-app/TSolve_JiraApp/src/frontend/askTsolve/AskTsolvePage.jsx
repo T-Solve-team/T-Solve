@@ -130,7 +130,7 @@ export function AskTsolvePage() {
   };
 
   // AC-010.15: the rating is a side effect; a failure changes nothing on the page and shows no message.
-  // BUG-324: only a searched answer is rated; a greeting or a refused question is not.
+  // BUG-325: only a searched answer is rated; a greeting or a refused question is not.
   const rate = (rating) => {
     const answer = lastAnswer(conversation);
     const rateable = answer && RATEABLE.includes(answer.outcome);

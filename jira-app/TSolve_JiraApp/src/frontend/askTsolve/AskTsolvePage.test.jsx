@@ -244,7 +244,7 @@ describe('AskTsolvePage', () => {
     expect(open).toHaveBeenCalled();
   });
 
-  it('does not rate a GREETING answer from "Solved" or "Not solved, create ticket" (BUG-324)', async () => {
+  it('does not rate a GREETING answer from "Solved" or "Not solved, create ticket" (BUG-325)', async () => {
     await renderLinked();
     await ask('hi', { answerId: 'a-3', outcome: 'GREETING', text: '', citations: [] });
 

@@ -47,7 +47,7 @@ import vn.tsolve.ticket.service.ProjectAccess;
 
 @Service
 public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
-    // The classifier may use at most 1/3 of the remaining ask budget (BUG-325).
+    // The classifier may use at most 1/3 of the remaining ask budget (BUG-326).
     private static final long CLASSIFIER_SHARE = 3;
     private final EmbeddingClient embeddings;
     private final LlmClient llm;
@@ -233,7 +233,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         if (refused != null) {
             return save(row.of(question, refused.name(), ""), refused, List.of(), deadline);
         }
-        // BUG-327: a first question is embedded as asked, so a lossy rewrite cannot drop an error code from it.
+        // BUG-328: a first question is embedded as asked, so a lossy rewrite cannot drop an error code from it.
         // The private rewrite only resolves a follow-up against the history; without one the old fallback stays.
         String retrievalText;
         if (request.history().isEmpty()) {
@@ -291,7 +291,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
     }
 
     /**
-     * BUG-325, BUG-326: the classifier fails open. It gets a third of the remaining ask budget, so a slow reply still
+     * BUG-326, BUG-327: the classifier fails open. It gets a third of the remaining ask budget, so a slow reply still
      * leaves time for the search; a timeout or any other failure returns {@code null}, which parses as QUESTION.
      */
     private String classify(List<ChatMessage> messages, long deadline) {

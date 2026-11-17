@@ -181,7 +181,7 @@ public class ChatbotIssueServiceImpl implements ChatbotIssueService {
         return new ChatbotIssueCreateResult(new ChatbotJiraIssueResponse(created.issueKey(), created.issueUrl()), true);
     }
 
-    // BUG-323: only a searched answer has an issue; a refused question must never reach the draft LLM.
+    // BUG-324: only a searched answer has an issue; a refused question must never reach the draft LLM.
     private static boolean searched(ChatbotAnswer answer) {
         return SEARCHED.contains(answer.getOutcome());
     }

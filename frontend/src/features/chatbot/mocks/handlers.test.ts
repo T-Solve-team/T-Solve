@@ -60,7 +60,7 @@ describe('chatbot mock handlers', () => {
   });
 
   it.each(['thanks \u2764\ufe0f', '\u{1F468}\u200d\u{1F4BB} thanks', 'thanks\u200b'])(
-    'AC-004.7 strips emoji joiners and selectors from the greeting "%s" (BUG-322)',
+    'AC-004.7 strips emoji joiners and selectors from the greeting "%s" (BUG-323)',
     async (question) => {
       expect(await ask(question)).toMatchObject({ outcome: 'GREETING' });
     },

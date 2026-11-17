@@ -6,6 +6,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.moreThanOrExactly;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
@@ -35,20 +36,17 @@ class KeycloakAdminClientTest {
     private static final String TOKEN_PATH = "/realms/tsolve/protocol/openid-connect/token";
     private static final String ADMIN = "/admin/realms/tsolve";
     private static final UUID WORKSPACE = UUID.fromString("11111111-2222-3333-4444-555555555555");
-    private static final String WEB_CLIENT_JSON =
-            """
+    private static final String WEB_CLIENT_JSON = """
             [{"id":"web-uuid","clientId":"tsolve-web",
               "redirectUris":["http://acme.localhost:8080/api/v1/auth/callback"],
               "attributes":{"post.logout.redirect.uris":"http://acme.localhost:8080/login"}}]
             """;
-    private static final String ORGANIZATION_JSON =
-            """
+    private static final String ORGANIZATION_JSON = """
             {"id":"org-1","alias":"acme","enabled":true,
              "attributes":{"tsolve.workspace-id":["11111111-2222-3333-4444-555555555555"]},
              "domains":[{"name":"acme.test","verified":false}]}
             """;
-    private static final String IDP_JSON =
-            """
+    private static final String IDP_JSON = """
             {"alias":"google-acme","providerId":"google",
              "config":{"tsolve.workspace-id":"11111111-2222-3333-4444-555555555555"}}
             """;
@@ -150,6 +148,23 @@ class KeycloakAdminClientTest {
         assertThatThrownBy(() -> client().createOrganization(WORKSPACE, "acme", "acme.test"))
                 .isInstanceOf(IllegalStateException.class)
                 .satisfies(e -> assertThat(e.getMessage()).doesNotContain(SECRET));
+    }
+
+    @Test
+    @DisplayName("BUG-322 the Google IdP asks Google for the account chooser on every sign-in")
+    void googleIdpPromptsForAccountChoice_BUG_322() {
+        stubToken();
+        keycloak.stubFor(post(urlPathMatching(ADMIN + "/identity-provider/instances.*"))
+                .willReturn(aResponse().withStatus(201)));
+        keycloak.stubFor(post(urlPathEqualTo(ADMIN + "/organizations/org-1/identity-providers"))
+                .willReturn(aResponse().withStatus(204)));
+
+        client().createGoogleIdentityProvider("acme", WORKSPACE, "acme.test", "org-1");
+
+        keycloak.verify(
+                1,
+                postRequestedFor(urlPathEqualTo(ADMIN + "/identity-provider/instances"))
+                        .withRequestBody(matchingJsonPath("$.config[?(@.prompt == 'select_account')]")));
     }
 
     // ---- S4: the IdP is found through the Organization, never by scanning every IdP ----
