@@ -1880,3 +1880,10 @@
 {"ts":"2026-11-15T19:54:14.192Z","type":"feature-status","module":"ticket-repository","feature":"drop-legacy-solution-tables","from":"evaluating","to":"passing"}
 {"ts":"2026-11-15T19:54:14.490Z","type":"feature-status","module":"platform","feature":"file-storage","from":"evaluating","to":"passing"}
 {"ts":"2026-11-16T17:48:57.783Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-workspace-account","from":"evaluating","to":"passing"}
+{"ts":"2026-11-17T04:48:35.678Z","type":"spec-approved","module":"chatbot","specHash":"40f7522169534fb6618bad20968ba920a231a87dc2e6eadba09215e59086f283"}
+{"ts":"2026-11-17T04:51:50.055Z","type":"feature-status","module":"chatbot","feature":"jira-issue-draft","from":null,"to":"pending"}
+{"ts":"2026-11-17T04:51:50.405Z","type":"feature-status","module":"chatbot","feature":"jira-issue-create","from":null,"to":"pending"}
+{"ts":"2026-11-17T04:53:33.271Z","type":"feature-status","module":"chatbot","feature":"jira-issue-draft","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T06:44:23.979Z","type":"feature-status","module":"chatbot","feature":"jira-issue-draft","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T06:44:24.785Z","type":"feature-status","module":"chatbot","feature":"jira-issue-draft","from":"evaluating","to":"passing"}
+{"ts":"2026-11-17T06:44:25.886Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"ba9dbfeed0154b8185e32be43dab552fd0cb640c"}
