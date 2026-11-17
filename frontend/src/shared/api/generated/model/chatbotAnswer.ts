@@ -13,8 +13,8 @@ export interface ChatbotAnswer {
   /** Identifies the answer for its rating (UC-53). */
   answerId: string;
   outcome: ChatbotAnswerOutcome;
-  /** Plain text with numbered markers [1], [2] …; empty when NO_SOURCE. */
+  /** Plain text with numbered markers [1], [2] …; empty unless ANSWERED. */
   text: string;
-  /** In number order; empty when NO_SOURCE. */
+  /** In number order; empty unless ANSWERED. */
   citations: ChatbotCitation[];
 }

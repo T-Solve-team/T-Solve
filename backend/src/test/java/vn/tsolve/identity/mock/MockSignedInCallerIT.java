@@ -49,7 +49,7 @@ class MockSignedInCallerIT {
     private MockIdentityProperties properties;
 
     @Test
-    void seedsKnowledgeManagersWithTheTwoColumnKey_BUG_326() {
+    void seedsKnowledgeManagersWithTheTwoColumnKey_BUG_332() {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         seeder.run(new DefaultApplicationArguments());
         seeder.run(new DefaultApplicationArguments());

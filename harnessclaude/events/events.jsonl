@@ -1779,6 +1779,8 @@
 {"ts":"2026-11-14T22:35:22.434Z","type":"spec-approved","module":"project-integration","specHash":"550d07281b77e1ea39217e0f4180b1938ed94d6feaa567e664ab31868ea6413a"}
 {"ts":"2026-11-14T22:35:22.792Z","type":"spec-approved","module":"tracker","specHash":"759e03700d56dd4b265645102759f62c4481efebcb09002021309582464e13d8"}
 {"ts":"2026-11-14T22:34:54.110Z","type":"spec-approved","module":"workspace","specHash":"1deeffb98454aa06eb6588d0dd6bfb8e50d069df60973cf47ba85cbfa192e2ad"}
+{"ts":"2026-11-15T03:33:16.235Z","type":"quick-opened","what":"BUG-244: review email link built from the site origin (KAN-341)","files":["backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java","backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuerTest.java","docs/bug-log.md"]}
+{"ts":"2026-11-15T04:00:29.303Z","type":"quick-closed","what":"BUG-244: review email link built from the site origin (KAN-341)","files":["backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java","backend/src/test/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuerTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-15T06:53:14.357Z","type":"quick-opened","what":"Route-table test still expects the built Wiki screens 11.4 and 11.7 as placeholders (BUG-285)","files":["frontend/src/app/router/route-table.test.tsx","docs/bug-log.md"]}
 {"ts":"2026-11-15T07:34:49.889Z","type":"quick-closed","what":"Route-table test still expects the built Wiki screens 11.4 and 11.7 as placeholders (BUG-285)","files":["frontend/src/app/router/route-table.test.tsx","docs/bug-log.md"]}
 {"ts":"2026-11-15T07:34:58.614Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"3cdb351ecab619c99e3ab7a1c844a0d1ee96975e"}
@@ -1888,6 +1890,26 @@
 {"ts":"2026-11-15T19:54:14.192Z","type":"feature-status","module":"ticket-repository","feature":"drop-legacy-solution-tables","from":"evaluating","to":"passing"}
 {"ts":"2026-11-15T19:54:14.490Z","type":"feature-status","module":"platform","feature":"file-storage","from":"evaluating","to":"passing"}
 {"ts":"2026-11-16T17:48:57.783Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-workspace-account","from":"evaluating","to":"passing"}
+{"ts":"2026-11-17T05:11:11.535Z","type":"spec-approved","module":"chatbot","specHash":"f844475db6c736c9ebb04c65735f625909cc5be2b8c4effac21360aa1fcc788e"}
+{"ts":"2026-11-17T05:11:16.605Z","type":"feature-status","module":"chatbot","feature":"classify-outcome-schema","from":null,"to":"pending"}
+{"ts":"2026-11-17T05:11:16.882Z","type":"feature-status","module":"chatbot","feature":"classify-question","from":null,"to":"pending"}
+{"ts":"2026-11-17T05:11:17.156Z","type":"feature-status","module":"chatbot","feature":"classify-question-ui","from":null,"to":"pending"}
+{"ts":"2026-11-17T05:13:43.306Z","type":"spec-approved","module":"chatbot","specHash":"6ca54b5072fa049cdd13b137ad24a4486891f7239fc00f2ef933930a47710609"}
+{"ts":"2026-11-17T05:14:03.583Z","type":"feature-status","module":"chatbot","feature":"classify-outcome-schema","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T06:07:34.838Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"807452ffd9ccc63e9e0743a0a5e7274887e456c8"}
+{"ts":"2026-11-17T06:07:35.116Z","type":"feature-status","module":"chatbot","feature":"classify-outcome-schema","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T06:17:35.564Z","type":"feature-status","module":"chatbot","feature":"classify-question","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T06:21:37.071Z","type":"quick-opened","what":"Add Chatbot messages MSG157-MSG159 for KAN-243 (chatbot spec Interface Contracts)","files":["frontend/src/shared/messages/catalog.ts"]}
+{"ts":"2026-11-17T06:21:53.928Z","type":"feature-status","module":"chatbot","feature":"classify-question-ui","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T06:43:42.059Z","type":"spec-approved","module":"fe-foundation","specHash":"f3736c582e96d8e787befb7d0dabd18457988ace7dad0a6633c34422d110a634"}
+{"ts":"2026-11-17T06:44:37.139Z","type":"spec-approved","module":"chatbot","specHash":"e42bff12ce9770f3ce319cc32e00a77712a38f13929c98acb3b90e6e7046491a"}
+{"ts":"2026-11-17T06:44:57.374Z","type":"quick-closed","what":"Add Chatbot messages MSG157-MSG159 for KAN-243 (chatbot spec Interface Contracts)","files":["frontend/src/shared/messages/catalog.ts"]}
+{"ts":"2026-11-17T11:51:41.066Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"fd44833b6d1915002c076ff061c15ee85445b039"}
+{"ts":"2026-11-17T11:51:41.341Z","type":"feature-status","module":"chatbot","feature":"classify-question","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T11:51:41.610Z","type":"feature-status","module":"chatbot","feature":"classify-question","from":"evaluating","to":"passing"}
+{"ts":"2026-11-17T11:52:03.548Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"2a4ee7865dae626ee19cddc25badf9515d706f2c"}
+{"ts":"2026-11-17T11:52:03.823Z","type":"feature-status","module":"chatbot","feature":"classify-question-ui","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T11:52:04.105Z","type":"feature-status","module":"chatbot","feature":"classify-question-ui","from":"evaluating","to":"passing"}
 {"ts":"2026-11-17T04:48:35.678Z","type":"spec-approved","module":"chatbot","specHash":"40f7522169534fb6618bad20968ba920a231a87dc2e6eadba09215e59086f283"}
 {"ts":"2026-11-17T04:51:50.055Z","type":"feature-status","module":"chatbot","feature":"jira-issue-draft","from":null,"to":"pending"}
 {"ts":"2026-11-17T04:51:50.405Z","type":"feature-status","module":"chatbot","feature":"jira-issue-create","from":null,"to":"pending"}
@@ -1967,6 +1989,12 @@
 {"ts":"2026-11-17T11:01:33.591Z","type":"spec-approved","module":"wiki","specHash":"d4844089023e6171ff68a8399886e37122a1b37f2381a70a3aa6c3afd93f1cbe"}
 {"ts":"2026-11-17T11:12:08.813Z","type":"spec-approved","module":"jira-app","specHash":"1377a3a4a44017590a35033d09cd45a766b47e5faa11be46259a48767d56308d"}
 {"ts":"2026-11-17T11:12:12.055Z","type":"spec-approved","module":"chatbot","specHash":"9e4ced8a57eedc16824ddc9ef0aca924b2ecdf7c5d27598b84d97e9ccc12b28c"}
+{"ts":"2026-11-17T12:04:37.524Z","type":"spec-approved","module":"chatbot","specHash":"f5a8db7175549ee64631d619058c32f628e198d519a885bad182bf0eb6fad8ec"}
+{"ts":"2026-11-17T13:04:31.505Z","type":"spec-approved","module":"chatbot","specHash":"528a0c388e74e2606df05998186b0c311d64076ee4f0ba1de9dfbf3a9cfe587d"}
+{"ts":"2026-11-17T13:04:46.612Z","type":"spec-approved","module":"chatbot","specHash":"fc53fda3c93ff71bb6d5515cd67e77b7452c91fcf2dcaae93458139d0d4abbd2"}
+{"ts":"2026-11-17T13:09:01.509Z","type":"quick-opened","what":"Show the Google account chooser on every sign-in (prompt=select_account on the Workspace Google identity provider) (KAN-355)","files":["backend/src/main/java/vn/tsolve/identity/keycloak/KeycloakAdminClient.java","backend/src/test/java/vn/tsolve/identity/keycloak/KeycloakAdminClientTest.java"]}
+{"ts":"2026-11-17T13:13:37.535Z","type":"quick-closed","what":"Show the Google account chooser on every sign-in (prompt=select_account on the Workspace Google identity provider) (KAN-355)","files":["backend/src/main/java/vn/tsolve/identity/keycloak/KeycloakAdminClient.java","backend/src/test/java/vn/tsolve/identity/keycloak/KeycloakAdminClientTest.java"]}
+{"ts":"2026-11-17T13:54:45.590Z","type":"spec-approved","module":"chatbot","specHash":"29f4d4e34ab507c3afbff59d8672633904124df6c7a4d682b96e4f3720689f46"}
 {"ts":"2026-11-17T12:25:07.352Z","type":"quick-opened","what":"BUG-322: enqueue wiki-index on a request bound only through TenantContext","files":["backend/src/main/java/vn/tsolve/worker/service/impl/TenantJobServiceImpl.java","backend/src/main/java/vn/tsolve/worker/config/WorkerConfiguration.java","backend/src/test/java/vn/tsolve/worker/service/impl/TenantJobServiceImplTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-17T12:57:53.116Z","type":"quick-closed","what":"BUG-322: enqueue wiki-index on a request bound only through TenantContext","files":["backend/src/main/java/vn/tsolve/worker/service/impl/TenantJobServiceImpl.java","backend/src/main/java/vn/tsolve/worker/config/WorkerConfiguration.java","backend/src/test/java/vn/tsolve/worker/service/impl/TenantJobServiceImplTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-17T13:09:01.509Z","type":"quick-opened","what":"Show the Google account chooser on every sign-in (prompt=select_account on the Workspace Google identity provider) (KAN-355)","files":["backend/src/main/java/vn/tsolve/identity/keycloak/KeycloakAdminClient.java","backend/src/test/java/vn/tsolve/identity/keycloak/KeycloakAdminClientTest.java"]}
@@ -2022,3 +2050,6 @@
 {"ts":"2026-11-17T15:48:00.391Z","type":"feature-status","module":"wiki","feature":"wiki-space-managers-list","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-17T15:48:00.580Z","type":"commit-recorded","module":"identity","repo":"default","sha":"64c47ea6055b60efab6852df1c752facd95b82f1"}
 {"ts":"2026-11-17T15:48:00.760Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"64c47ea6055b60efab6852df1c752facd95b82f1"}
+{"ts":"2026-11-17T15:11:05.979Z","type":"spec-approved","module":"chatbot","specHash":"342300752ea59274bf0c24942e978b5538ca6083af777ea14539024d4eb62a30"}
+{"ts":"2026-11-17T15:40:42.156Z","type":"spec-approved","module":"chatbot","specHash":"dd32f6721cc04e3daa484635f18ad9e760e28a3b15fe06e8af96e65df4db22bb"}
+{"ts":"2026-11-17T16:01:20.813Z","type":"spec-approved","module":"fe-foundation","specHash":"7bba61aa861d507f5c85f2a403f2c70b2df3426591fe80f260bfe65e762912b0"}

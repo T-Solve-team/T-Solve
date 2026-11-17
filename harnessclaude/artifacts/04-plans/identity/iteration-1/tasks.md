@@ -942,12 +942,12 @@ tracker account whose `app_user` is `ACTIVE`; nothing otherwise. Used by jira-ap
 **Feature:** multi-km-per-space-backend
 **Decisions owned:** KAN-362 (Dương, 17/11: cap 3, handover only for the last Active Knowledge Manager, MSG117 text)
 **Acceptance criteria:** AC-005.13, AC-005.14, AC-006.14, AC-006.15, AC-007.9, AC-007.14, AC-007.16, AC-007.19
-**Description:** Design "Several Knowledge Managers per Space — KAN-362". Changeset 046 (`space_manager` key
+**Description:** Design "Several Knowledge Managers per Space — KAN-362". Changeset 047 (`space_manager` key
 (`space_id`, `user_id`)); cap of three checked under a `space` row lock in creation and update; `soleManagedSpaces`
 for handover-options, update and deactivation; recipient row insert and removal of the outgoing Account's rows.
 Not in scope: the frontend and MSW (Task 39), wiki Space Settings (wiki Task 15), API contract changes.
 **Files:**
-- Create: `backend/src/main/resources/db/changelog/changes/046-identity-space-manager-many.sql`
+- Create: `backend/src/main/resources/db/changelog/changes/047-identity-space-manager-many.sql`
 - Modify: `db.changelog-master.xml`, `backend/src/main/java/vn/tsolve/identity/{repository/UserCreationRepository,repository/UserRoleUpdateRepository,service/impl/UserCreationServiceImpl,service/impl/UserRoleUpdateServiceImpl,service/impl/UserStatusUpdateServiceImpl,service/impl/HandoverChoices}.java`
 - Test: `backend/src/test/java/vn/tsolve/identity/{UserCreationIT,UserRoleUpdateIT,UserStatusIT,service/impl/UserRoleUpdateServiceImplTest,service/impl/UserStatusUpdateServiceImplTest,ScopeAccessIT}.java` (existing tests of the reworded criteria updated; new cases: third manager accepted, fourth refused 409 MSG117, race for the last place, co-managed Space needs no handover, last Active manager needs one, concurrent removal of two co-managers, `canAccessSpace` true for both co-managers)
 **Dependencies:** none (Tasks 33–36 are on main).

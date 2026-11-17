@@ -6,6 +6,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -32,16 +34,28 @@ public class ReviewNotificationEnqueuer {
     private final WorkspaceSiteService sites;
     private final ReviewEmailRenderer renderer = new ReviewEmailRenderer();
     private final ObjectProvider<WorkerTenantService> tenants;
+    private final String siteOriginTemplate;
 
     public ReviewNotificationEnqueuer(
             ObjectProvider<EmailOutboxService> outboxes,
             ObjectProvider<WorkerTenantService> tenants,
             ReviewNotificationService notifications,
             WorkspaceSiteService sites) {
+        this(outboxes, tenants, notifications, sites, "");
+    }
+
+    @Autowired
+    public ReviewNotificationEnqueuer(
+            ObjectProvider<EmailOutboxService> outboxes,
+            ObjectProvider<WorkerTenantService> tenants,
+            ReviewNotificationService notifications,
+            WorkspaceSiteService sites,
+            @Value("${TSOLVE_SITE_ORIGIN_TEMPLATE:}") String siteOriginTemplate) {
         this.outboxes = outboxes;
         this.tenants = tenants;
         this.notifications = notifications;
         this.sites = sites;
+        this.siteOriginTemplate = siteOriginTemplate;
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -113,7 +127,14 @@ public class ReviewNotificationEnqueuer {
                     case REJECTED -> Decision.REJECT;
                     case CHANGES_REQUESTED -> Decision.REQUEST_CHANGES;
                 };
-        String link = host == null ? null : "https://" + host + "/tickets/" + notification.ticketId();
+        // The site service exposes the host only; tenant site hosts start with their Workspace slug.
+        String link = null;
+        if (host != null) {
+            String origin = siteOriginTemplate == null || siteOriginTemplate.isBlank()
+                    ? "https://" + host
+                    : siteOriginTemplate.replace("{slug}", host.split("[.:]", 2)[0]);
+            link = origin + "/tickets/" + notification.ticketId();
+        }
         var email = new ReviewEmail(
                 decision,
                 notification.ticketKey(),

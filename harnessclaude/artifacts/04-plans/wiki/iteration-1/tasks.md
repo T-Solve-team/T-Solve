@@ -200,7 +200,7 @@ Not in scope: identity assignment and handover (identity Tasks 38–39).
 **Files:**
 - Modify: `frontend/openapi/tsolve-api.yaml` (`WikiSpaceSettings`), `backend/src/main/java/vn/tsolve/wiki/{dto/WikiSpaceSettings,repository/WikiPermissionRepository}.java`, `frontend/src/features/wiki/pages/SpaceSettingsPage.tsx`, `frontend/src/features/wiki/mocks/handlers.ts`, regenerated `frontend/src/shared/api/generated`
 - Test: `backend/src/test/java/vn/tsolve/wiki/WikiPermissionIT.java` (two managers), `frontend/src/features/wiki/pages/SpaceSettingsPage.test.tsx`
-**Dependencies:** identity Task 38 (changeset 046) for two `space_manager` rows in the IT.
+**Dependencies:** identity Task 38 (changeset 047) for two `space_manager` rows in the IT.
 **PR / Jira:** same branch as identity Tasks 38–39; Jira KAN-362.
 **Estimated size:** small (5 modified files); about 5 tests
 **Verification:** Tests name AC-006.11; `sdd.ts trace wiki`; backend `mvn verify`; frontend verify; `generate:api` committed with no further diff.

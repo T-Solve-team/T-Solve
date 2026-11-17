@@ -12,4 +12,7 @@ export type ChatbotAnswerOutcome = (typeof ChatbotAnswerOutcome)[keyof typeof Ch
 export const ChatbotAnswerOutcome = {
   ANSWERED: 'ANSWERED',
   NO_SOURCE: 'NO_SOURCE',
+  GREETING: 'GREETING',
+  OFF_TOPIC: 'OFF_TOPIC',
+  INJECTION: 'INJECTION',
 } as const;

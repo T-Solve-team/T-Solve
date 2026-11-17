@@ -21,6 +21,7 @@ owner: BA
 | 2026-11-01 | STORY-006 | AC-006.3 also holds MSG142 "No Spaces found" and MSG143 "Not a member of any Project." (type inline); AC-006.7 lists them | Identity STORY-003 (AC-003.15, AC-003.16) needs two empty-state messages; numbered by incrementing from MSG141, Report3 System_Messages updated later (KAN-237, Hiếu, 1/11) |
 | 2026-11-01 | STORY-006 | New AC-006.9 (`MSG_NEW_3`, a duplicate Ticket ID inside one CSV file); AC-006.7 also allows `MSG_NEW_3` | import-ticket-list asked for MSG78 as a new code, but System_Messages v3460 gave MSG78 to another message; the Import Preview shows the row error from the catalog (import-ticket-list D14, user decision 2026-11-01) |
 | 2026-11-12 | STORY-008 | AC-008.1 reworded (order: call, then clear); AC-008.2 reworded (navigate the browser to `logoutUrl`, full page load); new AC-008.4 (no usable `logoutUrl` or old 204: clear and go to Login, no error); AC-008.3 says Login inside the app; Interface: logout answers 200 `{ logoutUrl }` | `POST /api/v1/auth/logout` answers 200 `{ logoutUrl }` instead of 204 (identity Task 27, AC-002.1, AC-002.8; KAN-311, KAN-106) so Keycloak ends its own SSO session |
+| 2026-11-17 | STORY-006 | AC-006.7 reworded: the catalog also holds the provisional codes `MSG_NEW_5`, `MSG_NEW_6`, `MSG_NEW_7` (Chatbot greeting, off-topic, injection replies), and the list names `MSG_NEW_2` to `MSG_NEW_7` (`MSG_NEW_4` was already in the catalog and its test) | Chatbot KAN-243 needs three replies that System_Messages does not number; decision D3 gives them provisional keys (user, 17/11). MSG157/MSG158 are not used: the workspace spec plans them |
 
 ## Requirements
 
@@ -187,8 +188,10 @@ owner: BA
   - AC-006.5: WHEN a message is shown with parameters, THE web app SHALL replace each `{name}` placeholder with its
     value.
   - AC-006.6: IF a placeholder has no value, THEN THE web app SHALL leave the placeholder text as it is.
-  - AC-006.7: THE catalog SHALL hold no code other than the Report3 codes of AC-006.1, `MSG_NEW_2`, `MSG_NEW_3`,
-    MSG142 and MSG143 (AC-006.3), so every code the app uses (review included) is a Report3 code or one of these four.
+  - AC-006.7: THE catalog SHALL hold no code other than the Report3 codes of AC-006.1, the provisional codes
+    `MSG_NEW_2` to `MSG_NEW_7`, and MSG142 and MSG143 (AC-006.3), so every code the app uses (review included) is a
+    Report3 code or one of these. `MSG_NEW_5`, `MSG_NEW_6` and `MSG_NEW_7` are the Chatbot greeting, off-topic and
+    injection replies (chatbot KAN-243), with their text in the chatbot spec.
   - AC-006.8: THE catalog SHALL hold the multi-tenant web codes with their exact Report3 text: MSG119, MSG120,
     MSG122, MSG123 and MSG141 (type inline) and MSG134 (type field, adding a user, UC-05).
   - AC-006.9: THE catalog SHALL hold `MSG_NEW_3` (type inline) until System_Messages numbers it (import-ticket-list

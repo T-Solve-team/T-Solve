@@ -5090,10 +5090,10 @@ components:
           type: string
         answer:
           type: string
-          description: The answer text; empty for a NO_SOURCE turn.
+          description: The answer text; empty for a turn that is not ANSWERED.
     ChatbotAnswerOutcome:
       type: string
-      enum: [ANSWERED, NO_SOURCE]
+      enum: [ANSWERED, NO_SOURCE, GREETING, OFF_TOPIC, INJECTION]
     ChatbotAnswer:
       type: object
       required: [answerId, outcome, text, citations]
@@ -5106,10 +5106,10 @@ components:
           $ref: '#/components/schemas/ChatbotAnswerOutcome'
         text:
           type: string
-          description: Plain text with numbered markers [1], [2] …; empty when NO_SOURCE.
+          description: Plain text with numbered markers [1], [2] …; empty unless ANSWERED.
         citations:
           type: array
-          description: In number order; empty when NO_SOURCE.
+          description: In number order; empty unless ANSWERED.
           items:
             $ref: '#/components/schemas/ChatbotCitation'
     ChatbotCitation:

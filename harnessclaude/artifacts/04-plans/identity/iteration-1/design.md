@@ -281,7 +281,7 @@ Spec: identity changelog 2026-11-17 (14 reworded criteria) and wiki changelog 20
 - **Handover.** chosen: a Space needs a handover only when the outgoing Account is its only Active Knowledge Manager;
   alternatives: always hand over / never hand over; rationale: a co-manager already covers the Space, and a Space is
   never left without an Active Knowledge Manager.
-- **Store.** chosen: changeset `046-identity-space-manager-many.sql` drops the `space_id` primary key of
+- **Store.** chosen: changeset `047-identity-space-manager-many.sql` drops the `space_id` primary key of
   `space_manager` and adds `PRIMARY KEY (space_id, user_id)` (the baseline's key); `idx_space_manager_user` stays.
   Alternative: a separate join table; rejected, the baseline already has this shape. Rollback restores the single key
   only when no Space has two rows (precondition in the rollback comment).

@@ -9,6 +9,6 @@
 
 export interface ChatbotTurn {
   question: string;
-  /** The answer text; empty for a NO_SOURCE turn. */
+  /** The answer text; empty for a turn that is not ANSWERED. */
   answer: string;
 }

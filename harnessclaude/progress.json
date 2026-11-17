@@ -363,15 +363,18 @@
         "answer-rating-api": "passing",
         "jira-issue-draft": "passing",
         "jira-issue-create": "passing",
-        "chatbot-ask-for-project": "evaluating"
+        "chatbot-ask-for-project": "evaluating",
+        "classify-outcome-schema": "evaluating",
+        "classify-question": "passing",
+        "classify-question-ui": "passing"
       },
-      "lastUpdated": "2026-11-17T10:22:27.876Z",
+      "lastUpdated": "2026-11-17T11:52:04.103Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "4f9a94e2fde787153faf115f2f2a6131cb1be94d"
+        "default": "2a4ee7865dae626ee19cddc25badf9515d706f2c"
       }
     },
     "jira-app": {
