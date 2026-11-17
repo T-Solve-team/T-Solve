@@ -1329,8 +1329,8 @@
     }
   },
   "jira-app": {
-    "specHash": "f644e8ebaeb49390806de4e2bf46c4620648caa820dd7fff3dce0802cd94e106",
-    "approvedAt": "2026-11-17T15:50:14.518Z",
+    "specHash": "df25457eb231f28eb02050909214b1fe791edac08dbbc50523a24b8c4466cb32",
+    "approvedAt": "2026-11-17T17:27:49.806Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the issue being viewed changes to a status of the Done status category, THE Jira App SHALL ask the server whether the form may open and open the form when it may.",
@@ -1358,9 +1358,10 @@
       "AC-007.4": "IF the rewrite fails, is unavailable or takes longer than the UI call allows, THEN THE Jira App SHALL show MSG68 and leave the Solution unchanged.",
       "AC-008.1": "IF the Jira account is not linked to an active T-Solve Account, THEN THE panel SHALL show MSG62 and a link \"Open T-Solve account settings\" (a Jira App label — user, 2026-11-17) that opens the settings page of STORY-014, and nothing else.",
       "AC-008.2": "WHILE the issue's ticket is in Pending review, THE panel SHALL show MSG65.",
-      "AC-008.3": "WHILE the user has a Draft for the issue and the issue's ticket does not exist, THE panel SHALL show MSG77 with a button that reopens the form with the Draft.",
+      "AC-008.3": "WHILE the user has a Draft for the issue, the issue's ticket does not exist and the issue is in a status of the Done status category, THE panel SHALL show MSG77 with a button that reopens the form with the Draft.",
       "AC-008.7": "WHILE the issue's Solution Form ticket written by the user is in Changes requested, THE panel SHALL show MSG64 with the Project Manager's name and comment, read from 's , as  — the SRS text without its last sentence \"Update the solution and resubmit.\" (user, 2026-11-14).",
       "AC-008.9": "WHILE the issue's Solution Form ticket written by the user is in Rejected, THE panel SHALL show  (a Jira App text, not an SRS message — user, 2026-11-15) with the Project Manager's name and the reason read from 's  (its AC-009.13), and SHALL offer no button that opens the form.",
+      "AC-008.11": "WHILE the issue is not in a status of the Done status category, THE panel SHALL show neither MSG77 nor a button that opens the form, and THE Jira App SHALL keep the user's Draft for the issue unchanged, so it shows again and fills the form when the issue is Done again (AC-001.1, AC-005.2).",
       "AC-008.10": "WHILE the issue's ticket is in Published, THE panel SHALL show \"Solution approved and published.\" (a Jira App text, not an SRS message — user, 2026-11-15) and SHALL offer no button that opens the form.",
       "AC-010.1": "THE Jira App SHALL show a project page titled \"Ask T-Solve\" in every Jira project of the site, with a question box, a send button and the note \"Answers from T-Solve Solutions and Wiki\".",
       "AC-010.2": "IF the open Jira project is not the Jira project of an Active T-Solve Project, THEN THE page SHALL show \"This Jira project is not connected to T-Solve.\" (a Jira App text, not an SRS message — user, 2026-11-17) instead of the question box, or MSG124 instead when the Jira site belongs to no Workspace, and SHALL still show \"Not solved, create ticket\", which opens the Create dialog of AC-010.9 with nothing prefilled.",

@@ -406,9 +406,10 @@
         "linked-asker-lookup": "evaluating",
         "account-link-endpoints": "evaluating",
         "account-settings-page": "evaluating",
-        "account-page-global": "evaluating"
+        "account-page-global": "evaluating",
+        "draft-only-when-done": "in-progress"
       },
-      "lastUpdated": "2026-11-17T15:51:37.880Z",
+      "lastUpdated": "2026-11-17T17:27:50.330Z",
       "branch": "feat/KAN-337-jira-app-reject-reason",
       "repos": [
         "default"

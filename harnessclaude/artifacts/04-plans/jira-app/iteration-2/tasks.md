@@ -349,3 +349,16 @@ title) (AC-014.1). `settingsPagePath` builds `/jira/apps/{appId}/{envId}` for th
 `src/manifest.test.js`, `settingsPage.test.js`, `IssuePanel.test.jsx`; `forge lint`.
 **Dependencies:** Task 21
 **Estimated size:** small
+
+---
+
+## Task 23: Draft only while the issue is Done (STORY-008)
+
+**Story:** STORY-008
+**Feature:** draft-only-when-done
+**Description:** The panel shows MSG77 and "Continue draft" only while the issue's status category is Done
+(AC-008.3); otherwise it shows neither, and "Continue draft" re-checks the status before it opens the form. The
+Draft is not touched (AC-008.11). Jira App only; the panel already reloads on `JIRA_ISSUE_CHANGED` (BUG-231).
+**Files:** Modify `jira-app/TSolve_JiraApp/src/frontend/panel/IssuePanel.jsx`; test `IssuePanel.test.jsx`.
+**Dependencies:** none
+**Estimated size:** small

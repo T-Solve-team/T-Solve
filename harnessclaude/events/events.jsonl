@@ -2071,3 +2071,6 @@
 {"ts":"2026-11-17T16:24:25.917Z","type":"feature-status","module":"identity","feature":"multi-km-per-space-backend","from":"evaluating","to":"passing"}
 {"ts":"2026-11-17T16:24:25.975Z","type":"feature-status","module":"identity","feature":"multi-km-per-space-frontend","from":"evaluating","to":"passing"}
 {"ts":"2026-11-17T16:24:26.022Z","type":"feature-status","module":"wiki","feature":"wiki-space-managers-list","from":"evaluating","to":"passing"}
+{"ts":"2026-11-17T17:27:49.812Z","type":"spec-approved","module":"jira-app","specHash":"df25457eb231f28eb02050909214b1fe791edac08dbbc50523a24b8c4466cb32"}
+{"ts":"2026-11-17T17:27:50.078Z","type":"feature-status","module":"jira-app","feature":"draft-only-when-done","from":null,"to":"pending"}
+{"ts":"2026-11-17T17:27:50.331Z","type":"feature-status","module":"jira-app","feature":"draft-only-when-done","from":"pending","to":"in-progress"}
