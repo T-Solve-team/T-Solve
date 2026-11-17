@@ -336,3 +336,16 @@ failures of AC-014.9. The panel's MSG62 state adds "Open T-Solve account setting
 `AccountSettingsPage.test.jsx`, the panel test, `test/manifest.test.js`; `forge lint`.
 **Dependencies:** Task 20
 **Estimated size:** medium
+
+---
+
+## Task 22: Move the T-Solve account page to the Apps section (STORY-014)
+
+**Story:** STORY-014
+**Feature:** account-page-global
+**Description:** Manifest: replace `jira:personalSettingsPage` with `jira:globalPage` (same key, resource, resolver and
+title) (AC-014.1). `settingsPagePath` builds `/jira/apps/{appId}/{envId}` for the panel's MSG62 link (AC-008.1).
+**Files:** Modify `jira-app/TSolve_JiraApp/manifest.yml`, `src/frontend/accountSettings/settingsPage.js`; tests
+`src/manifest.test.js`, `settingsPage.test.js`, `IssuePanel.test.jsx`; `forge lint`.
+**Dependencies:** Task 21
+**Estimated size:** small

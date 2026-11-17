@@ -6,8 +6,8 @@ modules:
         endpoint: tsolve-ui-endpoint
       render: native
       title: Ask T-Solve
-  # STORY-014: link the Jira account to T-Solve from the profile menu (a Forge Preview module).
-  jira:personalSettingsPage:
+  # STORY-014: link the Jira account to T-Solve from the Apps section of Jira's navigation.
+  jira:globalPage:
     - key: tsolve-account-settings
       resource: account-settings
       resolver:

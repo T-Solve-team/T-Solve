@@ -264,3 +264,17 @@ describe('validateSections', () => {
     expect(validateSections({ ...atLimit, workaround: 'x' })).toMatchObject({ code: 'MSG02' });
   });
 });
+
+describe('SolutionFormModal with a Vietnamese input method', () => {
+  it('BUG-332 keeps what the input method wrote when the form renders again', () => {
+    open();
+    // An input method rewrites a section before the app has seen the change.
+    field('Symptoms').value = 'Mất kết nối mỗi giờ';
+    fireEvent.change(field('Root cause'), { target: { value: '' } });
+
+    click('Finish'); // Root cause is empty: MSG01 renders the form again
+
+    expect(screen.getByRole('alert')).toHaveTextContent('The Root cause field is required.');
+    expect(field('Symptoms')).toHaveValue('Mất kết nối mỗi giờ');
+  });
+});

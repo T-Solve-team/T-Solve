@@ -379,7 +379,7 @@ describe('TicketListPage', () => {
     expect(requests[0]?.getAll('sort')).toEqual(['updatedAt,desc']);
   });
 
-  it('AC-001.8 uses the default sort for the removed Ticket ID column in a shared link (BUG-334)', async () => {
+  it('AC-001.8 uses the default sort for the removed Ticket ID column in a shared link (BUG-335)', async () => {
     const requests = recordRequests();
     await openList('/tickets?sort=sourceTicketId%2Casc');
     expect(requests[0]?.getAll('sort')).toEqual(['updatedAt,desc']);

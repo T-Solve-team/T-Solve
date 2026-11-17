@@ -28,8 +28,9 @@ describe('manifest: app token for the backend', () => {
     expect(manifest.permissions.scopes.some((scope) => scope.startsWith('manage:'))).toBe(false);
   });
 
-  it('AC-014.1 adds the "T-Solve account" personal settings page', () => {
-    const [page] = manifest.modules['jira:personalSettingsPage'];
+  it('AC-014.1 adds the "T-Solve account" page to the Apps section', () => {
+    const [page] = manifest.modules['jira:globalPage'];
+    expect(manifest.modules['jira:personalSettingsPage']).toBeUndefined();
     expect(page).toMatchObject({
       key: 'tsolve-account-settings',
       resource: 'account-settings',

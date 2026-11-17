@@ -2039,5 +2039,12 @@
 {"ts":"2026-11-17T14:57:43.990Z","type":"spec-approved","module":"project-integration","specHash":"8d7eda80ec3d958f659e250b04288b3f8ae9b9d6c28b03e17377ab8713269b2b"}
 {"ts":"2026-11-17T15:18:08.366Z","type":"commit-recorded","module":"search","repo":"default","sha":"2cdb750e142857df28d5e567b6e25c66ea169fa9"}
 {"ts":"2026-11-17T15:18:09.205Z","type":"commit-recorded","module":"project-integration","repo":"default","sha":"2cdb750e142857df28d5e567b6e25c66ea169fa9"}
+{"ts":"2026-11-17T15:50:14.525Z","type":"spec-approved","module":"jira-app","specHash":"f644e8ebaeb49390806de4e2bf46c4620648caa820dd7fff3dce0802cd94e106"}
+{"ts":"2026-11-17T15:50:14.791Z","type":"feature-status","module":"jira-app","feature":"account-page-global","from":null,"to":"pending"}
+{"ts":"2026-11-17T15:50:15.033Z","type":"feature-status","module":"jira-app","feature":"account-page-global","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T15:51:37.153Z","type":"feature-status","module":"jira-app","feature":"account-page-global","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T15:51:37.881Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"de1b19bf22056e427e1c58592b6da829feeb0a97"}
 {"ts":"2026-11-17T15:11:05.979Z","type":"spec-approved","module":"chatbot","specHash":"342300752ea59274bf0c24942e978b5538ca6083af777ea14539024d4eb62a30"}
 {"ts":"2026-11-17T15:40:42.156Z","type":"spec-approved","module":"chatbot","specHash":"dd32f6721cc04e3daa484635f18ad9e760e28a3b15fe06e8af96e65df4db22bb"}
+{"ts":"2026-11-17T16:03:37.723Z","type":"quick-opened","what":"BUG-326: make the Ask T-Solve and Solution Form text boxes uncontrolled so Vietnamese input methods work","files":["jira-app/TSolve_JiraApp/src/frontend/askTsolve/AskTsolvePage.jsx","jira-app/TSolve_JiraApp/src/frontend/askTsolve/AskTsolvePage.test.jsx","jira-app/TSolve_JiraApp/src/frontend/form/SolutionFormModal.jsx","jira-app/TSolve_JiraApp/src/frontend/form/SolutionFormModal.test.jsx","jira-app/TSolve_JiraApp/test/forge-react.jsx"]}
+{"ts":"2026-11-17T16:06:16.984Z","type":"quick-closed","what":"BUG-326: make the Ask T-Solve and Solution Form text boxes uncontrolled so Vietnamese input methods work","files":["jira-app/TSolve_JiraApp/src/frontend/askTsolve/AskTsolvePage.jsx","jira-app/TSolve_JiraApp/src/frontend/askTsolve/AskTsolvePage.test.jsx","jira-app/TSolve_JiraApp/src/frontend/form/SolutionFormModal.jsx","jira-app/TSolve_JiraApp/src/frontend/form/SolutionFormModal.test.jsx","jira-app/TSolve_JiraApp/test/forge-react.jsx"]}
