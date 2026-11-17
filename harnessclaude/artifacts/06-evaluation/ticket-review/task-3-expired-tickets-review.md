@@ -1,3 +1,10 @@
+---
+module: ticket-review
+feature: expired-tickets
+task: 3
+verdict: pass
+---
+
 # KAN-158 Expired Tickets review
 
 Date: 2026-11-01. Module: ticket-review. Feature: expired-tickets. Story: STORY-007.
