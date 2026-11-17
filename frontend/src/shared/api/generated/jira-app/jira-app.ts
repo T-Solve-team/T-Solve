@@ -23,13 +23,14 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  ChatbotAnswer,
   ChatbotQuestion,
   ChatbotRating,
   IssueCreatedPayload,
   IssuePanel,
   JiraAccountLinkStart,
   JiraAccountLinkStatus,
+  JiraAppQuestionJob,
+  JiraAppQuestionJobResult,
   JiraAskerEligibility,
   JiraReviewFeedback,
   ProblemDetail,
@@ -706,13 +707,13 @@ export const getAskJiraAppQuestionUrl = () => {
 };
 
 /**
- * The project comes only from the verified FIT (`context.extension.project.key`, AC-010.13); no T-Solve sign-in is needed, but the FIT must have a Jira user. The answer is the Knowledge Chatbot's for that Project, from its Department's Published Solutions and the Wiki the asker may read: Company-wide documents, plus those their linked T-Solve user may view (AC-010.4, chatbot STORY-012); stored without a user; NO_SOURCE is shown as MSG109 by the Jira App. A blank question → 400 MSG01, longer than 1,000 characters or more than 10 history turns → 400 MSG02 (AC-010.5). A site of no Workspace → 403 MSG124; no Jira user, no project, or not an Active T-Solve Project's → 403 MSG08; no AI call in either case (AC-010.11). The AI unavailable or no answer within the Jira App deadline (JIRA_APP_ASK_TIMEOUT, 18 s) → 503 MSG06 (AC-010.8).
- * @summary Answers a question from the "Ask T-Solve" page with the Knowledge Chatbot (STORY-010).
+ * The project comes only from the verified FIT (`context.extension.project.key`, AC-010.13); no T-Solve sign-in is needed, but the FIT must have a Jira user. The answer is the Knowledge Chatbot's for that Project, from its Department's Published Solutions and the Wiki the asker may read: Company-wide documents, plus those their linked T-Solve user may view (AC-010.4, chatbot STORY-012); stored without a user; NO_SOURCE is shown as MSG109 by the Jira App. A blank question → 400 MSG01, longer than 1,000 characters or more than 10 history turns → 400 MSG02 (AC-010.5). A site of no Workspace → 403 MSG124; no Jira user, no project, or not an Active T-Solve Project's → 403 MSG08; no AI call or job in either case (AC-010.11). Returns a new job id within 2 seconds, without waiting for the AI (AC-010.4). A full job pool → 503 MSG06 (AC-010.18). Poll getJiraAppQuestionJob for the answer; the job deadline is JIRA_APP_ASK_TIMEOUT (default 60 s).
+ * @summary Starts a question job from the "Ask T-Solve" page (STORY-010).
  */
 export const askJiraAppQuestion = async (
   chatbotQuestion: ChatbotQuestion,
   options?: Parameters<typeof http>[1],
-): Promise<ChatbotAnswer> => {
+): Promise<JiraAppQuestionJob> => {
   const getHeaders = (
     h?: NonNullable<RequestInit['headers']>,
   ): Record<string, string | readonly string[]> => {
@@ -732,7 +733,7 @@ export const askJiraAppQuestion = async (
     }
     return headers;
   };
-  return http<ChatbotAnswer>(getAskJiraAppQuestionUrl(), {
+  return http<JiraAppQuestionJob>(getAskJiraAppQuestionUrl(), {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
@@ -786,7 +787,7 @@ export type AskJiraAppQuestionMutationError = ErrorType<ProblemResponse>;
 export type AskJiraAppQuestionMutationVariables = { data: ChatbotQuestion };
 
 /**
- * @summary Answers a question from the "Ask T-Solve" page with the Knowledge Chatbot (STORY-010).
+ * @summary Starts a question job from the "Ask T-Solve" page (STORY-010).
  */
 export const useAskJiraAppQuestion = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
   options?: {
@@ -807,6 +808,147 @@ export const useAskJiraAppQuestion = <TError = ErrorType<ProblemResponse>, TCont
 > => {
   return useMutation(getAskJiraAppQuestionMutationOptions(options), queryClient);
 };
+export const getGetJiraAppQuestionJobUrl = (jobId: string) => {
+  return `/api/v1/jira-app/questions/${jobId}`;
+};
+
+/**
+ * Only the FIT's cloudId, accountId and projectKey that started the job may read it (AC-010.16). Missing, expired or other-owner jobs answer 404 MSG06. Jobs expire 5 minutes after creation (AC-010.17). A chatbot error or timeout produces FAILED; only DONE includes an answer (AC-010.4). An unavailable job store answers 503 MSG06.
+ * @summary Reads the status and completed answer of an Ask T-Solve job.
+ */
+export const getJiraAppQuestionJob = async (
+  jobId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<JiraAppQuestionJobResult> => {
+  return http<JiraAppQuestionJobResult>(getGetJiraAppQuestionJobUrl(jobId), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetJiraAppQuestionJobQueryKey = (jobId: string) => {
+  return [`/api/v1/jira-app/questions/${jobId}`] as const;
+};
+
+export const getGetJiraAppQuestionJobQueryOptions = <
+  TData = Awaited<ReturnType<typeof getJiraAppQuestionJob>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJiraAppQuestionJob>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetJiraAppQuestionJobQueryKey(jobId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getJiraAppQuestionJob>>> = ({ signal }) =>
+    getJiraAppQuestionJob(jobId, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: jobId !== null && jobId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getJiraAppQuestionJob>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetJiraAppQuestionJobQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getJiraAppQuestionJob>>
+>;
+export type GetJiraAppQuestionJobQueryError = ErrorType<ProblemResponse | ProblemDetail>;
+
+export function useGetJiraAppQuestionJob<
+  TData = Awaited<ReturnType<typeof getJiraAppQuestionJob>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  jobId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJiraAppQuestionJob>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getJiraAppQuestionJob>>,
+          TError,
+          Awaited<ReturnType<typeof getJiraAppQuestionJob>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetJiraAppQuestionJob<
+  TData = Awaited<ReturnType<typeof getJiraAppQuestionJob>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJiraAppQuestionJob>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getJiraAppQuestionJob>>,
+          TError,
+          Awaited<ReturnType<typeof getJiraAppQuestionJob>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetJiraAppQuestionJob<
+  TData = Awaited<ReturnType<typeof getJiraAppQuestionJob>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJiraAppQuestionJob>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Reads the status and completed answer of an Ask T-Solve job.
+ */
+
+export function useGetJiraAppQuestionJob<
+  TData = Awaited<ReturnType<typeof getJiraAppQuestionJob>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJiraAppQuestionJob>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetJiraAppQuestionJobQueryOptions(jobId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export const getRateJiraAppAnswerUrl = (answerId: string) => {
   return `/api/v1/jira-app/questions/${answerId}/rating`;
 };

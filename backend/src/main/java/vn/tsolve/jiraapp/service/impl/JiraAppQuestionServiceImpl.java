@@ -2,23 +2,26 @@ package vn.tsolve.jiraapp.service.impl;
 
 import jakarta.annotation.PreDestroy;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.convert.DurationStyle;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import vn.tsolve.ai.exception.AiUnavailableException;
 import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse;
@@ -27,15 +30,19 @@ import vn.tsolve.chatbot.answer.service.ChatbotAnswerService;
 import vn.tsolve.common.security.JiraAppPrincipal;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.identity.signin.port.TenantScope;
+import vn.tsolve.jiraapp.dto.JiraAppQuestionJob;
+import vn.tsolve.jiraapp.dto.JiraAppQuestionJobResult;
 import vn.tsolve.jiraapp.dto.JiraAppQuestionRequest;
 import vn.tsolve.jiraapp.dto.JiraAppRatingRequest;
 import vn.tsolve.jiraapp.dto.JiraAskerEligibility;
 import vn.tsolve.jiraapp.dto.JiraAskerEligibility.Status;
+import vn.tsolve.jiraapp.exception.JiraAppQuestionJobNotFoundException;
 import vn.tsolve.jiraapp.exception.JiraIssueAccessDeniedException;
 import vn.tsolve.jiraapp.exception.JiraSiteNotConnectedException;
 import vn.tsolve.jiraapp.service.JiraAppQuestionService;
 import vn.tsolve.jiraapp.service.JiraAskerLookup;
 import vn.tsolve.jiraapp.service.JiraWorkspaceLookup;
+import vn.tsolve.jiraapp.service.impl.RedisAskJobStore.Job;
 import vn.tsolve.project.service.ProjectService;
 
 /**
@@ -53,7 +60,9 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
     private final JiraAskerLookup askers;
     private final ChatbotAnswerService answers;
     private final Executor executor;
-    private final long timeoutNanos;
+    private final RedisAskJobStore jobs;
+    private final Duration timeout;
+    private final BiConsumer<CompletableFuture<ChatbotAnswerResponse>, Duration> deadline;
 
     // Its own pool, not the shared applicationTaskExecutor: a Jira question waiting there would hold a thread the
     // chatbot's own AI calls need, and enough of them would starve the web chatbot too (BUG-183). Not a bean, so
@@ -65,14 +74,16 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
             ProjectService projects,
             JiraAskerLookup askers,
             ChatbotAnswerService answers,
+            RedisAskJobStore jobs,
             @Value("${JIRA_APP_ASK_THREADS:8}") int threads,
-            @Value("${JIRA_APP_ASK_TIMEOUT:18s}") String timeout) {
+            @Value("${JIRA_APP_ASK_TIMEOUT:60s}") String timeout) {
         this(
                 workspaces,
                 tenantScope,
                 projects,
                 askers,
                 answers,
+                jobs,
                 askPool(threads),
                 DurationStyle.detectAndParse(timeout));
     }
@@ -110,8 +121,31 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
             ProjectService projects,
             JiraAskerLookup askers,
             ChatbotAnswerService answers,
+            RedisAskJobStore jobs,
             Executor executor,
             Duration timeout) {
+        this(
+                workspaces,
+                tenantScope,
+                projects,
+                askers,
+                answers,
+                jobs,
+                executor,
+                timeout,
+                (future, limit) -> future.orTimeout(limit.toNanos(), TimeUnit.NANOSECONDS));
+    }
+
+    JiraAppQuestionServiceImpl(
+            JiraWorkspaceLookup workspaces,
+            TenantScope tenantScope,
+            ProjectService projects,
+            JiraAskerLookup askers,
+            ChatbotAnswerService answers,
+            RedisAskJobStore jobs,
+            Executor executor,
+            Duration timeout,
+            BiConsumer<CompletableFuture<ChatbotAnswerResponse>, Duration> deadline) {
         if (timeout.isNegative() || timeout.isZero()) {
             throw new IllegalArgumentException("JIRA_APP_ASK_TIMEOUT must be positive");
         }
@@ -121,7 +155,9 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
         this.askers = askers;
         this.answers = answers;
         this.executor = executor;
-        this.timeoutNanos = timeout.toNanos();
+        this.jobs = jobs;
+        this.timeout = timeout;
+        this.deadline = deadline;
     }
 
     @Override
@@ -135,35 +171,101 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
     }
 
     @Override
-    public ChatbotAnswerResponse ask(JiraAppPrincipal caller, JiraAppQuestionRequest request) {
+    public JiraAppQuestionJob start(JiraAppPrincipal caller, JiraAppQuestionRequest request) {
         UUID workspace = workspace(caller).orElseThrow(JiraSiteNotConnectedException::new);
         UUID project = project(workspace, caller).orElseThrow(JiraIssueAccessDeniedException::new);
         ChatbotQuestionRequest question = request.toChatbotQuestion();
         // AC-010.4: a Jira account linked to an active T-Solve user reads the Wiki that user may view.
         Optional<TSolveUser> reader =
                 tenantScope.runIn(workspace, () -> askers.find(caller.cloudId(), caller.accountId()));
-        // The chatbot allows itself CHATBOT_ASK_TIMEOUT (60 s); the Jira App must answer within Forge's 25 s, so the
-        // call runs on a worker and is abandoned at the Jira App deadline (AC-010.8). It may still finish and store
-        // its answer. The Workspace is bound per thread, so the worker binds it again (BUG-318).
+        UUID id = UUID.randomUUID();
+        Job job = new Job(
+                caller.cloudId(),
+                caller.accountId(),
+                caller.projectKey(),
+                JiraAppQuestionJobResult.Status.PENDING,
+                null);
         try {
-            return CompletableFuture.supplyAsync(
-                            () -> tenantScope.runIn(workspace, () -> answers.askForProject(project, reader, question)),
-                            executor)
-                    .orTimeout(timeoutNanos, TimeUnit.NANOSECONDS)
-                    .join();
-        } catch (RejectedExecutionException e) {
-            log.warn("Jira App question not answered: error type EXECUTOR_BUSY");
+            jobs.create(id, job);
+        } catch (DataAccessException e) {
+            logFailure(id, e);
             throw new AiUnavailableException();
-        } catch (CompletionException e) {
-            if (e.getCause() instanceof TimeoutException) {
-                log.warn("Jira App question not answered: error type TIMEOUT");
-                throw new AiUnavailableException();
-            }
-            if (e.getCause() instanceof RuntimeException cause) {
-                throw cause;
-            }
-            throw e;
         }
+        try {
+            // Workspace bindings are per thread; the worker binds it again (BUG-318).
+            var future = CompletableFuture.supplyAsync(
+                    () -> tenantScope.runIn(workspace, () -> answers.askForProject(project, reader, question)),
+                    executor);
+            deadline.accept(future, timeout);
+            future.whenCompleteAsync(
+                    (answer, error) -> {
+                        if (error != null) {
+                            logFailure(id, error);
+                        }
+                        try {
+                            jobs.update(
+                                    id,
+                                    job.finish(
+                                            error == null
+                                                    ? JiraAppQuestionJobResult.Status.DONE
+                                                    : JiraAppQuestionJobResult.Status.FAILED,
+                                            error == null ? answer : null));
+                        } catch (RuntimeException e) {
+                            logFailure(id, e);
+                        }
+                    },
+                    completionExecutor(id));
+        } catch (RejectedExecutionException e) {
+            try {
+                jobs.delete(id);
+            } catch (RuntimeException cleanupError) {
+                log.warn(
+                        "Jira App question job {}: error type {}",
+                        id,
+                        cleanupError.getClass().getSimpleName());
+            }
+            log.warn("Jira App question job {}: error type EXECUTOR_BUSY", id);
+            throw new AiUnavailableException();
+        }
+        return new JiraAppQuestionJob(id);
+    }
+
+    @Override
+    public JiraAppQuestionJobResult result(JiraAppPrincipal caller, UUID jobId) {
+        Optional<Job> stored;
+        try {
+            stored = jobs.find(jobId);
+        } catch (DataAccessException e) {
+            logFailure(jobId, e);
+            throw new AiUnavailableException();
+        }
+        Job job = stored.filter(record -> caller != null
+                        && Objects.equals(record.cloudId(), caller.cloudId())
+                        && Objects.equals(record.accountId(), caller.accountId())
+                        && Objects.equals(record.projectKey(), caller.projectKey()))
+                .orElseThrow(JiraAppQuestionJobNotFoundException::new);
+        return new JiraAppQuestionJobResult(
+                job.status(), job.status() == JiraAppQuestionJobResult.Status.DONE ? job.answer() : null);
+    }
+
+    private Executor completionExecutor(UUID id) {
+        return task -> {
+            try {
+                executor.execute(task);
+            } catch (RejectedExecutionException e) {
+                // A saturated or stopped ask pool must not leave a completed job PENDING.
+                logFailure(id, e);
+                task.run();
+            }
+        };
+    }
+
+    private static void logFailure(UUID id, Throwable error) {
+        while ((error instanceof CompletionException || error instanceof ExecutionException)
+                && error.getCause() != null) {
+            error = error.getCause();
+        }
+        log.warn("Jira App question job {}: error type {}", id, error.getClass().getSimpleName());
     }
 
     @Override

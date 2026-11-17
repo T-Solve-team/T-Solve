@@ -1920,15 +1920,16 @@ paths:
     post:
       tags: [jira-app]
       operationId: askJiraAppQuestion
-      summary: Answers a question from the "Ask T-Solve" page with the Knowledge Chatbot (STORY-010).
+      summary: Starts a question job from the "Ask T-Solve" page (STORY-010).
       description: >
         The project comes only from the verified FIT (`context.extension.project.key`, AC-010.13); no T-Solve
         sign-in is needed, but the FIT must have a Jira user. The answer is the Knowledge Chatbot's for that Project,
         from its Department's Published Solutions and the Wiki the asker may read: Company-wide documents, plus those
         their linked T-Solve user may view (AC-010.4, chatbot STORY-012); stored without a user; NO_SOURCE is shown as MSG109 by the Jira App. A blank question → 400 MSG01, longer than 1,000 characters or more than 10 history turns →
         400 MSG02 (AC-010.5). A site of no Workspace → 403 MSG124; no Jira user, no project, or not an Active T-Solve
-        Project's → 403 MSG08; no AI call in either case (AC-010.11). The AI unavailable or no answer within the Jira App
-        deadline (JIRA_APP_ASK_TIMEOUT, 18 s) → 503 MSG06 (AC-010.8).
+        Project's → 403 MSG08; no AI call or job in either case (AC-010.11). Returns a new job id within 2 seconds,
+        without waiting for the AI (AC-010.4). A full job pool → 503 MSG06 (AC-010.18).
+        Poll getJiraAppQuestionJob for the answer; the job deadline is JIRA_APP_ASK_TIMEOUT (default 60 s).
       security:
         - forgeInvocationToken: []
       requestBody:
@@ -1938,12 +1939,12 @@ paths:
             schema:
               $ref: '#/components/schemas/ChatbotQuestion'
       responses:
-        '200':
-          description: The answer, or NO_SOURCE.
+        '202':
+          description: Question accepted; poll the job for its answer.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ChatbotAnswer'
+                $ref: '#/components/schemas/JiraAppQuestionJob'
         '400':
           $ref: '#/components/responses/Problem'
         '401':
@@ -1952,6 +1953,42 @@ paths:
           $ref: '#/components/responses/Problem'
         '503':
           $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/questions/{jobId}:
+    get:
+      tags: [jira-app]
+      operationId: getJiraAppQuestionJob
+      summary: Reads the status and completed answer of an Ask T-Solve job.
+      description: >
+        Only the FIT's cloudId, accountId and projectKey that started the job may read it (AC-010.16).
+        Missing, expired or other-owner jobs answer 404 MSG06. Jobs expire 5 minutes after creation
+        (AC-010.17). A chatbot error or timeout produces FAILED; only DONE includes an answer (AC-010.4).
+        An unavailable job store answers 503 MSG06.
+      security:
+        - forgeInvocationToken: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Current job status; answer is present only when DONE.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JiraAppQuestionJobResult'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '503':
+          description: MSG06
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
   /api/v1/jira-app/questions/{answerId}/rating:
     parameters:
       - name: answerId
@@ -4494,6 +4531,24 @@ components:
         url:
           type: string
           description: The Workspace site's `/jira-link?request=<id>` link (identity AC-001.69).
+    JiraAppQuestionJob:
+      type: object
+      required: [jobId]
+      properties:
+        jobId:
+          type: string
+          format: uuid
+    JiraAppQuestionJobResult:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [PENDING, DONE, FAILED]
+        answer:
+          description: Present only when status is DONE.
+          allOf:
+            - $ref: '#/components/schemas/ChatbotAnswer'
     JiraAskerEligibility:
       type: object
       required: [status]
