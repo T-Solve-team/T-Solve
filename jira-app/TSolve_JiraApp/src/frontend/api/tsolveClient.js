@@ -5,8 +5,12 @@ import { invokeRemote } from '@forge/bridge';
 import { MOCK_DELAY_MS, mockAnswer } from './mockAnswers';
 import { USE_MOCK } from './mode';
 
-/** A UI call gives up after this long and shows MSG06 (AC-010.8, NF 2); the backend stops at 18 s. */
+/** Per-call limit (AC-010.8, NF 2): the answer runs as a job, so no call waits for the AI. */
 export const ASK_TIMEOUT_MS = 20000;
+
+/** Ask jobs are polled every 1.5 seconds, with 75 seconds total from sending the question (AC-010.3, AC-010.8). */
+export const ASK_POLL_MS = 1500;
+export const ASK_DEADLINE_MS = 75000;
 
 /** The earlier turns sent with a question (AC-010.3). */
 export const MAX_HISTORY = 10;
@@ -91,9 +95,9 @@ export async function rateAnswer(answerId, rating, useMock = USE_MOCK) {
 
 /**
  * The Knowledge Chatbot's answer `{answerId, outcome, text, citations}` to `question`, sent with the last 10 of the
- * earlier `{question, answer}` turns (AC-010.3, AC-010.4).
+ * earlier `{question, answer}` turns (AC-010.3, AC-010.4). The POST starts a job; only DONE returns its answer.
  */
-export async function askQuestion(question, history = [], useMock = USE_MOCK) {
+export async function askQuestion(question, history = [], useMock = USE_MOCK, { signal, sleep = wait, now = Date.now } = {}) {
   if (useMock) {
     await new Promise((resolve) => setTimeout(resolve, MOCK_DELAY_MS));
     const answer = mockAnswer(question);
@@ -102,13 +106,54 @@ export async function askQuestion(question, history = [], useMock = USE_MOCK) {
     }
     return answer;
   }
-  const response = await call({
+  // Count from the POST, including its duration and all waits/calls. Each operation is bounded by the time left,
+  // so a GET started near the deadline cannot extend the question by another 20 seconds.
+  const deadline = now() + ASK_DEADLINE_MS;
+  const remaining = () => {
+    if (signal?.aborted) {
+      throw abortError();
+    }
+    const ms = deadline - now();
+    if (ms <= 0) {
+      throw new TsolveError('MSG06');
+    }
+    return ms;
+  };
+  const callJob = async (request) => {
+    try {
+      return await call(request, { signal, timeoutMs: remaining() });
+    } catch (failure) {
+      // Ask always shows MSG06 for missing jobs and server failures. Other endpoints may preserve MSG68.
+      if (failure.status === 404 || failure.status >= 500) {
+        throw new TsolveError('MSG06', { status: failure.status });
+      }
+      throw failure;
+    }
+  };
+  const response = await callJob({
     path: QUESTIONS,
     method: 'POST',
     headers: JSON_HEADERS,
     body: { question, history: history.slice(-MAX_HISTORY) },
   });
-  return response.body;
+  remaining();
+  const jobId = response.body?.jobId;
+  if (typeof jobId !== 'string' || !jobId.trim()) {
+    throw new TsolveError('MSG06');
+  }
+
+  for (;;) {
+    await within(() => sleep(Math.min(ASK_POLL_MS, remaining()), signal), remaining(), signal);
+    const poll = await callJob({ path: `${QUESTIONS}/${encodeURIComponent(jobId)}`, method: 'GET' });
+    remaining();
+    const job = poll.body;
+    if (job?.status === 'DONE' && job.answer && typeof job.answer === 'object') {
+      return job.answer;
+    }
+    if (job?.status !== 'PENDING') {
+      throw new TsolveError('MSG06');
+    }
+  }
 }
 
 /**
@@ -211,23 +256,64 @@ export async function getReviewFeedback(issueKey) {
   return response.body?.feedback ?? null;
 }
 
-function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function abortError() {
+  return Object.assign(new Error('Aborted'), { name: 'AbortError' });
 }
 
-async function call(request) {
-  let timer;
-  const timeout = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(new TsolveError('MSG06')), ASK_TIMEOUT_MS);
+/** Abort the poll wait as well as the remote call; leaving the page never starts another GET. */
+function wait(ms, signal) {
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', abort);
+    };
+    const abort = () => {
+      cleanup();
+      reject(abortError());
+    };
+    const timer = setTimeout(() => {
+      cleanup();
+      resolve();
+    }, ms);
+    if (signal?.aborted) {
+      abort();
+    } else {
+      signal?.addEventListener('abort', abort, { once: true });
+    }
   });
-  let response;
+}
+
+/** Race an operation against its limit and cancellation, releasing listeners/timers on every exit path. */
+async function within(operation, timeoutMs, signal) {
+  if (signal?.aborted) {
+    throw abortError();
+  }
+  if (timeoutMs <= 0) {
+    throw new TsolveError('MSG06');
+  }
+  let timer;
+  let abort;
+  const stopped = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new TsolveError('MSG06')), timeoutMs);
+    abort = () => reject(abortError());
+    signal?.addEventListener('abort', abort, { once: true });
+  });
   try {
-    response = await Promise.race([invokeRemote(request), timeout]);
-  } catch (failure) {
-    // A Forge rejection (network, timeout, 401, a non-JSON error body) carries no message code.
-    throw failure instanceof TsolveError ? failure : new TsolveError('MSG06');
+    return await Promise.race([operation(), stopped]);
   } finally {
     clearTimeout(timer);
+    signal?.removeEventListener('abort', abort);
+  }
+}
+
+async function call(request, { signal, timeoutMs = ASK_TIMEOUT_MS } = {}) {
+  let response;
+  try {
+    // Forge does not accept our AbortSignal: stop awaiting its result, and discard any late response.
+    response = await within(() => invokeRemote(request), Math.min(timeoutMs, ASK_TIMEOUT_MS), signal);
+  } catch (failure) {
+    // A Forge rejection (network, timeout, 401, a non-JSON error body) carries no message code.
+    throw failure instanceof TsolveError || failure?.name === 'AbortError' ? failure : new TsolveError('MSG06');
   }
   if (response.status >= 200 && response.status < 300) {
     return response;
