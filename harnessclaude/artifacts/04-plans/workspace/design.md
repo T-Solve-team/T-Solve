@@ -573,6 +573,23 @@ Open questions for the spec owner: none.
 | Old rows | `current()` answers empty while `jira_cloud_id` is null (AC-008.4); the Admin enters a new (scoped) token, which fills it (AC-007.11) | Backfill by a job | Old rows hold classic tokens that cannot work with Bearer anyway; the Admin must re-enter the token |
 | PR | Workspace and tracker in one PR (KAN-344); the import follows in its own PR | Separate PRs | The check is `JiraClient.checkServiceAccount` and `JiraAccount` is tracker's type; one `http()` builder serves every call |
 
+## Change 2026-11-17: Jira access as the T-Solve Jira App (KAN-349)
+
+Supersedes the service-account parts of "Change 2026-11-16" (KAN-344). RESEARCH-005 (option D + probe).
+
+| Decision | Chosen | Alternatives | Rationale |
+|---|---|---|---|
+| Identity | The Forge app system token (`x-forge-oauth-system`, ≤ 4 h) | Service account + scoped token (KAN-344), OAuth client credentials | No customer secret, no per-project grant (probe), fits Marketplace rules (user decision 17/11) |
+| Delivery | `POST /api/v1/jira-app/app-token` on the existing FIT chain (`JiraAppSecurityConfig`, role `JIRA_APP`); hourly scheduled trigger + install/upgrade trigger call the remote directly | Pull from a Forge function via `invokeRemote` | Forge docs: a function hop may deliver a token with much less than 2 h left |
+| Store | Redis key `tsolve:jira-app-token:<workspaceId>`, value = `TokenCipher.encrypt(workspaceId, json{token, cloudId, receivedAt, exp})`, TTL = `exp − now` | In memory; tenant DB | Survives restarts, shared by web and worker (user decision 17/11) |
+| Workspace of a call | `jiraapp.service.JiraWorkspaceLookup.workspaceOf(cloudId)` then `TenantScope.runIn` | A new lookup | Same mapping every Jira App endpoint uses (stub `TSOLVE_STUB_JIRA_SITES` until the platform catalog) |
+| `exp` | Read from the token's JWT payload (Base64URL JSON, no signature check) | Trust a fixed 4 h | Forge sends tokens with 2–4 h left; the key must not outlive the token |
+| Status for 2.2 | `WorkspaceInfoResponse(companyName, jiraSiteUrl, jiraAppConnected, jiraAppTokenReceivedAt)` built by the service from the row and the store | A separate endpoint | One read for the screen |
+| Old credentials | Changeset 043 sets `service_account_email` and `service_account_api_token` to NULL; columns kept | Drop the columns | Forward-only, no entity churn; no customer secret left |
+| Dead code | `TicketTrackerClient.checkServiceAccount`, `JiraPermissionMissingException`, the `MSG156` reason (KAN-344 follow-up, #265) and their tests removed | Keep | Nothing calls them after AC-011.1 is removed |
+| Numbering | The token story is STORY-014 (AC-014.x), the Jira App line AC-010.10, the cleared columns AC-011.11 | Keep STORY-012 | KAN-121 reached `main` first with STORY-012 and STORY-013; removed ids are not reused |
+| KAN-121 default Project check | `TrackerProjectService.checkChatbotProject` keeps reading `JiraServiceAccount.current()`, which now holds the app token | Its own token | One Jira access per Workspace; the probe showed the app user has Create issues and Modify reporter |
+
 ## KAN-121: default Project (STORY-012, STORY-013)
 
 Change Mode of 17/11. Facts: `iteration-1/kan-121-default-project-scout.md` (from `origin/main` `db594997`). Decisions K121-D26 to K121-D42 in `iteration-1/kan-121-decisions.md`. Tasks 12 and 13 in `iteration-1/tasks.md`; edge cases rows 69 to 105 in `iteration-1/design.md`. Branch `feat/KAN-121-workspace-default-project` (K121-D26).

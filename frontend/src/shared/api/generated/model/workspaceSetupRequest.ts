@@ -19,9 +19,4 @@ export interface WorkspaceSetupRequest {
    * @maxLength 200
    */
   jiraSiteUrl: string;
-  /**
-   * Scoped API token of an Atlassian service account, sent as Bearer through the API gateway.
-   * @minLength 1
-   */
-  serviceAccountToken: string;
 }

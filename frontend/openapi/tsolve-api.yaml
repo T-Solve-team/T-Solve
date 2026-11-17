@@ -674,7 +674,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/WorkspaceInfo' }
         '400':
-          description: Field error MSG01, MSG02, MSG61, MSG153 or MSG156 (MSG03 for a malformed body).
+          description: Field error MSG01, MSG02, MSG61 or MSG153 (MSG03 for a malformed body).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ProblemDetail' }
@@ -1817,6 +1817,28 @@ paths:
       responses:
         '202':
           description: Accepted — also when already stored or when the issue belongs to no T-Solve Project.
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/app-token:
+    post:
+      tags: [jira-app]
+      operationId: receiveJiraAppToken
+      summary: Forge scheduled and install/upgrade triggers hand the app system token to the backend (workspace STORY-014, KAN-349).
+      security:
+        - forgeInvocationToken: []
+      parameters:
+        - name: x-forge-oauth-system
+          in: header
+          required: true
+          description: The app system token; kept encrypted until it expires, never returned or logged.
+          schema: { type: string }
+      responses:
+        '204':
+          description: Token held for the Workspace of the site.
         '400':
           $ref: '#/components/responses/Problem'
         '401':
@@ -3113,7 +3135,7 @@ components:
             inTrash: { type: boolean, description: True only on the Knowledge Manager's read of a trashed document. }
     WorkspaceSetupRequest:
       type: object
-      required: [companyName, jiraSiteUrl, serviceAccountToken]
+      required: [companyName, jiraSiteUrl]
       properties:
         companyName: { type: string, minLength: 1, maxLength: 100 }
         jiraSiteUrl:
@@ -3121,28 +3143,24 @@ components:
           minLength: 1
           maxLength: 200
           description: HTTPS Jira Cloud site; a single label followed by .atlassian.net, optionally a trailing slash.
-        serviceAccountToken:
-          type: string
-          format: password
-          minLength: 1
-          writeOnly: true
-          description: Scoped API token of an Atlassian service account, sent as Bearer through the API gateway.
     WorkspaceUpdateRequest:
       type: object
       required: [companyName]
       properties:
         companyName: { type: string, minLength: 1, maxLength: 100 }
-        serviceAccountToken:
-          type: string
-          format: password
-          writeOnly: true
-          description: Absent or blank keeps the stored token.
     WorkspaceInfo:
       type: object
-      required: [companyName, jiraSiteUrl]
+      required: [companyName, jiraSiteUrl, jiraAppConnected, jiraAppTokenReceivedAt]
       properties:
         companyName: { type: string }
         jiraSiteUrl: { type: string }
+        jiraAppConnected:
+          type: boolean
+          description: True while the T-Solve Jira App's token is held for the Workspace (KAN-349).
+        jiraAppTokenReceivedAt:
+          type: [string, 'null']
+          format: date-time
+          description: When the Jira App's token arrived; null while not connected.
     KnowledgeDashboard:
       type: object
       required: [period, options, outcomes, coverage, feedback, gaps, suggestions]

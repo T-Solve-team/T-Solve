@@ -64,4 +64,5 @@
     <include file="changes/040-wiki-tables.sql" relativeToChangelogFile="true"/>
     <include file="changes/041-wiki-audit-folder-change.sql" relativeToChangelogFile="true"/>
     <include file="changes/042-workspace-jira-cloud-id.sql" relativeToChangelogFile="true"/>
+    <include file="changes/043-workspace-clear-service-account.sql" relativeToChangelogFile="true"/>
 </databaseChangeLog>

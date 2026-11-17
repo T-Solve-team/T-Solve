@@ -34,6 +34,7 @@ the request belongs to; **discovery** = finding that database from the request (
 | 2026-11-12 | STORY-013 | Add the Project module's read-only Jira project lookup, Browse check and deduplicated statuses; expose TrackerProjectService and extend TicketTrackerClient | KAN-127 (project-integration) needs the Browse check and the project's statuses; one Jira client per tracker module boundary, decisions D22, D46 of kan-127-decisions.md |
 | 2026-11-12 | STORY-013 | Correct client findProject return type to Optional<String>, empty on project 404; no acceptance criterion changes | Explicit RUN 2 contract, KAN-127 D56 |
 | 2026-11-16 | STORY-012, STORY-013 | KAN-344: new AC-012.9 — every `JiraClient` call sends the service account's scoped token as `Authorization: Bearer` to `https://api.atlassian.com/ex/jira/{cloudId}` instead of Basic auth on the site; `JiraAccount` becomes `(siteUrl, cloudId, apiToken)`. AC-013.10, AC-013.12, functional requirement 9, the service account term and Required from other modules follow | RESEARCH-003: a real service account's scoped token gets 401 on the site URL; user decisions of 16/11 (option B, no email, workspace and tracker in one PR) |
+| 2026-11-17 | STORY-012, STORY-013 | KAN-349: Jira calls use the T-Solve Jira App's app token held by `workspace` (STORY-014 there) instead of a customer service-account token; Non-Functional 3 and 9 and the service account term reworded; the 01/11 decision "the system token is not stored" is replaced. AC-012.9 and AC-013.10 are unchanged (same gateway and Bearer call, another token) | RESEARCH-005 and its probe; user decision 17/11 (option D) |
 
 ## Requirements
 
@@ -50,8 +51,10 @@ the request belongs to; **discovery** = finding that database from the request (
 1. The event endpoint responds within 1 second at the 95th percentile (Forge's limit is 5 seconds); it calls
    neither Jira nor any AI service.
 2. Atlassian's JWKS is cached; a token signed with an unknown key id triggers at most one JWKS refresh.
-3. Event calls carry no app system token. A panel call that reads Jira uses the system token of that same
-   request only; the tracker never stores a system token.
+3. Event calls carry no app system token. The app system token reaches the backend only on the token endpoint
+   (workspace STORY-014), sent by a scheduled trigger and on install/upgrade; `workspace` keeps it encrypted in Redis
+   until it expires, and the tracker reads it through `JiraServiceAccount.current()` for every Jira call (KAN-349;
+   this replaces the decision of 01/11 that no system token is stored).
 4. Logs and stored error details contain only ids, issue keys, status codes and error types — never ticket
    content, personal data or FITs.
 5. Every Jira App API endpoint declares its roles with `@PreAuthorize`.
@@ -60,9 +63,9 @@ the request belongs to; **discovery** = finding that database from the request (
 7. UI calls (panel, Solution Form) answer within 20 seconds, below Forge's 25-second limit.
 8. The tracker runs inside one tenant database: it reads and writes tenant tables without a Workspace ID and
    never chooses or switches the database itself (discovery does).
-9. The MSG80 comment is posted with the Workspace's Jira service account, read from the `workspace` module for
-   each call; the tracker never stores, logs or returns its API token. Every call the tracker makes with the service
-   account goes to the Atlassian API gateway with the scoped token as Bearer (AC-012.9).
+9. The MSG80 comment is posted as the T-Solve Jira App, with the app token read from the `workspace` module for each
+   call; the tracker never stores, logs or returns the token. Every call goes to the Atlassian API gateway with the
+   token as Bearer (AC-012.9).
 
 ## User Stories
 
@@ -127,7 +130,7 @@ the request belongs to; **discovery** = finding that database from the request (
 
 ### STORY-012: Post the suggestion on the issue (KAN-131)
 - As a reporter, I want the T-Solve suggestion to appear on my new issue as a comment so that I can try it without waiting for the team (UC-36, GBR-35).
-- Terms: **service account** = the Workspace's Atlassian service account (the site's cloud id and its scoped API token, from `workspace`) that T-Solve uses to read and write Jira issues; **MSG80 comment** = MSG80 filled with the suggestion.
+- Terms: **service account** = the Workspace's Jira access as the T-Solve Jira App (the site's cloud id and the app token, from `workspace` STORY-014; KAN-349) that T-Solve uses to read and write Jira issues; **MSG80 comment** = MSG80 filled with the suggestion.
 - Acceptance:
   - AC-012.1: WHEN the suggestion job has stored a suggestion (AC-011.4), THE tracker SHALL add one comment to the issue in Jira with the service account, whose text is MSG80 with `{suggested_solution}` = the stored suggested solution and without its "Related documents" sentence.
   - AC-012.2: THE MSG80 comment SHALL never name, link or quote a source the suggestion was built from — neither a Wiki document nor a ticket; the sources stay only in the issue's suggestion result.

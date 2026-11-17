@@ -13,7 +13,6 @@ import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -22,7 +21,6 @@ import org.springframework.web.client.RestClientResponseException;
 import vn.tsolve.tracker.dto.JiraAccount;
 import vn.tsolve.tracker.dto.TrackerCreateField;
 import vn.tsolve.tracker.dto.TrackerStatus;
-import vn.tsolve.tracker.exception.JiraPermissionMissingException;
 import vn.tsolve.tracker.exception.JiraRejectedException;
 import vn.tsolve.tracker.exception.JiraUnavailableException;
 
@@ -71,38 +69,6 @@ public class JiraClient implements TicketTrackerClient {
     public JiraClient(RestClient.Builder builder) {
         this.builder = builder;
         this.gateway = GATEWAY;
-    }
-
-    @Override
-    public void checkServiceAccount(JiraAccount account) {
-        RestClient http = http(account);
-        ResponseEntity<Void> me =
-                call(() -> http.get().uri("/rest/api/3/myself").retrieve().toBodilessEntity());
-        if (me.getStatusCode().value() != 200) {
-            throw new JiraRejectedException(me.getStatusCode().value());
-        }
-        ResponseEntity<JsonNode> response = call(() -> http.get()
-                .uri("/rest/api/3/mypermissions?permissions=BROWSE_PROJECTS,CREATE_ISSUES,MODIFY_REPORTER")
-                .retrieve()
-                .toEntity(JsonNode.class));
-        if (response.getStatusCode().value() != 200) {
-            throw new JiraRejectedException(response.getStatusCode().value());
-        }
-        JsonNode permissions = response.getBody();
-        List<String> missing = new ArrayList<>();
-        for (String permission : List.of("BROWSE_PROJECTS", "CREATE_ISSUES", "MODIFY_REPORTER")) {
-            if (permissions == null
-                    || !permissions
-                            .path("permissions")
-                            .path(permission)
-                            .path("havePermission")
-                            .booleanValue()) {
-                missing.add(permission);
-            }
-        }
-        if (!missing.isEmpty()) {
-            throw new JiraPermissionMissingException(missing);
-        }
     }
 
     @Override

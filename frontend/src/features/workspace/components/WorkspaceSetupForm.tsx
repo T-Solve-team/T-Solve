@@ -1,11 +1,10 @@
 import { Button, Flex, Form, Input } from 'antd';
 import { useRef } from 'react';
 import type { WorkspaceSetupRequest } from '@/shared/api';
-import { rules } from '@/shared/forms';
+import { applyApiErrors, rules } from '@/shared/forms';
 import { showMessage } from '@/shared/messages';
 import { AppForm, FormField, SectionCard } from '@/shared/ui';
 import { isWorkspaceAlreadySetUp, useSetUpWorkspace } from '../hooks/useWorkspace';
-import { applyWorkspaceApiErrors } from './serviceAccountReason';
 
 export function WorkspaceSetupForm() {
   const [form] = Form.useForm<WorkspaceSetupRequest>();
@@ -20,7 +19,7 @@ export function WorkspaceSetupForm() {
       {
         onError: (error) => {
           if (isWorkspaceAlreadySetUp(error)) return;
-          if (!applyWorkspaceApiErrors(form, error)) showMessage(error.code, error.params);
+          if (!applyApiErrors(form, error)) showMessage(error.code, error.params);
         },
         onSettled: () => {
           submitting.current = false;
@@ -45,14 +44,6 @@ export function WorkspaceSetupForm() {
           rules={[rules.required('Jira site address'), rules.maxLength('Jira site address', 200)]}
         >
           <Input placeholder="https://company.atlassian.net" count={{ show: true, max: 200 }} />
-        </FormField>
-        <FormField<WorkspaceSetupRequest>
-          name="serviceAccountToken"
-          label="Service account API token"
-          extra="The scoped API token of an Atlassian service account."
-          rules={[rules.required('Service account API token')]}
-        >
-          <Input.Password autoComplete="new-password" />
         </FormField>
         <Flex justify="end">
           <Button

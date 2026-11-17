@@ -11,10 +11,12 @@ import vn.tsolve.identity.signin.port.TenantScope;
 import vn.tsolve.tracker.dto.JiraAccount;
 import vn.tsolve.tracker.service.JiraServiceAccount;
 import vn.tsolve.worker.service.WorkerTenantService;
-import vn.tsolve.workspace.crypto.TokenCipher;
+import vn.tsolve.workspace.dto.JiraAppToken;
 import vn.tsolve.workspace.entity.WorkspaceInfo;
 import vn.tsolve.workspace.repository.WorkspaceInfoRepository;
+import vn.tsolve.workspace.service.JiraAppTokenService;
 
+/** Jira access as the T-Solve Jira App: the Workspace's site and the app token held by STORY-014 (KAN-349). */
 @Service
 public class WorkspaceJiraServiceAccount implements JiraServiceAccount {
 
@@ -22,17 +24,17 @@ public class WorkspaceJiraServiceAccount implements JiraServiceAccount {
 
     private final TenantScope scope;
     private final WorkspaceInfoRepository repository;
-    private final TokenCipher cipher;
+    private final JiraAppTokenService tokens;
     private final ObjectProvider<WorkerTenantService> workers;
 
     public WorkspaceJiraServiceAccount(
             TenantScope scope,
             WorkspaceInfoRepository repository,
-            TokenCipher cipher,
+            JiraAppTokenService tokens,
             ObjectProvider<WorkerTenantService> workers) {
         this.scope = scope;
         this.repository = repository;
-        this.cipher = cipher;
+        this.tokens = tokens;
         this.workers = workers;
     }
 
@@ -52,18 +54,16 @@ public class WorkspaceJiraServiceAccount implements JiraServiceAccount {
         WorkspaceInfo workspace = found.get();
         String siteUrl = workspace.getJiraSiteAddress();
         String cloudId = workspace.getJiraCloudId();
-        String encryptedToken = workspace.getServiceAccountApiToken();
-        // AC-008.4: a row set up before KAN-344 has no cloud id until the Admin enters a new token.
-        if (isBlank(siteUrl) || isBlank(cloudId) || isBlank(encryptedToken)) {
+        Optional<JiraAppToken> token = tokens.current(workspaceId);
+        if (isBlank(siteUrl) || token.isEmpty()) {
             return Optional.empty();
         }
-        try {
-            String token = cipher.decrypt(workspaceId, encryptedToken);
-            return Optional.of(new JiraAccount(siteUrl, cloudId, token));
-        } catch (IllegalStateException exception) {
-            log.error("Workspace {} Jira service account token could not be decrypted", workspaceId);
+        // AC-008.4: a token of another site is never used for this Workspace
+        if (!token.get().cloudId().equals(cloudId)) {
+            log.warn("Workspace {} holds a Jira App token of another site; it is not used", workspaceId);
             return Optional.empty();
         }
+        return Optional.of(new JiraAccount(siteUrl, cloudId, token.get().token()));
     }
 
     private static boolean isBlank(String value) {

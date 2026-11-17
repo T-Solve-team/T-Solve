@@ -4,18 +4,19 @@ import { setDevUser } from '@/shared/auth';
 const SETUP = {
   companyName: 'Example Company',
   jiraSiteUrl: 'https://company.atlassian.net',
-  serviceAccountToken: 'fake-test-api-token',
 };
 
 describe('Workspace mock contracts', () => {
   beforeEach(() => setDevUser('admin'));
 
-  it('AC-009.5 starts without setup, then stores Setup for GET and PUT without exposing the token', async () => {
+  it('AC-009.5 starts without setup, then stores Setup for GET and PUT, not connected to the Jira App', async () => {
     await expect(getWorkspace()).rejects.toMatchObject({ status: 404 });
     const info = await setupWorkspace(SETUP);
     expect(info).toEqual({
       companyName: SETUP.companyName,
       jiraSiteUrl: SETUP.jiraSiteUrl,
+      jiraAppConnected: false,
+      jiraAppTokenReceivedAt: null,
     });
     expect(await getWorkspace()).toEqual(info);
     const changed = await updateWorkspace({
@@ -34,9 +35,9 @@ describe('Workspace mock contracts', () => {
   });
 
   it('AC-009.3 rejects missing setup fields without storing a Workspace', async () => {
-    await expect(setupWorkspace({ ...SETUP, serviceAccountToken: ' ' })).rejects.toMatchObject({
+    await expect(setupWorkspace({ ...SETUP, companyName: ' ' })).rejects.toMatchObject({
       status: 400,
-      fieldErrors: [{ field: 'serviceAccountToken', code: 'MSG01' }],
+      fieldErrors: [{ field: 'companyName', code: 'MSG01' }],
     });
     await expect(getWorkspace()).rejects.toMatchObject({ status: 404 });
   });
