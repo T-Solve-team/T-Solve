@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
+import vn.tsolve.ai.client.ChatMessage;
 import vn.tsolve.ai.client.EmbeddingClient;
 import vn.tsolve.ai.client.LlmClient;
 import vn.tsolve.ai.exception.AiUnavailableException;
@@ -35,7 +36,6 @@ import vn.tsolve.chatbot.answer.dto.TicketSolutionCitation;
 import vn.tsolve.chatbot.answer.entity.ChatbotAnswer;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
 import vn.tsolve.chatbot.answer.service.ChatbotAnswerService;
-import vn.tsolve.chatbot.answer.service.impl.QuestionClassifier.Category;
 import vn.tsolve.chatbot.exception.ChatbotProjectNotActiveException;
 import vn.tsolve.chatbot.rating.entity.ChatbotRating;
 import vn.tsolve.chatbot.rating.exception.ChatbotAnswerNotFoundException;
@@ -47,6 +47,8 @@ import vn.tsolve.ticket.service.ProjectAccess;
 
 @Service
 public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
+    // The classifier may use at most 1/3 of the remaining ask budget (BUG-325).
+    private static final long CLASSIFIER_SHARE = 3;
     private final EmbeddingClient embeddings;
     private final LlmClient llm;
     private final SolutionRetrieval solutions;
@@ -218,28 +220,29 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         if (QuestionClassifier.isGreeting(question)) {
             return save(row.of(question, Outcome.GREETING.name(), ""), Outcome.GREETING, List.of(), deadline);
         }
-        var classifierMessages = ClassifierPrompt.messages(question, request.history());
-        String reply = callAi(
-                () -> {
-                    try {
-                        return llm.chat(classifierMessages, ClassifierPrompt.CLASSIFIER_SCHEMA);
-                    } catch (AiUnavailableException failure) {
-                        // Provider failures fail open here; callAi still enforces the shared deadline.
-                        return null;
-                    }
-                },
-                deadline);
+        var classification =
+                classifier.parse(classify(ClassifierPrompt.messages(question, request.history()), deadline));
         remaining(deadline);
-        var classification = classifier.parse(reply);
-        if (classification.category() != Category.QUESTION) {
-            Outcome refused = Outcome.valueOf(classification.category().name());
+        Outcome refused =
+                switch (classification.category()) {
+                    case GREETING -> Outcome.GREETING;
+                    case OFF_TOPIC -> Outcome.OFF_TOPIC;
+                    case INJECTION -> Outcome.INJECTION;
+                    case QUESTION -> null;
+                };
+        if (refused != null) {
             return save(row.of(question, refused.name(), ""), refused, List.of(), deadline);
         }
-        // Use the private rewritten query only for retrieval; an unusable reply keeps the existing fallback.
-        String fallbackText = request.history().isEmpty()
-                ? question
-                : request.history().getLast().question().trim() + "\n" + question;
-        String retrievalText = classification.query().isEmpty() ? fallbackText : classification.query();
+        // BUG-327: a first question is embedded as asked, so a lossy rewrite cannot drop an error code from it.
+        // The private rewrite only resolves a follow-up against the history; without one the old fallback stays.
+        String retrievalText;
+        if (request.history().isEmpty()) {
+            retrievalText = question;
+        } else if (!classification.query().isEmpty()) {
+            retrievalText = classification.query();
+        } else {
+            retrievalText = request.history().getLast().question().trim() + "\n" + question;
+        }
         float[] vector =
                 callAi(() -> embeddings.embed(List.of(retrievalText)), deadline).getFirst();
         // Fail fast before the vector search if embedding has exhausted the deadline.
@@ -285,6 +288,22 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
             remaining(deadline);
             return new ChatbotAnswerResponse(saved.getId(), outcome, answer.getAnswerText(), citations);
         });
+    }
+
+    /**
+     * BUG-325, BUG-326: the classifier fails open. It gets a third of the remaining ask budget, so a slow reply still
+     * leaves time for the search; a timeout or any other failure returns {@code null}, which parses as QUESTION.
+     */
+    private String classify(List<ChatMessage> messages, long deadline) {
+        long budget = remaining(deadline) / CLASSIFIER_SHARE;
+        try {
+            return CompletableFuture.supplyAsync(() -> llm.chat(messages, ClassifierPrompt.CLASSIFIER_SCHEMA), executor)
+                    .orTimeout(budget, TimeUnit.NANOSECONDS)
+                    .join();
+        } catch (RuntimeException failure) {
+            // No log: the failure may carry the question or the reply.
+            return null;
+        }
     }
 
     private <T> T callAi(Supplier<T> call, long deadline) {

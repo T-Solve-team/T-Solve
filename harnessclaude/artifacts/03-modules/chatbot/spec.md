@@ -24,6 +24,7 @@ owner: BA
 | 2026-11-17 | STORY-012 | AC-012.1: the Wiki sources of a Jira question are the Company-wide documents only (`WikiSources.nearestCompanyWide`), as the MSG80 suggestion | KAN-294 risk review (user, 17/11): a requester outside the Department must not read its Department-only documents |
 | 2026-11-17 | STORY-012 | AC-012.1: `askForProject` takes the linked T-Solve user, if any, as `reader`: its Wiki sources are what that user may view; without one, Company-wide only | jira-app AC-010.4 change (user, 17/11) |
 | 2026-11-17 | STORY-009 (new), STORY-001, STORY-003, STORY-004, STORY-005, STORY-007 | **Backend and frontend change.** New STORY-009 classify a question before the search (KAN-243): greeting rules with no AI call, then one structured classify-and-rewrite call; outcomes `GREETING`, `OFF_TOPIC`, `INJECTION`. New AC-001.15 (MSG_NEW_5–7 shown), AC-004.7 (mock outcomes). Reworded AC-003.1 (no rating buttons on the new outcomes), AC-005.1 and AC-007.1 (retrieval text from AC-009.5). Requirement 10 added; Requirement 7: `INJECTION` rows kept, `GREETING` / `OFF_TOPIC` deleted with unrated answers. Out of Scope, Interface Contracts (outcome enum, table check, greeting phrases, classifier schema), Required from other modules and Definition of Done follow | KAN-243 back in To Do (17/11) after the 16/11 drop; user decisions of 17/11 in RESEARCH-006: Option C, new ids MSG_NEW_5–7 (MSG142/MSG143 are taken), three outcome values, fail open to search on a bad classifier answer (an `AiUnavailableException` from the classifier included, builder check), no rating on the new outcomes |
+| 2026-11-17 | STORY-008, STORY-009, STORY-010, STORY-011, STORY-012 | **Backend change (PR #275 review).** AC-009.5: the rewritten query is the retrieval text only for a follow-up; a first question is embedded as asked (BUG-327). AC-009.6 and AC-009.7: any classifier failure fails open, and the classifier waits at most a third of the time left, then fails open (BUG-325, BUG-326). AC-008.3, AC-010.8, AC-011.9 (through AC-010.8) and AC-012.7: a `GREETING`, `OFF_TOPIC` or `INJECTION` answer can be neither rated nor drafted into an issue, 404 MSG04 (BUG-323, BUG-324) | PR #275 review of 17/11; decisions in `04-plans/chatbot/iteration-3/decisions.md` |
 | 2026-11-17 | STORY-009, STORY-001 | Message ids renamed MSG157–MSG159 → `MSG_NEW_5`–`MSG_NEW_7` (texts unchanged) in AC-001.15, Interface Contracts and Required from other modules | The catalog test of fe-foundation AC-006.7 rejects unknown codes, decision D3 gives unnumbered messages provisional keys, and the workspace spec already plans MSG157/MSG158 (user, 17/11) |
 | 2026-11-17 | STORY-009, STORY-012, Requirement 11 | Merge of main into KAN-243: the KAN-243 requirement is now Requirement 11 (Requirement 10 is KAN-241's); AC-012.1 answers a Jira App question as STORY-009 too, so `askForProject` classifies before its search; the outcome changeset is `046-chatbot-answer-outcomes` (043 to 045 are taken on main) | KAN-241 and KAN-294 merged into main on 17/11; user, 17/11: classify on both paths (one pipeline), the Jira App page keeps MSG109 for the new outcomes until a jira-app change |
 
@@ -272,7 +273,8 @@ owner: BA
   - AC-008.2: WHEN a signed-in user removes the rating of an answer of their own, THE backend SHALL clear the rating
     and its time and answer 204, also when the answer has no rating (`removeChatbotAnswerRating`).
   - AC-008.3: IF the answer id is unknown, THEN THE backend SHALL answer 404 with MSG04 and change nothing
-    (unknown: not a UUID, no such answer, or an answer of another user).
+    (unknown: not a UUID, no such answer, an answer of another user, or a `GREETING`, `OFF_TOPIC` or `INJECTION`
+    answer, which has no rating: AC-003.1).
   - AC-008.4: IF the rating body is missing or its rating is missing or unknown, THEN THE backend SHALL answer 400
     with code MSG06 and no field error, and change nothing.
   - AC-008.5: IF the request has no web session, THEN THE backend SHALL answer 401 with MSG07; every signed-in user
@@ -300,16 +302,19 @@ owner: BA
   - AC-009.4: WHEN the backend answers `GREETING`, `OFF_TOPIC` or `INJECTION`, THE backend SHALL store one
     `chatbot_answer` row with that outcome, the trimmed question and an empty `answer_text`, and return its id as
     `answerId`; such a row is not a knowledge gap (only `NO_SOURCE` is, Requirement 4).
-  - AC-009.5: WHEN the classifier answers `QUESTION` with a `query` that is not blank, THE backend SHALL use the
-    trimmed `query` as the retrieval text of AC-005.1; the query SHALL not be returned, stored or logged, and the
+  - AC-009.5: WHEN the classifier answers `QUESTION` with a non-blank `query` for a follow-up, THE backend SHALL use
+    the trimmed `query` as the retrieval text of AC-005.1 (a first question, with an empty `history`, keeps the
+    trimmed question, so a rewrite cannot drop an error code); the query SHALL not be returned, stored or logged, and the
     chat model of AC-005.3 SHALL still get the user's question, not the query.
   - AC-009.6: IF the classifier gives no usable answer, THEN THE backend SHALL continue as for a question with the
     retrieval text of today: the trimmed question, or AC-007.1 for a follow-up (fail open to search). No usable
-    answer: an `AiUnavailableException` from the classifier call (the `ai` module throws it for a blank or non-JSON
-    reply too), not valid JSON, a category outside the four, or `QUESTION` with a blank `query`.
-  - AC-009.7: IF the ask times out, THEN THE backend SHALL answer 503 with MSG06 as in AC-005.7 and store no row,
-    also when the deadline passes during the classifier call (`CHATBOT_ASK_TIMEOUT` is one deadline for the
-    classifier, the embedding and the answer); a later embedding or chat failure is AC-005.7.
+    answer: any failure of the classifier call (an `AiUnavailableException`, which the `ai` module throws for a blank or
+    non-JSON reply too, or any other error), no reply within the classifier's share of the deadline (AC-009.7), not
+    valid JSON, a category outside the four, or `QUESTION` with a blank `query`.
+  - AC-009.7: IF the ask times out, THEN THE backend SHALL answer 503 with MSG06 as in AC-005.7 and store no row
+    (`CHATBOT_ASK_TIMEOUT` is one deadline for the classifier, the embedding and the answer); the classifier SHALL
+    wait at most one third of the time left, and a classifier that has not replied by then is AC-009.6 (fail open),
+    so the search keeps the rest of the deadline; a later embedding or chat failure is AC-005.7.
   - AC-009.8: THE chatbot changeset SHALL widen the `chatbot_answer.outcome` check to `ANSWERED`, `NO_SOURCE`,
     `GREETING`, `OFF_TOPIC` and `INJECTION`, with a `--rollback` that restores the two-value check.
 ### STORY-010: Prefill a Jira issue from an answer on the backend
@@ -334,7 +339,7 @@ owner: BA
   - AC-010.7: IF the user has no linked Jira account (`jira_account_links`, UC-59), THEN THE backend SHALL answer 409
     with code MSG146 and SHALL call no AI.
   - AC-010.8: IF the answer id is unknown, THEN THE backend SHALL answer 404 with MSG04 (not a UUID, no such answer,
-    or an answer of another user); IF `history` is missing, holds more than 10 turns, or a turn is too long (as in
+    an answer of another user, or a `GREETING`, `OFF_TOPIC` or `INJECTION` answer, whose question was never searched); IF `history` is missing, holds more than 10 turns, or a turn is too long (as in
     AC-007.3), THEN 400 with code MSG06 and no field error; IF the request has no web session, THEN 401 with MSG07;
     in each case it SHALL call no AI. Every signed-in user may ask for a draft, whatever their roles.
   - AC-010.9: THE backend SHALL store nothing for a draft and SHALL write neither the conversation nor the draft text
@@ -394,7 +399,8 @@ owner: BA
     the application log).
   - AC-012.7: WHEN the `jiraapp` module calls `ChatbotAnswerService.rateForProject(projectId, answerId, rating)`,
     THE backend SHALL store the rating and its time on that answer as AC-008.1 does, replacing an earlier one, only
-    WHILE the answer is a `JIRA_APP` row of that Project; IF it is not (unknown id, a web answer, another Project),
+    WHILE the answer is an `ANSWERED` or `NO_SOURCE` `JIRA_APP` row of that Project; IF it is not (unknown id, a web
+    answer, another Project, another outcome),
     THEN it SHALL change nothing and throw the error the caller answers with 404 MSG04 (jira-app AC-010.15).
 
 ## Out of Scope

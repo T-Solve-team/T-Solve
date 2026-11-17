@@ -1,5 +1,9 @@
 import type { ChatbotAnswer, ChatbotCitation } from '@/shared/api';
 
+/**
+ * A copy of the backend's `QuestionClassifier.GREETINGS` and `PUNCTUATION_AND_EMOJI`, which are the source of
+ * truth (AC-009.1). Change both together, or the AC-004.7 mock tests pass against stale behavior.
+ */
 const GREETING_PHRASES = new Set([
   'hi',
   'hello',

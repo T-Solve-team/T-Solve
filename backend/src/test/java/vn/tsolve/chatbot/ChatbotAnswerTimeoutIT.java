@@ -7,7 +7,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -43,6 +42,7 @@ import org.testcontainers.utility.DockerImageName;
 import vn.tsolve.ai.client.EmbeddingClient;
 import vn.tsolve.ai.client.LlmClient;
 import vn.tsolve.ai.exception.AiUnavailableException;
+import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse.Outcome;
 import vn.tsolve.chatbot.answer.dto.ChatbotQuestionRequest;
 import vn.tsolve.chatbot.answer.entity.ChatbotAnswer;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
@@ -152,7 +152,7 @@ class ChatbotAnswerTimeoutIT {
     }
 
     @Test
-    void classifierCountsAgainstDeadline_AC_009_7() throws InterruptedException {
+    void stalledClassifierFailsOpenWithinDeadline_AC_009_7_BUG_325() throws InterruptedException {
         UUID userId = jdbc.queryForObject(
                 "INSERT INTO app_user (email, status, created_at) VALUES (?, 'ACTIVE', now()) RETURNING id",
                 UUID.class,
@@ -166,10 +166,8 @@ class ChatbotAnswerTimeoutIT {
         var solutions = mock(SolutionRetrieval.class);
         var wiki = mock(WikiSources.class);
         var stalled = new CountDownLatch(1);
-        var classifierStarted = new CountDownLatch(1);
         var classifierFinished = new CountDownLatch(1);
         when(llm.chat(any(), any())).thenAnswer(invocation -> {
-            classifierStarted.countDown();
             try {
                 stalled.await();
                 return "{\"category\":\"OFF_TOPIC\",\"query\":\"\"}";
@@ -177,7 +175,8 @@ class ChatbotAnswerTimeoutIT {
                 classifierFinished.countDown();
             }
         });
-        var executor = Executors.newSingleThreadExecutor();
+        // Two threads: the stalled classifier keeps one, the embedding runs on the other.
+        var executor = Executors.newFixedThreadPool(2);
         try {
             new ApplicationContextRunner()
                     .withUserConfiguration(ChatbotAnswerServiceImpl.class)
@@ -193,15 +192,12 @@ class ChatbotAnswerTimeoutIT {
                     .run(context -> {
                         assertThat(context).hasNotFailed();
                         var service = context.getBean(ChatbotAnswerService.class);
-                        assertThatThrownBy(() -> service.ask(user, new ChatbotQuestionRequest("question", List.of())))
-                                .isInstanceOf(AiUnavailableException.class)
-                                .hasMessage("MSG06")
-                                .hasNoCause();
-                        assertThat(classifierStarted.getCount()).isZero();
-                        verify(llm).chat(any(), any());
-                        verifyNoInteractions(embeddings, solutions, wiki);
-                        assertThat(jdbc.queryForObject("SELECT count(*) FROM chatbot_answer", Integer.class))
-                                .isZero();
+                        // The classifier gets a third of the 3 s deadline, then the question is searched as asked.
+                        var response = service.ask(user, new ChatbotQuestionRequest("question", List.of()));
+                        assertThat(response.outcome()).isEqualTo(Outcome.NO_SOURCE);
+                        verify(embeddings).embed(List.of("question"));
+                        assertThat(jdbc.queryForObject("SELECT outcome FROM chatbot_answer", String.class))
+                                .isEqualTo("NO_SOURCE");
                         stalled.countDown();
                         assertThat(classifierFinished.await(2, TimeUnit.SECONDS))
                                 .isTrue();
@@ -211,9 +207,12 @@ class ChatbotAnswerTimeoutIT {
             executor.shutdownNow();
             assertThat(executor.awaitTermination(2, TimeUnit.SECONDS)).isTrue();
         }
-        // The late classifier result must not resume the request or insert a row.
+        // The late OFF_TOPIC reply must not change the stored row or add one.
+        assertThat(jdbc.queryForObject(
+                        "SELECT count(*) FROM chatbot_answer WHERE outcome = 'NO_SOURCE'", Integer.class))
+                .isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM chatbot_answer", Integer.class))
-                .isZero();
+                .isEqualTo(1);
     }
 
     private Liquibase liquibase() throws Exception {

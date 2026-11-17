@@ -34,6 +34,8 @@ const CREATE = 'Not solved, create ticket';
 const SOLVED_TEXT = 'Your problem is solved. Thank you!';
 
 const FIELD_CODES = ['MSG01', 'MSG02'];
+// The outcomes the backend lets a user rate (chatbot AC-003.1).
+const RATEABLE = ['ANSWERED', 'NO_SOURCE'];
 
 // The eligibility status → what the page shows (AC-010.2, AC-010.14).
 const ACCESS = { CONNECTED: 'connected', SITE_NOT_CONNECTED: 'site', PROJECT_NOT_CONNECTED: 'project' };
@@ -128,9 +130,11 @@ export function AskTsolvePage() {
   };
 
   // AC-010.15: the rating is a side effect; a failure changes nothing on the page and shows no message.
+  // BUG-324: only a searched answer is rated; a greeting or a refused question is not.
   const rate = (rating) => {
     const answer = lastAnswer(conversation);
-    Promise.resolve(answer && rateAnswer(answer.answerId, rating)).catch(() => {});
+    const rateable = answer && RATEABLE.includes(answer.outcome);
+    Promise.resolve(rateable && rateAnswer(answer.answerId, rating)).catch(() => {});
   };
 
   const solve = () => {

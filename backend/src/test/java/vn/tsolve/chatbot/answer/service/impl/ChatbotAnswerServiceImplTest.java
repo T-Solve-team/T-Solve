@@ -210,17 +210,29 @@ class ChatbotAnswerServiceImplTest {
     }
 
     @Test
-    void classifierTimeoutIs503StoresNothing_AC_009_7() {
+    void classifierTimeoutFailsOpen_AC_009_7_BUG_325() {
         // Simulate the exceptional completion of a timed-out classifier future without waiting on a clock.
         when(llm.chat(any(), notNull())).thenAnswer(invocation -> {
             throw new TimeoutException();
         });
-        assertThatThrownBy(() -> service.ask(USER, question()))
-                .isInstanceOf(AiUnavailableException.class)
-                .hasMessage("MSG06")
-                .hasNoCause();
-        verifyNoInteractions(embeddings, solutions, wiki, answers);
-        verify(llm).chat(any(), notNull());
+        var response = service.ask(USER, question());
+        assertThat(response.outcome()).isEqualTo(Outcome.NO_SOURCE);
+        verify(embeddings).embed(List.of("question"));
+    }
+
+    @Test
+    void classifierUnexpectedFailureFailsOpen_AC_009_6_BUG_326() {
+        when(llm.chat(any(), notNull())).thenThrow(new IllegalStateException("unexpected response shape"));
+        var response = service.ask(USER, question());
+        assertThat(response.outcome()).isEqualTo(Outcome.NO_SOURCE);
+        verify(embeddings).embed(List.of("question"));
+    }
+
+    @Test
+    void firstQuestionIsEmbeddedAsAsked_AC_009_5_BUG_327() {
+        when(llm.chat(any(), notNull())).thenReturn("{\"category\":\"QUESTION\",\"query\":\"VPN connection error\"}");
+        service.ask(USER, new ChatbotQuestionRequest("  lỗi VPN 809 khi kết nối  ", List.of()));
+        verify(embeddings).embed(List.of("lỗi VPN 809 khi kết nối"));
     }
 
     @Test
@@ -238,7 +250,7 @@ class ChatbotAnswerServiceImplTest {
         ArgumentCaptor<List<ChatMessage>> prompt = ArgumentCaptor.forClass(List.class);
         ordered.verify(llm).chat(prompt.capture(), eq(ClassifierPrompt.CLASSIFIER_SCHEMA));
         assertThat(prompt.getValue().getLast().content()).isEqualTo("<question>hi, how do I reset my VPN?</question>");
-        ordered.verify(embeddings).embed(List.of("VPN reset"));
+        ordered.verify(embeddings).embed(List.of("hi, how do I reset my VPN?"));
         ordered.verify(solutions).nearest(vector, 0.7, 5);
         ordered.verify(wiki).nearest(USER, vector, 0.7, 5);
         ordered.verify(llm).chat(any(), isNull());
@@ -263,7 +275,7 @@ class ChatbotAnswerServiceImplTest {
         when(llm.chat(any(), notNull()))
                 .thenReturn("{\"category\":\"QUESTION\",\"query\":\"private-rewritten-query\"}");
         when(llm.chat(any(), isNull())).thenReturn("Answer [1]");
-        var response = service.ask(USER, question());
+        var response = service.ask(USER, followUp());
         verify(embeddings).embed(List.of("private-rewritten-query"));
         assertThat(output.getAll()).doesNotContain("private-rewritten-query");
         assertThat(response.toString()).doesNotContain("private-rewritten-query");
@@ -277,7 +289,7 @@ class ChatbotAnswerServiceImplTest {
     void embedsQueryOnce_AC_005_1() {
         when(llm.chat(any(), notNull())).thenReturn("{\"category\":\"QUESTION\",\"query\":\"rewritten query\"}");
         when(embeddings.embed(any())).thenReturn(List.of(vector));
-        service.ask(USER, question());
+        service.ask(USER, followUp());
         verify(embeddings).embed(List.of("rewritten query"));
         verifyNoMoreInteractions(embeddings);
         verify(solutions).nearest(vector, 0.7, 5);
@@ -772,5 +784,9 @@ class ChatbotAnswerServiceImplTest {
 
     private static ChatbotQuestionRequest question() {
         return new ChatbotQuestionRequest("question", List.of());
+    }
+
+    private static ChatbotQuestionRequest followUp() {
+        return new ChatbotQuestionRequest("question", List.of(new ChatbotTurnRequest("earlier", "earlier answer")));
     }
 }

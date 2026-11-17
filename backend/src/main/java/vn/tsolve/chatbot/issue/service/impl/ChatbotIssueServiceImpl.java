@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -22,6 +23,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.tsolve.ai.client.LlmClient;
 import vn.tsolve.ai.exception.AiUnavailableException;
+import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse.Outcome;
+import vn.tsolve.chatbot.answer.entity.ChatbotAnswer;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
 import vn.tsolve.chatbot.exception.ChatbotJiraException;
 import vn.tsolve.chatbot.exception.InvalidChatbotRequestException;
@@ -43,6 +46,7 @@ import vn.tsolve.tracker.service.JiraServiceAccount;
 
 @Service
 public class ChatbotIssueServiceImpl implements ChatbotIssueService {
+    private static final Set<String> SEARCHED = Set.of(Outcome.ANSWERED.name(), Outcome.NO_SOURCE.name());
     private final ChatbotAnswerRepository answers;
     private final IssueTargetRepository targets;
     private final LlmClient llm;
@@ -96,8 +100,9 @@ public class ChatbotIssueServiceImpl implements ChatbotIssueService {
         } catch (IllegalArgumentException invalid) {
             throw new NotFoundException("MSG04", Map.of());
         }
-        var answer =
-                answers.findByIdAndUserId(id, user.id()).orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
+        var answer = answers.findByIdAndUserId(id, user.id())
+                .filter(ChatbotIssueServiceImpl::searched)
+                .orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
         if (targets.linkedJiraAccountId(user.id()).isEmpty()) {
             throw new BusinessRuleException("MSG146", Map.of());
         }
@@ -152,6 +157,7 @@ public class ChatbotIssueServiceImpl implements ChatbotIssueService {
             throw new NotFoundException("MSG04", Map.of());
         }
         var answer = answers.findForUpdateByIdAndUserId(id, user.id())
+                .filter(ChatbotIssueServiceImpl::searched)
                 .orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
         if (answer.getJiraIssueKey() != null) {
             String site = account().siteUrl().replaceAll("/+$", "");
@@ -173,6 +179,11 @@ public class ChatbotIssueServiceImpl implements ChatbotIssueService {
                 account, new NewIssue(target.jiraProjectKey(), request.summary(), request.description(), reporter));
         answer.recordJiraIssue(created.issueKey());
         return new ChatbotIssueCreateResult(new ChatbotJiraIssueResponse(created.issueKey(), created.issueUrl()), true);
+    }
+
+    // BUG-323: only a searched answer has an issue; a refused question must never reach the draft LLM.
+    private static boolean searched(ChatbotAnswer answer) {
+        return SEARCHED.contains(answer.getOutcome());
     }
 
     private JiraAccount account() {

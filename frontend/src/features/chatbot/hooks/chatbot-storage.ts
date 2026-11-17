@@ -1,4 +1,4 @@
-import type { ChatbotAnswer, ChatbotCitation } from '@/shared/api';
+import { ChatbotAnswerOutcome, type ChatbotAnswer, type ChatbotCitation } from '@/shared/api';
 import type { ChatTurn, Conversation } from '../model';
 
 /** Spec AC-002.7: under the `tsolve.session.` prefix, so logout and a global 401 remove it (fe-foundation). */
@@ -24,11 +24,7 @@ function isAnswer(value: unknown): value is ChatbotAnswer {
     answer !== null &&
     typeof answer.answerId === 'string' &&
     typeof answer.text === 'string' &&
-    (answer.outcome === 'ANSWERED' ||
-      answer.outcome === 'NO_SOURCE' ||
-      answer.outcome === 'GREETING' ||
-      answer.outcome === 'OFF_TOPIC' ||
-      answer.outcome === 'INJECTION') &&
+    Object.values<unknown>(ChatbotAnswerOutcome).includes(answer.outcome) &&
     Array.isArray(answer.citations) &&
     answer.citations.every(isCitation)
   );

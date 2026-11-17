@@ -241,6 +241,16 @@ class ChatbotIssueServiceImplTest {
         verifyNoInteractions(targets, llm);
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"GREETING", "OFF_TOPIC", "INJECTION"})
+    void rejectsUnsearchedAnswerBeforeAi_AC_010_1_BUG_323(String outcome) {
+        when(answers.findByIdAndUserId(ANSWER_ID, USER.id())).thenReturn(Optional.of(answer(outcome)));
+        when(answers.findForUpdateByIdAndUserId(ANSWER_ID, USER.id())).thenReturn(Optional.of(answer(outcome)));
+        assertThatThrownBy(this::draft).isInstanceOf(NotFoundException.class).hasMessage("MSG04");
+        assertThatThrownBy(this::create).isInstanceOf(NotFoundException.class).hasMessage("MSG04");
+        verifyNoInteractions(llm, creator);
+    }
+
     @Test
     void rejectsBadHistoryAndAcceptsExactLimits_AC_010_8() {
         List<List<ChatbotTurnRequest>> invalid = new ArrayList<>();
