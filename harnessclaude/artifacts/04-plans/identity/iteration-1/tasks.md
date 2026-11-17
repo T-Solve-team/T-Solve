@@ -935,3 +935,40 @@ tracker account whose `app_user` is `ACTIVE`; nothing otherwise. Used by jira-ap
   `JiraAccountLinkRepositoryIT`.
 **Dependencies:** none (the table and the confirm exist, KAN-234)
 **Estimated size:** small
+
+## Task 38: Several Knowledge Managers per Space — backend (KAN-362)
+
+**Story:** STORY-005, STORY-006, STORY-007
+**Feature:** multi-km-per-space-backend
+**Decisions owned:** KAN-362 (Dương, 17/11: cap 3, handover only for the last Active Knowledge Manager, MSG117 text)
+**Acceptance criteria:** AC-005.13, AC-005.14, AC-006.14, AC-006.15, AC-007.9, AC-007.14, AC-007.16, AC-007.19
+**Description:** Design "Several Knowledge Managers per Space — KAN-362". Changeset 046 (`space_manager` key
+(`space_id`, `user_id`)); cap of three checked under a `space` row lock in creation and update; `soleManagedSpaces`
+for handover-options, update and deactivation; recipient row insert and removal of the outgoing Account's rows.
+Not in scope: the frontend and MSW (Task 39), wiki Space Settings (wiki Task 15), API contract changes.
+**Files:**
+- Create: `backend/src/main/resources/db/changelog/changes/046-identity-space-manager-many.sql`
+- Modify: `db.changelog-master.xml`, `backend/src/main/java/vn/tsolve/identity/{repository/UserCreationRepository,repository/UserRoleUpdateRepository,service/impl/UserCreationServiceImpl,service/impl/UserRoleUpdateServiceImpl,service/impl/UserStatusUpdateServiceImpl,service/impl/HandoverChoices}.java`
+- Test: `backend/src/test/java/vn/tsolve/identity/{UserCreationIT,UserRoleUpdateIT,UserStatusIT,service/impl/UserRoleUpdateServiceImplTest,service/impl/UserStatusUpdateServiceImplTest,ScopeAccessIT}.java` (existing tests of the reworded criteria updated; new cases: third manager accepted, fourth refused 409 MSG117, race for the last place, co-managed Space needs no handover, last Active manager needs one, concurrent removal of two co-managers, `canAccessSpace` true for both co-managers)
+**Dependencies:** none (Tasks 33–36 are on main).
+**PR / Jira:** branch `feat/KAN-362-identity-multi-km-per-space` from main; Jira KAN-362.
+**Estimated size:** medium (1 new, 7 modified production files); about 15 tests
+**Verification:** Tests name the criteria above; `sdd.ts trace identity`; `cd backend && mvn verify`; `generate:api` no diff.
+
+## Task 39: Several Knowledge Managers per Space — frontend and MSW (KAN-362)
+
+**Story:** STORY-005, STORY-006, STORY-007, STORY-009
+**Feature:** multi-km-per-space-frontend
+**Decisions owned:** KAN-362 (as Task 38)
+**Acceptance criteria:** AC-005.6, AC-006.2, AC-006.5, AC-007.2, AC-009.1, AC-009.2
+**Description:** Design "Several Knowledge Managers per Space — KAN-362", Frontend. MSW state keeps manager ids per
+Space; creation and role-update handlers enforce the cap of three (MSG117); handover-options, role update and status
+mocks use the sole-manager rule and remove the outgoing rows; `UserStatusActions` and `useRoleUpdateFlow` decide from
+`handover-options` whether the popup opens; MSG117 catalog text. Not in scope: backend (Task 38), wiki (wiki Task 15).
+**Files:**
+- Modify: `frontend/src/features/users/mocks/{state,handlers,roles-handler,handover,status-handlers}.ts`, `frontend/src/features/users/components/UserStatusActions.tsx`, `frontend/src/features/users/hooks/useRoleUpdateFlow.ts`, `frontend/src/shared/messages/catalog.ts`
+- Test: `frontend/src/features/users/mocks/{handlers,roles}.test.ts`, `frontend/src/features/users/pages/{UserDetailPage,UserRolesPage}.test.tsx` and the status / handover tests that cite the criteria above
+**Dependencies:** none for the MSW work; the real backend from Task 38 for an end-to-end check.
+**PR / Jira:** same branch and Jira issue as Task 38 (one commit per feature).
+**Estimated size:** medium (8 modified files); about 15 tests
+**Verification:** Tests name the criteria above; `cd frontend && npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build`; `npm run generate:api` no diff.
