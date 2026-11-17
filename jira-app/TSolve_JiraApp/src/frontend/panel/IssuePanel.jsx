@@ -64,9 +64,10 @@ export function IssuePanel() {
 
   const openForm = async () => {
     try {
-      // The button may be stale (BUG-231): Write Solution only while the issue is still Done (AC-001.4).
+      // The button may be stale (BUG-231): Write Solution and Continue draft only while the issue is still Done
+      // (AC-001.4, AC-008.3); the Draft itself is kept (AC-008.11).
       const current = await readIssue(requestJira, issueKey);
-      if (!panel.hasDraft && current.category !== DONE) {
+      if (current.category !== DONE) {
         setIssue(current);
         return;
       }
@@ -161,7 +162,7 @@ export function IssuePanel() {
           </Button>
         </Inline>
       )}
-      {panel.hasDraft && (
+      {panel.hasDraft && done && (
         <SectionMessage appearance="information">
           <Stack space="space.100">
             <Text>{message('MSG77')}</Text>

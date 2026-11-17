@@ -94,6 +94,35 @@ describe('IssuePanel', () => {
     expect(screen.getByLabelText(/^Symptoms/)).toHaveValue('Drops');
   });
 
+  it('AC-008.11 hides MSG77 and Continue draft while the issue is not Done', async () => {
+    issueIn('indeterminate');
+    await show({ ...PANEL, hasDraft: true });
+
+    expect(screen.queryByText(message('MSG77'))).not.toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('AC-008.11 shows the kept Draft again once the issue is Done again', async () => {
+    issueIn('indeterminate');
+    await show({ ...PANEL, hasDraft: true });
+    issueIn('done');
+
+    await act(async () => events.on.mock.calls[0][1]({ changes: [{ changeType: 'updated', atlassianId: 'me' }] }));
+
+    expect(screen.getByText(message('MSG77'))).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: PANEL_LABELS.continueDraft })).toBeInTheDocument();
+  });
+
+  it('AC-008.11 re-checks the status on Continue draft and opens nothing once the issue left Done', async () => {
+    await show({ ...PANEL, hasDraft: true });
+    issueIn('indeterminate');
+
+    fireEvent.click(screen.getByRole('button', { name: PANEL_LABELS.continueDraft }));
+
+    await waitFor(() => expect(screen.queryByText(message('MSG77'))).not.toBeInTheDocument());
+    expect(openSolutionForm).not.toHaveBeenCalled();
+  });
+
   it('AC-012.1 AC-012.2 offers Edit and resubmit with MSG64 and opens the resubmission form', async () => {
     getReviewFeedback.mockResolvedValue({ code: 'MSG64', params: { manager_name: 'Le Minh', comment: 'Add steps' } });
     openSolutionForm.mockResolvedValue({ mayOpen: true, origin: 'TICKET', sections: SECTIONS, message: null });
