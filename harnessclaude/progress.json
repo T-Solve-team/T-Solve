@@ -141,15 +141,16 @@
         "jira-link-record": "passing",
         "profile-spaces-backend": "passing",
         "my-solutions-backend": "passing",
-        "my-solutions-summary-backend": "pending"
+        "my-solutions-summary-backend": "pending",
+        "jira-account-link-lookup": "evaluating"
       },
-      "lastUpdated": "2026-11-14T18:40:18.990Z",
+      "lastUpdated": "2026-11-17T14:30:06.437Z",
       "branch": "feat/identity",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "ab7e954b31a9ef70bb74ee1d394440064744b01b"
+        "default": "b906c83d1d252fde82b738ccede16c9678cb90e5"
       }
     },
     "workspace": {
@@ -395,15 +396,18 @@
         "panel-rejected": "passing",
         "panel-published": "passing",
         "app-token-trigger": "evaluating",
-        "ask-without-sign-in": "evaluating"
+        "ask-without-sign-in": "evaluating",
+        "linked-asker-lookup": "evaluating",
+        "account-link-endpoints": "evaluating",
+        "account-settings-page": "evaluating"
       },
-      "lastUpdated": "2026-11-17T10:37:55.476Z",
+      "lastUpdated": "2026-11-17T14:43:21.823Z",
       "branch": "feat/KAN-337-jira-app-reject-reason",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "ef1fc5e0db7ee7a071ba4cd4a9ff4932fd7e1f31"
+        "default": "95eb7cdec0d37701f47e49d167ed146dfbe8d2b3"
       }
     },
     "dashboard-audit": {
