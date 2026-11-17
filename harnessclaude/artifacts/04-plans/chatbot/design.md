@@ -410,7 +410,7 @@ Decided in planning (builder check, 06/11):
 ## Backend Jira issue (change of 2026-11-17, STORY-010, STORY-011, KAN-241)
 
 UC-58 on the backend: an AI-prefilled draft of a Jira issue from an own answer, then the issue created with the
-Workspace's Jira service account. The web form is KAN-242 (Hiếu); this change only writes the contract.
+T-Solve Jira App's token (KAN-349). The web form is KAN-242 (Hiếu); this change only writes the contract.
 
 ### Packages and classes (`vn.tsolve.chatbot.issue`)
 
@@ -457,7 +457,7 @@ Jira errors become a `MessageCodeException` (nothing stored, transaction rolled 
 |-------------|------|------|
 | 400 with `errors` naming `reporter`, or with no `errors` key | MSG148 | 502 |
 | 400 with `errors` naming `issuetype` or any key outside summary, description, labels, reporter | MSG157 | 502 |
-| 401, 403, 404, other 4xx; no service account | MSG148 | 502 |
+| 401, 403, 404, other 4xx; no Jira site or app token | MSG148 | 502 |
 | 5xx, timeout, I/O error | MSG149 | 503 |
 
 Only the HTTP status and the `errors` keys are logged (AC-011.10).
@@ -474,7 +474,7 @@ jira_issue_key VARCHAR(255) NULL`; `--rollback ALTER TABLE chatbot_answer DROP C
 | API shape | Both endpoints under an own `answerId` | Free-standing endpoints | User 17/11: search first, own answers only (404), the issue recorded on the answer; MSG145 needs no intent detection |
 | AI failure on the draft | 200 empty draft | 503 MSG06 | User 17/11: GBR-12, the user can still create the issue |
 | Duplicates | `jira_issue_key` on the answer + row lock; a second create returns it | Many issues per answer | User 17/11: a double click must not open two issues |
-| Jira credential | Workspace service account (`JiraServiceAccount`) | Forge system token (KAN-349) | User 17/11: KAN-344/345 merged; KAN-349 only proposed |
+| Jira credential | `JiraServiceAccount.current()`, which after KAN-349 holds the T-Solve Jira App's app token | A customer service-account token | Chosen 17/11 when KAN-349 was only proposed; KAN-349 (#271) then moved the same port to the app token with no chatbot change |
 | Jira client | Chatbot-owned port + REST adapter | Extend the `tracker` client | User 17/11: `tracker/` and KAN-125 belong to Bình; swap the adapter later |
 | Refused reporter | 502 MSG148, nothing created | Retry without reporter | User 17/11: GBR-40, the Employee is the reporter |
 | Cross-module tables | Read-only JDBC queries in `chatbot` | New methods in identity / workspace | Decided in planning: two `SELECT`s, no edit to other modules' files (builder check) |

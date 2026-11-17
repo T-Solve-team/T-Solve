@@ -220,7 +220,7 @@ Order: search Task 19 → Task 6 → Task 7 → Task 8 → Task 9 → Task 10.
 **Jira:** KAN-241 · branch `feat/KAN-241-chatbot-create-jira-issue`
 **Description:**
 - Changeset `044-chatbot-answer-jira-issue.sql`, `ChatbotAnswer.jiraIssueKey`, the locked lookup.
-- `JiraIssueCreator` port and `JiraRestIssueCreator` adapter (service account, gateway, ADF, 10 s, error mapping of
+- `JiraIssueCreator` port and `JiraRestIssueCreator` adapter (`JiraServiceAccount`, the Jira App token since KAN-349; gateway, ADF, 10 s, error mapping of
   the design); `createChatbotIssue` in the controller and the create path of the service: 201 / 200, 400 field
   errors and MSG06, 409 MSG146, 502 MSG148 / MSG157, 503 MSG149, 404, 401.
 **Files:**
