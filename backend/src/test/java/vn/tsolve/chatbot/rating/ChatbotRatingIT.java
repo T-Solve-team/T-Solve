@@ -47,6 +47,7 @@ class ChatbotRatingIT {
     private String databaseName;
     private DriverManagerDataSource dataSource;
     private JdbcTemplate jdbc;
+    private ChatbotAnswerRepository repository;
     private LocalContainerEntityManagerFactoryBean factory;
     private TransactionTemplate transactions;
     private ChatbotRatingService ratings;
@@ -84,7 +85,7 @@ class ChatbotRatingIT {
         factory.setJpaPropertyMap(Map.of("hibernate.hbm2ddl.auto", "validate"));
         factory.afterPropertiesSet();
         var entityManager = SharedEntityManagerCreator.createSharedEntityManager(factory.getObject());
-        var repository = new JpaRepositoryFactory(entityManager).getRepository(ChatbotAnswerRepository.class);
+        repository = new JpaRepositoryFactory(entityManager).getRepository(ChatbotAnswerRepository.class);
         transactions = new TransactionTemplate(new JpaTransactionManager(factory.getObject()));
         ratings = new ChatbotRatingServiceImpl(repository, Clock.fixed(RATED_AT, ZoneOffset.UTC));
         userA = seedUser("owner@example.test");
@@ -168,6 +169,45 @@ class ChatbotRatingIT {
         assertThat(row(noSourceId)).isEqualTo(noSourceBefore);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM chatbot_answer", Integer.class))
                 .isEqualTo(2);
+    }
+
+    @Test
+    void keepsAJiraQuestionWithoutAUserAndRatesItOnlyForItsProject_AC_012_3_AC_012_5_AC_012_7() {
+        UUID project = UUID.randomUUID();
+        UUID jiraAnswer = jdbc.queryForObject(
+                "INSERT INTO chatbot_answer (source, project_id, question, outcome, answer_text) "
+                        + "VALUES ('JIRA_APP', ?, 'question', 'NO_SOURCE', '') RETURNING chatbot_answer_id",
+                UUID.class,
+                project);
+        assertThat(row(answerId)).containsEntry("source", "WEB").containsEntry("project_id", null);
+
+        // AC-012.3: the web rating cannot reach it.
+        assertThatThrownBy(() -> rate(userA, jiraAnswer.toString(), new ChatbotRatingRequest(ChatbotRating.HELPFUL)))
+                .isInstanceOf(ChatbotAnswerNotFoundException.class);
+
+        // AC-012.7: only its own Project rates it, and never a web answer.
+        assertThat(rateInProject(jiraAnswer, UUID.randomUUID(), ChatbotRating.HELPFUL))
+                .isZero();
+        assertThat(rateInProject(answerId, project, ChatbotRating.HELPFUL)).isZero();
+        assertThat(rateInProject(jiraAnswer, project, ChatbotRating.NOT_HELPFUL))
+                .isEqualTo(1);
+        assertThat(row(jiraAnswer)).containsEntry("rating", "NOT_HELPFUL").containsEntry("user_id", null);
+
+        // AC-012.5: a row is either a web answer with a user or a Jira answer with a Project.
+        assertThatThrownBy(() -> jdbc.update("INSERT INTO chatbot_answer (source, question, outcome, answer_text) "
+                        + "VALUES ('JIRA_APP', 'q', 'NO_SOURCE', '')"))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> jdbc.update(
+                        "INSERT INTO chatbot_answer (user_id, project_id, question, outcome, answer_text) "
+                                + "VALUES (?, ?, 'q', 'NO_SOURCE', '')",
+                        userA.id(),
+                        project))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+    }
+
+    private int rateInProject(UUID id, UUID project, ChatbotRating rating) {
+        Integer changed = transactions.execute(status -> repository.updateProjectRating(id, project, rating, RATED_AT));
+        return changed == null ? 0 : changed;
     }
 
     private void rate(TSolveUser user, String id, ChatbotRatingRequest request) {

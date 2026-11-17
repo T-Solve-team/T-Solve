@@ -17,6 +17,8 @@ Covers UC-38 to UC-50, Wiki Space and Wiki Document Management (Jira epic KAN-91
 | 2026-11-14 | STORY-005 | AC-005.2 excepts the Knowledge Manager's read of AC-005.4; new AC-005.17: a restore that loses its title to a concurrent request answers 409 MSG84; pull request numbers replaced by Jira keys | Review of #223 (findings 1, 4, 8) |
 | 2026-11-14 | STORY-001 | AC-001.1: the Space's own Department grants View to every user whose Departments (AC-001.2) include it, so a Ticket Resolver in a Project of that Department views the Space; matches Functional 2 and identity AC-011.5 | Task 1 review (KAN-170), user decision |
 | 2026-11-15 | STORY-002, STORY-005 | AC-002.11 and AC-005.4 add `inTrash` to `WikiDocumentDetail`; new AC-005.18: a trashed document on 11.2 shows the "In trash" tag and no Download (its file answers 404 by AC-002.13) or Delete | PR #255 review, finding 1 (user decision: StatusTag preset IN_TRASH) |
+| 2026-11-17 | STORY-001 | New AC-001.12 (KAN-294): `WikiSources.nearestInProjectDepartment`, the Wiki passages the members of a Department may read, for the Jira App's Ask T-Solve page that has no T-Solve user | chatbot STORY-012, jira-app STORY-010 change (user, 17/11) |
+| 2026-11-17 | STORY-001 | AC-001.12 reworded: `WikiSources.nearestCompanyWide` returns Company-wide documents only, not the Department's own | KAN-294 risk review (user, 17/11): the MSG80 rule for a page without a T-Solve user |
 
 ## Requirements
 
@@ -61,6 +63,7 @@ These are known limits of the code this module builds on. They are not defects o
   - AC-001.9: WHEN identity calls `ManagedSpaceLookup.findManagedSpaces(userId)`, THE system SHALL return the Active Spaces of Active Departments that the user manages, only when the user has the role `KNOWLEDGE_MANAGER`, sorted by name.
   - AC-001.10: WHEN identity calls `ViewableSpaceLookup.findViewableSpaces(userId)`, THE system SHALL return every Space the user can view by AC-001.1, sorted by name.
   - AC-001.11: WHILE a document is not yet indexed, or its indexing failed, THE system SHALL leave it out of AC-001.5 and AC-001.7 and keep it in every list and keyword search.
+  - AC-001.12: WHEN the Knowledge Chatbot calls `WikiSources.nearestCompanyWide(vector, minSimilarity, limit)` for a question asked in Jira (chatbot STORY-012), THE system SHALL return, as AC-001.7 does, only the best passage of each Published Company-wide document of an Active Space of an Active Department.
 
 ### STORY-002: Browse, search and read Wiki documents
 - As an Employee, I want to browse the Spaces I can view, the Company-wide documents of every Department and a search box so that I find and read the right document.

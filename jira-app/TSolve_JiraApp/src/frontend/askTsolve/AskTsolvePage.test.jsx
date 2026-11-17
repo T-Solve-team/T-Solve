@@ -4,11 +4,11 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useProductContext } from '@forge/react';
 import { CreateIssueModal } from '@forge/jira-bridge';
-import { askQuestion, getEligibility } from '../api/tsolveClient';
+import { askQuestion, getEligibility, rateAnswer } from '../api/tsolveClient';
 import { message } from '../messages';
 import { AskTsolvePage } from './AskTsolvePage';
 
-jest.mock('../api/tsolveClient', () => ({ getEligibility: jest.fn(), askQuestion: jest.fn() }));
+jest.mock('../api/tsolveClient', () => ({ getEligibility: jest.fn(), askQuestion: jest.fn(), rateAnswer: jest.fn() }));
 jest.mock('@forge/jira-bridge', () => ({ CreateIssueModal: jest.fn() }));
 
 const WIKI = { number: 2, type: 'WIKI_DOCUMENT', wikiDocumentId: 'w-1', title: 'VPN guide' };
@@ -35,7 +35,8 @@ beforeEach(() => {
   open = jest.fn();
   CreateIssueModal.mockImplementation(() => ({ open }));
   useProductContext.mockReturnValue({ extension: { project: { id: '10001', key: 'SAM1' } } });
-  getEligibility.mockResolvedValue({ linked: true });
+  getEligibility.mockResolvedValue({ status: 'CONNECTED' });
+  rateAnswer.mockResolvedValue(undefined);
 });
 
 const box = () => screen.getByRole('textbox');
@@ -70,11 +71,15 @@ describe('AskTsolvePage', () => {
     expect(screen.queryByRole('heading', { name: 'Ask T-Solve' })).not.toBeInTheDocument();
   });
 
-  it('AC-010.2 shows MSG62 instead of the box and a Create button with nothing prefilled', async () => {
-    getEligibility.mockResolvedValue({ linked: false });
+  it.each([
+    ['PROJECT_NOT_CONNECTED', 'This Jira project is not connected to T-Solve.'],
+    ['SITE_NOT_CONNECTED', message('MSG124')],
+  ])('AC-010.2 AC-010.14 shows %s instead of the box and a Create button with nothing prefilled', async (status, text) => {
+    getEligibility.mockResolvedValue({ status });
     render(<AskTsolvePage />);
 
-    expect(await screen.findByText(message('MSG62'))).toBeInTheDocument();
+    expect(await screen.findByText(text)).toBeInTheDocument();
+    expect(screen.queryByText(message('MSG62'))).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Not solved, create ticket' }));
 
@@ -204,15 +209,50 @@ describe('AskTsolvePage', () => {
     expect(CreateIssueModal).not.toHaveBeenCalled();
   });
 
-  it('AC-010.11 switches to MSG62 when the server says the user is not linked', async () => {
+  it.each([
+    ['MSG08', 'This Jira project is not connected to T-Solve.'],
+    ['MSG124', message('MSG124')],
+  ])('AC-010.11 switches to "not connected" when the server answers %s', async (code, text) => {
     await renderLinked();
-    askQuestion.mockRejectedValueOnce(failure('MSG62'));
+    askQuestion.mockRejectedValueOnce(failure(code));
 
     type('VPN fails');
     send();
 
-    expect(await screen.findByText(message('MSG62'))).toBeInTheDocument();
+    expect(await screen.findByText(text)).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
+  it('AC-010.15 "Solved" rates the last answer HELPFUL', async () => {
+    await renderLinked();
+    await ask('VPN fails', ANSWERED);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Solved' }));
+
+    expect(rateAnswer).toHaveBeenCalledWith('a-1', 'HELPFUL');
+  });
+
+  it('AC-010.15 "Not solved, create ticket" rates the last answer NOT_HELPFUL and still opens Create', async () => {
+    await renderLinked();
+    await ask('VPN fails', ANSWERED);
+    await ask('Still failing', NO_SOURCE);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Not solved, create ticket' }));
+
+    expect(rateAnswer).toHaveBeenCalledWith('a-2', 'NOT_HELPFUL');
+    expect(rateAnswer).toHaveBeenCalledTimes(1);
+    expect(open).toHaveBeenCalled();
+  });
+
+  it('AC-010.15 a failed rating changes nothing on the page and shows no message', async () => {
+    rateAnswer.mockRejectedValue(failure('MSG06'));
+    await renderLinked();
+    await ask('VPN fails', ANSWERED);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Solved' }));
+
+    expect(await screen.findByText('Your problem is solved. Thank you!')).toBeInTheDocument();
+    expect(screen.queryByText(message('MSG06'))).not.toBeInTheDocument();
   });
 
   it('AC-010.5 shows a server MSG02 under the box', async () => {

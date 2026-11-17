@@ -148,6 +148,24 @@ class WikiIndexIT extends WikiReadTestSupport {
     }
 
     @Test
+    void readsOnlyCompanyWideDocumentsForAJiraQuestion_AC_001_12() {
+        long other = department("Finance");
+        long otherSpace = space(other, "Finance Wiki");
+        UUID departmentOnly = document(space, null, "Support only", "DEPARTMENT", "INDEXED", "own");
+        UUID companyWide = document(otherSpace, null, "Everyone", "COMPANY_WIDE", "INDEXED", "everyone");
+        UUID foreign = document(otherSpace, null, "Finance only", "DEPARTMENT", "INDEXED", "finance");
+        for (UUID id : List.of(departmentOnly, companyWide, foreign)) {
+            chunk(id, 0, 1, 0);
+        }
+        var sources = new vn.tsolve.wiki.service.impl.WikiSourcesImpl(context.getBean(AccessRepository.class));
+        var read = new TransactionTemplate(context.getBean(PlatformTransactionManager.class));
+        read.setReadOnly(true);
+        read.executeWithoutResult(status -> assertThat(sources.nearestCompanyWide(vector(1, 0), 0.55, 10))
+                .extracting(vn.tsolve.chatbot.source.service.WikiSources.WikiPassage::wikiDocumentId)
+                .containsExactly(companyWide));
+    }
+
+    @Test
     void insertFailureRollsBackDeletionAndAllNewChunks_AC_004_14() {
         UUID id = document(space, null, "Guide", "COMPANY_WIDE", "PENDING", "a".repeat(1001));
         chunk(id, 0, 1, 0);

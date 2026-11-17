@@ -2,6 +2,7 @@ package vn.tsolve.chatbot.answer.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -19,8 +20,12 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -52,15 +57,21 @@ import vn.tsolve.chatbot.answer.dto.TicketSolutionCitation;
 import vn.tsolve.chatbot.answer.dto.WikiDocumentCitation;
 import vn.tsolve.chatbot.answer.entity.ChatbotAnswer;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
+import vn.tsolve.chatbot.exception.ChatbotProjectNotActiveException;
+import vn.tsolve.chatbot.rating.entity.ChatbotRating;
+import vn.tsolve.chatbot.rating.exception.ChatbotAnswerNotFoundException;
 import vn.tsolve.chatbot.source.service.WikiSources;
 import vn.tsolve.chatbot.source.service.WikiSources.WikiPassage;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.search.retrieval.dto.RetrievedSolution;
+import vn.tsolve.search.retrieval.dto.RetrievedTicketSolution;
 import vn.tsolve.search.retrieval.service.SolutionRetrieval;
+import vn.tsolve.ticket.service.ProjectAccess;
 
 @ExtendWith(OutputCaptureExtension.class)
 class ChatbotAnswerServiceImplTest {
     private static final UUID ANSWER_ID = UUID.fromString("70000000-0000-0000-0000-000000000001");
+    private static final Instant NOW = Instant.parse("2026-11-17T10:00:00Z");
     private static final TSolveUser USER = new TSolveUser(UUID.randomUUID(), "asker@example.test", "Asker", Set.of());
     private final EmbeddingClient embeddings = mock(EmbeddingClient.class);
     private final LlmClient llm = mock(LlmClient.class);
@@ -596,6 +607,143 @@ class ChatbotAnswerServiceImplTest {
         verify(answers).save(any());
         verify(transactions).rollback(any());
         verify(transactions, never()).commit(any());
+    }
+
+    @Test
+    void answersFromTheProjectsDepartmentAndStoresNoUser_AC_012_1_AC_012_2() {
+        UUID project = UUID.randomUUID();
+        var service = projectService(project, true);
+        when(embeddings.embed(List.of("question"))).thenReturn(List.of(vector));
+        when(solutions.nearestInProjectDepartment(project, vector, 0.7, 5))
+                .thenReturn(List.of(new RetrievedTicketSolution(
+                        UUID.randomUUID(), "vpn drops", "cause", "steps", " ", "scope", 0.9)));
+        UUID document = UUID.randomUUID();
+        when(wiki.nearestCompanyWide(vector, 0.7, 5))
+                .thenReturn(List.of(new WikiPassage(document, "VPN guide", "Reconnect", 0.8)));
+        when(llm.chat(any(), isNull())).thenReturn("Restart the client [1] and read [2]");
+
+        var response = service.askForProject(project, Optional.empty(), question());
+
+        assertThat(response.outcome()).isEqualTo(Outcome.ANSWERED);
+        assertThat(response.citations()).hasSize(2);
+        assertThat(response.citations().get(0)).isInstanceOf(TicketSolutionCitation.class);
+        verify(solutions, never()).nearest(any(), anyDouble(), anyInt());
+        verify(wiki, never()).nearest(any(), any(), anyDouble(), anyInt());
+        ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
+        verify(answers).save(saved.capture());
+        assertThat(saved.getValue().getUserId()).isNull();
+        assertThat(saved.getValue().getSource()).isEqualTo(ChatbotAnswer.JIRA_APP);
+        assertThat(saved.getValue().getProjectId()).isEqualTo(project);
+        assertThat(saved.getValue().getQuestion()).isEqualTo("question");
+    }
+
+    @Test
+    void classifiesAJiraQuestionBeforeItsSearch_AC_012_1_AC_009_1_AC_009_3() {
+        UUID project = UUID.randomUUID();
+        var service = projectService(project, true);
+
+        var greeting = service.askForProject(project, Optional.empty(), new ChatbotQuestionRequest("hi", List.of()));
+        assertThat(greeting.outcome()).isEqualTo(Outcome.GREETING);
+        verifyNoInteractions(llm, embeddings, solutions, wiki);
+
+        when(llm.chat(any(), notNull())).thenReturn("{\"category\":\"INJECTION\",\"query\":\"\"}");
+        var refused = service.askForProject(project, Optional.empty(), question());
+        assertThat(refused.outcome()).isEqualTo(Outcome.INJECTION);
+        assertThat(refused.text()).isEmpty();
+        verifyNoInteractions(embeddings, solutions, wiki);
+        ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
+        verify(answers, times(2)).save(saved.capture());
+        assertThat(saved.getAllValues())
+                .extracting(ChatbotAnswer::getSource, ChatbotAnswer::getProjectId, ChatbotAnswer::getOutcome)
+                .containsExactly(
+                        tuple(ChatbotAnswer.JIRA_APP, project, "GREETING"),
+                        tuple(ChatbotAnswer.JIRA_APP, project, "INJECTION"));
+    }
+
+    @Test
+    void givesALinkedAskerTheWikiTheyMayViewAndStillStoresNoUser_AC_012_1() {
+        UUID project = UUID.randomUUID();
+        var service = projectService(project, true);
+        when(embeddings.embed(List.of("question"))).thenReturn(List.of(vector));
+        when(solutions.nearestInProjectDepartment(project, vector, 0.7, 5)).thenReturn(List.of());
+        UUID document = UUID.randomUUID();
+        when(wiki.nearest(USER, vector, 0.7, 5))
+                .thenReturn(List.of(new WikiPassage(document, "Department runbook", "Reconnect", 0.8)));
+        when(llm.chat(any(), isNull())).thenReturn("Reconnect [1]");
+
+        var response = service.askForProject(project, Optional.of(USER), question());
+
+        assertThat(response.outcome()).isEqualTo(Outcome.ANSWERED);
+        verify(wiki, never()).nearestCompanyWide(any(), anyDouble(), anyInt());
+        ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
+        verify(answers).save(saved.capture());
+        assertThat(saved.getValue().getUserId()).isNull();
+        assertThat(saved.getValue().getProjectId()).isEqualTo(project);
+    }
+
+    @Test
+    void storesAWebQuestionWithItsUserAndNoProject_AC_012_2() {
+        withSolution();
+        when(llm.chat(any(), isNull())).thenReturn("Answer [1]");
+
+        service.ask(USER, question());
+
+        ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
+        verify(answers).save(saved.capture());
+        assertThat(saved.getValue().getUserId()).isEqualTo(USER.id());
+        assertThat(saved.getValue().getSource()).isEqualTo(ChatbotAnswer.WEB);
+        assertThat(saved.getValue().getProjectId()).isNull();
+    }
+
+    @Test
+    void refusesAnInactiveProjectBeforeAnyAiCall_AC_012_4() {
+        UUID project = UUID.randomUUID();
+        var service = projectService(project, false);
+
+        assertThatThrownBy(() -> service.askForProject(project, Optional.empty(), question()))
+                .isInstanceOf(ChatbotProjectNotActiveException.class)
+                .hasMessage("MSG08");
+        assertThatThrownBy(() -> service.askForProject(null, Optional.empty(), question()))
+                .isInstanceOf(ChatbotProjectNotActiveException.class);
+        verifyNoInteractions(embeddings, llm, solutions, wiki, answers);
+    }
+
+    @Test
+    void ratesOnlyAJiraQuestionOfThatProject_AC_012_7() {
+        UUID project = UUID.randomUUID();
+        UUID answer = UUID.randomUUID();
+        var service = projectService(project, true);
+        when(answers.updateProjectRating(any(), any(), any(), any())).thenReturn(0);
+        when(answers.updateProjectRating(answer, project, ChatbotRating.HELPFUL, NOW))
+                .thenReturn(1);
+
+        service.rateForProject(project, answer, ChatbotRating.HELPFUL);
+
+        verify(answers).updateProjectRating(answer, project, ChatbotRating.HELPFUL, NOW);
+        assertThatThrownBy(() -> service.rateForProject(UUID.randomUUID(), answer, ChatbotRating.NOT_HELPFUL))
+                .isInstanceOf(ChatbotAnswerNotFoundException.class)
+                .hasMessage("MSG04");
+        assertThatThrownBy(() -> service.rateForProject(project, answer, null))
+                .isInstanceOf(ChatbotAnswerNotFoundException.class);
+    }
+
+    private ChatbotAnswerServiceImpl projectService(UUID activeProject, boolean active) {
+        ProjectAccess projects = mock(ProjectAccess.class);
+        when(projects.isActive(activeProject)).thenReturn(active);
+        return new ChatbotAnswerServiceImpl(
+                embeddings,
+                llm,
+                solutions,
+                wiki,
+                answers,
+                transactions,
+                new ObjectMapper(),
+                executor,
+                0.7,
+                5,
+                Duration.ofSeconds(2),
+                projects,
+                Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     private ChatbotAnswerServiceImpl service(Duration timeout, int limit) {

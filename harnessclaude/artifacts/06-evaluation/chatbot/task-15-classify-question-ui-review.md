@@ -102,7 +102,7 @@ No blocking issues. The informational items 1 to 6 are listed in Stage 2.
 - Caller's evidence, not re-run: chatbot 142/142, catalog 211/211, typecheck, lint and format:check clean.
 
 ## Resolution (2026-11-17, before commit)
-- The emoji normalization finding is fixed as BUG-314 (`docs/bug-log.md`): both normalizers also strip `\p{Cf}`
-  (ZWJ, zero-width space) and U+FE00–U+FE0F. New tests `QuestionClassifierTest.stripsEmojiJoinersAndSelectors_AC_009_1_BUG_314`
-  and `handlers.test.ts` "AC-004.7 strips emoji joiners and selectors … (BUG-314)" failed before the fix and pass
+- The emoji normalization finding is fixed as BUG-321 (`docs/bug-log.md`): both normalizers also strip `\p{Cf}`
+  (ZWJ, zero-width space) and U+FE00–U+FE0F. New tests `QuestionClassifierTest.stripsEmojiJoinersAndSelectors_AC_009_1_BUG_321`
+  and `handlers.test.ts` "AC-004.7 strips emoji joiners and selectors … (BUG-321)" failed before the fix and pass
   after it. The keycap mark U+20E3 is not stripped (a "1️⃣" greeting goes to the classifier).

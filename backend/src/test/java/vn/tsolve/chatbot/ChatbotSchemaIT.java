@@ -127,7 +127,7 @@ class ChatbotSchemaIT {
     void rollsBackToTwoOutcomes_AC_009_8() throws Exception {
         try (Liquibase liquibase = liquibase()) {
             List<ChangeSet> changesets = liquibase.getDatabaseChangeLog().getChangeSets();
-            assertThat(changesets.getLast().getId()).isEqualTo("043-chatbot-answer-outcomes");
+            assertThat(changesets.getLast().getId()).isEqualTo("046-chatbot-answer-outcomes");
             liquibase.rollback(1, "");
             UUID user = insertUser();
             assertThatThrownBy(() -> insertAnswer(user, "GREETING", ""))

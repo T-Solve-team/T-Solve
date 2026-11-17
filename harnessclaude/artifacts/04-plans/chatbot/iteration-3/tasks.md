@@ -20,12 +20,12 @@ All three tasks are Jira KAN-243, so one branch `feat/KAN-243-chatbot-classify-q
 **Feature:** classify-outcome-schema
 **Jira:** KAN-243 · branch `feat/KAN-243-chatbot-classify-questions`
 **Description:**
-- Changeset `043-chatbot-answer-outcomes.sql` (next free number): drop `ck_chatbot_answer_outcome`, re-add it with
+- Changeset `046-chatbot-answer-outcomes.sql` (next free number): drop `ck_chatbot_answer_outcome`, re-add it with
   `ANSWERED`, `NO_SOURCE`, `GREETING`, `OFF_TOPIC`, `INJECTION`; `--rollback` restores the two-value check.
 - `ChatbotAnswerResponse.Outcome` gains the three values; `frontend/openapi/tsolve-api.yaml` `ChatbotAnswer.outcome`
   enum too; `npm run generate:api` in `frontend/`.
 **Files:**
-- Create: `backend/src/main/resources/db/changelog/changes/043-chatbot-answer-outcomes.sql`
+- Create: `backend/src/main/resources/db/changelog/changes/046-chatbot-answer-outcomes.sql`
 - Modify: `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `…/answer/dto/ChatbotAnswerResponse.java`,
   `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**` (generated)
 - Test: `…/ChatbotSchemaIT.java` (`acceptsClassifiedOutcomes_AC_009_8`, `rejectsUnknownOutcome_AC_009_8`)

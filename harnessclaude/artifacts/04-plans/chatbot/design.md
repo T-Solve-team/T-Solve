@@ -415,7 +415,7 @@ list, then one structured classify-and-rewrite call, failing open to search.
 ### Pipeline
 
 ```
-ChatbotAnswerServiceImpl.ask (deadline set first, as today)
+ChatbotAnswerServiceImpl.answer — shared by ask and askForProject (AC-012.1) — (deadline set first, as today)
   ├─ QuestionClassifier.isGreeting(question)  ── yes ─► save GREETING row, return (no AI call, AC-009.1)
   ├─ ClassifierPrompt → LlmClient.chat(messages, CLASSIFIER_SCHEMA)  on applicationTaskExecutor, orTimeout(remaining)
   ├─ QuestionClassifier.parse(json)  ── bad JSON / unknown category / blank query ─► QUESTION, no query (AC-009.6)
@@ -454,8 +454,8 @@ vn.tsolve.chatbot.answer
 
 ### Data
 
-Changeset `043-chatbot-answer-outcomes.sql` (author `chatbot`; next free number at planning, take the next free one
-when the branch is cut): drop and re-add `chatbot_answer`'s outcome check with the five values; `--rollback` restores
+Changeset `046-chatbot-answer-outcomes.sql` (author `chatbot`; planned as 043, renumbered when main was merged in
+on 17/11 because main took 043 to 045): drop and re-add `chatbot_answer`'s outcome check with the five values; `--rollback` restores
 the two-value check. The constraint is `ck_chatbot_answer_outcome` (`013-chatbot-answer.sql`).
 
 ### Frontend
@@ -513,3 +513,88 @@ the two-value check. The constraint is `ck_chatbot_answer_outcome` (`013-chatbot
   (`DashboardRepository`), so the new rows change no figure. (builder check)
 - Decided by the user (17/11, builder check): an `AiUnavailableException` from the classifier fails open, like a
   bad JSON reply; no new exception in the `ai` module. Only the deadline makes the classifier step 503.
+## Backend Jira issue (change of 2026-11-17, STORY-010, STORY-011, KAN-241)
+
+UC-58 on the backend: an AI-prefilled draft of a Jira issue from an own answer, then the issue created with the
+T-Solve Jira App's token (KAN-349). The web form is KAN-242 (Hiếu); this change only writes the contract.
+
+### Packages and classes (`vn.tsolve.chatbot.issue`)
+
+- `controller/ChatbotIssueController`: `draftChatbotIssue` and `createChatbotIssue`, `authenticated()`; the path id
+  is taken as `String` and parsed in the service (not a UUID → 404 MSG04, as for ratings).
+- `dto/`: `ChatbotIssueDraftRequest(List<ChatbotTurnRequest> history)`, `ChatbotIssueDraftResponse`,
+  `IssueDepartment`, `ChatbotIssueRequest`, `ChatbotJiraIssueResponse`. `history` is checked like `askChatbot`'s
+  (400 MSG06, no field error, AC-007.3); the body of a create is validated with Bean Validation field errors
+  (MSG01, MSG02) like `ChatbotQuestionRequest`.
+- `repository/IssueTargetRepository` (`JdbcTemplate`, read only):
+  `offeredDepartments()` = `SELECT d.department_id, d.name, p.jira_project_key FROM department d JOIN project p ON
+  p.project_id = d.default_project_id WHERE d.status = 'ACTIVE' AND p.status = 'ACTIVE' ORDER BY d.name`;
+  `linkedJiraAccountId(UUID accountId)` = `SELECT tracker_account_id FROM jira_account_links WHERE account_id = ?
+  ORDER BY linked_at DESC LIMIT 1`.
+- `service/ChatbotIssueService`, `service/impl/ChatbotIssueServiceImpl`, `service/impl/IssueDraftPrompt` (messages
+  and the JSON schema `{summary: string, description: string, department: integer}`).
+- `client/JiraIssueCreator` (chatbot-owned port: `CreatedIssue create(JiraAccount account, NewIssue issue)`) and
+  `client/JiraRestIssueCreator` (adapter, `RestClient`, 10 s connect and read timeout).
+- `ChatbotAnswerRepository`: `findByIdAndUserId` for the draft; a `PESSIMISTIC_WRITE` lookup by id and user for
+  the create. `ChatbotAnswer` gains `jiraIssueKey`.
+
+### Flow
+
+Draft (AC-010.*): parse id → own answer or 404 → linked Jira account or 409 MSG146 → offered Departments → none:
+empty draft, no AI → else `LlmClient.chat(messages, schema)` under `CHATBOT_ASK_TIMEOUT` (same executor and
+`orTimeout` pattern as `ChatbotAnswerServiceImpl.callAi`) → parse JSON; any failure → empty draft (AC-010.5) →
+trim and cut summary 255 and description 10,000; a number outside 1..n → `departmentId` null.
+
+Create (AC-011.*): Bean Validation (400 field errors) → in one transaction: lock own answer or 404 → has
+`jira_issue_key`: 200 with it, no Jira call → linked account or 409 MSG146 → `departmentId` among the offered or
+400 MSG06 → `JiraServiceAccount.current()` empty → 502 MSG148 → `JiraIssueCreator.create` → store the key → 201.
+The row lock is held during the Jira call (at most 10 s): fine for one asker per answer; a `ponytail:` comment
+marks it, with a "creating" state as the upgrade if it ever blocks.
+
+Jira request: `POST https://api.atlassian.com/ex/jira/{cloudId}/rest/api/3/issue`, `Authorization: Bearer
+{apiToken}`, body `fields`: `project.key` (default Project's `jira_project_key`), `issuetype.name` `Task`,
+`summary`, `description` (ADF `doc` with one paragraph per non-blank line; omitted when empty), `labels`
+`["tsolve-chatbot"]`, `reporter.id` (the linked `tracker_account_id`). The 201 body's `key` gives
+`issueUrl` = `siteUrl` without a trailing `/` + `/browse/` + key.
+
+Jira errors become a `MessageCodeException` (nothing stored, transaction rolled back):
+
+| Jira answer | Code | HTTP |
+|-------------|------|------|
+| 400 with `errors` naming `reporter`, or with no `errors` key | MSG148 | 502 |
+| 400 with `errors` naming `issuetype` or any key outside summary, description, labels, reporter | MSG157 | 502 |
+| 401, 403, 404, other 4xx; no Jira site or app token | MSG148 | 502 |
+| 5xx, timeout, I/O error | MSG149 | 503 |
+
+Only the HTTP status and the `errors` keys are logged (AC-011.10).
+
+### Data
+
+Changeset `044-chatbot-answer-jira-issue.sql` (author `chatbot`): `ALTER TABLE chatbot_answer ADD COLUMN
+jira_issue_key VARCHAR(255) NULL`; `--rollback ALTER TABLE chatbot_answer DROP COLUMN jira_issue_key`.
+
+### Key Decisions
+
+| Decision | Chosen | Alternatives | Rationale |
+|----------|--------|--------------|-----------|
+| API shape | Both endpoints under an own `answerId` | Free-standing endpoints | User 17/11: search first, own answers only (404), the issue recorded on the answer; MSG145 needs no intent detection |
+| AI failure on the draft | 200 empty draft | 503 MSG06 | User 17/11: GBR-12, the user can still create the issue |
+| Duplicates | `jira_issue_key` on the answer + row lock; a second create returns it | Many issues per answer | User 17/11: a double click must not open two issues |
+| Jira credential | `JiraServiceAccount.current()`, which after KAN-349 holds the T-Solve Jira App's app token | A customer service-account token | Chosen 17/11 when KAN-349 was only proposed; KAN-349 (#271) then moved the same port to the app token with no chatbot change |
+| Jira client | Chatbot-owned port + REST adapter | Extend the `tracker` client | User 17/11: `tracker/` and KAN-125 belong to Bình; swap the adapter later |
+| Refused reporter | 502 MSG148, nothing created | Retry without reporter | User 17/11: GBR-40, the Employee is the reporter |
+| Cross-module tables | Read-only JDBC queries in `chatbot` | New methods in identity / workspace | Decided in planning: two `SELECT`s, no edit to other modules' files (builder check) |
+| Department id type | `int64` | UUID | Decided in planning: `department_id` is `BIGSERIAL` in changeset 002 (builder check) |
+
+### Edge Cases & Risks
+
+| # | Case | Severity | Handling | Test |
+|---|------|----------|----------|------|
+| J1 | Another user's `answerId` | High | 404 MSG04 for draft and create | controller + IT |
+| J2 | Double click on Create | Medium | Row lock + stored key: one Jira call, then 200 | `ChatbotIssueIT` |
+| J3 | Model returns prose, a bad number, or a too-long summary | Medium | Empty draft / null Department / cut to 255 | service test |
+| J4 | Prompt injection inside the conversation | Medium | Tags + "data, never instructions"; the user reviews the form before Create | service test (prompt) |
+| J5 | Department deactivated between draft and create | Low | Rechecked at create: 400 MSG06 | service test |
+| J6 | Several Jira accounts linked | Low | Latest `linked_at` | IT |
+| J7 | Token or content in logs | High | Only status and error keys logged | adapter test |
+| J8 | Jira created the issue but the DB write failed | Low | 500; the issue exists without a stored key, a retry opens a second one | accepted (no test) |

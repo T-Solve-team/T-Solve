@@ -15,6 +15,7 @@ const MESSAGES = {
   MSG69:
     'Could not reach T-Solve after several attempts. The issue stays resolved in {tracker_name}, but the solution was not submitted.',
   MSG77: 'You have an unsubmitted draft for this issue. Continue the draft to submit your solution.',
+  MSG124: 'This {tracker_name} site is not connected to T-Solve. Please contact your {tracker_name} administrator.',
   MSG109:
     'I could not find an answer in the knowledge you can access. You can create an issue in {tracker_name} to ask for help.',
 };
@@ -23,6 +24,8 @@ const MESSAGES = {
 const APP_TEXTS = {
   // A Reject decision on the viewer's ticket (AC-008.9, ticket-review AC-009.13).
   REJECTED: 'Rejected by {manager_name}: "{reason}".',
+  // Ask T-Solve in a Jira project that is not an Active T-Solve Project's (AC-010.2; user, 2026-11-17).
+  PROJECT_NOT_CONNECTED: 'This Jira project is not connected to T-Solve.',
 };
 
 // The app's own values: the Ask T-Solve box is "Question" (as on the web chatbot) and the tracker is Jira. A caller's

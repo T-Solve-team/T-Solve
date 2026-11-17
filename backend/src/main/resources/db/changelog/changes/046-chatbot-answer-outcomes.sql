@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset chatbot:043-chatbot-answer-outcomes
+--changeset chatbot:046-chatbot-answer-outcomes
 -- KAN-243: greetings and refused questions get their own outcome, so the knowledge gaps (NO_SOURCE) leave them out.
 ALTER TABLE chatbot_answer DROP CONSTRAINT ck_chatbot_answer_outcome;
 ALTER TABLE chatbot_answer ADD CONSTRAINT ck_chatbot_answer_outcome

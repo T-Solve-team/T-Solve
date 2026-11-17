@@ -13,16 +13,16 @@ import { renderApp } from '@/test/render';
 const VALUES: WorkspaceSetupRequest = {
   companyName: 'Example Company',
   jiraSiteUrl: 'https://company.atlassian.net',
-  serviceAccountToken: 'fake-test-api-token',
 };
 const LABELS = {
   companyName: 'Company name',
   jiraSiteUrl: 'Jira site address',
-  serviceAccountToken: 'Service account API token',
 } as const;
 const INFO = {
   companyName: VALUES.companyName,
   jiraSiteUrl: VALUES.jiraSiteUrl,
+  jiraAppConnected: false,
+  jiraAppTokenReceivedAt: null,
 };
 
 async function fillForm(user: ReturnType<typeof userEvent.setup>) {
@@ -58,7 +58,7 @@ describe('WorkspaceSetupPage', () => {
     expect(router.state.location.pathname).toBe(paths.workspaceSetup);
   });
 
-  it('AC-009.2 shows three required fields, no email field, the Jira placeholder and a masked scoped token', async () => {
+  it('AC-009.2 shows two required fields, no service account field and the Jira placeholder', async () => {
     renderApp(paths.workspaceSetup, { role: 'ADMIN' });
     await screen.findByRole('button', { name: 'Save' }, { timeout: 5000 });
     for (const label of Object.values(LABELS)) {
@@ -68,10 +68,7 @@ describe('WorkspaceSetupPage', () => {
       'placeholder',
       'https://company.atlassian.net',
     );
-    expect(screen.getByLabelText(LABELS.serviceAccountToken)).toHaveAttribute('type', 'password');
-    expect(
-      screen.getByText('The scoped API token of an Atlassian service account.'),
-    ).toBeInTheDocument();
+    expect(screen.queryByLabelText('Service account API token')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Service account email')).not.toBeInTheDocument();
   });
 
@@ -135,7 +132,6 @@ describe('WorkspaceSetupPage', () => {
     ['MSG02', 'companyName', { field_name: LABELS.companyName, max_length: 100 }],
     ['MSG61', 'jiraSiteUrl', {}],
     ['MSG153', 'jiraSiteUrl', { tracker_name: 'Jira' }],
-    ['MSG156', 'serviceAccountToken', { tracker_name: 'Jira' }],
   ] as const)(
     'AC-009.4 displays server %s under %s and keeps every value',
     async (code, field, params) => {
@@ -153,7 +149,6 @@ describe('WorkspaceSetupPage', () => {
       await user.click(screen.getByRole('button', { name: 'Save' }));
       const message = msg(code, params);
       await waitFor(() =>
-        // the token field also has the scoped-token hint in its description
         expect(screen.getByLabelText(LABELS[field])).toHaveAccessibleDescription(
           expect.stringContaining(message),
         ),
@@ -222,9 +217,7 @@ describe('WorkspaceSetupPage', () => {
     await fillForm(user);
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByText(msg('MSG06'))).toBeInTheDocument();
-    expect(screen.getByLabelText(LABELS.serviceAccountToken)).toHaveValue(
-      VALUES.serviceAccountToken,
-    );
+    expect(screen.getByLabelText(LABELS.jiraSiteUrl)).toHaveValue(VALUES.jiraSiteUrl);
     await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled());
     fails = false;
     await user.click(screen.getByRole('button', { name: 'Save' }));
