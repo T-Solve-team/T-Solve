@@ -1,0 +1,3 @@
+# gitleaks false alarms: one Fingerprint line each, with the reason above it.
+# KAN-241: "PRIVATE_QUESTION_241" is a fake question marker that the test asserts never reaches the log.
+ba9dbfeed0154b8185e32be43dab552fd0cb640c:backend/src/test/java/vn/tsolve/chatbot/issue/service/impl/ChatbotIssueServiceImplTest.java:generic-api-key:256

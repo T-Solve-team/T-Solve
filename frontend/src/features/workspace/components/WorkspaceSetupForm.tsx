@@ -45,24 +45,6 @@ export function WorkspaceSetupForm() {
         >
           <Input placeholder="https://company.atlassian.net" count={{ show: true, max: 200 }} />
         </FormField>
-        <FormField<WorkspaceSetupRequest>
-          name="serviceAccountEmail"
-          label="Service account email"
-          rules={[
-            rules.required('Service account email'),
-            rules.maxLength('Service account email', 100),
-            rules.email(),
-          ]}
-        >
-          <Input autoComplete="username" count={{ show: true, max: 100 }} />
-        </FormField>
-        <FormField<WorkspaceSetupRequest>
-          name="serviceAccountToken"
-          label="Service account API token"
-          rules={[rules.required('Service account API token')]}
-        >
-          <Input.Password autoComplete="new-password" />
-        </FormField>
         <Flex justify="end">
           <Button
             aria-label="Save"

@@ -228,8 +228,13 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
                 .filter(TicketRepository.Placement::getDepartmentActive)
                 .orElseThrow(() -> new AccessDeniedException("Active ticket Department required"));
         var project = projects.get(ticket.getProjectId());
-        boolean canReadReview =
-                Objects.equals(ticket.getWriterId(), accountId) || (manager && project != null && project.managed());
+        // the readable Projects hold only ACTIVE ones: an inactive Project's manager is found in project_membership
+        // (AC-008.2, BUG-312)
+        boolean projectManager = manager
+                && (project != null
+                        ? project.managed()
+                        : tickets.isProjectManager(placement.getProjectPublicId(), accountId));
+        boolean canReadReview = Objects.equals(ticket.getWriterId(), accountId) || projectManager;
         boolean canRead = ticket.getStatus() == TicketStatus.PUBLISHED
                 ? scopeAccess.canAccessDepartment(accountId, placement.getDepartmentId())
                 : canReadReview;
@@ -250,6 +255,8 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
                                 ? ticket.getRejectionReason()
                                 : ticket.getChangeRequestComment())
                         : null,
+                // deciding stays with the active Projects the decision service checks (managedProjectIds); AC-008.2
+                // widens only reading
                 manager
                         && project != null
                         && project.managed()

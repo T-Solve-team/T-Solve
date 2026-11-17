@@ -16,4 +16,5 @@ public record WikiDocumentDetail(
         String content,
         String fileName,
         long fileSize,
-        boolean canDelete) {}
+        boolean canDelete,
+        boolean inTrash) {}

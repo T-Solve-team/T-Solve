@@ -33,6 +33,8 @@ import vn.tsolve.search.scope.entity.SearchTicket;
 import vn.tsolve.search.scope.service.VisibleScope;
 
 class TicketListServiceImplTest {
+    private static final UUID WRITER_ID = UUID.fromString("00000000-0000-0000-0000-0000000000aa");
+
     private final TicketListRepository repository = mock(TicketListRepository.class);
     private final VisibleScope visibleScope = mock(VisibleScope.class);
     private final TicketSummaryMapper mapper = mock(TicketSummaryMapper.class);
@@ -41,7 +43,7 @@ class TicketListServiceImplTest {
 
     @BeforeEach
     void scope() {
-        when(visibleScope.of(user)).thenReturn(new VisibleScope.Scope(Set.of(1L), Set.of(7L), Optional.of("writer")));
+        when(visibleScope.of(user)).thenReturn(new VisibleScope.Scope(Set.of(1L), Set.of(7L), Optional.of(WRITER_ID)));
     }
 
     @Test

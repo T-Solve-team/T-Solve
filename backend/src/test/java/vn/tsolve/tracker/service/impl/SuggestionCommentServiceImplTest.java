@@ -33,7 +33,7 @@ class SuggestionCommentServiceImplTest {
 
     private static final UUID ID = UUID.fromString("0c9f3e52-6a41-4d7b-8e2f-91b3c5d7a640");
     private static final JiraAccount ACCOUNT =
-            new JiraAccount("https://acme.atlassian.net", "bot@acme.test", "secret-token");
+            new JiraAccount("https://acme.atlassian.net", "1324a887-45db-1bf4-1e99-ef0ff456d421", "secret-token");
     private static final String SUGGESTION = "Update the VPN client to 5.2.";
 
     @Mock

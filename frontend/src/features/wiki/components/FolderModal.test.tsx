@@ -303,7 +303,7 @@ describe('FolderModal', () => {
     expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
   });
 
-  it('AC-003.15 persists create, rename and move through the feature mocks and AC-003.16 deletes the refreshed folder (BUG-264)', async () => {
+  it('AC-003.15 persists create, rename and move through the feature mocks and AC-003.16 deletes the refreshed folder (BUG-264, BUG-316)', async () => {
     server.resetHandlers();
     const { user, dialog, name } = await openFolder();
     await user.click(name);
@@ -336,7 +336,9 @@ describe('FolderModal', () => {
     const deletion = await openAction('Support', 'Delete');
     await user.click(within(deletion).getByRole('button', { name: 'Delete' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(screen.getByRole('tree', { name: 'Folders' })).not.toHaveTextContent('Support');
+    await waitFor(() =>
+      expect(screen.getByRole('tree', { name: 'Folders' })).not.toHaveTextContent('Support'),
+    );
     expect(screen.getAllByText(msg('MSG05')).length).toBeGreaterThan(0);
   });
 });

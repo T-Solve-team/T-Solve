@@ -1,35 +1,24 @@
 import { Button, Flex, Form, Input, Typography } from 'antd';
 import type { WorkspaceInfo, WorkspaceUpdateRequest } from '@/shared/api';
 import { applyApiErrors, rules } from '@/shared/forms';
+import { formatDateTime } from '@/shared/lib/date';
 import { showMessage } from '@/shared/messages';
 import { AppForm, FormField, SectionCard } from '@/shared/ui';
 import { useUpdateWorkspaceInfo } from '../hooks/useWorkspace';
 
 type WorkspaceInfoFormProps = { workspace: WorkspaceInfo };
 
-/** An empty token keeps the stored one, so it is left out of the request (AC-010.3, edge 19). */
-function toRequest({
-  serviceAccountToken,
-  ...rest
-}: WorkspaceUpdateRequest): WorkspaceUpdateRequest {
-  return serviceAccountToken?.trim() ? { ...rest, serviceAccountToken } : rest;
-}
-
 /** 2.2 "Company information" section (STORY-010). */
 export function WorkspaceInfoForm({ workspace }: WorkspaceInfoFormProps) {
   const [form] = Form.useForm<WorkspaceUpdateRequest>();
   const update = useUpdateWorkspaceInfo();
-  // Only these two fields: a stored token is never put into the form (AC-010.2).
-  const loaded = {
-    companyName: workspace.companyName,
-    serviceAccountEmail: workspace.serviceAccountEmail,
-  };
+  // Only the company name is edited (AC-010.3); T-Solve holds no Jira credential to show (KAN-349).
+  const loaded = { companyName: workspace.companyName };
 
   function submit(values: WorkspaceUpdateRequest) {
     update.mutate(
-      { data: toRequest(values) },
+      { data: { companyName: values.companyName } },
       {
-        onSuccess: () => form.resetFields(['serviceAccountToken']),
         onError: (error) => {
           if (!applyApiErrors(form, error)) showMessage(error.code, error.params);
         },
@@ -56,22 +45,18 @@ export function WorkspaceInfoForm({ workspace }: WorkspaceInfoFormProps) {
           <Typography.Text>{workspace.jiraSiteUrl}</Typography.Text>
         </FormField>
         <FormField<WorkspaceUpdateRequest>
-          name="serviceAccountEmail"
-          label="Service account email"
-          rules={[
-            rules.required('Service account email'),
-            rules.maxLength('Service account email', 100),
-            rules.email(),
-          ]}
+          label="Jira App"
+          extra={
+            workspace.jiraAppConnected
+              ? undefined
+              : 'Install the T-Solve Jira App on this Jira site.'
+          }
         >
-          <Input autoComplete="username" count={{ show: true, max: 100 }} />
-        </FormField>
-        <FormField<WorkspaceUpdateRequest>
-          name="serviceAccountToken"
-          label="Service account API token"
-          extra="Leave empty to keep the current token."
-        >
-          <Input.Password autoComplete="new-password" />
+          <Typography.Text>
+            {workspace.jiraAppConnected
+              ? `Connected — last update ${formatDateTime(workspace.jiraAppTokenReceivedAt)}`
+              : 'Not connected'}
+          </Typography.Text>
         </FormField>
         <Flex justify="end" gap="small">
           <Button onClick={() => form.resetFields()}>Cancel</Button>

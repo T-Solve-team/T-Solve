@@ -17,6 +17,12 @@ paths:
   - backend/src/main/java/vn/tsolve/tracker/service/JiraServiceAccount.java
   - backend/src/main/java/vn/tsolve/tracker/service/impl/ConfiguredJiraServiceAccount.java
   - backend/src/test/java/vn/tsolve/tracker/service/impl/ConfiguredJiraServiceAccountTest.java
+  - backend/src/main/java/vn/tsolve/tracker/service/TrackerProjectService.java
+  - backend/src/main/java/vn/tsolve/tracker/service/impl/TrackerProjectServiceImpl.java
+  - backend/src/test/java/vn/tsolve/tracker/service/impl/TrackerProjectServiceImplTest.java
+  - backend/src/main/java/vn/tsolve/tracker/dto/ChatbotProjectCheck.java
+  - backend/src/main/java/vn/tsolve/tracker/dto/TrackerCreateField.java
+  - backend/src/test/java/vn/tsolve/project/ProjectApiITConfiguration.java
   - backend/src/main/resources/application.yml
   - backend/src/test/resources/**
   - .env.example

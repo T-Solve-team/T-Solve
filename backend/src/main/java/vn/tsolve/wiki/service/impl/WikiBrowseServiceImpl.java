@@ -49,7 +49,10 @@ public class WikiBrowseServiceImpl implements WikiBrowseService {
 
     @Override
     public WikiDocumentDetail getDocument(UUID userId, UUID documentId) {
-        return repository.findDocument(userId, documentId).orElseThrow(() -> new NotFoundException("MSG110", Map.of()));
+        return repository
+                .findDocument(userId, documentId)
+                .or(() -> repository.findTrashedDocument(userId, documentId))
+                .orElseThrow(() -> new NotFoundException("MSG110", Map.of()));
     }
 
     private long requireViewableSpace(UUID userId, UUID spaceId) {

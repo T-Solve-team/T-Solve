@@ -184,3 +184,9 @@ port 8080 was taken), ngrok to the remote baseUrl, stub link to a test Account.
 | AC-010.11 POST 403 MSG62 reaching the page through Forge (`application/problem+json`) | ⏭ not checked (the user reloaded, so MSG62 came from eligibility). If Forge rejects problem+json the page shows MSG06 and the POST still refuses — fails safe |
 
 Skipped by the user's choice (08/11); re-check both open rows when Ollama is reachable.
+
+## Change 2026-11-17: the app token reaches the backend (KAN-349)
+The app sends its app system token through an hourly scheduled trigger and its install/upgrade trigger, each invoking
+the remote endpoint `/api/v1/jira-app/app-token` directly with `appSystemToken` (Forge recommends no function hop:
+`invokeRemote` may deliver a token with much less than 2 h left). The backend (workspace STORY-014) keeps it encrypted
+in Redis. Scope `write:jira-work` is added for the MSG80 comment and issue creation (RESEARCH-005).
