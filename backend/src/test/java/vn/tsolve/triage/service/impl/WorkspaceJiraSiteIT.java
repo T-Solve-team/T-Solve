@@ -2,26 +2,26 @@ package vn.tsolve.triage.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.TestPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
-import vn.tsolve.identity.signin.SignInTestFixtures;
+import vn.tsolve.identity.TwoTenantDatabases;
+import vn.tsolve.identity.signin.port.TenantScope;
 import vn.tsolve.triage.service.JiraSite;
 
 /** The Jira site comes from the bound Workspace's singleton row; none, null or blank means no issue link. */
-@SpringBootTest
-@TestPropertySource(
+@SpringBootTest(
         properties = {
-            "TSOLVE_LOGIN_ORIGIN=" + SignInTestFixtures.LOGIN_ORIGIN,
-            "TSOLVE_ADMIN_ORIGIN=" + SignInTestFixtures.ADMIN_ORIGIN,
-            "TSOLVE_SIGNING_KEY=" + SignInTestFixtures.KEY,
+            "TSOLVE_LOGIN_ORIGIN=http://127.0.0.1:9",
+            "TSOLVE_ADMIN_ORIGIN=http://admin.localhost:8081",
+            "TSOLVE_SIGNING_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
             "GOOGLE_CLIENT_ID=test-client-id",
             "GOOGLE_CLIENT_SECRET=test-secret",
             "PLATFORM_OPERATOR_EMAILS=ops@example.test",
@@ -33,55 +33,71 @@ import vn.tsolve.triage.service.JiraSite;
             "DB_USER=unused",
             "DB_PASSWORD=unused"
         })
+@AutoConfigureMockMvc
+@Import(TwoTenantDatabases.class)
 class WorkspaceJiraSiteIT {
-
-    @ServiceConnection
-    static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>(
-            DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
-
-    static {
-        DB.start();
-    }
-
-    @Autowired
-    private JdbcTemplate jdbc;
 
     @Autowired
     private JiraSite jiraSite;
 
+    @Autowired
+    private TenantScope scope;
+
+    // the workspace table is a singleton; the other workspace ITs also leave it empty
     @BeforeEach
+    @AfterEach
     void clean() {
-        jdbc.update("DELETE FROM workspace");
+        TwoTenantDatabases.tenantA().update("DELETE FROM workspace");
+        TwoTenantDatabases.tenantB().update("DELETE FROM workspace");
     }
 
     @Test
     void readsTheWorkspaceJiraSite_AC_003_5() {
-        workspace("https://acme.atlassian.net/");
+        workspace(TwoTenantDatabases.tenantA(), "https://acme.atlassian.net/");
 
-        assertThat(jiraSite.url()).contains("https://acme.atlassian.net/");
+        assertThat(site(TwoTenantDatabases.ACME)).contains("https://acme.atlassian.net/");
+    }
+
+    @Test
+    void readsOnlyTheBoundWorkspacesSite_AC_003_5() {
+        workspace(TwoTenantDatabases.tenantA(), "https://acme.atlassian.net/");
+        workspace(TwoTenantDatabases.tenantB(), "https://beta.atlassian.net/");
+
+        assertThat(site(TwoTenantDatabases.ACME)).contains("https://acme.atlassian.net/");
+        assertThat(site(TwoTenantDatabases.BETA)).contains("https://beta.atlassian.net/");
     }
 
     @Test
     void isEmptyWithoutAWorkspaceRow_AC_003_6() {
-        assertThat(jiraSite.url()).isEmpty();
+        workspace(TwoTenantDatabases.tenantB(), "https://beta.atlassian.net/");
+
+        assertThat(site(TwoTenantDatabases.ACME)).isEmpty();
     }
 
     @Test
     void isEmptyWhenTheWorkspaceHasNoSite_AC_003_6() {
-        workspace(null);
+        workspace(TwoTenantDatabases.tenantA(), null);
+        workspace(TwoTenantDatabases.tenantB(), "https://beta.atlassian.net/");
 
-        assertThat(jiraSite.url()).isEmpty();
+        assertThat(site(TwoTenantDatabases.ACME)).isEmpty();
+        assertThat(site(TwoTenantDatabases.BETA)).contains("https://beta.atlassian.net/");
     }
 
     @Test
     void isEmptyWhenTheSiteIsBlank_AC_003_6() {
-        workspace("  ");
+        workspace(TwoTenantDatabases.tenantA(), "  ");
+        workspace(TwoTenantDatabases.tenantB(), "https://beta.atlassian.net/");
 
-        assertThat(jiraSite.url()).isEmpty();
+        assertThat(site(TwoTenantDatabases.ACME)).isEmpty();
+        assertThat(site(TwoTenantDatabases.BETA)).contains("https://beta.atlassian.net/");
     }
 
-    private void workspace(String site) {
-        jdbc.update(
+    private Optional<String> site(UUID workspace) {
+        return scope.runIn(workspace, jiraSite::url);
+    }
+
+    private static void workspace(JdbcTemplate db, String site) {
+        db.update(
                 "INSERT INTO workspace (workspace_id, company_name, sign_in_provider, jira_site_address)"
                         + " VALUES (?, 'Acme', 'GOOGLE', ?)",
                 UUID.randomUUID(),
