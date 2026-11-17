@@ -6,6 +6,9 @@ import java.util.UUID;
 public record ChatbotAnswerResponse(UUID answerId, Outcome outcome, String text, List<ChatbotCitation> citations) {
     public enum Outcome {
         ANSWERED,
-        NO_SOURCE
+        NO_SOURCE,
+        GREETING,
+        OFF_TOPIC,
+        INJECTION
     }
 }

@@ -71,28 +71,19 @@ class ChatbotSchemaIT {
                         String.class))
                 .containsExactlyInAnyOrder(
                         "chatbot_answer_id", "user_id", "question", "outcome", "answer_text", "created_at");
-        assertThat(jdbc.queryForObject(
-                        """
+        assertThat(jdbc.queryForObject("""
                         SELECT count(*) FROM information_schema.columns
                         WHERE table_name = 'chatbot_answer' AND is_nullable = 'NO'
-                        """,
-                        Integer.class))
-                .isEqualTo(6);
-        assertThat(jdbc.queryForObject(
-                        """
+                        """, Integer.class)).isEqualTo(6);
+        assertThat(jdbc.queryForObject("""
                         SELECT data_type FROM information_schema.columns
                         WHERE table_name = 'chatbot_answer' AND column_name = 'created_at'
                           AND column_default = 'now()'
-                        """,
-                        String.class))
-                .isEqualTo("timestamp with time zone");
-        assertThat(jdbc.queryForObject(
-                        """
+                        """, String.class)).isEqualTo("timestamp with time zone");
+        assertThat(jdbc.queryForObject("""
                         SELECT column_default FROM information_schema.columns
                         WHERE table_name = 'chatbot_answer' AND column_name = 'chatbot_answer_id' AND data_type = 'uuid'
-                        """,
-                        String.class))
-                .isEqualTo("gen_random_uuid()");
+                        """, String.class)).isEqualTo("gen_random_uuid()");
         assertThat(jdbc.queryForObject(
                         "SELECT count(*) FROM chatbot_answer WHERE created_at IS NOT NULL", Integer.class))
                 .isEqualTo(2);
@@ -114,6 +105,38 @@ class ChatbotSchemaIT {
         assertThatThrownBy(() -> insertAnswer(user, "UNKNOWN", ""))
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .hasMessageContaining("ck_chatbot_answer_outcome");
+    }
+
+    @Test
+    void acceptsClassifiedOutcomes_AC_009_8() {
+        UUID user = insertUser();
+        for (String outcome : List.of("ANSWERED", "NO_SOURCE", "GREETING", "OFF_TOPIC", "INJECTION")) {
+            assertThat(insertAnswer(user, outcome, "")).isNotNull();
+        }
+    }
+
+    @Test
+    void rejectsUnknownOutcome_AC_009_8() {
+        UUID user = insertUser();
+        assertThatThrownBy(() -> insertAnswer(user, "REFUSED", ""))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("ck_chatbot_answer_outcome");
+    }
+
+    @Test
+    void rollsBackToTwoOutcomes_AC_009_8() throws Exception {
+        try (Liquibase liquibase = liquibase()) {
+            List<ChangeSet> changesets = liquibase.getDatabaseChangeLog().getChangeSets();
+            assertThat(changesets.getLast().getId()).isEqualTo("043-chatbot-answer-outcomes");
+            liquibase.rollback(1, "");
+            UUID user = insertUser();
+            assertThatThrownBy(() -> insertAnswer(user, "GREETING", ""))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("ck_chatbot_answer_outcome");
+            assertThat(insertAnswer(user, "NO_SOURCE", "")).isNotNull();
+            liquibase.update("");
+            assertThat(insertAnswer(user, "INJECTION", "")).isNotNull();
+        }
     }
 
     @Test
@@ -146,15 +169,10 @@ class ChatbotSchemaIT {
     }
 
     private UUID insertAnswer(UUID user, String outcome, String text) {
-        return jdbc.queryForObject(
-                """
+        return jdbc.queryForObject("""
                 INSERT INTO chatbot_answer(user_id, question, outcome, answer_text)
                 VALUES (?, 'Question', ?, ?) RETURNING chatbot_answer_id
-                """,
-                UUID.class,
-                user,
-                outcome,
-                text);
+                """, UUID.class, user, outcome, text);
     }
 
     private Liquibase liquibase() throws Exception {
