@@ -28,6 +28,8 @@ import type {
   ChatbotRating,
   IssueCreatedPayload,
   IssuePanel,
+  JiraAccountLinkStart,
+  JiraAccountLinkStatus,
   JiraAskerEligibility,
   JiraReviewFeedback,
   ProblemDetail,
@@ -373,6 +375,202 @@ export const useReceiveJiraAppToken = <TError = ErrorType<ProblemResponse>, TCon
   queryClient?: QueryClient,
 ): UseMutationResult<Awaited<ReturnType<typeof receiveJiraAppToken>>, TError, void, TContext> => {
   return useMutation(getReceiveJiraAppTokenMutationOptions(options), queryClient);
+};
+export const getGetJiraAccountLinkUrl = () => {
+  return `/api/v1/jira-app/account-link`;
+};
+
+/**
+ * The site and the Jira account come only from the verified FIT (`context.cloudId`, `principal`). LINKED carries the linked Active Account's full name and email and the link time; NOT_LINKED when there is no link or the Account is not Active; SITE_NOT_CONNECTED when the site belongs to no Workspace. A FIT without a Jira user → 403 MSG08. Calls no AI and stores nothing.
+ * @summary Whether the Jira user is linked to a T-Solve Account (STORY-014, AC-014.2).
+ */
+export const getJiraAccountLink = async (
+  options?: Parameters<typeof http>[1],
+): Promise<JiraAccountLinkStatus> => {
+  return http<JiraAccountLinkStatus>(getGetJiraAccountLinkUrl(), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetJiraAccountLinkQueryKey = () => {
+  return [`/api/v1/jira-app/account-link`] as const;
+};
+
+export const getGetJiraAccountLinkQueryOptions = <
+  TData = Awaited<ReturnType<typeof getJiraAccountLink>>,
+  TError = ErrorType<ProblemResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getJiraAccountLink>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetJiraAccountLinkQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getJiraAccountLink>>> = ({ signal }) =>
+    getJiraAccountLink({ signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getJiraAccountLink>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetJiraAccountLinkQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getJiraAccountLink>>
+>;
+export type GetJiraAccountLinkQueryError = ErrorType<ProblemResponse>;
+
+export function useGetJiraAccountLink<
+  TData = Awaited<ReturnType<typeof getJiraAccountLink>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getJiraAccountLink>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getJiraAccountLink>>,
+          TError,
+          Awaited<ReturnType<typeof getJiraAccountLink>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetJiraAccountLink<
+  TData = Awaited<ReturnType<typeof getJiraAccountLink>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJiraAccountLink>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getJiraAccountLink>>,
+          TError,
+          Awaited<ReturnType<typeof getJiraAccountLink>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetJiraAccountLink<
+  TData = Awaited<ReturnType<typeof getJiraAccountLink>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getJiraAccountLink>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Whether the Jira user is linked to a T-Solve Account (STORY-014, AC-014.2).
+ */
+
+export function useGetJiraAccountLink<
+  TData = Awaited<ReturnType<typeof getJiraAccountLink>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getJiraAccountLink>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetJiraAccountLinkQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getStartJiraAccountLinkUrl = () => {
+  return `/api/v1/jira-app/account-link`;
+};
+
+/**
+ * No body. The site and the Jira account come only from the verified FIT (AC-014.10). The server reads the Jira display name with the Workspace's app token and asks identity for a single-use link request (10 minutes, identity AC-001.69); the answer is the `/jira-link?request=<id>` link on the Workspace's site. A site of no Workspace → 403 MSG124; no Jira user → 403 MSG08; Jira, the app token or the link request store unavailable, or no display name → 503 MSG06; no link request is created in these cases (AC-014.9).
+ * @summary Starts linking the Jira user to a T-Solve Account (STORY-014, AC-014.6).
+ */
+export const startJiraAccountLink = async (
+  options?: Parameters<typeof http>[1],
+): Promise<JiraAccountLinkStart> => {
+  return http<JiraAccountLinkStart>(getStartJiraAccountLinkUrl(), {
+    ...options,
+    method: 'POST',
+  });
+};
+
+export const getStartJiraAccountLinkMutationKey = () => ['startJiraAccountLink'] as const;
+
+export const getStartJiraAccountLinkMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startJiraAccountLink>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof startJiraAccountLink>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = getStartJiraAccountLinkMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof startJiraAccountLink>>,
+    void
+  > = () => {
+    return startJiraAccountLink(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StartJiraAccountLinkMutationResult = NonNullable<
+  Awaited<ReturnType<typeof startJiraAccountLink>>
+>;
+
+export type StartJiraAccountLinkMutationError = ErrorType<ProblemResponse>;
+
+/**
+ * @summary Starts linking the Jira user to a T-Solve Account (STORY-014, AC-014.6).
+ */
+export const useStartJiraAccountLink = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof startJiraAccountLink>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof startJiraAccountLink>>, TError, void, TContext> => {
+  return useMutation(getStartJiraAccountLinkMutationOptions(options), queryClient);
 };
 export const getGetJiraAskerEligibilityUrl = () => {
   return `/api/v1/jira-app/questions/eligibility`;
