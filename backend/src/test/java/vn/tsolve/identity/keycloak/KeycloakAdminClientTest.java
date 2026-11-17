@@ -10,6 +10,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.moreThanOrExactly;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.putRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -165,6 +166,31 @@ class KeycloakAdminClientTest {
                 1,
                 postRequestedFor(urlPathEqualTo(ADMIN + "/identity-provider/instances"))
                         .withRequestBody(matchingJsonPath("$.config[?(@.prompt == 'select_account')]")));
+    }
+
+    @Test
+    @DisplayName("BUG-322 the backfill adds the account chooser only to Workspace IdPs that lack it")
+    void backfillSetsPromptOnlyWhereMissing_BUG_322() {
+        stubToken();
+        stubJson(get(urlPathEqualTo(ADMIN + "/identity-provider/instances")), """
+                [{"alias":"google-acme","providerId":"google","config":{"tsolve.workspace-id":"w-1"}},
+                 {"alias":"google-beta","providerId":"google",
+                  "config":{"tsolve.workspace-id":"w-2","prompt":"select_account"}},
+                 {"alias":"corp-saml","providerId":"saml","config":{}}]
+                """);
+        keycloak.stubFor(com.github.tomakehurst.wiremock.client.WireMock.put(
+                        urlPathMatching(ADMIN + "/identity-provider/instances/.*"))
+                .willReturn(aResponse().withStatus(204)));
+
+        int updated = client().addAccountChooserToWorkspaceIdps();
+
+        assertThat(updated).isEqualTo(1);
+        keycloak.verify(1, putRequestedFor(urlPathMatching(ADMIN + "/identity-provider/instances/.*")));
+        keycloak.verify(
+                1,
+                putRequestedFor(urlPathEqualTo(ADMIN + "/identity-provider/instances/google-acme"))
+                        .withRequestBody(matchingJsonPath("$.config[?(@.prompt == 'select_account')]"))
+                        .withRequestBody(matchingJsonPath("$.config[?(@['tsolve.workspace-id'] == 'w-1')]")));
     }
 
     // ---- S4: the IdP is found through the Organization, never by scanning every IdP ----

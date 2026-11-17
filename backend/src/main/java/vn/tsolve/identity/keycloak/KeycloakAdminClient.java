@@ -224,6 +224,39 @@ public class KeycloakAdminClient {
         send("POST", admin("/organizations/" + enc(organizationId) + "/identity-providers"), quote(alias), 204);
     }
 
+    /**
+     * Sets {@code prompt=select_account} on every Workspace Google identity provider that lacks it, so the ones
+     * created before KAN-355 also show Google's account chooser. Idempotent; returns how many it changed. Keycloak keeps
+     * a client secret it reads back masked.
+     */
+    public int addAccountChooserToWorkspaceIdps() {
+        int updated = 0;
+        for (int first = 0, round = 0; round < MAX_SCAN_PAGES; first += SCAN_PAGE, round++) {
+            JsonNode page = read(admin(
+                    "/identity-provider/instances?briefRepresentation=false&first=" + first + "&max=" + SCAN_PAGE));
+            for (JsonNode idp : page) {
+                JsonNode config = idp.path("config");
+                boolean workspaceGoogle = "google".equals(idp.path("providerId").asText())
+                        && !config.path(WORKSPACE_TAG).asText().isEmpty();
+                if (workspaceGoogle
+                        && !"select_account".equals(config.path("prompt").asText())) {
+                    ((ObjectNode) config).put("prompt", "select_account");
+                    send(
+                            "PUT",
+                            admin("/identity-provider/instances/"
+                                    + enc(idp.path("alias").asText())),
+                            idp.toString(),
+                            204);
+                    updated++;
+                }
+            }
+            if (page.size() != SCAN_PAGE) {
+                break;
+            }
+        }
+        return updated;
+    }
+
     public void deleteIdentityProvider(String alias) {
         deleteQuietly(admin("/identity-provider/instances/" + enc(alias)));
     }
