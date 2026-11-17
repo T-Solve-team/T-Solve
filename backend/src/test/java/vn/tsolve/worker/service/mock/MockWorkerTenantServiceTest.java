@@ -4,9 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 class MockWorkerTenantServiceTest {
     @Test
@@ -35,6 +40,32 @@ class MockWorkerTenantServiceTest {
         assertThatThrownBy(() -> tenants.activeWorkspaceIds().add(unknown))
                 .isInstanceOf(UnsupportedOperationException.class);
         assertThat(new MockWorkerTenantService(Set.of(), Set.of(suspended)).activeWorkspaceIds())
+                .isEmpty();
+    }
+
+    @AfterEach
+    void clearRequest() {
+        RequestContextHolder.resetRequestAttributes();
+    }
+
+    @Test
+    void enqueueWorkspaceTakesTheRequestWorkspaceOnlyOnARequestThread_BUG_324() {
+        UUID acme = UUID.randomUUID();
+        UUID other = UUID.randomUUID();
+        UUID suspended = UUID.randomUUID();
+        var tenants = new MockWorkerTenantService(Set.of(acme, other), Set.of(suspended), () -> Optional.of(acme));
+        // A scheduler or executor thread: StubTenantContext would answer here too, so the mock must not use it.
+        assertThat(tenants.enqueueWorkspaceId()).isEmpty();
+
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest()));
+        assertThat(tenants.enqueueWorkspaceId()).contains(acme);
+        assertThat(new MockWorkerTenantService(Set.of(acme, other), Set.of(suspended), () -> Optional.of(suspended))
+                        .enqueueWorkspaceId())
+                .isEmpty();
+        assertThat(new MockWorkerTenantService(Set.of(acme, other), Set.of(), () -> Optional.of(UUID.randomUUID()))
+                        .enqueueWorkspaceId())
+                .isEmpty();
+        assertThat(new MockWorkerTenantService(Set.of(acme, other), Set.of()).enqueueWorkspaceId())
                 .isEmpty();
     }
 }

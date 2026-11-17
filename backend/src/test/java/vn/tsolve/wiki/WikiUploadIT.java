@@ -110,7 +110,7 @@ class WikiUploadIT extends WikiReadTestSupport {
                     return UUID.randomUUID();
                 })
                 .when(jobs)
-                .enqueue(any(), any());
+                .enqueueFromRequest(any(), any());
     }
 
     @AfterEach
@@ -155,7 +155,7 @@ class WikiUploadIT extends WikiReadTestSupport {
             assertThat(details.path("folderId").asText()).isEqualTo(folder.toString());
             assertThat(details.path("title").asText()).isEqualTo(result.get(i).title());
             assertThat(details.path("visibility").asText()).isEqualTo(i == 0 ? "DEPARTMENT" : "COMPANY_WIDE");
-            verify(jobs).enqueue("wiki-index", id);
+            verify(jobs).enqueueFromRequest("wiki-index", id);
             var download = service.download(user, id);
             var output = new ByteArrayOutputStream();
             download.content().writeTo(output);
@@ -254,7 +254,7 @@ class WikiUploadIT extends WikiReadTestSupport {
                 .isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM audit_log_entry WHERE actor_id = ?", Integer.class, user))
                 .isEqualTo(1);
-        org.mockito.Mockito.verify(jobs, org.mockito.Mockito.times(1)).enqueue(any(), any());
+        org.mockito.Mockito.verify(jobs, org.mockito.Mockito.times(1)).enqueueFromRequest(any(), any());
     }
 
     @Test

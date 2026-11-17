@@ -110,7 +110,7 @@ public class WikiTrashServiceImpl implements WikiTrashService {
                         log.warn("No worker configured; restored Wiki document {} stays unindexed", documentId);
                         return;
                     }
-                    worker.enqueue("wiki-index", documentId);
+                    worker.enqueueFromRequest("wiki-index", documentId);
                 }
             });
         }
