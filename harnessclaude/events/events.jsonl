@@ -1981,3 +1981,15 @@
 {"ts":"2026-11-17T14:25:06.587Z","type":"feature-status","module":"jira-app","feature":"account-link-endpoints","from":null,"to":"pending"}
 {"ts":"2026-11-17T14:25:06.875Z","type":"feature-status","module":"jira-app","feature":"account-settings-page","from":null,"to":"pending"}
 {"ts":"2026-11-17T14:25:07.122Z","type":"feature-status","module":"identity","feature":"jira-account-link-lookup","from":null,"to":"pending"}
+{"ts":"2026-11-17T14:30:00.342Z","type":"feature-status","module":"identity","feature":"jira-account-link-lookup","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T14:30:00.604Z","type":"feature-status","module":"identity","feature":"jira-account-link-lookup","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T14:30:01.082Z","type":"feature-status","module":"jira-app","feature":"linked-asker-lookup","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T14:30:06.438Z","type":"commit-recorded","module":"identity","repo":"default","sha":"b906c83d1d252fde82b738ccede16c9678cb90e5"}
+{"ts":"2026-11-17T14:32:49.496Z","type":"feature-status","module":"jira-app","feature":"linked-asker-lookup","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T14:32:50.099Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"b31c3dc857256795b99587ae32eb2fae011abb22"}
+{"ts":"2026-11-17T14:32:50.387Z","type":"feature-status","module":"jira-app","feature":"account-link-endpoints","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T14:37:16.327Z","type":"feature-status","module":"jira-app","feature":"account-link-endpoints","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T14:37:17.129Z","type":"feature-status","module":"jira-app","feature":"account-settings-page","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T14:37:21.491Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"76d68fce27bff5ef392beb4fd7dff413681b9e34"}
+{"ts":"2026-11-17T14:43:21.303Z","type":"feature-status","module":"jira-app","feature":"account-settings-page","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T14:43:21.825Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"95eb7cdec0d37701f47e49d167ed146dfbe8d2b3"}
