@@ -35,10 +35,10 @@ export const getGetWikiSpaceSettingsResponseMock = (
   spaceId: faker.string.uuid(),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   departmentName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-  knowledgeManager: faker.helpers.arrayElement([
-    faker.string.alpha({ length: { min: 10, max: 20 } }),
-    null,
-  ]),
+  knowledgeManagers: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   ownDepartment: {
     departmentId: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),

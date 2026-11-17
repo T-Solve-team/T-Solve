@@ -152,7 +152,15 @@ export function handoverOptions(id: string): UserHandoverOptions {
             .map(publicAccount),
         }),
       ),
-    spaces: SPACES.filter((space) => user?.spaceIds.includes(space.spaceId)).map((space) => ({
+    spaces: SPACES.filter(
+      (space) =>
+        user?.spaceIds.includes(space.spaceId) &&
+        !eligible.some(
+          (candidate) =>
+            candidate.roles.includes(Role.KNOWLEDGE_MANAGER) &&
+            candidate.spaceIds.includes(space.spaceId),
+        ),
+    ).map((space) => ({
       space,
       recipients: eligible
         .filter((candidate) => candidate.roles.includes(Role.KNOWLEDGE_MANAGER))

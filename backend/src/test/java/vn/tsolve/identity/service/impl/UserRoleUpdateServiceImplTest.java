@@ -67,6 +67,13 @@ class UserRoleUpdateServiceImplTest {
         when(write.lockTarget(target)).thenReturn(true);
         account(List.of(Role.EMPLOYEE));
         when(read.handoverOptions(target)).thenReturn(new UserHandoverOptionsResponse(List.of(), List.of()));
+        when(write.soleManagedSpaces(eq(target), any())).thenAnswer(call -> {
+            Collection<UUID> candidates = call.getArgument(1);
+            return read.handoverOptions(target).spaces().stream()
+                    .map(item -> item.space().spaceId())
+                    .filter(candidates::contains)
+                    .toList();
+        });
     }
 
     private void account(List<Role> roles) {
@@ -290,7 +297,7 @@ class UserRoleUpdateServiceImplTest {
     @Test
     void rejectsDuplicateSpace_AC_007_14() throws Exception {
         when(write.spaces())
-                .thenReturn(List.of(new UserRoleUpdateRepository.Space(spaceId, "Support space", true, null)));
+                .thenReturn(List.of(new UserRoleUpdateRepository.Space(spaceId, "Support space", true, List.of())));
         ObjectNode body = body(Role.KNOWLEDGE_MANAGER);
         body.withArray("spaceIds").add(spaceId.toString()).add(spaceId.toString());
         failure(body.toString(), "MSG01", "spaceIds", Map.of("field_name", "Spaces"));
@@ -299,7 +306,7 @@ class UserRoleUpdateServiceImplTest {
     @Test
     void rejectsSpaceWithoutKnowledgeManagerRole_AC_007_14() throws Exception {
         when(write.spaces())
-                .thenReturn(List.of(new UserRoleUpdateRepository.Space(spaceId, "Support space", true, null)));
+                .thenReturn(List.of(new UserRoleUpdateRepository.Space(spaceId, "Support space", true, List.of())));
         ObjectNode body = body();
         body.withArray("spaceIds").add(spaceId.toString());
         failure(body.toString(), "MSG01", "spaceIds", Map.of("field_name", "Spaces"));
@@ -308,7 +315,7 @@ class UserRoleUpdateServiceImplTest {
     @Test
     void rejectsNewHiddenSpace_AC_007_14() throws Exception {
         when(write.spaces())
-                .thenReturn(List.of(new UserRoleUpdateRepository.Space(spaceId, "Support space", false, null)));
+                .thenReturn(List.of(new UserRoleUpdateRepository.Space(spaceId, "Support space", false, List.of())));
         ObjectNode body = body(Role.KNOWLEDGE_MANAGER);
         body.withArray("spaceIds").add(spaceId.toString());
         failure(body.toString(), "MSG01", "spaceIds", Map.of("field_name", "Spaces"));
@@ -317,7 +324,8 @@ class UserRoleUpdateServiceImplTest {
     @Test
     void retainsAlreadyManagedHiddenSpace_AC_007_14() {
         when(write.spaces())
-                .thenReturn(List.of(new UserRoleUpdateRepository.Space(spaceId, "Support space", false, target)));
+                .thenReturn(
+                        List.of(new UserRoleUpdateRepository.Space(spaceId, "Support space", false, List.of(target))));
         ObjectNode body = body(Role.KNOWLEDGE_MANAGER);
         body.withArray("spaceIds").add(spaceId.toString());
         service.update(target, body, caller);
@@ -325,10 +333,11 @@ class UserRoleUpdateServiceImplTest {
     }
 
     @Test
-    void rejectsOccupiedSpaceBeforeAdminAndConfirmation_AC_007_14() throws Exception {
+    void rejectsFullSpaceBeforeAdminAndConfirmation_AC_007_14() throws Exception {
         account(List.of(Role.EMPLOYEE, Role.ADMIN));
         when(write.spaces())
-                .thenReturn(List.of(new UserRoleUpdateRepository.Space(spaceId, "Support space", true, recipientId)));
+                .thenReturn(List.of(new UserRoleUpdateRepository.Space(
+                        spaceId, "Support space", true, List.of(recipientId, UUID.randomUUID(), UUID.randomUUID()))));
         ObjectNode body = body(Role.KNOWLEDGE_MANAGER);
         body.withArray("spaceIds").add(spaceId.toString());
         body.put("confirmTicketResolverRemoval", "wrong");
@@ -505,7 +514,8 @@ class UserRoleUpdateServiceImplTest {
     @Test
     void retainedSpaceDoesNotRequireHandover_AC_007_16() {
         when(write.spaces())
-                .thenReturn(List.of(new UserRoleUpdateRepository.Space(spaceId, "Support space", true, target)));
+                .thenReturn(
+                        List.of(new UserRoleUpdateRepository.Space(spaceId, "Support space", true, List.of(target))));
         when(read.handoverOptions(target))
                 .thenReturn(new UserHandoverOptionsResponse(List.of(), List.of(spaceOption(List.of()))));
         ObjectNode body = body(Role.KNOWLEDGE_MANAGER);
@@ -644,5 +654,27 @@ class UserRoleUpdateServiceImplTest {
         assertThat((Collection<?>) event.get("projectHandovers")).hasSize(1);
         assertThat((Collection<?>) event.get("spaceHandovers")).hasSize(1);
         verify(write).transferSpace(spaceId, recipientId);
+    }
+
+    @Test
+    void acceptsCoManagerAndRetainsOwnPlaceAtCap_AC_007_14() {
+        for (List<UUID> managers : List.of(List.of(recipientId), List.of(target, recipientId, UUID.randomUUID()))) {
+            when(write.spaces())
+                    .thenReturn(List.of(new UserRoleUpdateRepository.Space(spaceId, "Support space", true, managers)));
+            ObjectNode body = body(Role.KNOWLEDGE_MANAGER);
+            body.withArray("spaceIds").add(spaceId.toString());
+            service.update(target, body, caller);
+        }
+    }
+
+    @Test
+    void removingCoManagedSpaceNeedsNoHandover_AC_007_16_AC_007_19() {
+        when(read.handoverOptions(target))
+                .thenReturn(new UserHandoverOptionsResponse(List.of(), List.of(spaceOption(List.of()))));
+        org.mockito.Mockito.doReturn(List.of()).when(write).soleManagedSpaces(eq(target), any());
+        service.update(target, body(), caller);
+        verify(write).soleManagedSpaces(target, List.of(spaceId));
+        verify(write).replaceAssignments(eq(target), any(), eq(null), eq(List.of()));
+        verify(write, never()).transferSpace(any(), any());
     }
 }

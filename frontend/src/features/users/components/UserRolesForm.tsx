@@ -47,6 +47,10 @@ export function UserRolesForm({ user }: UserRolesFormProps) {
 
   return (
     <SectionCard title="Roles">
+      {flow.step === 'checking' && <LoadingState />}
+      {flow.step === 'options-error' && flow.optionsError && (
+        <ErrorState error={flow.optionsError} onRetry={flow.retryOptions} />
+      )}
       <AppForm<UpdateUserRolesRequest>
         aria-label="User roles"
         form={form}

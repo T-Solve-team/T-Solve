@@ -271,3 +271,51 @@ code, the rules per Role, only the helpers before the code freeze, 403 MSG08 als
 - `space.department_id` is unique (one Space per Department); a Space of a deleted Department is refused even if its
   own status is still `ACTIVE`.
 - Several Roles: the union of the rules (GBR-28), e.g. a Knowledge Manager who is also a Ticket Resolver.
+
+## Several Knowledge Managers per Space — KAN-362, Tasks 38–39 (2026-11-17)
+
+Spec: identity changelog 2026-11-17 (14 reworded criteria) and wiki changelog 2026-11-17. Decisions (Dương, 17/11):
+- **Cap.** chosen: one to three Knowledge Managers per Space; alternatives: no cap / 2 / 5; rationale: enough to share
+  a Department's Wiki while keeping clear ownership. MSG117 stays the cap error, text
+  "`{space_name}` already has the maximum of 3 Knowledge Managers." (same code and `space_name` parameter).
+- **Handover.** chosen: a Space needs a handover only when the outgoing Account is its only Active Knowledge Manager;
+  alternatives: always hand over / never hand over; rationale: a co-manager already covers the Space, and a Space is
+  never left without an Active Knowledge Manager.
+- **Store.** chosen: changeset `047-identity-space-manager-many.sql` drops the `space_id` primary key of
+  `space_manager` and adds `PRIMARY KEY (space_id, user_id)` (the baseline's key); `idx_space_manager_user` stays.
+  Alternative: a separate join table; rejected, the baseline already has this shape. Rollback restores the single key
+  only when no Space has two rows (precondition in the rollback comment).
+- **Cap enforcement.** The cap is a count, not a key, so the services lock the requested `space` rows
+  (`SELECT … FOR UPDATE`, ordered by `space_id` to avoid deadlocks) before counting `space_manager` rows, in the same
+  transaction as the insert. Two creations or updates racing for the last place are serialized by that lock (AC-005.13,
+  AC-007.14). The old "unique violation → MSG117" mapping goes away.
+- **Affected Spaces.** `UserRoleUpdateRepository` gets `soleManagedSpaces(accountId, candidateSpaceIds)`: the Spaces of
+  the Account, locked `FOR UPDATE`, with no other `space_manager` row whose Account is `ACTIVE` and holds
+  KNOWLEDGE_MANAGER. Used by handover-options (AC-007.9), the update (AC-007.16) and the status change (AC-006.14), so
+  two co-managers removed at once are serialized and the second one sees itself as the last.
+- **Writes.** `transferSpace` becomes "insert the recipient's row (`ON CONFLICT DO NOTHING`)" plus the removal below;
+  the outgoing Account's rows are removed: on deactivation all of them (AC-006.15), on an update those of the Spaces
+  not in `spaceIds` (AC-007.19). `UserRoleUpdateRepository.Space.managerId` becomes `managerIds` (a list) for the
+  options and checks.
+- **Frontend.** The web app stops deciding from `user.managedSpaces` whether a handover is due: deactivation
+  (`UserStatusActions`) and the role update (`useRoleUpdateFlow`) read `handover-options` and open the popup only
+  when it has a Project or Space entry; otherwise deactivation shows the MSG57 confirmation (AC-006.2). The MSW mock
+  keeps a list of manager ids per Space and mirrors the backend (cap 3, sole-manager rule, row removal). No OpenAPI
+  change for identity.
+- **Wiki (wiki Task 15).** `WikiSpaceSettings.knowledgeManager` becomes `knowledgeManagers: string[]` (OpenAPI change,
+  `generate:api`); `WikiPermissionRepository` aggregates the Active Knowledge Managers' names (`ORDER BY lower(full_name)`),
+  so the header query no longer fails with two rows; `SpaceSettingsPage` joins them with ", " or shows "—". Access
+  checks (`AccessRepository`, `ScopeAccessRepository`) already use `EXISTS` and need no change; tests prove it with two
+  managers.
+
+### Edge cases — KAN-362
+- Adding an Account to a Space it already manages (update) does not count against the cap (AC-007.14: "the Account
+  does not already manage").
+- A Deactivated co-manager does not count as "another Active Knowledge Manager"; going forward a deactivation removes
+  its rows, so only data from before this change can hold such rows.
+- A co-manager who holds the row but lost KNOWLEDGE_MANAGER does not count either (AC-007.19 removes the rows when the
+  role is dropped, since `spaceIds` must then be empty).
+- The recipient of a last-manager handover cannot already manage that Space (the outgoing Account is the only one).
+- Two Admins removing the two co-managers of one Space at the same time: the row locks make the second request see
+  itself as the last and require a handover (409 MSG118 when nobody else is eligible).
+- Mock seed (`MockUserListSeeder`, AC-006.19) unchanged: the second Knowledge Manager still manages no Space.

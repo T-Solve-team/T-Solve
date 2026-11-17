@@ -566,7 +566,7 @@ class UserStatusIT {
                 db.queryForList("SELECT * FROM app_user ORDER BY id"),
                 db.queryForList("SELECT * FROM user_role ORDER BY id"),
                 db.queryForList("SELECT * FROM project_membership ORDER BY user_id, project_id"),
-                db.queryForList("SELECT * FROM space_manager ORDER BY space_id"));
+                db.queryForList("SELECT * FROM space_manager ORDER BY space_id, user_id"));
     }
 
     private int auditCount() {
@@ -648,5 +648,63 @@ class UserStatusIT {
                     manager,
                     id);
         }
+    }
+
+    private void addManager(UUID space, UUID user) {
+        TwoTenantDatabases.tenantA()
+                .update(
+                        "INSERT INTO space_manager(space_id,user_id,assigned_at) SELECT space_id,?,now() FROM space WHERE public_id = ?",
+                        user,
+                        space);
+    }
+
+    @Test
+    void deactivatesCoManagerAndRemovesEveryOwnSpaceRow_AC_006_14_AC_006_15() throws Exception {
+        addManager(SPACE, RECIPIENT);
+        addManager(FREE_SPACE, TARGET);
+        addManager(FREE_SPACE, RECIPIENT);
+        ObjectNode body = update("DEACTIVATED");
+        body.putArray("projectHandovers")
+                .addObject()
+                .put("projectId", PROJECT.toString())
+                .put("recipientId", RECIPIENT.toString());
+        perform(TARGET, body)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.managedSpaces").isEmpty());
+        assertThat(TwoTenantDatabases.tenantA()
+                        .queryForObject("SELECT count(*) FROM space_manager WHERE user_id = ?", Integer.class, TARGET))
+                .isZero();
+        assertThat(TwoTenantDatabases.tenantA()
+                        .queryForObject(
+                                "SELECT count(*) FROM space_manager WHERE user_id = ?", Integer.class, RECIPIENT))
+                .isEqualTo(2);
+    }
+
+    @Test
+    void concurrentCoManagerDeactivationsCannotBothSucceedWithoutHandover_AC_006_14() throws Exception {
+        JdbcTemplate db = TwoTenantDatabases.tenantA();
+        db.update("DELETE FROM project_membership WHERE user_id IN (?, ?)", TARGET, RECIPIENT);
+        addManager(SPACE, RECIPIENT);
+        List<MvcResult> results = race(
+                () -> performAs(TARGET, update("DEACTIVATED"), new UUID(0, 1)).andReturn(),
+                () -> performAs(RECIPIENT, update("DEACTIVATED"), new UUID(0, 1))
+                        .andReturn());
+        assertThat(results.stream()
+                        .filter(result -> result.getResponse().getStatus() == 200)
+                        .count())
+                .isEqualTo(1);
+        MvcResult rejected = results.stream()
+                .filter(result -> result.getResponse().getStatus() != 200)
+                .findFirst()
+                .orElseThrow();
+        assertThat(mapper.readTree(rejected.getResponse().getContentAsString())
+                        .path("code")
+                        .asText())
+                .isIn("MSG01", "MSG118");
+        assertThat(db.queryForObject(
+                        "SELECT count(*) FROM space_manager sm JOIN app_user u ON u.id = sm.user_id WHERE sm.space_id = (SELECT space_id FROM space WHERE public_id = ?) AND u.status = 'ACTIVE'",
+                        Integer.class,
+                        SPACE))
+                .isEqualTo(1);
     }
 }

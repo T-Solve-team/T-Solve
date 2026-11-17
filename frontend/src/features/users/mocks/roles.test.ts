@@ -68,7 +68,15 @@ describe('Workspace role and assignment contract', () => {
     expect(await getUserDetail(id(2))).toEqual(before);
   });
 
-  it('AC-007.2 allows a manager to retain their own Space and rejects another occupied Space with MSG117', async () => {
+  it('AC-007.2 allows a manager to retain their own Space and rejects a fourth manager with MSG117', async () => {
+    for (const n of [6, 7]) {
+      const detail = await getUserDetail(id(n));
+      await updateUserRoles(id(n), {
+        roles: [...detail.roles, 'KNOWLEDGE_MANAGER'],
+        departmentId: detail.department?.departmentId ?? null,
+        spaceIds: [...detail.managedSpaces.map((space) => space.spaceId), IT_SPACE],
+      });
+    }
     const before = await getUserDetail(id(3));
     await expect(
       updateUserRoles(id(2), {
