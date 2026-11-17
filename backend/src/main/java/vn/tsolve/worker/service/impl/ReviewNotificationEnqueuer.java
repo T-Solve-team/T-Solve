@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
+import vn.tsolve.common.tenant.TenantContext;
 import vn.tsolve.identity.service.WorkspaceSiteService;
 import vn.tsolve.ticket.dto.ReviewNotification;
 import vn.tsolve.ticket.event.ReviewFeedbackDecidedEvent;
@@ -34,6 +35,7 @@ public class ReviewNotificationEnqueuer {
     private final WorkspaceSiteService sites;
     private final ReviewEmailRenderer renderer = new ReviewEmailRenderer();
     private final ObjectProvider<WorkerTenantService> tenants;
+    private final ObjectProvider<TenantContext> requestTenants;
     private final String siteOriginTemplate;
 
     public ReviewNotificationEnqueuer(
@@ -44,13 +46,25 @@ public class ReviewNotificationEnqueuer {
         this(outboxes, tenants, notifications, sites, "");
     }
 
+    public ReviewNotificationEnqueuer(
+            ObjectProvider<EmailOutboxService> outboxes,
+            ObjectProvider<WorkerTenantService> tenants,
+            ReviewNotificationService notifications,
+            WorkspaceSiteService sites,
+            String siteOriginTemplate) {
+        this(outboxes, tenants, notifications, sites, siteOriginTemplate, null);
+    }
+
+    /** {@code requestTenants} names the Workspace in the web process, where no WorkerTenantService exists (BUG-339). */
     @Autowired
     public ReviewNotificationEnqueuer(
             ObjectProvider<EmailOutboxService> outboxes,
             ObjectProvider<WorkerTenantService> tenants,
             ReviewNotificationService notifications,
             WorkspaceSiteService sites,
-            @Value("${TSOLVE_SITE_ORIGIN_TEMPLATE:}") String siteOriginTemplate) {
+            @Value("${TSOLVE_SITE_ORIGIN_TEMPLATE:}") String siteOriginTemplate,
+            ObjectProvider<TenantContext> requestTenants) {
+        this.requestTenants = requestTenants;
         this.outboxes = outboxes;
         this.tenants = tenants;
         this.notifications = notifications;
@@ -64,6 +78,9 @@ public class ReviewNotificationEnqueuer {
         try {
             EmailOutboxService queue = outboxes.getIfAvailable();
             if (queue == null) {
+                // Silent before BUG-339: the web process had no outbox and nobody could tell why no mail went out.
+                int total = event.decisionIds().size();
+                LOG.warn("Could not queue {} of {} review emails (the email outbox is not available)", total, total);
                 return;
             }
             WorkerTenantService context = tenants.getIfAvailable();
@@ -112,13 +129,21 @@ public class ReviewNotificationEnqueuer {
 
     private String siteHost(WorkerTenantService context) {
         try {
-            return (context == null ? Optional.<UUID>empty() : context.currentWorkspaceId())
+            return currentWorkspace(context)
                     .flatMap(sites::siteHost)
                     .filter(value -> !value.isBlank())
                     .orElse(null);
         } catch (RuntimeException ignored) {
             return null;
         }
+    }
+
+    private Optional<UUID> currentWorkspace(WorkerTenantService context) {
+        if (context != null) {
+            return context.currentWorkspaceId();
+        }
+        TenantContext request = requestTenants == null ? null : requestTenants.getIfAvailable();
+        return request == null ? Optional.empty() : request.currentWorkspaceId();
     }
 
     private OutboundEmail render(ReviewNotification notification, String host) {
