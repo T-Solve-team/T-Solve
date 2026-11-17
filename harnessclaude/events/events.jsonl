@@ -2050,6 +2050,11 @@
 {"ts":"2026-11-17T15:48:00.391Z","type":"feature-status","module":"wiki","feature":"wiki-space-managers-list","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-17T15:48:00.580Z","type":"commit-recorded","module":"identity","repo":"default","sha":"64c47ea6055b60efab6852df1c752facd95b82f1"}
 {"ts":"2026-11-17T15:48:00.760Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"64c47ea6055b60efab6852df1c752facd95b82f1"}
+{"ts":"2026-11-17T15:50:14.525Z","type":"spec-approved","module":"jira-app","specHash":"f644e8ebaeb49390806de4e2bf46c4620648caa820dd7fff3dce0802cd94e106"}
+{"ts":"2026-11-17T15:50:14.791Z","type":"feature-status","module":"jira-app","feature":"account-page-global","from":null,"to":"pending"}
+{"ts":"2026-11-17T15:50:15.033Z","type":"feature-status","module":"jira-app","feature":"account-page-global","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T15:51:37.153Z","type":"feature-status","module":"jira-app","feature":"account-page-global","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T15:51:37.881Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"de1b19bf22056e427e1c58592b6da829feeb0a97"}
 {"ts":"2026-11-17T15:11:05.979Z","type":"spec-approved","module":"chatbot","specHash":"342300752ea59274bf0c24942e978b5538ca6083af777ea14539024d4eb62a30"}
 {"ts":"2026-11-17T15:40:42.156Z","type":"spec-approved","module":"chatbot","specHash":"dd32f6721cc04e3daa484635f18ad9e760e28a3b15fe06e8af96e65df4db22bb"}
 {"ts":"2026-11-17T16:01:20.813Z","type":"spec-approved","module":"fe-foundation","specHash":"7bba61aa861d507f5c85f2a403f2c70b2df3426591fe80f260bfe65e762912b0"}
