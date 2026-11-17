@@ -1952,6 +1952,15 @@
 {"ts":"2026-11-17T08:14:45.866Z","type":"spec-approved","module":"tracker","specHash":"38a2f8d7b449e96004467350e10e2ecabb8b73bec5cfc79a850c20edac3ff8ad"}
 {"ts":"2026-11-17T08:14:51.861Z","type":"spec-approved","module":"jira-app","specHash":"632f7ab7dfb105a7a56b9eccaf220877f291a13c3d65d281ab843df23c2708d0"}
 {"ts":"2026-11-17T09:08:04.693Z","type":"spec-approved","module":"chatbot","specHash":"860f7cdf682ab102166702077c463fc2795a52a0c5f1b1ae34eeff84fd4ec36d"}
+{"ts":"2026-11-17T10:01:23.284Z","type":"spec-approved","module":"triage","specHash":"391a80281f2eb82db8d9a5ffae1d2595707bdd0fe3026e2378b57f736373069c"}
+{"ts":"2026-11-17T10:01:35.353Z","type":"feature-status","module":"triage","feature":"jira-site","from":null,"to":"pending"}
+{"ts":"2026-11-17T10:01:43.526Z","type":"feature-status","module":"triage","feature":"managed-projects","from":null,"to":"pending"}
+{"ts":"2026-11-17T10:01:43.910Z","type":"feature-status","module":"triage","feature":"managed-projects","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T10:14:41.189Z","type":"feature-status","module":"triage","feature":"managed-projects","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T10:17:19.680Z","type":"feature-status","module":"triage","feature":"managed-projects","from":"evaluating","to":"passing"}
+{"ts":"2026-11-17T10:17:33.172Z","type":"feature-status","module":"triage","feature":"jira-site","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T10:17:33.535Z","type":"feature-status","module":"triage","feature":"jira-site","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T10:17:33.861Z","type":"feature-status","module":"triage","feature":"jira-site","from":"evaluating","to":"passing"}
 {"ts":"2026-11-17T10:00:47.082Z","type":"feature-status","module":"jira-app","feature":"panel-rejected","from":"evaluating","to":"passing"}
 {"ts":"2026-11-17T10:00:47.316Z","type":"feature-status","module":"jira-app","feature":"panel-published","from":"evaluating","to":"passing"}
 {"ts":"2026-11-17T10:00:47.549Z","type":"feature-status","module":"ticket-review","feature":"jira-rejected-feedback","from":"evaluating","to":"passing"}
