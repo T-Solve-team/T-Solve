@@ -86,6 +86,7 @@ export function TicketListTable({
           key: 'rowNumber',
           title: 'No.',
           width: 64,
+          ellipsis: false,
           render: (_, _t, index) => (page - 1) * PAGE_SIZE + index + 1,
         },
         ...COLUMNS,

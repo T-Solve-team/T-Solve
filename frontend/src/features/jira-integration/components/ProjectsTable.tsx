@@ -24,7 +24,13 @@ export function ProjectsTable({ rows }: ProjectsTableProps) {
     <DataTable<ProjectRow>
       label="Projects"
       columns={[
-        { key: 'rowNumber', title: 'No.', width: 64, render: (_, _p, index) => index + 1 },
+        {
+          key: 'rowNumber',
+          title: 'No.',
+          width: 64,
+          ellipsis: false,
+          render: (_, _p, index) => index + 1,
+        },
         {
           key: 'jiraProjectKey',
           title: 'Jira project key',
