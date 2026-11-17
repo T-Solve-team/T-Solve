@@ -2,11 +2,14 @@ package vn.tsolve.worker.config;
 
 import com.zaxxer.hikari.HikariDataSource;
 import java.time.Clock;
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import javax.sql.DataSource;
 import liquibase.integration.spring.SpringLiquibase;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -19,13 +22,14 @@ import org.springframework.context.annotation.DependsOn;
 import vn.tsolve.common.tenant.TenantContext;
 import vn.tsolve.worker.repository.EmailOutboxRepository;
 import vn.tsolve.worker.service.EmailOutboxService;
+import vn.tsolve.worker.service.OutboxWorkspace;
 import vn.tsolve.worker.service.WorkerTenantService;
 import vn.tsolve.worker.service.impl.EmailOutboxServiceImpl;
 
 /**
  * Lets the web process write to the Jobs email outbox without the worker runtime (BUG-339). The review decision is
  * taken in the web process; the worker process only sends. Unlike {@code tsolve.worker.enabled} this starts no
- * JobRunr, registers no job handler and does not change the tracker queue, and it needs no worker-mock profile.
+ * JobRunr, registers no job handler and does not change the tracker queue, and it needs no worker-mock profile and no TenantContext bean.
  */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnExpression(
@@ -89,24 +93,43 @@ public class OutboxOnlyConfiguration {
         return new EmailOutboxRepository(pool.dataSource());
     }
 
+    /**
+     * The request's {@link TenantContext} Workspace when the platform binds one, else the single Active Workspace of
+     * the worker mock list (the same rule as {@code MockWorkerTenantService.enqueueWorkspaceId}); several are never
+     * guessed between. The staging web process has no TenantContext bean, so it is optional (BUG-340).
+     */
     @Bean
-    EmailOutboxService emailOutboxService(EmailOutboxRepository repository, TenantContext tenantContext) {
-        return new EmailOutboxServiceImpl(repository, new RequestTenant(tenantContext), Clock.systemUTC());
+    OutboxWorkspace outboxWorkspace(
+            ObjectProvider<TenantContext> tenantContext,
+            @Value("${tsolve.worker.mock.active-workspaces:}") String activeWorkspaces) {
+        Set<UUID> active = Arrays.stream(activeWorkspaces.split(","))
+                .map(String::trim)
+                .filter(id -> !id.isEmpty())
+                .map(UUID::fromString)
+                .collect(Collectors.toUnmodifiableSet());
+        return () -> Optional.ofNullable(tenantContext.getIfAvailable())
+                .flatMap(TenantContext::currentWorkspaceId)
+                .or(() -> active.size() == 1 ? active.stream().findFirst() : Optional.empty());
+    }
+
+    @Bean
+    EmailOutboxService emailOutboxService(EmailOutboxRepository repository, OutboxWorkspace workspace) {
+        return new EmailOutboxServiceImpl(repository, new RequestTenant(workspace), Clock.systemUTC());
     }
 
     /**
      * The outbox only asks for the bound Workspace. Not a bean: a {@link WorkerTenantService} bean would tell
      * WorkspaceJiraServiceAccount and the review expiry that a web request is a worker job.
      */
-    private record RequestTenant(TenantContext tenantContext) implements WorkerTenantService {
+    private record RequestTenant(OutboxWorkspace workspace) implements WorkerTenantService {
         @Override
         public Optional<UUID> currentWorkspaceId() {
-            return tenantContext.currentWorkspaceId();
+            return workspace.current();
         }
 
         @Override
         public void runIn(UUID workspaceId, Runnable action) {
-            tenantContext.runIn(workspaceId, action);
+            throw new UnsupportedOperationException("The web outbox does not bind Workspaces");
         }
 
         @Override

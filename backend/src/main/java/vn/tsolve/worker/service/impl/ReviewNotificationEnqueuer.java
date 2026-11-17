@@ -11,7 +11,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
-import vn.tsolve.common.tenant.TenantContext;
 import vn.tsolve.identity.service.WorkspaceSiteService;
 import vn.tsolve.ticket.dto.ReviewNotification;
 import vn.tsolve.ticket.event.ReviewFeedbackDecidedEvent;
@@ -22,6 +21,7 @@ import vn.tsolve.worker.client.ReviewEmailRenderer;
 import vn.tsolve.worker.dto.OutboundEmail;
 import vn.tsolve.worker.exception.EmailOutboxUnavailableException;
 import vn.tsolve.worker.service.EmailOutboxService;
+import vn.tsolve.worker.service.OutboxWorkspace;
 import vn.tsolve.worker.service.WorkerTenantService;
 
 /** Queues the writer email of committed Reject and Request Changes decisions (ticket-review STORY-010). */
@@ -35,7 +35,7 @@ public class ReviewNotificationEnqueuer {
     private final WorkspaceSiteService sites;
     private final ReviewEmailRenderer renderer = new ReviewEmailRenderer();
     private final ObjectProvider<WorkerTenantService> tenants;
-    private final ObjectProvider<TenantContext> requestTenants;
+    private final ObjectProvider<OutboxWorkspace> requestTenants;
     private final String siteOriginTemplate;
 
     public ReviewNotificationEnqueuer(
@@ -55,7 +55,7 @@ public class ReviewNotificationEnqueuer {
         this(outboxes, tenants, notifications, sites, siteOriginTemplate, null);
     }
 
-    /** {@code requestTenants} names the Workspace in the web process, where no WorkerTenantService exists (BUG-339). */
+    /** {@code requestTenants} names the Workspace in the web process, where no WorkerTenantService exists (BUG-339, BUG-340). */
     @Autowired
     public ReviewNotificationEnqueuer(
             ObjectProvider<EmailOutboxService> outboxes,
@@ -63,7 +63,7 @@ public class ReviewNotificationEnqueuer {
             ReviewNotificationService notifications,
             WorkspaceSiteService sites,
             @Value("${TSOLVE_SITE_ORIGIN_TEMPLATE:}") String siteOriginTemplate,
-            ObjectProvider<TenantContext> requestTenants) {
+            ObjectProvider<OutboxWorkspace> requestTenants) {
         this.requestTenants = requestTenants;
         this.outboxes = outboxes;
         this.tenants = tenants;
@@ -142,8 +142,8 @@ public class ReviewNotificationEnqueuer {
         if (context != null) {
             return context.currentWorkspaceId();
         }
-        TenantContext request = requestTenants == null ? null : requestTenants.getIfAvailable();
-        return request == null ? Optional.empty() : request.currentWorkspaceId();
+        OutboxWorkspace request = requestTenants == null ? null : requestTenants.getIfAvailable();
+        return request == null ? Optional.empty() : request.current();
     }
 
     private OutboundEmail render(ReviewNotification notification, String host) {
