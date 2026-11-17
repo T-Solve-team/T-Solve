@@ -64,7 +64,7 @@ class JiraAppTokenServiceImplTest {
     }
 
     @Test
-    void holdsTheTokenForTheWorkspaceOfTheSiteUntilItsExp_AC_012_1() {
+    void holdsTheTokenForTheWorkspaceOfTheSiteUntilItsExp_AC_014_1() {
         long exp = NOW.getEpochSecond() + 3 * 3600;
         String token = token(exp);
 
@@ -75,7 +75,7 @@ class JiraAppTokenServiceImplTest {
     }
 
     @Test
-    void refusesASiteWithoutAWorkspace_AC_012_2() {
+    void refusesASiteWithoutAWorkspace_AC_014_2() {
         when(lookup.workspaceOf(CLOUD)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.receive(CLOUD, BASE, token(NOW.getEpochSecond() + 60)))
@@ -85,13 +85,13 @@ class JiraAppTokenServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"", "   ", "no-dots", "a.!!!.c", "a.e30.c"})
-    void refusesAMissingOrUnreadableToken_AC_012_3(String token) {
+    void refusesAMissingOrUnreadableToken_AC_014_3(String token) {
         assertThatThrownBy(() -> service.receive(CLOUD, BASE, token)).isInstanceOf(JiraAppTokenRejectedException.class);
         verifyNoInteractions(store);
     }
 
     @Test
-    void refusesANullOrExpiredToken_AC_012_3() {
+    void refusesANullOrExpiredToken_AC_014_3() {
         assertThatThrownBy(() -> service.receive(CLOUD, BASE, token(NOW.getEpochSecond())))
                 .isInstanceOf(JiraAppTokenRejectedException.class);
         assertThatThrownBy(() -> service.receive(CLOUD, BASE, null)).isInstanceOf(JiraAppTokenRejectedException.class);
@@ -106,14 +106,14 @@ class JiraAppTokenServiceImplTest {
                 "http://api.atlassian.com/ex/jira/1324a887-45db-1bf4-1e99-ef0ff456d421",
                 "https://api.atlassian.com/ex/jira/1324a887-45db-1bf4-1e99-ef0ff456d421/../x"
             })
-    void refusesAForeignApiBase_AC_012_4(String apiBaseUrl) {
+    void refusesAForeignApiBase_AC_014_4(String apiBaseUrl) {
         assertThatThrownBy(() -> service.receive(CLOUD, apiBaseUrl, token(NOW.getEpochSecond() + 60)))
                 .isInstanceOf(JiraAppTokenRejectedException.class);
         verifyNoInteractions(store);
     }
 
     @Test
-    void refusesACloudIdThatIsNotACanonicalUuid_AC_012_4() {
+    void refusesACloudIdThatIsNotACanonicalUuid_AC_014_4() {
         assertThatThrownBy(() -> service.receive(
                         "not-a-uuid", "https://api.atlassian.com/ex/jira/not-a-uuid", token(NOW.getEpochSecond() + 60)))
                 .isInstanceOf(JiraAppTokenRejectedException.class);
@@ -121,7 +121,7 @@ class JiraAppTokenServiceImplTest {
     }
 
     @Test
-    void logsOnlyTheWorkspaceAndNeverTheToken_AC_012_6() {
+    void logsOnlyTheWorkspaceAndNeverTheToken_AC_014_6() {
         String token = token(NOW.getEpochSecond() + 3600);
         Logger logger = (Logger) LoggerFactory.getLogger(JiraAppTokenServiceImpl.class);
         ListAppender<ILoggingEvent> logs = new ListAppender<>();

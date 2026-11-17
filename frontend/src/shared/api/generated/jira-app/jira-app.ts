@@ -310,7 +310,7 @@ export const getReceiveJiraAppTokenUrl = () => {
 };
 
 /**
- * @summary Forge scheduled and install/upgrade triggers hand the app system token to the backend (workspace STORY-012, KAN-349).
+ * @summary Forge scheduled and install/upgrade triggers hand the app system token to the backend (workspace STORY-014, KAN-349).
  */
 export const receiveJiraAppToken = async (options?: Parameters<typeof http>[1]): Promise<void> => {
   return http<void>(getReceiveJiraAppTokenUrl(), {
@@ -357,7 +357,7 @@ export type ReceiveJiraAppTokenMutationResult = NonNullable<
 export type ReceiveJiraAppTokenMutationError = ErrorType<ProblemResponse>;
 
 /**
- * @summary Forge scheduled and install/upgrade triggers hand the app system token to the backend (workspace STORY-012, KAN-349).
+ * @summary Forge scheduled and install/upgrade triggers hand the app system token to the backend (workspace STORY-014, KAN-349).
  */
 export const useReceiveJiraAppToken = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
   options?: {

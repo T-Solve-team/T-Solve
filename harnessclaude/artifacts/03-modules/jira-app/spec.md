@@ -147,7 +147,7 @@ an issue has at most one.
 
 ### STORY-013: Hand the app token to the backend (KAN-349)
 - As the T-Solve backend, I want the Jira App to send me its app token regularly, so that I can call Jira for the
-  Workspace when nobody is inside Jira (workspace STORY-012).
+  Workspace when nobody is inside Jira (workspace STORY-014).
 - Acceptance:
   - AC-013.1: THE manifest SHALL declare a scheduled trigger with interval `hour` and a trigger on the app's install and
     upgrade events, each invoking the remote endpoint of `POST /api/v1/jira-app/app-token` directly (not through a

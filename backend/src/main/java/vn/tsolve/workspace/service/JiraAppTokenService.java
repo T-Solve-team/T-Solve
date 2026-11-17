@@ -4,11 +4,11 @@ import java.util.Optional;
 import java.util.UUID;
 import vn.tsolve.workspace.dto.JiraAppToken;
 
-/** The Jira App's app token per Workspace (STORY-012, KAN-349). */
+/** The Jira App's app token per Workspace (STORY-014, KAN-349). */
 public interface JiraAppTokenService {
 
     /**
-     * Holds the token the Jira App sent for the site of a verified FIT (AC-012.1..AC-012.5).
+     * Holds the token the Jira App sent for the site of a verified FIT (AC-014.1..AC-014.5).
      *
      * @param cloudId the FIT's {@code context.cloudId}
      * @param apiBaseUrl the FIT's {@code app.apiBaseUrl}

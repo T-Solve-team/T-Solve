@@ -198,8 +198,9 @@ class ImportHistoryDateRangeIT {
     @DisplayName("AC-007.8 failed Jira pull persists the requested resolved range")
     void failedPull_AC_007_8() {
         JiraIssueSource jira = mock(JiraIssueSource.class);
-        when(jira.resolvedIssues(anyString(), any(), any(), any(), any()))
-                .thenThrow(new JiraUnavailableException("HTTP 503"));
+        when(jira.pull(anyString(), any(), any(), any())).thenReturn(token -> {
+            throw new JiraUnavailableException("HTTP 503");
+        });
         JiraImportServiceImpl service = new JiraImportServiceImpl(
                 jira, previews, rows, tickets, projects, recorder, mapper, clock, transactions);
         assertThatThrownBy(() -> service.pull(PM.getName(), PROJECT, FROM, TO))

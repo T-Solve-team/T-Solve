@@ -16,7 +16,7 @@ import vn.tsolve.workspace.entity.WorkspaceInfo;
 import vn.tsolve.workspace.repository.WorkspaceInfoRepository;
 import vn.tsolve.workspace.service.JiraAppTokenService;
 
-/** Jira access as the T-Solve Jira App: the Workspace's site and the app token held by STORY-012 (KAN-349). */
+/** Jira access as the T-Solve Jira App: the Workspace's site and the app token held by STORY-014 (KAN-349). */
 @Service
 public class WorkspaceJiraServiceAccount implements JiraServiceAccount {
 

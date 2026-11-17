@@ -18,7 +18,7 @@ import vn.tsolve.workspace.dto.JiraAppToken;
 
 /**
  * Holds the Jira App's token per Workspace in Redis, encrypted with {@code WORKSPACE_SECRET_KEY} and the Workspace id
- * as associated data, expiring with the token (Non-Functional 4, AC-012.1). Redis is shared by the web and the worker,
+ * as associated data, expiring with the token (Non-Functional 4, AC-014.1). Redis is shared by the web and the worker,
  * and survives a restart of either.
  */
 @Repository
@@ -40,7 +40,7 @@ public class JiraAppTokenStore {
         this.clock = clock;
     }
 
-    /** Keeps the token unless a held one expires later (AC-012.5); an expired token is never written. */
+    /** Keeps the token unless a held one expires later (AC-014.5); an expired token is never written. */
     public void hold(UUID workspaceId, JiraAppToken token) {
         Optional<JiraAppToken> held = current(workspaceId);
         if (held.isPresent() && held.get().expiresAt().isAfter(token.expiresAt())) {
@@ -53,7 +53,7 @@ public class JiraAppTokenStore {
         redis.opsForValue().set(KEY_PREFIX + workspaceId, cipher.encrypt(workspaceId, serialise(token)), ttl);
     }
 
-    /** The held, unexpired token; empty when none, or when the value cannot be decrypted (AC-012.7). */
+    /** The held, unexpired token; empty when none, or when the value cannot be decrypted (AC-014.7). */
     public Optional<JiraAppToken> current(UUID workspaceId) {
         String value = redis.opsForValue().get(KEY_PREFIX + workspaceId);
         if (value == null) {
@@ -63,7 +63,7 @@ public class JiraAppTokenStore {
             JiraAppToken token = deserialise(cipher.decrypt(workspaceId, value));
             return token.expiresAt().isAfter(clock.instant()) ? Optional.of(token) : Optional.empty();
         } catch (IllegalStateException | JsonProcessingException | IllegalArgumentException failure) {
-            // Never the value or the cause: they could carry the ciphertext (AC-012.6).
+            // Never the value or the cause: they could carry the ciphertext (AC-014.6).
             log.error("Workspace {} Jira App token could not be read; it is dropped", workspaceId);
             redis.delete(KEY_PREFIX + workspaceId);
             return Optional.empty();

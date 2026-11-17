@@ -63,7 +63,7 @@ class WorkspaceJiraServiceAccountTest {
     }
 
     @Test
-    @DisplayName("AC-008.1 returns the Workspace's site with the cloud id and app token held by STORY-012")
+    @DisplayName("AC-008.1 returns the Workspace's site with the cloud id and app token held by STORY-014")
     void returnsSiteAndAppToken() {
         row(WORKSPACE, SITE, CLOUD_ID);
         when(tokens.current(WORKSPACE)).thenReturn(Optional.of(appToken(WORKSPACE, CLOUD_ID, TOKEN)));

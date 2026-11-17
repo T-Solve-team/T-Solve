@@ -7,7 +7,7 @@ Branch: `feat/KAN-349-jira-app-identity` (on KAN-345). Jira App part: jira-app T
 
 ## Task 12: Receive and hold the app token
 
-**Story:** STORY-012, STORY-008
+**Story:** STORY-014, STORY-008
 **Feature:** jira-app-token
 **Description:** `workspace/jiraapp/JiraAppTokenStore` (Redis, encrypted, TTL to `exp`, later `exp` wins, undecryptable →
 delete + empty), `JiraAppTokenService` + `JiraAppTokenController` (`POST /api/v1/jira-app/app-token`, `@PreAuthorize`
@@ -25,7 +25,7 @@ and token from the store; empty when none or when the cloud id differs from the 
 **Description:** Setup takes `companyName` + `jiraSiteUrl`, reads the cloud id, links and stores, no Jira check; Update
 takes `companyName` only; both ignore `serviceAccountEmail`/`serviceAccountToken`; audits without token fields;
 `WorkspaceInfo` gains `jiraAppConnected`, `jiraAppTokenReceivedAt` (AC-006.6). Changeset 043 clears the old credential
-columns (AC-011.9). Remove `TicketTrackerClient.checkServiceAccount`. Contract first.
+columns (AC-011.11). Remove `TicketTrackerClient.checkServiceAccount`. Contract first.
 **Files:** `WorkspaceServiceImpl`, DTOs, entity, changeset, `frontend/openapi/tsolve-api.yaml`, tracker client; tests
 `WorkspaceServiceImplTest`, `WorkspaceControllerTest`, `WorkspaceOpenApiTest`, `WorkspaceControllerIT`,
 `WorkspaceInfoRepositoryIT`.
@@ -37,6 +37,6 @@ columns (AC-011.9). Remove `TicketTrackerClient.checkServiceAccount`. Contract f
 **Story:** STORY-009, STORY-010
 **Feature:** workspace-jira-app-status-screen
 **Description:** Generated client; 2.1 without the token field (AC-009.2, AC-009.4); 2.2 without the token field, with
-the read-only "Jira App" line (AC-010.1, AC-010.3, AC-010.9); MSW mocks and tests.
+the read-only "Jira App" line (AC-010.1, AC-010.3, AC-010.10); MSW mocks and tests.
 **Dependencies:** Task 13
 **Estimated size:** small

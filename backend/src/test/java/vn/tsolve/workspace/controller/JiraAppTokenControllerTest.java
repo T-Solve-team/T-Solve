@@ -49,7 +49,7 @@ class JiraAppTokenControllerTest {
     }
 
     @Test
-    void holdsTheTokenOfAScheduledTriggerWithoutAUser_AC_012_1() throws Exception {
+    void holdsTheTokenOfAScheduledTriggerWithoutAUser_AC_014_1() throws Exception {
         mvc.perform(post(URL).with(authentication(fit())).header("x-forge-oauth-system", "app-token"))
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""));
@@ -57,7 +57,7 @@ class JiraAppTokenControllerTest {
     }
 
     @Test
-    void answers403Msg08ForASiteWithoutAWorkspace_AC_012_2() throws Exception {
+    void answers403Msg08ForASiteWithoutAWorkspace_AC_014_2() throws Exception {
         doThrow(new JiraAppSiteNotRegisteredException()).when(tokens).receive(CLOUD, APP.apiBaseUrl(), "app-token");
         mvc.perform(post(URL).with(authentication(fit())).header("x-forge-oauth-system", "app-token"))
                 .andExpect(status().isForbidden())
@@ -65,7 +65,7 @@ class JiraAppTokenControllerTest {
     }
 
     @Test
-    void answers400Msg06WithoutAToken_AC_012_3() throws Exception {
+    void answers400Msg06WithoutAToken_AC_014_3() throws Exception {
         doThrow(new JiraAppTokenRejectedException()).when(tokens).receive(CLOUD, APP.apiBaseUrl(), null);
         mvc.perform(post(URL).with(authentication(fit())))
                 .andExpect(status().isBadRequest())
@@ -73,7 +73,7 @@ class JiraAppTokenControllerTest {
     }
 
     @Test
-    void refusesACallWithoutAFit_AC_012_8() throws Exception {
+    void refusesACallWithoutAFit_AC_014_8() throws Exception {
         mvc.perform(post(URL).header("x-forge-oauth-system", "app-token")).andExpect(status().isUnauthorized());
         verifyNoInteractions(tokens);
     }

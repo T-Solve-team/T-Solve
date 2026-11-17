@@ -89,7 +89,7 @@ class WorkspaceControllerIT {
     @Autowired
     private WorkspaceStatusLookup lookup;
 
-    // The app token lives in Redis (STORY-012); this IT is about the tenant database, so the store is mocked.
+    // The app token lives in Redis (STORY-014); this IT is about the tenant database, so the store is mocked.
     @MockBean
     private JiraAppTokenService tokens;
 

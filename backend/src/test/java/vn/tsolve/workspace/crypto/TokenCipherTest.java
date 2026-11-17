@@ -212,7 +212,7 @@ class TokenCipherTest {
     }
 
     @Test
-    @DisplayName("AC-012.6 cipher diagnostics and the Workspace entity hold no token (KAN-349)")
+    @DisplayName("AC-014.6 cipher diagnostics and the Workspace entity hold no token (KAN-349)")
     void hidesSecretsInDiagnosticsAndJson() throws Exception {
         String encrypted = cipher.encrypt(WORKSPACE, TOKEN);
         WorkspaceInfo workspace = new WorkspaceInfo(

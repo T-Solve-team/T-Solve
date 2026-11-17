@@ -72,14 +72,14 @@ describe('WorkspaceSettingsPage company information', () => {
     expect(screen.queryByText('Leave empty to keep the current token.')).not.toBeInTheDocument();
   });
 
-  it('AC-010.9 shows the Jira App as connected with the time of its last update', async () => {
+  it('AC-010.10 shows the Jira App as connected with the time of its last update', async () => {
     renderApp(paths.workspaceSettings, { role: 'ADMIN' });
     await findSave();
     expect(screen.getByText(/^Connected — last update /)).toBeInTheDocument();
     expect(screen.queryByText(INSTALL_HINT)).not.toBeInTheDocument();
   });
 
-  it('AC-010.9 shows the Jira App as not connected with the install hint', async () => {
+  it('AC-010.10 shows the Jira App as not connected with the install hint', async () => {
     server.use(
       http.get('*/api/v1/workspace', () =>
         HttpResponse.json({ ...INFO, jiraAppConnected: false, jiraAppTokenReceivedAt: null }),

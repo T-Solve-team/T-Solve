@@ -855,7 +855,7 @@ paths:
           description: The Department.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/DepartmentRef' }
+              schema: { $ref: '#/components/schemas/DepartmentDetail' }
         '401':
           $ref: '#/components/responses/Problem'
         '403':
@@ -865,7 +865,7 @@ paths:
     put:
       tags: [departments]
       operationId: updateDepartment
-      summary: Rename a Department and its Space
+      summary: Rename a Department and its Space, and set its default Project
       parameters:
         - { name: departmentId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -875,10 +875,10 @@ paths:
             schema: { $ref: '#/components/schemas/UpdateDepartmentRequest' }
       responses:
         '200':
-          description: Department renamed (or already had that name).
+          description: Department saved (or already had that name and default Project).
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/DepartmentRef' }
+              schema: { $ref: '#/components/schemas/DepartmentDetail' }
         '400':
           $ref: '#/components/responses/Problem'
         '401':
@@ -1827,7 +1827,7 @@ paths:
     post:
       tags: [jira-app]
       operationId: receiveJiraAppToken
-      summary: Forge scheduled and install/upgrade triggers hand the app system token to the backend (workspace STORY-012, KAN-349).
+      summary: Forge scheduled and install/upgrade triggers hand the app system token to the backend (workspace STORY-014, KAN-349).
       security:
         - forgeInvocationToken: []
       parameters:
@@ -3516,6 +3516,26 @@ components:
       required: [name]
       properties:
         name: { type: string, minLength: 1, maxLength: 50 }
+        defaultProjectId: { type: [string, 'null'], format: uuid }
+    DepartmentProjectOption:
+      type: object
+      required: [projectId, jiraProjectKey]
+      properties:
+        projectId: { type: string, format: uuid }
+        jiraProjectKey: { type: string }
+    DepartmentDetail:
+      type: object
+      required: [departmentId, name, defaultProject, projects]
+      properties:
+        departmentId: { type: string, format: uuid }
+        name: { type: string }
+        defaultProject:
+          anyOf:
+            - { $ref: '#/components/schemas/DepartmentProjectOption' }
+            - { type: 'null' }
+        projects:
+          type: array
+          items: { $ref: '#/components/schemas/DepartmentProjectOption' }
     ProjectSummaryResponse:
       type: object
       required: [id, jiraProjectKey, departmentName, projectManagerName, status]

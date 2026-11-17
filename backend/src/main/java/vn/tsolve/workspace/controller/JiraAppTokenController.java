@@ -14,7 +14,7 @@ import vn.tsolve.common.security.JiraAppPrincipal;
 import vn.tsolve.common.security.Roles;
 import vn.tsolve.workspace.service.JiraAppTokenService;
 
-/** The Jira App hands its app token to the backend (workspace STORY-012, jira-app STORY-013, KAN-349). */
+/** The Jira App hands its app token to the backend (workspace STORY-014, jira-app STORY-013, KAN-349). */
 @RestController
 @RequestMapping("/api/v1/jira-app/app-token")
 @Tag(name = "jira-app")

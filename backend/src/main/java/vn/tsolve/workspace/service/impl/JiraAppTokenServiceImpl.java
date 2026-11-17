@@ -53,7 +53,7 @@ public class JiraAppTokenServiceImpl implements JiraAppTokenService {
         if (token == null || token.isBlank()) {
             throw new JiraAppTokenRejectedException();
         }
-        // AC-012.4: the gateway of exactly this site, so a stored token can never send calls anywhere else
+        // AC-014.4: the gateway of exactly this site, so a stored token can never send calls anywhere else
         if (cloudId == null || !CLOUD_ID.matcher(cloudId).matches() || !(GATEWAY + cloudId).equals(apiBaseUrl)) {
             throw new JiraAppTokenRejectedException();
         }

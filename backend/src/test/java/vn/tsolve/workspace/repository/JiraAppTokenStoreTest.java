@@ -59,7 +59,7 @@ class JiraAppTokenStoreTest {
     }
 
     @Test
-    void holdsTheTokenEncryptedUntilItExpires_AC_012_1() {
+    void holdsTheTokenEncryptedUntilItExpires_AC_014_1() {
         store.hold(WORKSPACE, token("app-token-1", NOW.plus(Duration.ofHours(3))));
 
         ArgumentCaptor<String> stored = ArgumentCaptor.forClass(String.class);
@@ -70,7 +70,7 @@ class JiraAppTokenStoreTest {
     }
 
     @Test
-    void keepsAHeldTokenThatExpiresLater_AC_012_5() {
+    void keepsAHeldTokenThatExpiresLater_AC_014_5() {
         store.hold(WORKSPACE, token("later", NOW.plus(Duration.ofHours(4))));
         ArgumentCaptor<String> stored = ArgumentCaptor.forClass(String.class);
         verify(values).set(eq(KEY), stored.capture(), any(Duration.class));
@@ -83,7 +83,7 @@ class JiraAppTokenStoreTest {
     }
 
     @Test
-    void dropsAValueThatCannotBeDecryptedWithoutLoggingIt_AC_012_7() {
+    void dropsAValueThatCannotBeDecryptedWithoutLoggingIt_AC_014_7() {
         byte[] otherKey = new byte[32];
         otherKey[0] = 1;
         String foreign = cipher(otherKey).encrypt(WORKSPACE, "{\"token\":\"secret\"}");
@@ -107,14 +107,14 @@ class JiraAppTokenStoreTest {
     }
 
     @Test
-    void neverWritesAnExpiredToken_AC_012_3() {
+    void neverWritesAnExpiredToken_AC_014_3() {
         store.hold(WORKSPACE, token("old", NOW.minusSeconds(1)));
 
         verify(values, never()).set(anyString(), anyString(), any(Duration.class));
     }
 
     @Test
-    void answersEmptyWhenNothingIsHeld_AC_012_1() {
+    void answersEmptyWhenNothingIsHeld_AC_014_1() {
         assertThat(store.current(WORKSPACE)).isEmpty();
     }
 }
