@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -413,7 +414,7 @@ class ChatbotAnswerServiceImplTest {
                 .thenReturn(List.of(new WikiPassage(document, "VPN guide", "Reconnect", 0.8)));
         when(llm.chat(any(), isNull())).thenReturn("Restart the client [1] and read [2]");
 
-        var response = service.askForProject(project, question());
+        var response = service.askForProject(project, Optional.empty(), question());
 
         assertThat(response.outcome()).isEqualTo(Outcome.ANSWERED);
         assertThat(response.citations()).hasSize(2);
@@ -426,6 +427,27 @@ class ChatbotAnswerServiceImplTest {
         assertThat(saved.getValue().getSource()).isEqualTo(ChatbotAnswer.JIRA_APP);
         assertThat(saved.getValue().getProjectId()).isEqualTo(project);
         assertThat(saved.getValue().getQuestion()).isEqualTo("question");
+    }
+
+    @Test
+    void givesALinkedAskerTheWikiTheyMayViewAndStillStoresNoUser_AC_012_1() {
+        UUID project = UUID.randomUUID();
+        var service = projectService(project, true);
+        when(embeddings.embed(List.of("question"))).thenReturn(List.of(vector));
+        when(solutions.nearestInProjectDepartment(project, vector, 0.7, 5)).thenReturn(List.of());
+        UUID document = UUID.randomUUID();
+        when(wiki.nearest(USER, vector, 0.7, 5))
+                .thenReturn(List.of(new WikiPassage(document, "Department runbook", "Reconnect", 0.8)));
+        when(llm.chat(any(), isNull())).thenReturn("Reconnect [1]");
+
+        var response = service.askForProject(project, Optional.of(USER), question());
+
+        assertThat(response.outcome()).isEqualTo(Outcome.ANSWERED);
+        verify(wiki, never()).nearestCompanyWide(any(), anyDouble(), anyInt());
+        ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
+        verify(answers).save(saved.capture());
+        assertThat(saved.getValue().getUserId()).isNull();
+        assertThat(saved.getValue().getProjectId()).isEqualTo(project);
     }
 
     @Test
@@ -447,10 +469,10 @@ class ChatbotAnswerServiceImplTest {
         UUID project = UUID.randomUUID();
         var service = projectService(project, false);
 
-        assertThatThrownBy(() -> service.askForProject(project, question()))
+        assertThatThrownBy(() -> service.askForProject(project, Optional.empty(), question()))
                 .isInstanceOf(ChatbotProjectNotActiveException.class)
                 .hasMessage("MSG08");
-        assertThatThrownBy(() -> service.askForProject(null, question()))
+        assertThatThrownBy(() -> service.askForProject(null, Optional.empty(), question()))
                 .isInstanceOf(ChatbotProjectNotActiveException.class);
         verifyNoInteractions(embeddings, llm, solutions, wiki, answers);
     }

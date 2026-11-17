@@ -38,12 +38,14 @@ import vn.tsolve.chatbot.answer.service.ChatbotAnswerService;
 import vn.tsolve.chatbot.rating.entity.ChatbotRating;
 import vn.tsolve.chatbot.rating.exception.ChatbotAnswerNotFoundException;
 import vn.tsolve.common.security.JiraAppPrincipal;
+import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.identity.signin.port.LocalTenantScope;
 import vn.tsolve.jiraapp.dto.JiraAppQuestionRequest;
 import vn.tsolve.jiraapp.dto.JiraAppRatingRequest;
 import vn.tsolve.jiraapp.dto.JiraAskerEligibility.Status;
 import vn.tsolve.jiraapp.exception.JiraIssueAccessDeniedException;
 import vn.tsolve.jiraapp.exception.JiraSiteNotConnectedException;
+import vn.tsolve.jiraapp.service.JiraAskerLookup;
 import vn.tsolve.jiraapp.service.JiraWorkspaceLookup;
 import vn.tsolve.project.service.ProjectService;
 
@@ -63,6 +65,7 @@ class JiraAppQuestionServiceImplTest {
     private final JiraWorkspaceLookup workspaces = mock(JiraWorkspaceLookup.class);
     private final LocalTenantScope tenantScope = new LocalTenantScope();
     private final ProjectService projects = mock(ProjectService.class);
+    private final JiraAskerLookup askers = mock(JiraAskerLookup.class);
     private final ChatbotAnswerService answers = mock(ChatbotAnswerService.class);
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
@@ -104,12 +107,12 @@ class JiraAppQuestionServiceImplTest {
     void answersMsg06AtOnceWhenItsPoolIsFull_BUG_183() throws Exception {
         ThreadPoolExecutor one = new ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS, new SynchronousQueue<>());
         CountDownLatch release = new CountDownLatch(1);
-        when(answers.askForProject(any(), any())).thenAnswer(call -> {
+        when(answers.askForProject(any(), any(), any())).thenAnswer(call -> {
             release.await(5, TimeUnit.SECONDS);
             return ANSWER;
         });
-        JiraAppQuestionServiceImpl service =
-                new JiraAppQuestionServiceImpl(workspaces, tenantScope, projects, answers, one, Duration.ofSeconds(5));
+        JiraAppQuestionServiceImpl service = new JiraAppQuestionServiceImpl(
+                workspaces, tenantScope, projects, askers, answers, one, Duration.ofSeconds(5));
         try {
             CompletableFuture<ChatbotAnswerResponse> first = CompletableFuture.supplyAsync(
                     () -> service.ask(CALLER, new JiraAppQuestionRequest("q1", List.of())));
@@ -134,22 +137,38 @@ class JiraAppQuestionServiceImplTest {
     @Test
     void returnsTheChatbotAnswerForTheProjectOfAnyJiraUser_AC_010_4() {
         List<ChatbotTurnRequest> history = List.of(new ChatbotTurnRequest("VPN fails", "Check the client [1]"));
-        when(answers.askForProject(any(), any())).thenReturn(ANSWER);
+        when(answers.askForProject(any(), any(), any())).thenReturn(ANSWER);
 
         ChatbotAnswerResponse answer =
                 service(Duration.ofSeconds(5)).ask(CALLER, new JiraAppQuestionRequest("Still failing", history));
 
         assertThat(answer).isSameAs(ANSWER);
-        verify(answers).askForProject(PROJECT, new ChatbotQuestionRequest("Still failing", history));
+        verify(answers).askForProject(PROJECT, Optional.empty(), new ChatbotQuestionRequest("Still failing", history));
+    }
+
+    @Test
+    void givesALinkedAskerTheWikiOfTheirTsolveUser_AC_010_4() {
+        TSolveUser linked = new TSolveUser(UUID.randomUUID(), "an@t-solve.vn", "An", java.util.Set.of());
+        AtomicReference<UUID> boundAtLookup = new AtomicReference<>();
+        when(askers.find("cloud-1", "jira-1")).thenAnswer(call -> {
+            boundAtLookup.set(tenantScope.currentWorkspaceId());
+            return Optional.of(linked);
+        });
+        when(answers.askForProject(any(), any(), any())).thenReturn(ANSWER);
+
+        service(Duration.ofSeconds(5)).ask(CALLER, new JiraAppQuestionRequest("VPN fails", List.of()));
+
+        verify(answers).askForProject(PROJECT, Optional.of(linked), new ChatbotQuestionRequest("VPN fails", List.of()));
+        assertThat(boundAtLookup).hasValue(WORKSPACE);
     }
 
     @Test
     void sendsNoHistoryAsAnEmptyHistory_AC_010_4() {
-        when(answers.askForProject(any(), any())).thenReturn(ANSWER);
+        when(answers.askForProject(any(), any(), any())).thenReturn(ANSWER);
 
         service(Duration.ofSeconds(5)).ask(CALLER, new JiraAppQuestionRequest("VPN fails", null));
 
-        verify(answers).askForProject(PROJECT, new ChatbotQuestionRequest("VPN fails", List.of()));
+        verify(answers).askForProject(PROJECT, Optional.empty(), new ChatbotQuestionRequest("VPN fails", List.of()));
     }
 
     @Test
@@ -203,7 +222,7 @@ class JiraAppQuestionServiceImplTest {
 
     @Test
     void answersMsg06WhenTheAiIsUnavailable_AC_010_8() {
-        when(answers.askForProject(any(), any())).thenThrow(new AiUnavailableException());
+        when(answers.askForProject(any(), any(), any())).thenThrow(new AiUnavailableException());
 
         assertThatThrownBy(() -> service(Duration.ofSeconds(5)).ask(CALLER, new JiraAppQuestionRequest("q", List.of())))
                 .isInstanceOfSatisfying(AiUnavailableException.class, e -> {
@@ -215,7 +234,7 @@ class JiraAppQuestionServiceImplTest {
     @Test
     void answersMsg06WhenTheChatbotMissesTheDeadline_AC_010_8() throws Exception {
         CountDownLatch release = new CountDownLatch(1);
-        when(answers.askForProject(any(), any())).thenAnswer(call -> {
+        when(answers.askForProject(any(), any(), any())).thenAnswer(call -> {
             release.await(5, TimeUnit.SECONDS);
             return ANSWER;
         });
@@ -257,7 +276,7 @@ class JiraAppQuestionServiceImplTest {
     @Test
     void asksTheChatbotInTheWorkspaceOfTheSite_BUG_318() {
         AtomicReference<UUID> boundAtAnswer = new AtomicReference<>();
-        when(answers.askForProject(any(), any())).thenAnswer(call -> {
+        when(answers.askForProject(any(), any(), any())).thenAnswer(call -> {
             boundAtAnswer.set(tenantScope.currentWorkspaceId());
             return ANSWER;
         });
@@ -306,6 +325,6 @@ class JiraAppQuestionServiceImplTest {
     }
 
     private JiraAppQuestionServiceImpl service(Duration timeout) {
-        return new JiraAppQuestionServiceImpl(workspaces, tenantScope, projects, answers, executor, timeout);
+        return new JiraAppQuestionServiceImpl(workspaces, tenantScope, projects, askers, answers, executor, timeout);
     }
 }

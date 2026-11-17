@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -162,7 +163,8 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
     }
 
     @Override
-    public ChatbotAnswerResponse askForProject(UUID projectId, ChatbotQuestionRequest request) {
+    public ChatbotAnswerResponse askForProject(
+            UUID projectId, Optional<TSolveUser> reader, ChatbotQuestionRequest request) {
         // AC-012.4: refused before any AI call.
         if (projectId == null || projects == null || !projects.isActive(projectId)) {
             throw new ChatbotProjectNotActiveException();
@@ -173,7 +175,10 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
                     solutions.nearestInProjectDepartment(projectId, vector, minSimilarity, sourceLimit).stream()
                             .map(ChatbotSource::of)
                             .forEach(candidates::add);
-                    return wiki.nearestCompanyWide(vector, minSimilarity, sourceLimit);
+                    // AC-012.1: a linked asker reads what they may view on the web; anyone else Company-wide only.
+                    return reader.isPresent()
+                            ? wiki.nearest(reader.get(), vector, minSimilarity, sourceLimit)
+                            : wiki.nearestCompanyWide(vector, minSimilarity, sourceLimit);
                 },
                 (question, outcome, text) -> ChatbotAnswer.forProject(projectId, question, outcome, text));
     }

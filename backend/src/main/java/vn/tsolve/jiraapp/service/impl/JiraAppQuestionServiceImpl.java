@@ -25,6 +25,7 @@ import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse;
 import vn.tsolve.chatbot.answer.dto.ChatbotQuestionRequest;
 import vn.tsolve.chatbot.answer.service.ChatbotAnswerService;
 import vn.tsolve.common.security.JiraAppPrincipal;
+import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.identity.signin.port.TenantScope;
 import vn.tsolve.jiraapp.dto.JiraAppQuestionRequest;
 import vn.tsolve.jiraapp.dto.JiraAppRatingRequest;
@@ -33,6 +34,7 @@ import vn.tsolve.jiraapp.dto.JiraAskerEligibility.Status;
 import vn.tsolve.jiraapp.exception.JiraIssueAccessDeniedException;
 import vn.tsolve.jiraapp.exception.JiraSiteNotConnectedException;
 import vn.tsolve.jiraapp.service.JiraAppQuestionService;
+import vn.tsolve.jiraapp.service.JiraAskerLookup;
 import vn.tsolve.jiraapp.service.JiraWorkspaceLookup;
 import vn.tsolve.project.service.ProjectService;
 
@@ -48,6 +50,7 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
     private final JiraWorkspaceLookup workspaces;
     private final TenantScope tenantScope;
     private final ProjectService projects;
+    private final JiraAskerLookup askers;
     private final ChatbotAnswerService answers;
     private final Executor executor;
     private final long timeoutNanos;
@@ -60,10 +63,18 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
             JiraWorkspaceLookup workspaces,
             TenantScope tenantScope,
             ProjectService projects,
+            JiraAskerLookup askers,
             ChatbotAnswerService answers,
             @Value("${JIRA_APP_ASK_THREADS:8}") int threads,
             @Value("${JIRA_APP_ASK_TIMEOUT:18s}") String timeout) {
-        this(workspaces, tenantScope, projects, answers, askPool(threads), DurationStyle.detectAndParse(timeout));
+        this(
+                workspaces,
+                tenantScope,
+                projects,
+                askers,
+                answers,
+                askPool(threads),
+                DurationStyle.detectAndParse(timeout));
     }
 
     /** At most {@code threads} questions at once and as many waiting; any more answer MSG06 at once (BUG-183). */
@@ -97,6 +108,7 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
             JiraWorkspaceLookup workspaces,
             TenantScope tenantScope,
             ProjectService projects,
+            JiraAskerLookup askers,
             ChatbotAnswerService answers,
             Executor executor,
             Duration timeout) {
@@ -106,6 +118,7 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
         this.workspaces = workspaces;
         this.tenantScope = tenantScope;
         this.projects = projects;
+        this.askers = askers;
         this.answers = answers;
         this.executor = executor;
         this.timeoutNanos = timeout.toNanos();
@@ -126,12 +139,15 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
         UUID workspace = workspace(caller).orElseThrow(JiraSiteNotConnectedException::new);
         UUID project = project(workspace, caller).orElseThrow(JiraIssueAccessDeniedException::new);
         ChatbotQuestionRequest question = request.toChatbotQuestion();
+        // AC-010.4: a Jira account linked to an active T-Solve user reads the Wiki that user may view.
+        Optional<TSolveUser> reader =
+                tenantScope.runIn(workspace, () -> askers.find(caller.cloudId(), caller.accountId()));
         // The chatbot allows itself CHATBOT_ASK_TIMEOUT (60 s); the Jira App must answer within Forge's 25 s, so the
         // call runs on a worker and is abandoned at the Jira App deadline (AC-010.8). It may still finish and store
         // its answer. The Workspace is bound per thread, so the worker binds it again (BUG-318).
         try {
             return CompletableFuture.supplyAsync(
-                            () -> tenantScope.runIn(workspace, () -> answers.askForProject(project, question)),
+                            () -> tenantScope.runIn(workspace, () -> answers.askForProject(project, reader, question)),
                             executor)
                     .orTimeout(timeoutNanos, TimeUnit.NANOSECONDS)
                     .join();
