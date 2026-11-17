@@ -4,7 +4,7 @@ import { Link, useParams } from 'react-router';
 import { useGetDepartment } from '@/shared/api';
 import { paths } from '@/shared/routing';
 import { ErrorState, LoadingState, SectionCard } from '@/shared/ui';
-import { DepartmentNameForm } from '../components/DepartmentNameForm';
+import { DepartmentEditForm } from '../components/DepartmentEditForm';
 
 export function DepartmentDetailPage() {
   const { departmentId = '' } = useParams();
@@ -16,7 +16,7 @@ export function DepartmentDetailPage() {
     <Flex vertical gap="middle">
       <Link to={paths.workspaceSettings}>Back to Workspace Settings</Link>
       <SectionCard title="Department Detail">
-        <DepartmentNameForm department={department.data} />
+        <DepartmentEditForm department={department.data} />
       </SectionCard>
     </Flex>
   );

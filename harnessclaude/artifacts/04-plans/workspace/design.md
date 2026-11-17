@@ -5,7 +5,7 @@ date: 2026-11-13
 
 # Design: workspace
 
-Spec: `artifacts/03-modules/workspace/spec.md`. The module holds UC-12 Create Department (KAN-120, STORY-001..STORY-002), the UC-13 rename (KAN-121, STORY-003..STORY-004) and UC-10/UC-11 Workspace Setup and Settings (KAN-119, STORY-005..STORY-011); later UCs extend this file through Change Mode. Facts about the existing code: `iteration-1/kan-120-scout.md`, `iteration-1/kan-121-scout.md`. KAN-120 decisions: `iteration-1/kan-120-decisions.md` and Key Decisions (KAN-120) below. KAN-121 decisions: `iteration-1/kan-121-decisions.md`, written `K121-D6` and so on in this file. KAN-119: plan `iteration-1/kan-119/`, decisions Key Decisions (KAN-119) and "Decisions made without the user (KAN-119)" below. Decision ids (D…) are numbered per Jira story: say "KAN-119 D28" or "KAN-120 D7" when it is not clear.
+Spec: `artifacts/03-modules/workspace/spec.md`. The module holds UC-12 Create Department (KAN-120, STORY-001..STORY-002), the UC-13 rename (KAN-121, STORY-003..STORY-004) and default Project (KAN-121, STORY-012..STORY-013, section "KAN-121: default Project" at the end) and UC-10/UC-11 Workspace Setup and Settings (KAN-119, STORY-005..STORY-011); later UCs extend this file through Change Mode. Facts about the existing code: `iteration-1/kan-120-scout.md`, `iteration-1/kan-121-scout.md`. KAN-120 decisions: `iteration-1/kan-120-decisions.md` and Key Decisions (KAN-120) below. KAN-121 decisions: `iteration-1/kan-121-decisions.md`, written `K121-D6` and so on in this file. KAN-119: plan `iteration-1/kan-119/`, decisions Key Decisions (KAN-119) and "Decisions made without the user (KAN-119)" below. Decision ids (D…) are numbered per Jira story: say "KAN-119 D28" or "KAN-120 D7" when it is not clear.
 
 ## Architecture Overview
 
@@ -356,8 +356,8 @@ frontend/src/features/workspace/
   pages/WorkspaceSettingsPage.test.tsx          + AC-004.1
   pages/DepartmentDetailPage.tsx                replaces the placeholder
   pages/DepartmentDetailPage.test.tsx           new
-  components/DepartmentNameForm.tsx             new
-  hooks/useDepartmentMutations.ts               + useRenameDepartment
+  components/DepartmentEditForm.tsx             new
+  hooks/useDepartmentMutations.ts               + useSaveDepartment
   mocks/handlers.ts                             seeded list, GET and PUT handlers
 ```
 
@@ -572,3 +572,174 @@ Open questions for the spec owner: none.
 | Reading the cloud id | `JiraSiteLinker` gains `readCloudId(site)`: the same no-redirect `/_edge/tenant_info` read as `linkJiraSite`, called **before** the check and outside the transaction; only a canonical UUID is accepted (AC-011.8) | Call `linkJiraSite` before the check | The check needs the cloud id first; `linkJiraSite` stays the in-transaction link of AC-005.8 for the future catalog |
 | Old rows | `current()` answers empty while `jira_cloud_id` is null (AC-008.4); the Admin enters a new (scoped) token, which fills it (AC-007.11) | Backfill by a job | Old rows hold classic tokens that cannot work with Bearer anyway; the Admin must re-enter the token |
 | PR | Workspace and tracker in one PR (KAN-344); the import follows in its own PR | Separate PRs | The check is `JiraClient.checkServiceAccount` and `JiraAccount` is tracker's type; one `http()` builder serves every call |
+
+## KAN-121: default Project (STORY-012, STORY-013)
+
+Change Mode of 17/11. Facts: `iteration-1/kan-121-default-project-scout.md` (from `origin/main` `db594997`). Decisions K121-D26 to K121-D42 in `iteration-1/kan-121-decisions.md`. Tasks 12 and 13 in `iteration-1/tasks.md`; edge cases rows 69 to 105 in `iteration-1/design.md`. Branch `feat/KAN-121-workspace-default-project` (K121-D26).
+
+### API
+
+```
+GET /api/v1/departments/{departmentId}              (Admin) → 200 DepartmentDetail | 401 | 403 | 404 MSG04 | 500
+PUT /api/v1/departments/{departmentId}              (Admin) body UpdateDepartmentRequest { name, defaultProjectId? (uuid | null) }
+                                                     → 200 DepartmentDetail | 400 MSG01/MSG02 (name)
+                                                       | 400 MSG04/MSG156/MSG157 (defaultProjectId) | 401 | 403 | 404 MSG04 | 409 MSG43 | 500
+
+DepartmentDetail        { departmentId, name, defaultProject: DepartmentProjectOption | null, projects: DepartmentProjectOption[] }
+DepartmentProjectOption { projectId (uuid), jiraProjectKey }
+```
+
+Contract (`frontend/openapi/tsolve-api.yaml`, OpenAPI 3.1): `getDepartment` and `updateDepartment` answer `DepartmentDetail` instead of `DepartmentRef`; `UpdateDepartmentRequest` gains `defaultProjectId: { type: [string, 'null'], format: uuid }`, not in `required` (K121-D29: absent = null); `defaultProject` is `oneOf: [{ $ref: DepartmentProjectOption }, { type: 'null' }]` as `UserAccountDetail.department` (`tsolve-api.yaml:3573`). Every field of the two new schemas is required. `DepartmentRef` is not touched (K121-D33).
+
+Java: `vn.tsolve.workspace.dto.DepartmentDetailResponse(UUID departmentId, String name, DepartmentProjectOptionResponse defaultProject, List<DepartmentProjectOptionResponse> projects)` and `DepartmentProjectOptionResponse(UUID projectId, String jiraProjectKey)`. `UpdateDepartmentRequest` gains `UUID defaultProjectId` (no annotation; a value that is not a UUID is an unreadable body, 400 from the handler). `DepartmentService.get` and `update` return `DepartmentDetailResponse`; `create` keeps `DepartmentRefResponse`.
+
+### Service flow
+
+`DepartmentServiceImpl.update` loses `@Transactional` and gains a `TransactionTemplate` built from `PlatformTransactionManager`, as `WorkspaceServiceImpl.java:48, 68, 99` (Non-Functional 2: no outbound call inside a transaction, `backend/AGENTS.md:144`). New constructor parameters: `TrackerProjectService tracker`, `PlatformTransactionManager transactions`.
+
+```
+update(departmentId, request)
+  scope.currentWorkspaceId()                                   AC-003.21, AC-012.14
+  name   = request.name().strip()
+  wanted = request.defaultProjectId()                          null or absent: none (K121-D29)
+  before = repository.findActive(departmentId)                 empty: NotFoundException MSG04 (AC-003.2); no lock
+  if wanted != null && !wanted.equals(before.defaultProjectId()):                 AC-012.10 (unchanged: no Jira)
+      option = repository.findActiveProject(before.id(), wanted)                  empty: 400 MSG04 on defaultProjectId (AC-012.5)
+      switch tracker.checkChatbotProject(option.jiraProjectKey()):                AC-012.7, outside any transaction
+          READY                -> go on
+          NOT_READY            -> 400 MSG157 {project_name: key} on defaultProjectId   (AC-012.9)
+          DENIED, UNAVAILABLE  -> 400 MSG156 {tracker_name: "Jira"} on defaultProjectId (AC-012.8)
+  return transaction.execute(status ->
+      current = repository.lockActive(departmentId)                               empty: 404 MSG04; FOR UPDATE (K121-D7)
+      chosen  = wanted == null ? null : repository.lockActiveProject(current.id(), wanted)
+                                                                                   empty: 400 MSG04 (AC-012.13); FOR SHARE
+      nameChanged    = !name.equals(current.name())
+      defaultChanged = !Objects.equals(wanted, current.defaultProjectId())
+      if !nameChanged && !defaultChanged: return detail(current)                  AC-003.14
+      if nameChanged:    renameDepartment (23505: MSG43), spaceId = renameSpace   AC-003.3, AC-003.4, AC-012.15
+      if defaultChanged: repository.setDefaultProject(current.id(), chosen == null ? null : chosen.rowId())   AC-012.4, AC-012.6
+      audit.record(DEPARTMENT_CHANGE, "DEPARTMENT", departmentId, details)       AC-012.11
+      return new DepartmentDetailResponse(departmentId, name, chosen option or null, repository.activeProjects(current.id())))
+```
+
+Errors on the field use `new FieldMessageCodeException(HttpStatus.BAD_REQUEST, code, params, "defaultProjectId")` (`common/exception`, as `WorkspaceServiceImpl.java:219-221`). Any exception inside the callback rolls back the whole save (AC-012.15, AC-003.17).
+
+`get` stays `@Transactional(readOnly = true)`: `findActive`, then `activeProjects`, and answers `DepartmentDetailResponse` (AC-012.1, AC-012.3).
+
+Audit details (K121-D40) are built in a `LinkedHashMap` because `defaultProject` may be null (`Map.of` refuses null):
+
+```
+{ operation: "UPDATE",
+  before: { name: <old>, defaultProject: {projectId, jiraProjectKey} | null },   defaultProject only when it changed
+  after:  { name: <new>, defaultProject: {projectId, jiraProjectKey} | null },
+  spaceId: <uuid> }                                                              only when the name changed
+```
+
+A rename alone keeps today's details exactly (AC-003.5).
+
+### SQL (`DepartmentRepository`, JDBC; no changeset)
+
+`department.default_project_id BIGINT` and its FK already exist (`002-tenant-project-suggestion.sql:10, 28-30`); the latest changeset stays `042-workspace-jira-cloud-id.sql`. The record `Current` becomes `Current(long id, String name, UUID defaultProjectId, String defaultProjectKey)`; a new record `ProjectOption(long rowId, UUID projectId, String jiraProjectKey)`.
+
+```sql
+-- findActive (GET and the pre-read of PUT): a default Project that is not Active reads as none (AC-012.3)
+SELECT d.department_id, d.name, p.public_id AS default_project_id, p.jira_project_key AS default_project_key
+FROM department d
+LEFT JOIN project p ON p.project_id = d.default_project_id AND p.status = 'ACTIVE'
+WHERE d.public_id = :id AND d.status = 'ACTIVE';
+
+-- lockActive: two statements (BUG-314). First lock the Department row alone:
+SELECT department_id FROM department WHERE public_id = :id AND status = 'ACTIVE' FOR UPDATE;
+-- then re-read it with the findActive join in a new statement. A single `LEFT JOIN … FOR UPDATE OF d`
+-- rechecks only the locked row after the wait and keeps the stale Project row, so the second of two
+-- concurrent saves audited an old before.defaultProject (AC-012.16).
+
+-- activeProjects (AC-012.1)
+SELECT public_id, jira_project_key FROM project
+WHERE department_id = :departmentId AND status = 'ACTIVE' ORDER BY jira_project_key;
+
+-- findActiveProject (before Jira) and lockActiveProject (in the transaction, + FOR SHARE): AC-012.5, AC-012.13
+SELECT project_id, public_id, jira_project_key FROM project
+WHERE public_id = :projectId AND department_id = :departmentId AND status = 'ACTIVE';
+
+-- setDefaultProject (null clears)
+UPDATE department SET default_project_id = :projectRowId WHERE department_id = :id;
+```
+
+Reading `project` with workspace's own SQL is K121-D32 (project already reads `department` the same way; calling `ProjectService` would be a cycle). `FOR SHARE` keeps the Project from being Removed between the check and the commit once a remove-Project story exists.
+
+### Jira check (tracker, K121-D39)
+
+Workspace calls only `tracker.service.TrackerProjectService` (`backend/AGENTS.md:78-79`). New pieces, all in `tracker`:
+
+| Piece | Where | What |
+|---|---|---|
+| `ChatbotProjectCheck` | `tracker/dto/ChatbotProjectCheck.java` | enum `READY`, `NOT_READY`, `DENIED`, `UNAVAILABLE` |
+| `TrackerCreateField` | `tracker/dto/TrackerCreateField.java` | record `(String fieldId, boolean required, boolean hasDefaultValue)` |
+| `TrackerProjectService.checkChatbotProject(String projectKey)` | `tracker/service/TrackerProjectService.java`, impl `TrackerProjectServiceImpl` | the rule of AC-012.7; never throws for a Jira failure |
+| `TicketTrackerClient.hasProjectPermissions(JiraAccount, String projectKey, List<String> permissions)` | `tracker/client/TicketTrackerClient.java`, impl `JiraClient` | `GET /rest/api/3/mypermissions?projectKey={key}&permissions=CREATE_ISSUES,MODIFY_REPORTER`; true when every named permission has `havePermission` true |
+| `TicketTrackerClient.createFields(JiraAccount, String projectKey, String issueTypeName)` | same | `Optional<List<TrackerCreateField>>`: empty when the project has no issue type of that name (ignoring case) with `subtask` false; else the fields of `GET /rest/api/3/issue/createmeta/{key}/issuetypes/{id}` |
+
+Calls, all through the existing gateway builder (`JiraClient.java:37, 190-202`, `Authorization: Bearer`, `https://api.atlassian.com/ex/jira/{cloudId}`) and its `call` error mapping (`:204-219`: 429/5xx/no answer → `JiraUnavailableException`, other 4xx → `JiraRejectedException`, no body kept):
+
+1. `GET /rest/api/3/mypermissions?projectKey={key}&permissions=CREATE_ISSUES,MODIFY_REPORTER` → `permissions.CREATE_ISSUES.havePermission`, `permissions.MODIFY_REPORTER.havePermission`.
+2. `GET /rest/api/3/issue/createmeta/{key}/issuetypes?startAt={n}&maxResults=200` → array `issueTypes` (items `id`, `name`, `subtask`), paged by `startAt`/`total` until all are read or a match is found.
+3. `GET /rest/api/3/issue/createmeta/{key}/issuetypes/{issueTypeId}?startAt={n}&maxResults=200` → array `fields` (items `fieldId`, `required`, `hasDefaultValue`), paged the same way.
+
+The keys `issueTypes` and `fields` are from the Jira Cloud REST v3 reference; `values` is read when they are absent (older answers). Task 12 makes the three calls once by hand on the staging site and notes the shapes in its log (Definition of Done). The project key goes into the path through the URI template, never by concatenation.
+
+`checkChatbotProject` (copies the shape of `findProject`, `TrackerProjectServiceImpl.java:32-77`):
+
+```
+account = serviceAccount.current()             empty: DENIED (AC-012.8)
+!jira.hasProjectPermissions(...)               DENIED
+fields = jira.createFields(account, key, "Task")   empty: NOT_READY (AC-012.9)
+any field required && !hasDefaultValue && fieldId not in {summary, description, project, issuetype, reporter, labels}: NOT_READY
+else READY
+catch JiraRejectedException (any 4xx, 404 included, K121-D35): DENIED
+catch JiraUnavailableException, RuntimeException: UNAVAILABLE
+```
+
+Each outcome is logged at `warn` (`info` for READY) with the key and Jira's status only, as `findProject` does (AC-012.17). Timeouts are `JiraClient`'s `tsolve.tracker.jira.connect-timeout` 5 s and `read-timeout` 10 s per call (Non-Functional 6); a check makes three calls, more only when a list has over 200 entries.
+
+### Web app
+
+- `useGetDepartment` now returns `DepartmentDetail`; `DepartmentDetailPage` passes it to the form unchanged.
+- `DepartmentEditForm` (renamed from `DepartmentNameForm`, PR #269 review; its Javadoc becomes "the name and default Project and their inline edit form, UC-13"): props `{ department: DepartmentDetail }`.
+  - View: a second `Descriptions` item, label "Default Project", `department.defaultProject?.jiraProjectKey ?? 'None'` (AC-013.1).
+  - Edit: below "Department name", `FormField name="defaultProjectId" label="Default Project" extra=<AC-013.4 text>` holding an antd `Select` with options `[{ value: '', label: 'None' }, ...department.projects.map(p => ({ value: p.projectId, label: p.jiraProjectKey }))]` and `disabled={rename.isPending}` (AC-013.2, AC-013.3, AC-013.9). Initial value `department.defaultProject?.projectId ?? ''`.
+  - Submit: `{ name: values.name.trim(), defaultProjectId: values.defaultProjectId || null }` (AC-013.5). `applyApiErrors` already places a `fieldErrors` entry on the form field of the same name with its params (`shared/forms/apply-api-errors.ts:10-19`), so MSG04, MSG156 and MSG157 land under the select (AC-013.7).
+  - Success and Cancel as today (AC-013.6, AC-013.8): the refetched detail shows the stored value; `form.resetFields()` restores it.
+- Catalog: `MSG157: { type: 'field', text: '{project_name} cannot receive Chatbot issues: it has no issue type Task or requires other fields. Choose another Project.' }` in `shared/messages/catalog.ts` beside MSG156 (AC-013.10, K121-D41).
+- MSW (`features/workspace/mocks/handlers.ts`): the seeded list keeps IT and HR and gains `defaultProjectId: null` and per-Department projects: IT has `OPS` (`00000000-0000-4000-8000-0000000000e1`) and `SUP` (`...0000000000e2`), HR has none. GET answers the `DepartmentDetail`; PUT keeps the name rules, answers 400 MSG04 on `defaultProjectId` for an id not in that Department's list, else stores it (null clears) and answers the detail. MSG156 and MSG157 are driven in tests with `server.use`. `resetMockData` restores the seed.
+
+### Decisions (K121-D29 to K121-D42, summary)
+
+| Decision | Chosen | Alternatives | Rationale |
+|---|---|---|---|
+| D29 Request | `defaultProjectId` in the rename PUT, absent = null | Own endpoint; absent = unchanged | One Save (UC-13 step 2); records cannot tell absent from null |
+| D31 Other id | 400 MSG04 on `defaultProjectId` | MSG40; MSG157; provisional key | No catalog message fits better; 404 already means "no Department" |
+| D32 Reading Projects | Workspace's own SQL | `ProjectService` | Would be a module cycle |
+| D33 Read model | New `DepartmentDetail` | Widen identity's `DepartmentRef` | Keeps identity and project responses unchanged |
+| D34 Required fields | Allowed {summary, description, project, issuetype, reporter, labels}, defaults ignored | Stricter sets | Exactly what UC-58 will send |
+| D35 Failures | MSG156 for access/connection incl. 404; MSG157 only for Task/fields | 404 → MSG157; 503 MSG06 | Field message always; text matches cause |
+| D36 Removed default | Reads as none; no clearing code | Clearing SQL now | No caller yet |
+| D37 Unchanged default | No Jira call | Re-check every save | A rename must not fail when Jira is down |
+| D39 Boundary | `TrackerProjectService.checkChatbotProject` | Client called from workspace | Compliant path exists (KAN-127 pattern) |
+| D40 Audit | Same entry, `defaultProject` in before/after | New action | No changeset |
+
+Decided in planning: when the pre-read shows the requested Project as the current default (no Jira call) but the locked row shows another one (a concurrent save changed it), the save stores the requested Project without a new Jira check; it passed the check when it was first chosen. (edge row 94)
+
+Decided in planning: "None" is the empty string inside the form only; the request sends null.
+
+Decided in planning (builder check): the pre-read of `update` (`findActive`, `findActiveProject`) runs in its own read-only `transaction.execute`, closed before the Jira call, so it keeps working when the tenant row guard of `architecture.md` needs a transaction for every read.
+
+Decided in planning (builder check): errors come one at a time in this order: name rules (MSG01, MSG02, by `@Valid`), unknown Department (404 MSG04), the chosen Project (MSG04, MSG156, MSG157), then the name's uniqueness (409 MSG43, at the write). A taken name with a failing Project answers the Project's error first.
+
+Decided in planning (builder check): when Jira lists several non-sub-task types named Task, the first in Jira's order is used. `createFields` reads `issueTypes`/`fields` and falls back to `values`; unit tests stub both shapes, and the manual staging call of the Definition of Done only confirms which one Jira sends (it blocks nothing).
+
+Decided in planning (builder check): the scoped token's scopes are not checked separately. A token without the read scopes these calls need gets 401 from Jira, which is MSG156 ("lacks the required permissions"); the Setup check of AC-011.1 is unchanged.
+
+Decided in planning (builder check): a field error under the select clears when the Admin picks another value (antd's default).
+
+Decided in planning: the `module.md` `paths` of workspace gain the tracker files this feature changes (K121-D39); `TrackerProjectServiceImplTest` and `JiraClientTest` get the tracker tests.

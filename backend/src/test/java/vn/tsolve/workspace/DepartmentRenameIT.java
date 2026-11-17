@@ -2,6 +2,10 @@ package vn.tsolve.workspace;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -9,6 +13,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -19,9 +24,13 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -36,6 +45,8 @@ import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.common.security.WithTSolveUser;
 import vn.tsolve.identity.TwoTenantDatabases;
 import vn.tsolve.identity.signin.port.TenantScope;
+import vn.tsolve.tracker.dto.ChatbotProjectCheck;
+import vn.tsolve.tracker.service.TrackerProjectService;
 import vn.tsolve.workspace.dto.UpdateDepartmentRequest;
 import vn.tsolve.workspace.service.DepartmentService;
 
@@ -58,6 +69,7 @@ import vn.tsolve.workspace.service.DepartmentService;
 @AutoConfigureMockMvc
 @Import(TwoTenantDatabases.class)
 @WithTSolveUser(roles = Role.ADMIN)
+@ExtendWith(OutputCaptureExtension.class)
 class DepartmentRenameIT {
     private final String prefix = UUID.randomUUID().toString().substring(0, 8);
 
@@ -72,6 +84,9 @@ class DepartmentRenameIT {
 
     @Autowired
     private DepartmentService service;
+
+    @MockBean
+    private TrackerProjectService tracker;
 
     @AfterEach
     void cleanup() {
@@ -264,7 +279,7 @@ class DepartmentRenameIT {
     }
 
     @Test
-    void keepsStatusDefaultProjectAndProjects_AC_003_6() {
+    void keepsStatusDefaultProjectAndProjectsWhenTheDefaultIsSent_AC_003_6() {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         UUID id = seed(prefix + " Keep");
         db.update("""
@@ -275,12 +290,15 @@ class DepartmentRenameIT {
                 UPDATE department SET default_project_id = (SELECT project_id FROM project WHERE jira_project_key = ?)
                 WHERE public_id = ?
                 """, prefix + "-A", id);
+        UUID projectId = db.queryForObject(
+                "SELECT public_id FROM project WHERE jira_project_key = ?", UUID.class, prefix + "-A");
         in(TwoTenantDatabases.ACME, () -> {
-            mvc.perform(rename(id, prefix + " Kept"))
+            mvc.perform(save(id, prefix + " Kept", projectId))
                     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
                             .isOk());
             return null;
         });
+        verifyNoInteractions(tracker);
         var row = db.queryForMap("SELECT status, default_project_id, name FROM department WHERE public_id = ?", id);
         assertThat(row).containsEntry("status", "ACTIVE").containsEntry("name", prefix + " Kept");
         assertThat(row.get("default_project_id"))
@@ -507,7 +525,7 @@ class DepartmentRenameIT {
         try {
             assertThatThrownBy(() -> scope.runIn(
                             TwoTenantDatabases.ACME,
-                            () -> service.update(id, new UpdateDepartmentRequest(prefix + " Renamed"))))
+                            () -> service.update(id, new UpdateDepartmentRequest(prefix + " Renamed", null))))
                     .isInstanceOf(IllegalStateException.class);
         } finally {
             SecurityContextHolder.setContext(context);
@@ -588,6 +606,252 @@ class DepartmentRenameIT {
                         AND details ->> 'operation' = 'CREATE' AND details ->> 'name' = ?
                         """, id, prefix + " First")).isEqualTo(1);
         assertThat(updateAudits(db, id)).isEqualTo(2);
+    }
+
+    // --- KAN-121: default Project (STORY-012) ---
+
+    private UUID project(UUID department, String key, String status) {
+        return TwoTenantDatabases.tenantA().queryForObject("""
+                        INSERT INTO project(department_id, jira_project_key, status)
+                        SELECT department_id, ?, ? FROM department WHERE public_id = ? RETURNING public_id
+                        """, UUID.class, key, status, department);
+    }
+
+    private void setDefault(UUID department, UUID project) {
+        TwoTenantDatabases.tenantA().update("""
+                UPDATE department SET default_project_id = (SELECT project_id FROM project WHERE public_id = ?)
+                WHERE public_id = ?
+                """, project, department);
+    }
+
+    private UUID defaultOf(UUID department) {
+        return TwoTenantDatabases.tenantA().queryForObject("""
+                SELECT p.public_id FROM department d LEFT JOIN project p ON p.project_id = d.default_project_id
+                WHERE d.public_id = ?
+                """, UUID.class, department);
+    }
+
+    private MockHttpServletRequestBuilder save(UUID id, String name, UUID defaultProjectId) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("name", name);
+        body.put("defaultProjectId", defaultProjectId);
+        return put("/api/v1/departments/" + id)
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(toJson(body));
+    }
+
+    private JsonNode perform(MockHttpServletRequestBuilder request, int status) {
+        return in(TwoTenantDatabases.ACME, () -> {
+            MockHttpServletResponse response = mvc.perform(request).andReturn().getResponse();
+            assertThat(response.getStatus()).as(response.getContentAsString()).isEqualTo(status);
+            return mapper.readTree(response.getContentAsString());
+        });
+    }
+
+    private List<Map<String, Object>> auditRows(UUID id) {
+        return TwoTenantDatabases.tenantA().queryForList("""
+                SELECT details::text AS details,
+                       details -> 'before' -> 'defaultProject' ->> 'projectId' AS before_project,
+                       details -> 'after' -> 'defaultProject' ->> 'projectId' AS after_project,
+                       jsonb_typeof(details -> 'after' -> 'defaultProject') AS after_type,
+                       details ->> 'spaceId' AS space_id
+                FROM audit_log_entry WHERE target_type = 'DEPARTMENT' AND target_id = ?
+                """, id);
+    }
+
+    @Test
+    void listsTheDepartmentsActiveProjectsByKey_AC_012_1() {
+        UUID id = seed(prefix + " List");
+        UUID other = seed(prefix + " Other");
+        UUID b = project(id, prefix + "-B", "ACTIVE");
+        UUID a = project(id, prefix + "-A", "ACTIVE");
+        project(id, prefix + "-C", "REMOVED");
+        project(other, prefix + "-D", "ACTIVE");
+        setDefault(id, b);
+
+        JsonNode body = perform(get("/api/v1/departments/" + id), 200);
+
+        assertThat(body.get("defaultProject").get("projectId").asText()).isEqualTo(b.toString());
+        assertThat(body.get("defaultProject").get("jiraProjectKey").asText()).isEqualTo(prefix + "-B");
+        List<String> keys = new ArrayList<>();
+        body.get("projects")
+                .forEach(option -> keys.add(option.get("jiraProjectKey").asText()));
+        assertThat(keys).containsExactly(prefix + "-A", prefix + "-B");
+        assertThat(body.get("projects").get(0).get("projectId").asText()).isEqualTo(a.toString());
+    }
+
+    @Test
+    void readsARemovedDefaultAsNone_AC_012_3() {
+        UUID id = seed(prefix + " Removed");
+        UUID removed = project(id, prefix + "-R", "REMOVED");
+        setDefault(id, removed);
+
+        JsonNode body = perform(get("/api/v1/departments/" + id), 200);
+        assertThat(body.get("defaultProject").isNull()).isTrue();
+        assertThat(body.get("projects")).isEmpty();
+
+        perform(save(id, prefix + " Removed", null), 200);
+        assertThat(audits(TwoTenantDatabases.tenantA(), id)).isZero();
+        verifyNoInteractions(tracker);
+    }
+
+    @Test
+    void storesTheCheckedProjectAndAnswersTheDetail_AC_012_4_AC_012_2() {
+        UUID id = seed(prefix + " Store");
+        UUID ops = project(id, prefix + "-OPS", "ACTIVE");
+        when(tracker.checkChatbotProject(prefix + "-OPS")).thenReturn(ChatbotProjectCheck.READY);
+
+        JsonNode body = perform(save(id, prefix + " Store", ops), 200);
+
+        assertThat(defaultOf(id)).isEqualTo(ops);
+        assertThat(body.get("departmentId").asText()).isEqualTo(id.toString());
+        assertThat(body.get("defaultProject").get("projectId").asText()).isEqualTo(ops.toString());
+        assertThat(body.get("projects").get(0).get("jiraProjectKey").asText()).isEqualTo(prefix + "-OPS");
+        verify(tracker).checkChatbotProject(prefix + "-OPS");
+    }
+
+    @Test
+    void refusesAProjectThatIsNotAnActiveProjectOfThisDepartment_AC_012_5() {
+        UUID id = seed(prefix + " Refuse");
+        UUID other = seed(prefix + " Elsewhere");
+        UUID foreign = project(other, prefix + "-F", "ACTIVE");
+        UUID removed = project(id, prefix + "-X", "REMOVED");
+        for (UUID projectId : List.of(foreign, removed, UUID.randomUUID())) {
+            JsonNode body = perform(save(id, prefix + " Renamed", projectId), 400);
+            assertThat(body.get("code").asText()).isEqualTo("MSG04");
+            assertThat(body.get("fieldErrors").get(0).get("field").asText()).isEqualTo("defaultProjectId");
+        }
+        assertThat(defaultOf(id)).isNull();
+        assertThat(nameOf(TwoTenantDatabases.tenantA(), id)).isEqualTo(prefix + " Refuse");
+        assertThat(audits(TwoTenantDatabases.tenantA(), id)).isZero();
+        verifyNoInteractions(tracker);
+    }
+
+    @Test
+    void clearsTheDefaultWithNullOrAbsent_AC_012_6() throws Exception {
+        JdbcTemplate db = TwoTenantDatabases.tenantA();
+        UUID id = seed(prefix + " Clear");
+        UUID ops = project(id, prefix + "-C1", "ACTIVE");
+        setDefault(id, ops);
+
+        perform(save(id, prefix + " Clear", null), 200);
+        assertThat(defaultOf(id)).isNull();
+        setDefault(id, ops);
+        perform(rename(id, prefix + " Clear"), 200);
+        assertThat(defaultOf(id)).isNull();
+
+        List<Map<String, Object>> rows = auditRows(id);
+        assertThat(rows).hasSize(2).allSatisfy(row -> {
+            assertThat(row).containsEntry("before_project", ops.toString()).containsEntry("after_type", "null");
+            assertThat(row.get("space_id")).isNull();
+        });
+        assertThat(nameOf(db, id)).isEqualTo(prefix + " Clear");
+        verifyNoInteractions(tracker);
+    }
+
+    @Test
+    void changesOnlyTheDefaultWhenTheNameIsTheSame_AC_012_12() {
+        JdbcTemplate db = TwoTenantDatabases.tenantA();
+        UUID id = seed(prefix + " Only");
+        UUID ops = project(id, prefix + "-O", "ACTIVE");
+        when(tracker.checkChatbotProject(prefix + "-O")).thenReturn(ChatbotProjectCheck.READY);
+
+        perform(save(id, "  " + prefix + " Only ", ops), 200);
+
+        assertThat(defaultOf(id)).isEqualTo(ops);
+        assertThat(nameOf(db, id)).isEqualTo(prefix + " Only");
+        assertThat(spaceNameOf(db, id)).isEqualTo(prefix + " Only");
+        List<Map<String, Object>> rows = auditRows(id);
+        assertThat(rows).singleElement().satisfies(row -> {
+            assertThat(row).containsEntry("after_project", ops.toString()).containsEntry("before_project", null);
+            assertThat(row.get("space_id")).isNull();
+        });
+    }
+
+    @Test
+    void keepsTheOldNameAndDefaultWhenTheNameIsTakenAfterTheCheck_AC_012_15() {
+        JdbcTemplate db = TwoTenantDatabases.tenantA();
+        UUID id = seed(prefix + " Mine");
+        seed(prefix + " Taken");
+        UUID ops = project(id, prefix + "-T", "ACTIVE");
+        when(tracker.checkChatbotProject(prefix + "-T")).thenReturn(ChatbotProjectCheck.READY);
+
+        JsonNode body = perform(save(id, prefix + " Taken", ops), 409);
+
+        assertThat(body.get("code").asText()).isEqualTo("MSG43");
+        assertThat(defaultOf(id)).isNull();
+        assertThat(nameOf(db, id)).isEqualTo(prefix + " Mine");
+        assertThat(audits(db, id)).isZero();
+    }
+
+    @Test
+    void keepsTheOldNameAndDefaultWhenTheAuditFails_AC_012_15() {
+        JdbcTemplate db = TwoTenantDatabases.tenantA();
+        UUID id = seed(prefix + " Audit");
+        UUID ops = project(id, prefix + "-AU", "ACTIVE");
+        when(tracker.checkChatbotProject(prefix + "-AU")).thenReturn(ChatbotProjectCheck.READY);
+        var context = SecurityContextHolder.getContext();
+        SecurityContextHolder.clearContext();
+        try {
+            assertThatThrownBy(() -> scope.runIn(
+                            TwoTenantDatabases.ACME,
+                            () -> service.update(id, new UpdateDepartmentRequest(prefix + " Renamed", ops))))
+                    .isInstanceOf(IllegalStateException.class);
+        } finally {
+            SecurityContextHolder.setContext(context);
+        }
+        assertThat(defaultOf(id)).isNull();
+        assertThat(nameOf(db, id)).isEqualTo(prefix + " Audit");
+        assertThat(audits(db, id)).isZero();
+    }
+
+    @Test
+    void appliesTwoConcurrentDefaultChangesInTurn_AC_012_16_BUG_314() throws Exception {
+        UUID id = seed(prefix + " Race");
+        UUID a = project(id, prefix + "-RA", "ACTIVE");
+        UUID b = project(id, prefix + "-RB", "ACTIVE");
+        when(tracker.checkChatbotProject(any())).thenReturn(ChatbotProjectCheck.READY);
+
+        var responses = race(List.of(save(id, prefix + " Race", a), save(id, prefix + " Race", b)));
+
+        assertThat(responses.stream().map(MockHttpServletResponse::getStatus)).containsExactly(200, 200);
+        List<Map<String, Object>> rows = auditRows(id);
+        assertThat(rows).hasSize(2);
+        Map<String, Object> first = rows.get(0).get("before_project") == null ? rows.get(0) : rows.get(1);
+        Map<String, Object> second = first == rows.get(0) ? rows.get(1) : rows.get(0);
+        assertThat(first.get("before_project")).isNull();
+        assertThat(second.get("before_project")).isEqualTo(first.get("after_project"));
+        assertThat(defaultOf(id)).hasToString((String) second.get("after_project"));
+    }
+
+    @Test
+    void addsNoAuditWhenNameAndDefaultAreUnchanged_AC_003_14() {
+        UUID id = seed(prefix + " Same");
+        UUID ops = project(id, prefix + "-S", "ACTIVE");
+        setDefault(id, ops);
+
+        JsonNode body = perform(save(id, " " + prefix + " Same ", ops), 200);
+
+        assertThat(body.get("defaultProject").get("projectId").asText()).isEqualTo(ops.toString());
+        assertThat(audits(TwoTenantDatabases.tenantA(), id)).isZero();
+        verifyNoInteractions(tracker);
+    }
+
+    @Test
+    void keepsTokensOutOfLogsAndTheAudit_AC_012_17(CapturedOutput output) throws Exception {
+        UUID id = seed(prefix + " Secret");
+        UUID ops = project(id, prefix + "-SE", "ACTIVE");
+        when(tracker.checkChatbotProject(prefix + "-SE")).thenReturn(ChatbotProjectCheck.READY);
+
+        perform(save(id, prefix + " Secret", ops), 200);
+
+        String details = (String) auditRows(id).get(0).get("details");
+        assertThat(mapper.readTree(details).fieldNames())
+                .toIterable()
+                .containsExactlyInAnyOrder("operation", "before", "after");
+        assertThat(details).doesNotContainIgnoringCase("token").doesNotContain("Bearer");
+        assertThat(output.getAll()).doesNotContain("Bearer ");
     }
 
     private String toJson(Object value) {

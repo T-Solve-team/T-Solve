@@ -1887,3 +1887,15 @@
 {"ts":"2026-11-17T06:44:23.979Z","type":"feature-status","module":"chatbot","feature":"jira-issue-draft","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-17T06:44:24.785Z","type":"feature-status","module":"chatbot","feature":"jira-issue-draft","from":"evaluating","to":"passing"}
 {"ts":"2026-11-17T06:44:25.886Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"ba9dbfeed0154b8185e32be43dab552fd0cb640c"}
+{"ts":"2026-11-16T19:57:56.906Z","type":"feature-status","module":"workspace","feature":"default-project-api","from":null,"to":"pending"}
+{"ts":"2026-11-16T19:57:57.206Z","type":"feature-status","module":"workspace","feature":"default-project-screen","from":null,"to":"pending"}
+{"ts":"2026-11-16T20:00:08.906Z","type":"spec-approved","module":"workspace","specHash":"b8cc01b75e3b292ca76a65e08a1d4f7b75def6abde72aa87bccdd95167cb5a24"}
+{"ts":"2026-11-16T20:00:17.127Z","type":"module-status","module":"workspace","from":"evaluating","to":"implementing"}
+{"ts":"2026-11-16T20:00:17.425Z","type":"feature-status","module":"workspace","feature":"default-project-api","from":"pending","to":"in-progress"}
+{"ts":"2026-11-16T20:44:58.107Z","type":"feature-status","module":"workspace","feature":"default-project-api","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-16T20:44:58.656Z","type":"commit-recorded","module":"workspace","repo":"default","sha":"5a363ceb5b07c2ad3ad5ebce59ba4b0ccd7bd97e"}
+{"ts":"2026-11-16T20:45:09.516Z","type":"feature-status","module":"workspace","feature":"default-project-screen","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T03:58:44.575Z","type":"feature-status","module":"workspace","feature":"default-project-screen","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T03:58:45.135Z","type":"commit-recorded","module":"workspace","repo":"default","sha":"030ed7b71dc85c45fe3a3d21731bfde87c8f653a"}
+{"ts":"2026-11-17T04:06:47.554Z","type":"feature-status","module":"workspace","feature":"default-project-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-17T04:06:47.854Z","type":"feature-status","module":"workspace","feature":"default-project-screen","from":"evaluating","to":"passing"}
