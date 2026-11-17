@@ -2686,6 +2686,97 @@ paths:
           $ref: '#/components/responses/Problem'
         '404':
           $ref: '#/components/responses/Problem'
+  /api/v1/chatbot/answers/{answerId}/issue-draft:
+    parameters:
+      - name: answerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [chatbot]
+      operationId: draftChatbotIssue
+      summary: The Jira issue form of an own answer, prefilled by the AI from the conversation (UC-58, MSG144).
+      description: >
+        For an ANSWERED or NO_SOURCE answer of the user. Offers only the Departments with a default Project. When the
+        AI fails the draft is empty and the user fills it. Nothing is stored and nothing reaches Jira. A user with no
+        linked Jira account (UC-59) gets 409 code MSG146 instead of the form.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatbotIssueDraftRequest'
+      responses:
+        '200':
+          description: The prefilled form.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatbotIssueDraft'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /api/v1/chatbot/answers/{answerId}/jira-issue:
+    parameters:
+      - name: answerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [chatbot]
+      operationId: createChatbotIssue
+      summary: Creates the Jira issue of an own answer when the user clicks Create in Jira (UC-58, GBR-40).
+      description: >
+        Issue type Task, label tsolve-chatbot, in the default Project of the chosen Department, created with the
+        Workspace's Jira service account with the user's linked Jira account as reporter. One issue per answer: when
+        it exists, 200 returns it without calling Jira. Errors (code): 400 field errors MSG01/MSG02 or MSG06 for a
+        Department that is not offered; 409 MSG146 no linked Jira account; 502 MSG148 Jira refused, MSG157 the
+        default Project has no Task type or requires other fields; 503 MSG149 Jira unreachable. Nothing is created
+        on an error.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatbotIssueRequest'
+      responses:
+        '201':
+          description: The issue was created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatbotJiraIssue'
+        '200':
+          description: The issue of this answer already exists; Jira was not called.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatbotJiraIssue'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '502':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
   /api/v1/tickets:
     get:
       tags: [tickets]
@@ -4964,6 +5055,70 @@ components:
           items:
             type: string
             format: uuid
+    ChatbotIssueDraftRequest:
+      type: object
+      required: [history]
+      properties:
+        history:
+          type: array
+          maxItems: 10
+          description: The turns of the conversation before this answer, oldest first, as for askChatbot.
+          items:
+            $ref: '#/components/schemas/ChatbotTurn'
+    ChatbotIssueDraft:
+      type: object
+      required: [summary, description, departmentId, departments]
+      properties:
+        summary:
+          type: string
+          maxLength: 255
+          description: Prefilled by the AI; empty when the AI failed.
+        description:
+          type: string
+          maxLength: 10000
+        departmentId:
+          type: [integer, 'null']
+          format: int64
+          description: The suggested Department, one of departments; null when none is suggested.
+        departments:
+          type: array
+          description: The Departments with a default Project (UC-13), by name; empty when there is none.
+          items:
+            $ref: '#/components/schemas/IssueDepartment'
+    IssueDepartment:
+      type: object
+      required: [departmentId, name]
+      properties:
+        departmentId:
+          type: integer
+          format: int64
+        name:
+          type: string
+    ChatbotIssueRequest:
+      type: object
+      required: [summary, description, departmentId]
+      properties:
+        summary:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 10000
+        departmentId:
+          type: integer
+          format: int64
+    ChatbotJiraIssue:
+      type: object
+      required: [issueKey, issueUrl]
+      properties:
+        issueKey:
+          type: string
+          description: The Jira issue key, e.g. HR-12.
+        issueUrl:
+          type: string
+          format: uri
+          description: The issue in the Workspace's Jira site ({site}/browse/{issueKey}).
     FieldError:
       type: object
       required: [field, code]

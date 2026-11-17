@@ -8,9 +8,15 @@ import vn.tsolve.chatbot.exception.InvalidChatbotRequestException;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record ChatbotQuestionRequest(
-        @NotBlank(message = "MSG01") @Size(max = 1000, message = "MSG02") String question,
+        @NotBlank(message = "MSG01") @Size(max = 1000, message = "MSG02")
+        String question,
+
         List<ChatbotTurnRequest> history) {
     public ChatbotQuestionRequest {
+        validateHistory(history);
+    }
+
+    public static void validateHistory(List<ChatbotTurnRequest> history) {
         if (history == null || history.size() > 10) {
             throw new InvalidChatbotRequestException();
         }

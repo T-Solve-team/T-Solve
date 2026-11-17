@@ -46,6 +46,9 @@ public class ChatbotAnswer {
     @Column(name = "rated_at")
     private Instant ratedAt;
 
+    @Column(name = "jira_issue_key", length = 255)
+    private String jiraIssueKey;
+
     protected ChatbotAnswer() {}
 
     public ChatbotAnswer(UUID userId, String question, String outcome, String answerText) {
@@ -85,5 +88,13 @@ public class ChatbotAnswer {
 
     public Instant getRatedAt() {
         return ratedAt;
+    }
+
+    public String getJiraIssueKey() {
+        return jiraIssueKey;
+    }
+
+    public void recordJiraIssue(String issueKey) {
+        jiraIssueKey = issueKey;
     }
 }

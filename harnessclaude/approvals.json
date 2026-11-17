@@ -233,8 +233,8 @@
     }
   },
   "chatbot": {
-    "specHash": "ecbccd305941158a3919d4b2a346a4dd22b18320e08e111cae98a7433b59ca75",
-    "approvedAt": "2026-11-09T03:54:35.734Z",
+    "specHash": "860f7cdf682ab102166702077c463fc2795a52a0c5f1b1ae34eeff84fd4ec36d",
+    "approvedAt": "2026-11-17T09:08:04.683Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",
@@ -302,7 +302,27 @@
       "AC-008.3": "IF the answer id is unknown, THEN THE backend SHALL answer 404 with MSG04 and change nothing",
       "AC-008.4": "IF the rating body is missing or its rating is missing or unknown, THEN THE backend SHALL answer 400",
       "AC-008.5": "IF the request has no web session, THEN THE backend SHALL answer 401 with MSG07; every signed-in user",
-      "AC-008.6": "THE chatbot changeset SHALL add to  the nullable columns  ( or"
+      "AC-008.6": "THE chatbot changeset SHALL add to  the nullable columns  ( or",
+      "AC-010.1": "WHEN a signed-in user sends  () for an  or  answer of their own, THE backend SHALL answer 200  with , ,  (the suggested Department, or null) and .",
+      "AC-010.2": "THE backend SHALL offer as  exactly the  Departments whose default Project is an",
+      "AC-010.3": "WHEN at least one Department is offered, THE backend SHALL call the  module's",
+      "AC-010.4": "THE backend SHALL return the summary trimmed and cut to 255 characters and the description trimmed and",
+      "AC-010.5": "IF the AI fails or the draft takes longer than  or the reply is not the expected JSON, THEN THE backend SHALL answer 200 with an empty , an empty , a null  and the offered , and SHALL not retry (GBR-12: the user fills the form).",
+      "AC-010.6": "IF no Department is offered, THEN THE backend SHALL answer 200 with empty  and",
+      "AC-010.7": "IF the user has no linked Jira account (, UC-59), THEN THE backend SHALL answer 409",
+      "AC-010.8": "IF the answer id is unknown, THEN THE backend SHALL answer 404 with MSG04 (not a UUID, no such answer,",
+      "AC-010.9": "THE backend SHALL store nothing for a draft and SHALL write neither the conversation nor the draft text",
+      "AC-011.1": "WHEN a signed-in user sends  () with a valid  for an answer of their own, THE backend SHALL create one Jira issue through the Jira REST API as the T-Solve Jira App (: the Workspace's Jira site and the app token of KAN-349, as Bearer through ): the chosen Department's default Project, issue type Task, the given summary, the given description, the label  and the user's linked Jira account as reporter; and SHALL answer 201  with the issue key and its URL (the Jira site address,  and the key).",
+      "AC-011.2": "WHEN Jira has created the issue, THE backend SHALL store its key in  on that",
+      "AC-011.3": "IF the answer already has a , THEN THE backend SHALL answer 200  with",
+      "AC-011.4": "THE backend SHALL use as reporter the user's linked Jira account, the latest linked when there are",
+      "AC-011.5": "IF  is missing or blank, THEN THE backend SHALL answer 400 with field error MSG01 on ;",
+      "AC-011.6": "IF  is empty (no Jira site, or no usable Jira App token) or Jira answers 401, 403, 404 or a 400 that names the reporter or no field, THEN THE backend SHALL answer 502 with code MSG148 and store nothing.",
+      "AC-011.7": "IF Jira answers 400 naming the issue type or another field than the summary or the description or the labels or the reporter, THEN THE backend SHALL answer 502 with code MSG157 and store nothing (the default Project has no Task type or requires other fields).",
+      "AC-011.8": "IF Jira answers 5xx, does not answer within 10 seconds, or cannot be reached, THEN THE backend SHALL",
+      "AC-011.9": "IF the answer id is unknown, THEN THE backend SHALL answer 404 with MSG04 (as in AC-010.8); IF the",
+      "AC-011.10": "THE backend SHALL write neither the summary, the description nor the token to the application log;",
+      "AC-011.11": "THE chatbot changeset SHALL add to  the nullable column"
     }
   },
   "identity": {
