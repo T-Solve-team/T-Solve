@@ -1,16 +1,11 @@
 import type { ProjectRow } from '@/shared/api';
+import { useSession } from '@/shared/auth';
 import { msg } from '@/shared/messages';
+import { paths } from '@/shared/routing';
 import { cells, DataTable, type DataTableColumn } from '@/shared/ui';
 
 /** Screen 3.1 Projects table (spec AC-008.2–AC-008.5); no paging or client sorting (D44). */
 const COLUMNS: DataTableColumn<ProjectRow>[] = [
-  { key: 'projectId', title: 'Project ID', width: 320, render: (_, p) => cells.text(p.projectId) },
-  {
-    key: 'jiraProjectKey',
-    title: 'Jira project key',
-    width: 160,
-    render: (_, p) => cells.text(p.jiraProjectKey),
-  },
   {
     key: 'projectManager',
     title: 'Project Manager',
@@ -24,10 +19,23 @@ type ProjectsTableProps = { rows: ProjectRow[] };
 
 /** The Projects of the caller's Department, in the returned order. */
 export function ProjectsTable({ rows }: ProjectsTableProps) {
+  const { session } = useSession();
   return (
     <DataTable<ProjectRow>
       label="Projects"
-      columns={COLUMNS}
+      columns={[
+        { key: 'rowNumber', title: 'No.', width: 64, render: (_, _p, index) => index + 1 },
+        {
+          key: 'jiraProjectKey',
+          title: 'Jira project key',
+          width: 160,
+          render: (_, p) =>
+            session && p.projectManager?.userId === session.user.id
+              ? cells.link(paths.projectDetail(p.projectId), p.jiraProjectKey)
+              : cells.text(p.jiraProjectKey),
+        },
+        ...COLUMNS,
+      ]}
       rows={rows}
       rowKey={(p) => p.projectId}
     />

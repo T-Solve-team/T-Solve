@@ -39,9 +39,9 @@ function dataRows(): HTMLElement[] {
   return within(screen.getByRole('table')).getAllByRole('row').slice(1); // without the header row
 }
 
-function rowOf(ticketId: string): HTMLElement {
-  const row = screen.getByRole('link', { name: ticketId }).closest('tr');
-  if (!row) throw new Error(`no row for ${ticketId}`);
+function rowOf(title: string): HTMLElement {
+  const row = screen.getByRole('link', { name: title }).closest('tr');
+  if (!row) throw new Error(`no row for ${title}`);
   return row;
 }
 
@@ -92,7 +92,7 @@ describe('TicketListPage', () => {
       .getAllByRole('columnheader')
       .map((h) => h.textContent);
     expect(headers).toEqual([
-      'Ticket ID',
+      'No.',
       'Title',
       'Project',
       'Department',
@@ -119,20 +119,19 @@ describe('TicketListPage', () => {
       expect(first?.has(name)).toBe(false);
     }
     expect(dataRows()).toHaveLength(20);
-    expect(dataRows()[0]).toHaveTextContent('ITNET-0412'); // updated 02/10/2026 18:31
+    expect(dataRows()[0]).toHaveTextContent('Wi-Fi drops in meeting rooms on floor 3'); // updated 02/10/2026 18:31
   });
 
   it('AC-001.3 shows each column of a row, and "—" for an empty review due date', async () => {
     await openList();
-    expect(screen.getByRole('link', { name: 'ITSUP-1102' })).toHaveAttribute(
-      'href',
-      '/tickets/7a1c0000-0000-4000-8000-000000000003',
-    );
-    const cells = within(rowOf('ITSUP-1102'))
+    expect(
+      screen.getByRole('link', { name: 'VPN keeps dropping during Teams calls' }),
+    ).toHaveAttribute('href', '/tickets/7a1c0000-0000-4000-8000-000000000003');
+    const cells = within(rowOf('VPN keeps dropping during Teams calls'))
       .getAllByRole('cell')
       .map((c) => c.textContent);
     expect(cells).toEqual([
-      'ITSUP-1102',
+      '3',
       'VPN keeps dropping during Teams calls',
       'ITSUP',
       'IT',
@@ -141,9 +140,21 @@ describe('TicketListPage', () => {
       '05/10/2026 16:02',
       '02/10/2026 16:02',
     ]);
-    const published = within(rowOf('ITSUP-1024')).getAllByRole('cell');
+    const published = within(rowOf('VPN disconnects every 10 minutes on home Wi-Fi')).getAllByRole(
+      'cell',
+    );
     expect(published[5]).toHaveTextContent('Published');
     expect(published[6]).toHaveTextContent('—');
+  });
+
+  it('AC-001.3 numbers page 2 from 21 and links the Title to the ticket detail', async () => {
+    await openList('/tickets?page=2');
+    expect(
+      dataRows().map((row) => within(row).getAllByRole('cell', { hidden: true })[0]?.textContent),
+    ).toEqual(['21', '22', '23', '24', '25', '26', '27', '28']);
+    expect(
+      screen.getByRole('link', { name: 'Insurance card request form returns an error' }),
+    ).toHaveAttribute('href', '/tickets/7a1c0000-0000-4000-8000-000000000021');
   });
 
   it('AC-001.4 searches the keyword only on Enter, trimmed, from page 1', async () => {
@@ -156,7 +167,7 @@ describe('TicketListPage', () => {
     await user.keyboard('{Enter}');
     await waitFor(() => expect(router.state.location.search).toBe('?keyword=payslip'));
     await waitFor(() => expect(dataRows()).toHaveLength(1));
-    expect(dataRows()[0]).toHaveTextContent('HRHELP-0318');
+    expect(dataRows()[0]).toHaveTextContent('Payslip PDF shows wrong overtime hours');
   });
 
   it('AC-001.4 removes the keyword when the box is empty or white space', async () => {
@@ -201,7 +212,9 @@ describe('TicketListPage', () => {
 
     await waitFor(() => expect(router.state.location.search).toBe(`?departmentId=${HR_ID}`));
     await waitFor(() =>
-      expect(screen.queryByRole('link', { name: 'ITSUP-1024' })).not.toBeInTheDocument(),
+      expect(
+        screen.queryByRole('link', { name: 'VPN disconnects every 10 minutes on home Wi-Fi' }),
+      ).not.toBeInTheDocument(),
     );
     expect(screen.getByText('Total 10 items')).toBeInTheDocument();
     expect(requests.at(-1)?.get('departmentId')).toBe(HR_ID);
@@ -227,7 +240,7 @@ describe('TicketListPage', () => {
     await pick(user, 'Status', 'Rejected');
     await waitFor(() => expect(router.state.location.search).toBe('?source=CSV&status=REJECTED'));
     await waitFor(() => expect(dataRows()).toHaveLength(1));
-    expect(dataRows()[0]).toHaveTextContent('ITSUP-1042');
+    expect(dataRows()[0]).toHaveTextContent('Reset MFA for users who changed phones');
   });
 
   it('AC-001.7 removes Source and Status when their defaults are picked', async () => {
@@ -258,17 +271,22 @@ describe('TicketListPage', () => {
     }
   });
 
-  it('AC-001.8 sorts by a sortable column header', async () => {
+  it('AC-001.8 sorts by Title, keeps No. unsortable and removes the Ticket ID header', async () => {
     const { user, router } = await openList();
     const table = screen.getByRole('table');
-    const sortable = ['Ticket ID', 'Title', 'Project', 'Review due date', 'Updated'];
+    const sortable = ['Title', 'Project', 'Review due date', 'Updated'];
+    expect(
+      within(table).queryByRole('columnheader', { name: 'Ticket ID' }),
+    ).not.toBeInTheDocument();
     for (const header of within(table).getAllByRole('columnheader')) {
       const isSortable = header.classList.contains('ant-table-column-has-sorters');
       expect(isSortable).toBe(sortable.includes(header.textContent));
     }
-    await user.click(within(table).getByRole('columnheader', { name: 'Ticket ID' }));
-    await waitFor(() => expect(router.state.location.search).toBe('?sort=sourceTicketId%2Casc'));
-    await waitFor(() => expect(dataRows()[0]).toHaveTextContent('HRHELP-0228'));
+    await user.click(within(table).getByRole('columnheader', { name: 'No.' }));
+    expect(router.state.location.search).toBe('');
+    await user.click(within(table).getByRole('columnheader', { name: 'Title' }));
+    await waitFor(() => expect(router.state.location.search).toBe('?sort=title%2Casc'));
+    await waitFor(() => expect(dataRows()[0]).toHaveTextContent('Bank account change not saved'));
   });
 
   it('AC-001.9 shows the total and loads another page with the same filters and sort', async () => {
@@ -289,7 +307,11 @@ describe('TicketListPage', () => {
       `/tickets?keyword=vpn&departmentId=${IT_ID}&source=SOLUTION_FORM&status=PENDING_REVIEW`,
     );
     expect(
-      await screen.findByRole('link', { name: 'ITSUP-1102' }, { timeout: 5000 }),
+      await screen.findByRole(
+        'link',
+        { name: 'VPN keeps dropping during Teams calls' },
+        { timeout: 5000 },
+      ),
     ).toBeInTheDocument();
     expect(dataRows()).toHaveLength(1);
     expect(screen.getByLabelText('Keyword')).toHaveValue('vpn');
@@ -398,7 +420,9 @@ describe('TicketListPage', () => {
     renderApp('/tickets');
     expect(await screen.findByRole('alert', {}, { timeout: 5000 })).toHaveTextContent(msg('MSG06'));
     await user.click(screen.getByRole('button', { name: 'Try again' }));
-    expect(await screen.findByRole('link', { name: 'ITSUP-1024' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('link', { name: 'VPN disconnects every 10 minutes on home Wi-Fi' }),
+    ).toBeInTheDocument();
   });
 
   it('AC-001.14 shows a title with HTML as plain text', async () => {
