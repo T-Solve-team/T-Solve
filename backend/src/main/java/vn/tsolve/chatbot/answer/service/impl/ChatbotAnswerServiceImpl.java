@@ -13,6 +13,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -68,8 +69,9 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
             @Value("${CHATBOT_MIN_SIMILARITY:0.7}") double minSimilarity,
             @Value("${CHATBOT_SOURCE_LIMIT:5}") int sourceLimit,
             @Value("${CHATBOT_ASK_TIMEOUT:60s}") String timeout,
-            ProjectAccess projects,
-            Clock clock) {
+            // Optional, so a context without the ticket module or a Clock bean still answers web questions (BUG-320).
+            ObjectProvider<ProjectAccess> projects,
+            ObjectProvider<Clock> clock) {
         this(
                 embeddings,
                 llm,
@@ -81,8 +83,8 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
                 minSimilarity,
                 sourceLimit,
                 DurationStyle.detectAndParse(timeout),
-                projects,
-                clock);
+                projects.getIfAvailable(),
+                clock.getIfAvailable(Clock::systemUTC));
     }
 
     ChatbotAnswerServiceImpl(

@@ -151,7 +151,8 @@ class WikiIndexIT extends WikiReadTestSupport {
     void readsWhatTheProjectsDepartmentMayRead_AC_001_12() {
         long other = department("Finance");
         long otherSpace = space(other, "Finance Wiki");
-        long sharedSpace = space(other, "Shared with Support");
+        // One Space per Department (space_department_id_key, BUG-319): the shared Space belongs to a third one.
+        long sharedSpace = space(department("Legal"), "Shared with Support");
         jdbc.update(
                 "INSERT INTO space_permission(space_id, department_id, granted_by, granted_at) VALUES (?, ?, ?, now())",
                 sharedSpace,
