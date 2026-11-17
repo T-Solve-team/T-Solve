@@ -277,3 +277,23 @@ describe('AskTsolvePage', () => {
     expect(box()).toHaveValue('VPN fails');
   });
 });
+
+describe('AskTsolvePage with a Vietnamese input method', () => {
+  it('BUG-332 keeps what the input method wrote when the page renders again', async () => {
+    await renderLinked();
+    // An input method rewrites the box (Qua → Quân) before the app has seen the change.
+    box().value = 'Quân';
+
+    send(); // the app's draft is still empty: MSG01 renders the page again
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('The Question field is required.'));
+
+    expect(box()).toHaveValue('Quân');
+  });
+
+  it('BUG-332 empties the box after an answer', async () => {
+    await renderLinked();
+    await ask('Mất kết nối VPN', ANSWERED);
+
+    await waitFor(() => expect(box()).toHaveValue(''));
+  });
+});
