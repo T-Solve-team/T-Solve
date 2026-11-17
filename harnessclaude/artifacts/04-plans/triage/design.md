@@ -182,7 +182,7 @@ reads them through three triage ports in `service/`, each with a fail-closed sta
 | Port | Stand-in | Answers until its owner implements it |
 |------|----------|---------------------------------------|
 | `ManagedProjects.of(user)` → `ManagedProject(id, publicId, key)` | none: `MembershipManagedProjects` reads `project_membership` (KAN-347) | — |
-| `JiraSite.url()` | `NoJiraSite` | empty: `jiraIssueUrl` null (AC-003.6) |
+| `JiraSite.url()` | none: `WorkspaceJiraSite` reads `workspace.jira_site_address` (KAN-348) | — |
 | `WikiDocumentAccess.available(user, ids)` | `NoWikiDocumentAccess` | none: every Wiki source unavailable (AC-004.3) |
 
 `ManagedProject` carries both the database id and the id the web app knows, so the API keeps the
