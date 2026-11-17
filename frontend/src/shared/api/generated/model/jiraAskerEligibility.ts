@@ -6,8 +6,9 @@
  *
  * OpenAPI spec version: 0.1.0-stub
  */
+import type { JiraAskerEligibilityStatus } from './jiraAskerEligibilityStatus';
 
 export interface JiraAskerEligibility {
-  /** Whether the FIT user is linked to an active T-Solve user (AC-010.2); false shows MSG62. */
-  linked: boolean;
+  /** CONNECTED shows the question box; SITE_NOT_CONNECTED (the site belongs to no Workspace) shows MSG124; PROJECT_NOT_CONNECTED (the FIT's project is not an Active T-Solve Project's) shows "This Jira project is not connected to T-Solve." (AC-010.2, AC-010.14). */
+  status: JiraAskerEligibilityStatus;
 }

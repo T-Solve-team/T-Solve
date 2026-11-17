@@ -6,6 +6,7 @@ import vn.tsolve.chatbot.answer.dto.TicketSolutionCitation;
 import vn.tsolve.chatbot.answer.dto.WikiDocumentCitation;
 import vn.tsolve.chatbot.source.service.WikiSources.WikiPassage;
 import vn.tsolve.search.retrieval.dto.RetrievedSolution;
+import vn.tsolve.search.retrieval.dto.RetrievedTicketSolution;
 
 record ChatbotSource(int number, double similarity, String text, ChatbotCitation citation) {
     static ChatbotSource of(RetrievedSolution solution) {
@@ -29,6 +30,17 @@ record ChatbotSource(int number, double similarity, String text, ChatbotCitation
         return new ChatbotSource(0, solution.similarity(), text, new TicketSolutionCitation(0, cited));
     }
 
+    /** A Solution of the Project's Department (STORY-012); its ticket id is never cited (AC-006.3). */
+    static ChatbotSource of(RetrievedTicketSolution solution) {
+        return of(new RetrievedSolution(
+                solution.symptoms(),
+                solution.rootCause(),
+                solution.resolutionSteps(),
+                solution.workaround(),
+                solution.scopeOfApplicability(),
+                solution.similarity()));
+    }
+
     static ChatbotSource of(WikiPassage passage) {
         return new ChatbotSource(
                 0,
@@ -41,8 +53,8 @@ record ChatbotSource(int number, double similarity, String text, ChatbotCitation
         ChatbotCitation numbered =
                 switch (citation) {
                     case TicketSolutionCitation solution -> new TicketSolutionCitation(number, solution.solution());
-                    case WikiDocumentCitation wiki -> new WikiDocumentCitation(
-                            number, wiki.wikiDocumentId(), wiki.title());
+                    case WikiDocumentCitation wiki ->
+                        new WikiDocumentCitation(number, wiki.wikiDocumentId(), wiki.title());
                 };
         return new ChatbotSource(number, similarity, text, numbered);
     }

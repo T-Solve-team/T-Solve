@@ -96,6 +96,7 @@ export * from './issueCreatedPayloadIssueFieldsProject';
 export * from './issueDepartment';
 export * from './issuePanel';
 export * from './jiraAskerEligibility';
+export * from './jiraAskerEligibilityStatus';
 export * from './jiraLinkConfirmed';
 export * from './jiraLinkConfirmRequest';
 export * from './jiraLinkRequestInfo';

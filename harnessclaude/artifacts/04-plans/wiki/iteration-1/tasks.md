@@ -170,3 +170,18 @@ Blockers: Tasks 6 and 9 need `FileStorage` (KAN-96) on `main`. AC-001.7 needs tr
 - Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`, `backend/src/main/java/vn/tsolve/wiki/dto/WikiDocumentDetail.java`, `backend/src/main/java/vn/tsolve/wiki/repository/WikiSearchRepository.java`, `frontend/src/features/wiki/pages/WikiDocumentPage.tsx`, `frontend/src/shared/ui/StatusTag/status-tags.ts`
 - Test: `WikiBrowseIT.java` (or the existing trash IT), `WikiDocumentPage.test.tsx`
 **Tests:** AC-002.11, AC-005.4, AC-005.18.
+
+---
+
+## Task 14: Wiki passages of a Project's Department (KAN-294)
+
+**Story:** STORY-001
+**Feature:** wiki-project-department-sources
+**Description:** `WikiSources.nearestCompanyWide(vector, minSimilarity, limit)` (AC-001.12): the existing
+`AccessRepository.nearestCompanyWide` query (Published Company-wide documents of Active Spaces), mapped by
+`WikiSourcesImpl` (risk review of 17/11: no Department-only document for a page without a T-Solve user). For the Jira App's Ask T-Solve page (the chatbot's answer for a Jira project).
+**Files:** Modify `backend/src/main/java/vn/tsolve/chatbot/source/service/WikiSources.java` (the chatbot-owned port),
+`backend/src/main/java/vn/tsolve/wiki/repository/AccessRepository.java`,
+`backend/src/main/java/vn/tsolve/wiki/service/impl/WikiSourcesImpl.java`; tests `WikiPortsTest` (mapping, arguments) and
+`WikiIndexIT` (the three Space rules and the unknown Project, on CI).
+**Estimated size:** small

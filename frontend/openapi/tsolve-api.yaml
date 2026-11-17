@@ -1849,15 +1849,15 @@ paths:
     get:
       tags: [jira-app]
       operationId: getJiraAskerEligibility
-      summary: Whether the Jira user may ask T-Solve on the "Ask T-Solve" page (STORY-010, AC-010.2).
+      summary: Whether the "Ask T-Solve" page can answer in this Jira project (STORY-010, AC-010.2, AC-010.14).
       description: >
-        The user comes only from the verified FIT principal. Linked means the Jira account is linked to an active
-        T-Solve user; a FIT without a principal is not linked. Calls no AI.
+        The site and the project come only from the verified FIT (`context.cloudId`,
+        `context.extension.project.key`). No T-Solve sign-in is needed. Calls no AI.
       security:
         - forgeInvocationToken: []
       responses:
         '200':
-          description: Whether the user is linked.
+          description: CONNECTED, SITE_NOT_CONNECTED or PROJECT_NOT_CONNECTED.
           content:
             application/json:
               schema:
@@ -1872,12 +1872,13 @@ paths:
       operationId: askJiraAppQuestion
       summary: Answers a question from the "Ask T-Solve" page with the Knowledge Chatbot (STORY-010).
       description: >
-        The user comes only from the verified FIT principal. The answer is the Knowledge Chatbot's, with the same
-        sources, citations and outcomes as on the web (AC-010.4); NO_SOURCE is shown as MSG109 by the Jira App.
-        A blank question → 400 MSG01, longer than 1,000 characters or more than 10 history turns →
-        400 MSG02 (AC-010.5). A Jira account not linked to an active T-Solve user, or a FIT without a principal →
-        403 MSG62 and no AI call (AC-010.11). The AI unavailable or no answer within the Jira App deadline
-        (JIRA_APP_ASK_TIMEOUT, 18 s) → 503 MSG06 (AC-010.8).
+        The project comes only from the verified FIT (`context.extension.project.key`, AC-010.13); no T-Solve
+        sign-in is needed, but the FIT must have a Jira user. The answer is the Knowledge Chatbot's for that Project,
+        from its Department's Published Solutions and the Wiki the asker may read: Company-wide documents, plus those
+        their linked T-Solve user may view (AC-010.4, chatbot STORY-012); stored without a user; NO_SOURCE is shown as MSG109 by the Jira App. A blank question → 400 MSG01, longer than 1,000 characters or more than 10 history turns →
+        400 MSG02 (AC-010.5). A site of no Workspace → 403 MSG124; no Jira user, no project, or not an Active T-Solve
+        Project's → 403 MSG08; no AI call in either case (AC-010.11). The AI unavailable or no answer within the Jira App
+        deadline (JIRA_APP_ASK_TIMEOUT, 18 s) → 503 MSG06 (AC-010.8).
       security:
         - forgeInvocationToken: []
       requestBody:
@@ -1900,6 +1901,43 @@ paths:
         '403':
           $ref: '#/components/responses/Problem'
         '503':
+          $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/questions/{answerId}/rating:
+    parameters:
+      - name: answerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [jira-app]
+      operationId: rateJiraAppAnswer
+      summary: >
+        "Solved" (HELPFUL) or "Not solved, create ticket" (NOT_HELPFUL) on the "Ask T-Solve" page rates the last
+        answer (STORY-010, AC-010.15).
+      description: >
+        Only an answer asked in the FIT's project (`context.extension.project.key`) can be rated; any other id →
+        404 MSG04 (chatbot AC-012.7). A site of no Workspace → 403 MSG124; no project or not an Active T-Solve
+        Project's → 403 MSG08.
+      security:
+        - forgeInvocationToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatbotRating'
+      responses:
+        '204':
+          description: Rating saved.
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
           $ref: '#/components/responses/Problem'
   /api/v1/jira-app/issues/{issueKey}/solution-form:
     parameters:
@@ -4378,11 +4416,15 @@ components:
           description: Whether the current user may decide this pending Solution Form ticket in its managed Project.
     JiraAskerEligibility:
       type: object
-      required: [linked]
+      required: [status]
       properties:
-        linked:
-          type: boolean
-          description: Whether the FIT user is linked to an active T-Solve user (AC-010.2); false shows MSG62.
+        status:
+          type: string
+          enum: [CONNECTED, SITE_NOT_CONNECTED, PROJECT_NOT_CONNECTED]
+          description: >
+            CONNECTED shows the question box; SITE_NOT_CONNECTED (the site belongs to no Workspace) shows MSG124;
+            PROJECT_NOT_CONNECTED (the FIT's project is not an Active T-Solve Project's) shows "This Jira project is
+            not connected to T-Solve." (AC-010.2, AC-010.14).
     JiraReviewFeedback:
       type: object
       required: [feedback]

@@ -38,13 +38,33 @@ export class TsolveError extends Error {
   }
 }
 
-/** Whether the viewer may ask (AC-010.2). */
+const STATUSES = ['CONNECTED', 'SITE_NOT_CONNECTED', 'PROJECT_NOT_CONNECTED'];
+
+/**
+ * Whether the page can answer in this Jira project: `CONNECTED`, `SITE_NOT_CONNECTED` or `PROJECT_NOT_CONNECTED`
+ * (AC-010.2, AC-010.14). No T-Solve sign-in is needed; an unknown answer counts as connected, as the question itself
+ * is refused anyway (AC-010.11).
+ */
 export async function getEligibility(useMock = USE_MOCK) {
   if (useMock) {
-    return { linked: true };
+    return { status: 'CONNECTED' };
   }
   const response = await call({ path: `${QUESTIONS}/eligibility`, method: 'GET' });
-  return { linked: response.body?.linked === true };
+  const status = response.body?.status;
+  return { status: STATUSES.includes(status) ? status : 'CONNECTED' };
+}
+
+/** "Solved" rates the last answer HELPFUL, "Not solved, create ticket" NOT_HELPFUL (AC-010.15). */
+export async function rateAnswer(answerId, rating, useMock = USE_MOCK) {
+  if (useMock || !answerId) {
+    return;
+  }
+  await call({
+    path: `${QUESTIONS}/${encodeURIComponent(answerId)}/rating`,
+    method: 'PUT',
+    headers: JSON_HEADERS,
+    body: { rating },
+  });
 }
 
 /**
