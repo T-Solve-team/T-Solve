@@ -11,7 +11,12 @@ import { faker } from '@faker-js/faker';
 import { HttpResponse, http } from 'msw';
 import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'msw';
 
-import type { CreateDepartmentRequest, DepartmentRef, UpdateDepartmentRequest } from '../model';
+import type {
+  CreateDepartmentRequest,
+  DepartmentDetail,
+  DepartmentRef,
+  UpdateDepartmentRequest,
+} from '../model';
 
 export const getCreateDepartmentResponseMock = (
   overrideResponse: Partial<Extract<DepartmentRef, object>> = {},
@@ -22,18 +27,44 @@ export const getCreateDepartmentResponseMock = (
 });
 
 export const getGetDepartmentResponseMock = (
-  overrideResponse: Partial<Extract<DepartmentRef, object>> = {},
-): DepartmentRef => ({
+  overrideResponse: Partial<Extract<DepartmentDetail, object>> = {},
+): DepartmentDetail => ({
   departmentId: faker.string.uuid(),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  defaultProject: faker.helpers.arrayElement([
+    {
+      projectId: faker.string.uuid(),
+      jiraProjectKey: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    null,
+  ]),
+  projects: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      projectId: faker.string.uuid(),
+      jiraProjectKey: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
   ...overrideResponse,
 });
 
 export const getUpdateDepartmentResponseMock = (
-  overrideResponse: Partial<Extract<DepartmentRef, object>> = {},
-): DepartmentRef => ({
+  overrideResponse: Partial<Extract<DepartmentDetail, object>> = {},
+): DepartmentDetail => ({
   departmentId: faker.string.uuid(),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  defaultProject: faker.helpers.arrayElement([
+    {
+      projectId: faker.string.uuid(),
+      jiraProjectKey: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    null,
+  ]),
+  projects: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      projectId: faker.string.uuid(),
+      jiraProjectKey: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
   ...overrideResponse,
 });
 
@@ -63,10 +94,10 @@ export const getCreateDepartmentMockHandler = (
 
 export const getGetDepartmentMockHandler = (
   overrideResponse?:
-    | DepartmentRef
+    | DepartmentDetail
     | ((
         info: Parameters<HttpResponseResolver<{ departmentId: string }>>[0],
-      ) => Promise<DepartmentRef> | DepartmentRef),
+      ) => Promise<DepartmentDetail> | DepartmentDetail),
   options?: RequestHandlerOptions,
 ) => {
   return http.get<{ departmentId: string }>(
@@ -87,12 +118,12 @@ export const getGetDepartmentMockHandler = (
 
 export const getUpdateDepartmentMockHandler = (
   overrideResponse?:
-    | DepartmentRef
+    | DepartmentDetail
     | ((
         info: Parameters<
           HttpResponseResolver<{ departmentId: string }, UpdateDepartmentRequest>
         >[0],
-      ) => Promise<DepartmentRef> | DepartmentRef),
+      ) => Promise<DepartmentDetail> | DepartmentDetail),
   options?: RequestHandlerOptions,
 ) => {
   return http.put<{ departmentId: string }, UpdateDepartmentRequest>(

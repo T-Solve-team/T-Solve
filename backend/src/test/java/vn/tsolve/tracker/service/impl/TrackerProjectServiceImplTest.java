@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -22,7 +23,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import vn.tsolve.tracker.client.TicketTrackerClient;
+import vn.tsolve.tracker.dto.ChatbotProjectCheck;
 import vn.tsolve.tracker.dto.JiraAccount;
+import vn.tsolve.tracker.dto.TrackerCreateField;
 import vn.tsolve.tracker.dto.TrackerProjectLookup;
 import vn.tsolve.tracker.dto.TrackerProjectLookup.Outcome;
 import vn.tsolve.tracker.dto.TrackerStatus;
@@ -276,5 +279,127 @@ class TrackerProjectServiceImplTest {
         assertThat(lookup.key()).isNull();
         assertThat(lookup.statuses()).isNotNull().isEmpty();
         assertThat(lookup.toString()).doesNotContain("bot@acme.test", "secret-token", "JIRA-BODY-SECRET");
+    }
+
+    // --- KAN-121: the Chatbot project check (workspace STORY-012) ---
+
+    private static final List<String> CHATBOT_PERMISSIONS = List.of("CREATE_ISSUES", "MODIFY_REPORTER");
+
+    private void readyAccount() {
+        given(serviceAccount.current()).willReturn(Optional.of(ACCOUNT));
+        given(jira.hasProjectPermissions(ACCOUNT, "OPS", CHATBOT_PERMISSIONS)).willReturn(true);
+    }
+
+    @Test
+    void isReadyWhenOnlyFieldsTheChatbotSendsAreRequired_AC_012_7() {
+        readyAccount();
+        given(jira.createFields(ACCOUNT, "OPS", "Task"))
+                .willReturn(Optional.of(List.of(
+                        new TrackerCreateField("summary", true, false),
+                        new TrackerCreateField("description", true, false),
+                        new TrackerCreateField("project", true, false),
+                        new TrackerCreateField("issuetype", true, false),
+                        new TrackerCreateField("reporter", true, false),
+                        new TrackerCreateField("labels", true, false),
+                        new TrackerCreateField("customfield_10020", false, false))));
+
+        assertThat(service().checkChatbotProject("OPS")).isEqualTo(ChatbotProjectCheck.READY);
+    }
+
+    @Test
+    void isReadyWhenAnotherRequiredFieldHasADefault_AC_012_7() {
+        readyAccount();
+        given(jira.createFields(ACCOUNT, "OPS", "Task"))
+                .willReturn(Optional.of(List.of(
+                        new TrackerCreateField("summary", true, false),
+                        new TrackerCreateField("priority", true, true))));
+
+        assertThat(service().checkChatbotProject("OPS")).isEqualTo(ChatbotProjectCheck.READY);
+    }
+
+    @Test
+    void isDeniedWithoutAServiceAccountAndCallsNoJira_AC_012_8() {
+        given(serviceAccount.current()).willReturn(Optional.empty());
+
+        assertThat(service().checkChatbotProject("OPS")).isEqualTo(ChatbotProjectCheck.DENIED);
+        verifyNoInteractions(jira);
+    }
+
+    @Test
+    void isDeniedWhenAPermissionIsMissing_AC_012_8() {
+        given(serviceAccount.current()).willReturn(Optional.of(ACCOUNT));
+        given(jira.hasProjectPermissions(ACCOUNT, "OPS", CHATBOT_PERMISSIONS)).willReturn(false);
+
+        assertThat(service().checkChatbotProject("OPS")).isEqualTo(ChatbotProjectCheck.DENIED);
+        verify(jira, never()).createFields(any(), anyString(), anyString());
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {400, 401, 403, 404})
+    void isDeniedWhenJiraRefuses_AC_012_8(int status) {
+        given(serviceAccount.current()).willReturn(Optional.of(ACCOUNT));
+        given(jira.hasProjectPermissions(ACCOUNT, "OPS", CHATBOT_PERMISSIONS))
+                .willThrow(new JiraRejectedException(status));
+
+        assertThat(service().checkChatbotProject("OPS")).isEqualTo(ChatbotProjectCheck.DENIED);
+    }
+
+    @Test
+    void isUnavailableWhenJiraCannotAnswer_AC_012_8() {
+        readyAccount();
+        for (RuntimeException failure : List.of(
+                new JiraUnavailableException(500), new JiraUnavailableException(0), new IllegalStateException())) {
+            willThrow(failure).given(jira).createFields(ACCOUNT, "OPS", "Task");
+
+            assertThat(service().checkChatbotProject("OPS")).isEqualTo(ChatbotProjectCheck.UNAVAILABLE);
+        }
+    }
+
+    @Test
+    void isNotReadyWithoutATaskType_AC_012_9() {
+        readyAccount();
+        given(jira.createFields(ACCOUNT, "OPS", "Task")).willReturn(Optional.empty());
+
+        assertThat(service().checkChatbotProject("OPS")).isEqualTo(ChatbotProjectCheck.NOT_READY);
+    }
+
+    @Test
+    void isNotReadyWhenACustomFieldIsRequiredWithoutDefault_AC_012_9() {
+        readyAccount();
+        given(jira.createFields(ACCOUNT, "OPS", "Task"))
+                .willReturn(Optional.of(List.of(
+                        new TrackerCreateField("summary", true, false),
+                        new TrackerCreateField("customfield_10010", true, false))));
+
+        assertThat(service().checkChatbotProject("OPS")).isEqualTo(ChatbotProjectCheck.NOT_READY);
+    }
+
+    @Test
+    void logsTheKeyAndJirasStatusOnly_AC_012_17(CapturedOutput output) {
+        given(serviceAccount.current()).willReturn(Optional.of(ACCOUNT));
+        given(jira.hasProjectPermissions(ACCOUNT, "OPS", CHATBOT_PERMISSIONS))
+                .willThrow(new JiraRejectedException(403))
+                .willThrow(new JiraUnavailableException(503))
+                .willThrow(new IllegalStateException("JIRA-BODY-SECRET secret-token bot@acme.test"))
+                .willReturn(false)
+                .willReturn(true);
+        given(jira.createFields(ACCOUNT, "OPS", "Task"))
+                .willReturn(Optional.empty())
+                .willReturn(Optional.of(List.of(new TrackerCreateField("customfield_1", true, false))))
+                .willReturn(Optional.of(List.of()));
+
+        for (int i = 0; i < 7; i++) {
+            service().checkChatbotProject("OPS");
+        }
+
+        assertThat(output)
+                .contains("Jira chatbot check OPS: DENIED (Jira answered 403)")
+                .contains("Jira chatbot check OPS: UNAVAILABLE (Jira answered 503)")
+                .contains("Jira chatbot check OPS: UNAVAILABLE (IllegalStateException)")
+                .contains("Jira chatbot check OPS: DENIED (permission missing)")
+                .contains("Jira chatbot check OPS: NOT_READY (no issue type Task)")
+                .contains("Jira chatbot check OPS: NOT_READY (another field required)")
+                .contains("Jira chatbot check OPS: READY (Jira answered 200)")
+                .doesNotContain("JIRA-BODY-SECRET", "secret-token", "bot@acme.test", "customfield_1");
     }
 }

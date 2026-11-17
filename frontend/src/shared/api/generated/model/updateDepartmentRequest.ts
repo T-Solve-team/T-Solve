@@ -13,4 +13,6 @@ export interface UpdateDepartmentRequest {
    * @maxLength 50
    */
   name: string;
+  /** @nullable */
+  defaultProjectId?: string | null;
 }
