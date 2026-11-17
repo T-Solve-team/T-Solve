@@ -42,11 +42,6 @@ function validate(input: Record<string, unknown>, isSetup: boolean) {
   }
   if (
     isSetup &&
-    (typeof input.serviceAccountToken !== 'string' || !input.serviceAccountToken.trim())
-  )
-    return fieldError('serviceAccountToken', 'MSG01', { field_name: 'Service account API token' });
-  if (
-    isSetup &&
     (typeof input.jiraSiteUrl !== 'string' ||
       !/^https:\/\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.atlassian\.net\/?$/i.test(
         input.jiraSiteUrl.trim(),
@@ -126,12 +121,15 @@ export const handlers: HttpHandler[] = [
     if (invalid) return invalid;
     if (workspace)
       return HttpResponse.json({ status: 409, code: 'WORKSPACE_ALREADY_SET_UP' }, { status: 409 });
-    // Narrow the JSON boundary before constructing the generated response type. Never retain the token.
+    // Narrow the JSON boundary before constructing the generated response type.
     if (typeof input.companyName !== 'string' || typeof input.jiraSiteUrl !== 'string')
       return problem(400);
     workspace = {
       companyName: input.companyName.trim(),
       jiraSiteUrl: input.jiraSiteUrl.trim().toLowerCase().replace(/\/$/, ''),
+      // The Jira App sends its token after it is installed (KAN-349); a new Workspace starts not connected.
+      jiraAppConnected: false,
+      jiraAppTokenReceivedAt: null,
     };
     return HttpResponse.json<WorkspaceInfo>(workspace, { status: 201 });
   }),

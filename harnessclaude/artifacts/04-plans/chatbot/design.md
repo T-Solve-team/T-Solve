@@ -464,7 +464,7 @@ Only the HTTP status and the `errors` keys are logged (AC-011.10).
 
 ### Data
 
-Changeset `043-chatbot-answer-jira-issue.sql` (author `chatbot`): `ALTER TABLE chatbot_answer ADD COLUMN
+Changeset `044-chatbot-answer-jira-issue.sql` (author `chatbot`): `ALTER TABLE chatbot_answer ADD COLUMN
 jira_issue_key VARCHAR(255) NULL`; `--rollback ALTER TABLE chatbot_answer DROP COLUMN jira_issue_key`.
 
 ### Key Decisions

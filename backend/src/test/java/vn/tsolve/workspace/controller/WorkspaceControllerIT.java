@@ -1,11 +1,9 @@
 package vn.tsolve.workspace.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -18,8 +16,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -48,11 +48,8 @@ import vn.tsolve.common.security.WithTSolveUser;
 import vn.tsolve.common.session.lookup.WorkspaceStatusLookup;
 import vn.tsolve.identity.TwoTenantDatabases;
 import vn.tsolve.identity.signin.port.TenantScope;
-import vn.tsolve.tracker.client.TicketTrackerClient;
-import vn.tsolve.tracker.dto.JiraAccount;
-import vn.tsolve.tracker.exception.JiraRejectedException;
-import vn.tsolve.tracker.exception.JiraUnavailableException;
-import vn.tsolve.workspace.crypto.TokenCipher;
+import vn.tsolve.workspace.dto.JiraAppToken;
+import vn.tsolve.workspace.service.JiraAppTokenService;
 import vn.tsolve.workspace.site.JiraSiteLinkRefusedException;
 import vn.tsolve.workspace.site.JiraSiteLinkRefusedException.Reason;
 import vn.tsolve.workspace.site.JiraSiteLinker;
@@ -90,13 +87,11 @@ class WorkspaceControllerIT {
     private ObjectMapper mapper;
 
     @Autowired
-    private TokenCipher cipher;
-
-    @Autowired
     private WorkspaceStatusLookup lookup;
 
+    // The app token lives in Redis (STORY-014); this IT is about the tenant database, so the store is mocked.
     @MockBean
-    private TicketTrackerClient tracker;
+    private JiraAppTokenService tokens;
 
     @MockBean
     private JiraSiteLinker linker;
@@ -104,6 +99,7 @@ class WorkspaceControllerIT {
     @BeforeEach
     void readCloudId() {
         when(linker.readCloudId(anyString())).thenReturn(CLOUD_ID);
+        when(tokens.current(TwoTenantDatabases.ACME)).thenReturn(Optional.empty());
     }
 
     @BeforeEach
@@ -133,7 +129,7 @@ class WorkspaceControllerIT {
     }
 
     private Map<String, String> input(String company, String site) {
-        return Map.of("companyName", company, "jiraSiteUrl", site, "serviceAccountToken", TOKEN);
+        return Map.of("companyName", company, "jiraSiteUrl", site);
     }
 
     private MockHttpServletRequestBuilder setup(Map<String, String> input) throws Exception {
@@ -144,7 +140,8 @@ class WorkspaceControllerIT {
     }
 
     @Test
-    @DisplayName("AC-005.1 returns 201 and stores the cloud id and encrypted token, no email, only in the bound tenant")
+    @DisplayName(
+            "AC-005.1 returns 201 and stores the site and its cloud id, no Jira credential, only in the bound tenant")
     void createsWorkspace() throws Exception {
         String body = perform(setup(input("Fake company", " HTTPS://FAKE.ATLASSIAN.NET/ ")))
                 .andExpect(status().isCreated())
@@ -153,23 +150,21 @@ class WorkspaceControllerIT {
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
-        assertThat(mapper.readTree(body).size()).isEqualTo(2);
-        assertThat(body).doesNotContain(TOKEN, "token", "Token", CLOUD_ID);
+        assertThat(mapper.readTree(body).path("jiraAppConnected").asBoolean(true))
+                .isFalse();
+        assertThat(body).doesNotContain(TOKEN, CLOUD_ID);
         var row = TwoTenantDatabases.tenantA().queryForMap("SELECT * FROM workspace");
         assertThat(row.get("workspace_id")).isEqualTo(TwoTenantDatabases.ACME);
         assertThat(row.get("jira_cloud_id")).isEqualTo(CLOUD_ID);
         assertThat(row.get("service_account_email")).isNull();
-        verify(tracker).checkServiceAccount(new JiraAccount(SITE, CLOUD_ID, TOKEN));
+        assertThat(row.get("service_account_api_token")).isNull();
         assertThat(row.get("sign_in_provider")).isEqualTo("GOOGLE");
-        String encrypted = (String) row.get("service_account_api_token");
-        assertThat(encrypted).doesNotContain(TOKEN);
-        assertThat(cipher.decrypt(TwoTenantDatabases.ACME, encrypted)).isEqualTo(TOKEN);
         assertThat(TwoTenantDatabases.tenantB().queryForObject("SELECT count(*) FROM workspace", Integer.class))
                 .isZero();
     }
 
     @ParameterizedTest
-    @CsvSource({"companyName,MSG01", "jiraSiteUrl,MSG01", "serviceAccountToken,MSG01"})
+    @CsvSource({"companyName,MSG01", "jiraSiteUrl,MSG01"})
     @DisplayName("AC-005.2 blank setup fields return 400 Problem Details field errors and store nothing")
     void rejectsBlankField(String field, String code) throws Exception {
         var body = new java.util.HashMap<>(input("Fake company", "https://fake.atlassian.net"));
@@ -180,24 +175,7 @@ class WorkspaceControllerIT {
                 .andExpect(jsonPath("$.fieldErrors[0].field").value(field))
                 .andExpect(jsonPath("$.fieldErrors[0].code").value(code));
         assertEmpty();
-        verifyNoInteractions(tracker, linker);
-    }
-
-    @Test
-    @DisplayName("AC-005.7 Jira failures return MSG156 without storing or exposing the token")
-    void rejectsJira() throws Exception {
-        doThrow(new JiraRejectedException(401)).when(tracker).checkServiceAccount(any());
-        String body = perform(setup(input("Fake company", "https://fake.atlassian.net")))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("MSG156"))
-                .andExpect(jsonPath("$.params.tracker_name").value("Jira"))
-                .andExpect(jsonPath("$.fieldErrors[0].field").value("serviceAccountToken"))
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-        assertThat(body).doesNotContain(TOKEN);
-        verify(linker, never()).linkJiraSite(anyString());
-        assertEmpty();
+        verifyNoInteractions(linker);
     }
 
     @Test
@@ -208,7 +186,7 @@ class WorkspaceControllerIT {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("MSG61"))
                 .andExpect(jsonPath("$.fieldErrors[0].field").value("jiraSiteUrl"));
-        verifyNoInteractions(tracker);
+        verify(linker, never()).linkJiraSite(anyString());
         assertEmpty();
     }
 
@@ -243,10 +221,10 @@ class WorkspaceControllerIT {
         var barrier = new CyclicBarrier(2);
         doAnswer(call -> {
                     barrier.await(15, TimeUnit.SECONDS);
-                    return null;
+                    return CLOUD_ID;
                 })
-                .when(tracker)
-                .checkServiceAccount(any());
+                .when(linker)
+                .linkJiraSite(anyString());
         var context = SecurityContextHolder.getContext();
         try (var pool = Executors.newFixedThreadPool(2)) {
             var requests = List.of(
@@ -286,7 +264,7 @@ class WorkspaceControllerIT {
     }
 
     @Test
-    @DisplayName("AC-005.12 setup writes one audit entry with public details and no token")
+    @DisplayName("AC-005.12 setup writes one audit entry with the company name and the site")
     void auditsSetup() throws Exception {
         perform(setup(input("Fake company", "https://fake.atlassian.net"))).andExpect(status().isCreated());
         var rows = TwoTenantDatabases.tenantA()
@@ -299,7 +277,6 @@ class WorkspaceControllerIT {
         assertThat(mapper.readTree((String) row.get("details")))
                 .isEqualTo(mapper.valueToTree(
                         Map.of("companyName", "Fake company", "jiraSiteUrl", "https://fake.atlassian.net")));
-        assertThat(row.toString()).doesNotContain(TOKEN);
     }
 
     @Test
@@ -308,7 +285,7 @@ class WorkspaceControllerIT {
     void rejectsNonAdminSetup() throws Exception {
         perform(setup(input("Fake company", "https://fake.atlassian.net"))).andExpect(status().isForbidden());
         assertEmpty();
-        verifyNoInteractions(tracker, linker);
+        verifyNoInteractions(linker);
     }
 
     @Test
@@ -336,17 +313,22 @@ class WorkspaceControllerIT {
     }
 
     @Test
-    @DisplayName("AC-006.2 GET returns 200 with exactly the two public fields, no email or cloud id")
+    @DisplayName("AC-006.2 AC-006.6 GET returns the company, the site and the Jira App status, never the token")
     void readsWorkspace() throws Exception {
         perform(setup(input("Fake company", "https://fake.atlassian.net"))).andExpect(status().isCreated());
+        Instant received = Instant.parse("2026-11-17T03:00:00Z");
+        when(tokens.current(TwoTenantDatabases.ACME))
+                .thenReturn(Optional.of(new JiraAppToken(TOKEN, CLOUD_ID, received, received.plusSeconds(3600))));
         var response = perform(get("/api/v1/workspace"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.companyName").value("Fake company"))
+                .andExpect(jsonPath("$.jiraAppConnected").value(true))
+                .andExpect(jsonPath("$.jiraAppTokenReceivedAt").value("2026-11-17T03:00:00Z"))
                 .andExpect(jsonPath("$.serviceAccountEmail").doesNotExist())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
-        assertThat(mapper.readTree(response).size()).isEqualTo(2);
-        assertThat(response).doesNotContain(TOKEN, "Token", "token", CLOUD_ID);
+        assertThat(response).doesNotContain(TOKEN, CLOUD_ID);
     }
 
     @Test
@@ -366,7 +348,7 @@ class WorkspaceControllerIT {
 
     private Map<String, Object> existingWorkspace() throws Exception {
         perform(setup(input("Fake company", "https://fake.atlassian.net"))).andExpect(status().isCreated());
-        clearInvocations(tracker, linker);
+        clearInvocations(linker);
         return TwoTenantDatabases.tenantA().queryForMap("SELECT * FROM workspace");
     }
 
@@ -389,42 +371,20 @@ class WorkspaceControllerIT {
     }
 
     @Test
-    @DisplayName("AC-007.1 PUT persists encrypted changes only in the bound tenant and returns public fields")
+    @DisplayName("AC-007.1 AC-007.6 PUT renames in the bound tenant only, calls no Jira, keeps the site and cloud id")
     void updatesWorkspace() throws Exception {
         existingWorkspace();
-        String token = "obviously-fake-new-token";
-        String body = perform(update(Map.of("companyName", "Renamed", "serviceAccountToken", token)))
+        perform(update(Map.of("companyName", "Renamed", "serviceAccountToken", "obviously-fake-new-token")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.companyName").value("Renamed"))
-                .andExpect(jsonPath("$.jiraSiteUrl").value("https://fake.atlassian.net"))
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-        assertThat(mapper.readTree(body).size()).isEqualTo(2);
-        assertThat(body).doesNotContain(TOKEN, token, "Token", "token");
+                .andExpect(jsonPath("$.jiraSiteUrl").value("https://fake.atlassian.net"));
         var row = TwoTenantDatabases.tenantA().queryForMap("SELECT * FROM workspace");
         assertThat(row.get("company_name")).isEqualTo("Renamed");
         assertThat(row.get("jira_cloud_id")).isEqualTo(CLOUD_ID);
-        verify(tracker).checkServiceAccount(new JiraAccount(SITE, CLOUD_ID, token));
-        String encrypted = (String) row.get("service_account_api_token");
-        assertThat(encrypted).doesNotContain(token);
-        assertThat(cipher.decrypt(TwoTenantDatabases.ACME, encrypted)).isEqualTo(token);
+        assertThat(row.get("service_account_api_token")).isNull();
+        verifyNoInteractions(linker);
         assertThat(TwoTenantDatabases.tenantB().queryForObject("SELECT count(*) FROM workspace", Integer.class))
                 .isZero();
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"absent", "null", "", " \t\n "})
-    @DisplayName("AC-007.2 omitted, null and blank update tokens retain the identical stored ciphertext")
-    void keepsUpdateToken(String token) throws Exception {
-        var before = existingWorkspace();
-        var body = new java.util.HashMap<String, Object>(Map.of("companyName", "Renamed"));
-        if (!token.equals("absent")) body.put("serviceAccountToken", token.equals("null") ? null : token);
-        perform(update(body)).andExpect(status().isOk());
-        assertThat(TwoTenantDatabases.tenantA()
-                        .queryForObject("SELECT service_account_api_token FROM workspace", String.class))
-                .isEqualTo(before.get("service_account_api_token"));
-        verifyNoInteractions(tracker, linker);
     }
 
     @ParameterizedTest
@@ -445,7 +405,7 @@ class WorkspaceControllerIT {
                 .andExpect(jsonPath("$.code").value("MSG01"))
                 .andExpect(jsonPath("$.fieldErrors[0].field").value(field));
         assertUpdateUnchanged(before);
-        verifyNoInteractions(tracker, linker);
+        verifyNoInteractions(linker);
     }
 
     @ParameterizedTest
@@ -461,109 +421,46 @@ class WorkspaceControllerIT {
                 .andExpect(jsonPath("$.params.max_length").value(100))
                 .andExpect(jsonPath("$.fieldErrors[0].field").value(field));
         assertUpdateUnchanged(before);
-        verifyNoInteractions(tracker, linker);
-    }
-
-    @Test
-    @DisplayName("AC-007.7 an email in the update request is ignored, stored nowhere and calls no Jira")
-    void ignoresUpdateEmail() throws Exception {
-        existingWorkspace();
-        perform(update(Map.of("companyName", "Renamed", "serviceAccountEmail", "invalid")))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.serviceAccountEmail").doesNotExist());
-        assertThat(TwoTenantDatabases.tenantA()
-                        .queryForMap("SELECT * FROM workspace")
-                        .get("service_account_email"))
-                .isNull();
-        verifyNoInteractions(tracker, linker);
-    }
-
-    @Test
-    @DisplayName("AC-007.11 a new token on a row with no cloud id reads it, checks with it and stores it")
-    void fillsTheCloudIdOfAnOldRow() throws Exception {
-        existingWorkspace();
-        TwoTenantDatabases.tenantA().update("UPDATE workspace SET jira_cloud_id = NULL");
-        perform(update(Map.of("companyName", "Renamed", "serviceAccountToken", "obviously-fake-new-token")))
-                .andExpect(status().isOk());
-        verify(linker).readCloudId(SITE);
-        verify(tracker).checkServiceAccount(new JiraAccount(SITE, CLOUD_ID, "obviously-fake-new-token"));
-        assertThat(TwoTenantDatabases.tenantA().queryForObject("SELECT jira_cloud_id FROM workspace", String.class))
-                .isEqualTo(CLOUD_ID);
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = {401, 403, 500, 0})
-    @DisplayName("AC-007.5 Jira failure returns MSG156 on token without changing any stored value or audit")
-    void rejectsUpdateCheck(int code) throws Exception {
-        var before = existingWorkspace();
-        RuntimeException failure =
-                code == 401 || code == 403 ? new JiraRejectedException(code) : new JiraUnavailableException(code);
-        doThrow(failure).when(tracker).checkServiceAccount(any());
-        String body = perform(
-                        update(Map.of("companyName", "Renamed", "serviceAccountToken", "obviously-fake-new-token")))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("MSG156"))
-                .andExpect(jsonPath("$.params.tracker_name").value("Jira"))
-                .andExpect(jsonPath("$.fieldErrors[0].field").value("serviceAccountToken"))
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-        assertThat(body)
-                .doesNotContain(TOKEN, "obviously-fake-new-token", (String) before.get("service_account_api_token"));
-        assertUpdateUnchanged(before);
         verifyNoInteractions(linker);
     }
 
     @Test
-    @DisplayName("AC-007.6 company-only rename succeeds while Jira is unavailable")
-    void renamesWithoutJira() throws Exception {
+    @DisplayName("AC-007.7 the site, an email and a token in the update request are ignored")
+    void ignoresSiteEmailAndToken() throws Exception {
         existingWorkspace();
-        doThrow(new JiraUnavailableException(0)).when(tracker).checkServiceAccount(any());
-        perform(update(Map.of("companyName", "Renamed")))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.companyName").value("Renamed"));
-        verifyNoInteractions(tracker, linker);
-    }
-
-    @Test
-    @DisplayName("AC-007.7 request site is ignored and never used in the account check")
-    void ignoresUpdateSite() throws Exception {
-        existingWorkspace();
-        perform(update(input("Renamed", "http://localhost")))
+        perform(update(Map.of(
+                        "companyName", "Renamed",
+                        "jiraSiteUrl", "http://localhost",
+                        "serviceAccountEmail", "invalid",
+                        "serviceAccountToken", "obviously-fake-new-token")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.jiraSiteUrl").value("https://fake.atlassian.net"));
-        assertThat(TwoTenantDatabases.tenantA().queryForObject("SELECT jira_site_address FROM workspace", String.class))
-                .isEqualTo("https://fake.atlassian.net");
-        verify(tracker).checkServiceAccount(new JiraAccount("https://fake.atlassian.net", CLOUD_ID, TOKEN));
+        var row = TwoTenantDatabases.tenantA().queryForMap("SELECT * FROM workspace");
+        assertThat(row.get("jira_site_address")).isEqualTo("https://fake.atlassian.net");
+        assertThat(row.get("service_account_email")).isNull();
+        assertThat(row.get("service_account_api_token")).isNull();
         verifyNoInteractions(linker);
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    @DisplayName("AC-007.8 update writes one audit with old/new public values and tokenChanged without secrets")
-    void auditsUpdate(boolean tokenChanged) throws Exception {
-        var before = existingWorkspace();
-        var body = new java.util.HashMap<>(input("Renamed", "https://fake.atlassian.net"));
-        if (!tokenChanged) body.remove("serviceAccountToken");
-        perform(update(body)).andExpect(status().isOk());
+    @Test
+    @DisplayName("AC-007.8 update writes one audit with the old and new company name")
+    void auditsUpdate() throws Exception {
+        existingWorkspace();
+        perform(update(Map.of("companyName", "Renamed"))).andExpect(status().isOk());
         var entries = TwoTenantDatabases.tenantA()
                 .queryForList(
                         "SELECT action, target_type, target_id, details::text AS details FROM audit_log_entry WHERE target_type = 'WORKSPACE' AND target_id = ?",
                         TwoTenantDatabases.ACME);
         assertThat(entries).hasSize(2);
         var updates = entries.stream()
-                .filter(row -> ((String) row.get("details")).contains("tokenChanged"))
+                .filter(row -> ((String) row.get("details")).contains("\"old\""))
                 .toList();
-        assertThat(updates).hasSize(1);
-        var entry = updates.getFirst();
-        assertThat(entry.get("action")).isEqualTo("TRACKER_CONFIGURATION_CHANGE");
-        assertThat(entry.get("target_id")).isEqualTo(TwoTenantDatabases.ACME);
-        assertThat(mapper.readTree((String) entry.get("details")))
-                .isEqualTo(mapper.valueToTree(Map.of(
-                        "companyName", Map.of("old", "Fake company", "new", "Renamed"), "tokenChanged", tokenChanged)));
-        assertThat(entry.toString()).doesNotContain(TOKEN, (String) before.get("service_account_api_token"));
-        if (tokenChanged)
-            verify(tracker).checkServiceAccount(new JiraAccount("https://fake.atlassian.net", CLOUD_ID, TOKEN));
+        assertThat(updates).singleElement().satisfies(entry -> {
+            assertThat(entry.get("action")).isEqualTo("TRACKER_CONFIGURATION_CHANGE");
+            assertThat(mapper.readTree((String) entry.get("details")))
+                    .isEqualTo(
+                            mapper.valueToTree(Map.of("companyName", Map.of("old", "Fake company", "new", "Renamed"))));
+        });
     }
 
     @Test
@@ -573,7 +470,7 @@ class WorkspaceControllerIT {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("MSG60"));
         assertEmpty();
-        verifyNoInteractions(tracker, linker);
+        verifyNoInteractions(linker);
     }
 
     @Test
@@ -584,7 +481,7 @@ class WorkspaceControllerIT {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("MSG08"));
         assertEmpty();
-        verifyNoInteractions(tracker, linker);
+        verifyNoInteractions(linker);
     }
 
     private void assertEmpty() {

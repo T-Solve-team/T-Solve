@@ -174,7 +174,10 @@
         "default-project-api": "passing",
         "default-project-screen": "passing",
         "jira-check-reason": "evaluating",
-        "jira-check-reason-screen": "evaluating"
+        "jira-check-reason-screen": "evaluating",
+        "jira-app-token": "evaluating",
+        "workspace-without-service-account": "evaluating",
+        "workspace-jira-app-status-screen": "evaluating"
       },
       "lastUpdated": "2026-11-17T04:06:47.852Z",
       "branch": "feat/workspace",
@@ -385,9 +388,10 @@
         "resubmit-backend": "evaluating",
         "resubmit-forge": "evaluating",
         "panel-rejected": "evaluating",
-        "panel-published": "evaluating"
+        "panel-published": "evaluating",
+        "app-token-trigger": "evaluating"
       },
-      "lastUpdated": "2026-11-14T19:08:51.881Z",
+      "lastUpdated": "2026-11-16T20:49:31.048Z",
       "branch": "feat/KAN-337-jira-app-reject-reason",
       "repos": [
         "default"

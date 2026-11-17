@@ -254,3 +254,17 @@ approved and published." (a Jira App text) with no button. No server change: the
 - Modify: `jira-app/TSolve_JiraApp/src/frontend/panel/IssuePanel.jsx`, its test
 **Dependencies:** none
 **Estimated size:** small
+
+---
+
+## Task 17: Hand the app token to the backend (KAN-349)
+
+**Story:** STORY-013
+**Feature:** app-token-trigger
+**Description:** Manifest: a `scheduledTrigger` (interval `hour`) and a `trigger` on `avi:forge:installed:app` /
+`avi:forge:upgraded:app`, both to a new endpoint `tsolve-app-token-endpoint` on remote `tsolve-backend`, route
+`/api/v1/jira-app/app-token`, `auth.appSystemToken.enabled: true` (AC-013.1); scopes `read:jira-work`,
+`write:jira-work` (AC-013.2); no Forge function in between, no retry (AC-013.3). The backend side is workspace Task 12.
+**Files:** Modify `jira-app/TSolve_JiraApp/manifest.yml`; test `jira-app/TSolve_JiraApp/test/manifest.test.js` (the
+three ACs read from the parsed manifest); `forge lint`.
+**Estimated size:** small

@@ -219,12 +219,12 @@ Order: search Task 19 → Task 6 → Task 7 → Task 8 → Task 9 → Task 10.
 **Feature:** jira-issue-create
 **Jira:** KAN-241 · branch `feat/KAN-241-chatbot-create-jira-issue`
 **Description:**
-- Changeset `043-chatbot-answer-jira-issue.sql`, `ChatbotAnswer.jiraIssueKey`, the locked lookup.
+- Changeset `044-chatbot-answer-jira-issue.sql`, `ChatbotAnswer.jiraIssueKey`, the locked lookup.
 - `JiraIssueCreator` port and `JiraRestIssueCreator` adapter (service account, gateway, ADF, 10 s, error mapping of
   the design); `createChatbotIssue` in the controller and the create path of the service: 201 / 200, 400 field
   errors and MSG06, 409 MSG146, 502 MSG148 / MSG157, 503 MSG149, 404, 401.
 **Files:**
-- Create: `backend/src/main/resources/db/changelog/changes/043-chatbot-answer-jira-issue.sql`,
+- Create: `backend/src/main/resources/db/changelog/changes/044-chatbot-answer-jira-issue.sql`,
   `…/chatbot/issue/client/JiraIssueCreator.java`, `…/chatbot/issue/client/JiraRestIssueCreator.java`
 - Modify: `…/db/changelog/db.changelog-master.xml`, `…/chatbot/answer/entity/ChatbotAnswer.java`,
   `…/chatbot/answer/repository/ChatbotAnswerRepository.java`, `…/chatbot/issue/controller/ChatbotIssueController.java`,

@@ -218,6 +218,23 @@ export const getReceiveIssueCreatedMockHandler = (
   );
 };
 
+export const getReceiveJiraAppTokenMockHandler = (
+  overrideResponse?: void | ((info: Parameters<HttpResponseResolver>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    '*/api/v1/jira-app/app-token',
+    async (info: Parameters<HttpResponseResolver>[0]) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
 export const getGetJiraAskerEligibilityMockHandler = (
   overrideResponse?:
     | JiraAskerEligibility
@@ -389,6 +406,7 @@ export const getGetIssuePanelMockHandler = (
 export const getJiraAppMock = () => [
   getGetJiraReviewFeedbackMockHandler(),
   getReceiveIssueCreatedMockHandler(),
+  getReceiveJiraAppTokenMockHandler(),
   getGetJiraAskerEligibilityMockHandler(),
   getAskJiraAppQuestionMockHandler(),
   getOpenSolutionFormMockHandler(),

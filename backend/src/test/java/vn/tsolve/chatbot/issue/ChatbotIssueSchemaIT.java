@@ -35,11 +35,11 @@ class ChatbotIssueSchemaIT {
     @Test
     void declaresAndExecutesRollbackOfOnlyTheIssueKey_AC_011_11() throws Exception {
         assertColumn();
-        var sql = new ClassPathResource("db/changelog/changes/043-chatbot-answer-jira-issue.sql")
+        var sql = new ClassPathResource("db/changelog/changes/044-chatbot-answer-jira-issue.sql")
                 .getContentAsString(StandardCharsets.UTF_8);
         assertThat(sql)
                 .contains(
-                        "--changeset chatbot:043-chatbot-answer-jira-issue",
+                        "--changeset chatbot:044-chatbot-answer-jira-issue",
                         "--rollback ALTER TABLE chatbot_answer DROP COLUMN jira_issue_key;");
         String rollback = sql.lines()
                 .filter(line -> line.startsWith("--rollback "))

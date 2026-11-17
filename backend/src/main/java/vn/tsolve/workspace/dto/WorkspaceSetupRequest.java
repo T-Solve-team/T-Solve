@@ -11,22 +11,14 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 import vn.tsolve.common.exception.FieldMessageCodeException;
 
-/** Keeps JSON field types for ordered service validation; never prints the request's token. */
+/** Keeps JSON field types for ordered service validation; never prints the request. */
 @Schema(
         name = "WorkspaceSetupRequest",
         type = "object",
-        requiredProperties = {"companyName", "jiraSiteUrl", "serviceAccountToken"})
+        requiredProperties = {"companyName", "jiraSiteUrl"})
 @SchemaProperties({
     @SchemaProperty(name = "companyName", schema = @Schema(type = "string", minLength = 1, maxLength = 100)),
-    @SchemaProperty(name = "jiraSiteUrl", schema = @Schema(type = "string", minLength = 1, maxLength = 200)),
-    @SchemaProperty(
-            name = "serviceAccountToken",
-            schema =
-                    @Schema(
-                            type = "string",
-                            format = "password",
-                            minLength = 1,
-                            accessMode = Schema.AccessMode.WRITE_ONLY))
+    @SchemaProperty(name = "jiraSiteUrl", schema = @Schema(type = "string", minLength = 1, maxLength = 200))
 })
 public record WorkspaceSetupRequest(@Schema(hidden = true) JsonNode body) {
     public static WorkspaceSetupRequest parse(String json, ObjectMapper mapper) {
