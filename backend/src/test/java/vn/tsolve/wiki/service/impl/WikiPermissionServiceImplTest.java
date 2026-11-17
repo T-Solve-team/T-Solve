@@ -67,7 +67,7 @@ class WikiPermissionServiceImplTest {
                 space,
                 "Wiki",
                 "Support",
-                "Manager",
+                List.of("Manager"),
                 new WikiSpaceSettings.OwnDepartment(department, "Support", true),
                 List.of(),
                 List.of());

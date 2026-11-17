@@ -38,7 +38,11 @@ export function SpaceSettingsPage() {
       <Descriptions
         items={[
           { key: 'department', label: 'Department', children: space.departmentName },
-          { key: 'manager', label: 'Knowledge Manager', children: space.knowledgeManager ?? '—' },
+          {
+            key: 'manager',
+            label: 'Knowledge Manager',
+            children: space.knowledgeManagers.join(', ') || '—',
+          },
         ]}
       />
       <Tabs
