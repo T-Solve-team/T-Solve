@@ -54,6 +54,28 @@ export async function getEligibility(useMock = USE_MOCK) {
   return { status: STATUSES.includes(status) ? status : 'CONNECTED' };
 }
 
+const LINK_STATUSES = ['LINKED', 'NOT_LINKED', 'SITE_NOT_CONNECTED'];
+
+/**
+ * Whether the Jira user is linked to a T-Solve Account: `{status, fullName, email, linkedAt}` with `status` `LINKED`,
+ * `NOT_LINKED` or `SITE_NOT_CONNECTED` (AC-014.2). An unknown status counts as not linked.
+ */
+export async function getAccountLink() {
+  const response = await call({ path: `${JIRA_APP}/account-link`, method: 'GET' });
+  const body = response.body ?? {};
+  return { ...body, status: LINK_STATUSES.includes(body.status) ? body.status : 'NOT_LINKED' };
+}
+
+/** A single-use link to the Workspace's `/jira-link` confirm page (AC-014.6); MSG124, MSG08 or MSG06 otherwise. */
+export async function startAccountLink() {
+  const response = await call({ path: `${JIRA_APP}/account-link`, method: 'POST' });
+  const url = response.body?.url;
+  if (typeof url !== 'string' || !/^https?:\/\//.test(url)) {
+    throw new TsolveError('MSG06', { status: response.status });
+  }
+  return url;
+}
+
 /** "Solved" rates the last answer HELPFUL, "Not solved, create ticket" NOT_HELPFUL (AC-010.15). */
 export async function rateAnswer(answerId, rating, useMock = USE_MOCK) {
   if (useMock || !answerId) {

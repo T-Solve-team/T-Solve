@@ -333,8 +333,8 @@
     }
   },
   "identity": {
-    "specHash": "7680f68b9cb8b19f9d40f1b687f3dee0b3b61c4acb8680ef1323f5c93537287e",
-    "approvedAt": "2026-11-12T18:30:09.009Z",
+    "specHash": "2c6bdebe511b181032454bcd8277dfd1e62cfebab2075267140b439993608137",
+    "approvedAt": "2026-11-17T14:23:21.612Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a browser opens  on a Workspace site whose Workspace passes AC-001.48, THE backend SHALL save an authorization request for the Workspace that the platform resolved from the host (AC-001.53) and answer 302 to the authorization endpoint of the Keycloak realm  ( + ;  in production), without a signed-in user.",
@@ -396,6 +396,7 @@
       "AC-001.72": "IF the link request is missing, expired, already used or made for another Workspace, THEN THE backend SHALL record no link and answer 400 with  , on the confirm POST and on the  of AC-001.75 alike; IF the request has no valid session, THEN THE backend SHALL answer 401 with  , and IF the confirm POST has no valid CSRF token, THEN 403 (be-foundation AC-002.11); the checks SHALL run in the order session, then CSRF token, then link request (401 before 403 before 400), so the session filter SHALL run before the CSRF filter; the confirm POST SHALL read and delete the link request in one step whatever the outcome, so a confirm for another Workspace's request uses it up; in every case no link SHALL be recorded.",
       "AC-001.75": "WHEN a signed-in person of a Workspace sends  for a link request made for that Workspace, THE backend SHALL answer 200 with  (the Jira site's name, not the Workspace's) taken from the stored link request, SHALL leave the request in Redis (the GET does not consume it) and SHALL record nothing.",
       "AC-001.76": "WHEN a request carries a valid Workspace session, THE backend SHALL bind the Workspace of that session (the Workspace id the session holds, after the host check of AC-001.20 has passed) through  for the rest of that request and SHALL remove the binding when the request ends, also when the endpoint throws, so the endpoint reads only that Workspace's database. A request with no valid Workspace session (anonymous, an Operator session, or the hosts  and ) SHALL get no binding, and no default Workspace is ever bound. IF a signed-in request reaches code that needs the Workspace and none is bound, THEN THE backend SHALL answer 500 with  , never another Workspace's data (decision of KAN-298:  makes the binding; AC-004.16 states the same 500 for the user list).",
+      "AC-001.77": "WHEN another module asks  for the Account linked to a ticket tracker account, THE backend SHALL answer, in the Workspace bound by , the Account of that ticket tracker account's  row when the Account is Active, and nothing when there is no row or the Account is not Active.",
       "AC-002.1": "WHEN a signed-in user sends  with a valid CSRF token, on a Workspace site or on , THE backend SHALL end the Redis session, expire the cookie  (, with  and  and no ) and answer 200 with , the Keycloak end-session URL of the realm that signed the person in (, or  on ) carrying the kept  and  set to  on the same site (K10, Q7).",
       "AC-002.2": "WHEN a session has been ended by logout, THE backend SHALL answer every later request that carries its cookie with 401 and  .",
       "AC-002.3": "WHEN a Workspace session ends, THE backend SHALL publish exactly one  event with the Account id, the Workspace id, the session id and the reason, after the session is gone. The reason SHALL be  (AC-002.1),  (AC-001.23) or  (AC-001.27). The reason is also  when the Account no longer exists. The reason is also  when a new sign-in in the same browser ends a session that is still inside the limits of AC-001.23 (AC-001.18).",
@@ -1318,8 +1319,8 @@
     }
   },
   "jira-app": {
-    "specHash": "1377a3a4a44017590a35033d09cd45a766b47e5faa11be46259a48767d56308d",
-    "approvedAt": "2026-11-17T11:12:08.811Z",
+    "specHash": "c56daf7c1aff255ea05d3d34d4a714c7111d4f79c84639522d0519462b129b8e",
+    "approvedAt": "2026-11-17T14:23:21.356Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the issue being viewed changes to a status of the Done status category, THE Jira App SHALL ask the server whether the form may open and open the form when it may.",
@@ -1345,7 +1346,7 @@
       "AC-007.2": "WHEN the user clicks Accept, THE Jira App SHALL replace the form's five sections with the rewritten ones and go back to the form.",
       "AC-007.3": "WHEN the user clicks Discard, THE Jira App SHALL go back to the form with the Solution unchanged.",
       "AC-007.4": "IF the rewrite fails, is unavailable or takes longer than the UI call allows, THEN THE Jira App SHALL show MSG68 and leave the Solution unchanged.",
-      "AC-008.1": "IF the Jira account is not linked to an active T-Solve Account, THEN THE panel SHALL show MSG62 and nothing else.",
+      "AC-008.1": "IF the Jira account is not linked to an active T-Solve Account, THEN THE panel SHALL show MSG62 and a link \"Open T-Solve account settings\" (a Jira App label — user, 2026-11-17) that opens the settings page of STORY-014, and nothing else.",
       "AC-008.2": "WHILE the issue's ticket is in Pending review, THE panel SHALL show MSG65.",
       "AC-008.3": "WHILE the user has a Draft for the issue and the issue's ticket does not exist, THE panel SHALL show MSG77 with a button that reopens the form with the Draft.",
       "AC-008.7": "WHILE the issue's Solution Form ticket written by the user is in Changes requested, THE panel SHALL show MSG64 with the Project Manager's name and comment, read from 's , as  — the SRS text without its last sentence \"Update the solution and resubmit.\" (user, 2026-11-14).",
@@ -1374,8 +1375,19 @@
       "AC-012.6": "WHEN the user closes the resubmission form, THE server SHALL store the five sections as the user's Draft for the issue as in AC-005.1, the ticket SHALL stay in Changes requested, and THE Jira App SHALL show the flag \"Saved as draft\".",
       "AC-012.7": "THE resubmission form SHALL check, rewrite and retry as the first submission does (AC-002.3, AC-002.4, AC-004.4, STORY-007).",
       "AC-013.1": "THE manifest SHALL declare a scheduled trigger with interval  and a trigger on the app's install and",
-      "AC-013.2": "THE manifest SHALL request the scopes  and  and no administration scope",
-      "AC-013.3": "WHEN the backend answers the token call with an error, THE Jira App SHALL do nothing else; the next run"
+      "AC-013.2": "THE manifest SHALL request the scopes ,  and  and no",
+      "AC-013.3": "WHEN the backend answers the token call with an error, THE Jira App SHALL do nothing else; the next run",
+      "AC-014.1": "THE Jira App SHALL add a personal settings page titled \"T-Solve account\" (Forge ) to the profile menu of every Jira user of the site.",
+      "AC-014.2": "WHEN the settings page opens, THE Jira App SHALL call , which SHALL answer, for the FIT's site and Jira user only,   with the linked Account's full name and email and the link time, , or  (the site belongs to no Workspace), and SHALL call no AI and store nothing.",
+      "AC-014.3": "WHILE the status is , THE settings page SHALL show \"Your Jira account is not linked to T-Solve.\" and a button \"Sign in to T-Solve\" (Jira App labels — user, 2026-11-17).",
+      "AC-014.4": "WHILE the status is , THE settings page SHALL show  with the linked Account's full name and email, and a button \"Link another account\" (Jira App labels — user, 2026-11-17), and SHALL offer no unlink.",
+      "AC-014.5": "WHILE the status is , THE settings page SHALL show MSG124 and no button.",
+      "AC-014.6": "WHEN the user clicks \"Sign in to T-Solve\" or \"Link another account\", THE Jira App SHALL call ; THE server SHALL read the display name of the FIT's Jira account from Jira () with the Workspace's app token (STORY-013), ask identity's  for a link request with the Workspace of the FIT's site, the FIT's Jira account, that display name and the Jira site name (the host of the Workspace's Jira site URL) (identity AC-001.69), and answer with the link it returns.",
+      "AC-014.7": "WHEN the link arrives, THE Jira App SHALL open it in a new browser tab and, instead of the button, show MSG74 with \"page\" in place of \"panel\": \"Finish signing in in the new tab. This page will update when you are done.\" (user, 2026-11-17).",
+      "AC-014.8": "WHILE MSG74 is shown, THE Jira App SHALL call  every 5 seconds and SHALL show the state of AC-014.4 as soon as the answer is  with a link time later than the click; WHEN 10 minutes have passed without that answer (the link request has expired), THE Jira App SHALL stop calling and show the state of the last answer again, with its button.",
+      "AC-014.9": "IF the site belongs to no Workspace, THEN THE server SHALL answer  with 403 MSG124; IF the FIT has no Jira user (), THEN with 403 MSG08; IF Jira or the link request store cannot be reached, or Jira returns no display name, THEN with 503 MSG06; in every case THE server SHALL create no link request, and THE Jira App SHALL show that message, open no tab and keep the button.",
+      "AC-014.10": "THE server SHALL take the site and the Jira account of a link request only from the verified FIT, never from the request body, a parameter or a header (identity AC-001.38, GBR-19).",
+      "AC-014.11": "THE server SHALL find the T-Solve user of every Jira App call — the panel, the Solution Form, the resubmission and the Ask T-Solve answer (AC-010.4) — only as the linked Account (identity AC-001.77): no link, or a link to an Account that is not Active, means not linked; THE server SHALL no longer read the  setting."
     }
   },
   "workspace": {
