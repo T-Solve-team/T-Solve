@@ -23,10 +23,21 @@ describe('manifest: app token for the backend', () => {
     expect(endpoint.auth.appSystemToken.enabled).toBe(true);
   });
 
-  it('AC-013.2 asks for read and write of Jira work', () => {
-    expect(manifest.permissions.scopes).toEqual(
-      expect.arrayContaining(['read:jira-work', 'write:jira-work']),
-    );
+  it('AC-013.2 asks for read and write of Jira work and reading users, and no administration scope', () => {
+    expect([...manifest.permissions.scopes].sort()).toEqual(['read:jira-user', 'read:jira-work', 'write:jira-work']);
+    expect(manifest.permissions.scopes.some((scope) => scope.startsWith('manage:'))).toBe(false);
+  });
+
+  it('AC-014.1 adds the "T-Solve account" personal settings page', () => {
+    const [page] = manifest.modules['jira:personalSettingsPage'];
+    expect(page).toMatchObject({
+      key: 'tsolve-account-settings',
+      resource: 'account-settings',
+      render: 'native',
+      title: 'T-Solve account',
+      resolver: { endpoint: 'tsolve-ui-endpoint' },
+    });
+    expect(manifest.resources).toContainEqual({ key: 'account-settings', path: 'src/frontend/accountSettings/index.jsx' });
   });
 
   it('AC-013.3 goes straight to the remote, with no Forge function in between', () => {

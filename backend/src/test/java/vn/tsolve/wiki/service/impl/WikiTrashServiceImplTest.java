@@ -215,7 +215,7 @@ class WikiTrashServiceImplTest {
         } else {
             assertThat(TransactionSynchronizationManager.getSynchronizations()).hasSize(1);
             commit();
-            verify(jobs).enqueue("wiki-index", id);
+            verify(jobs).enqueueFromRequest("wiki-index", id);
         }
         assertThat(document.getIndexStatus()).isEqualTo(index);
     }
