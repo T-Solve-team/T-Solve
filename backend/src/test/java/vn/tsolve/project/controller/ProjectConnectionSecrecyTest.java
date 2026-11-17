@@ -115,14 +115,14 @@ class ProjectConnectionSecrecyTest {
                 .setAuthentication(UsernamePasswordAuthenticationToken.authenticated(user, null, user.authorities()));
         previousLevel = root.getLevel();
         root.setLevel(Level.ALL);
-        // The fake Jira's threads keep logging to the root logger while a test reads the list (BUG-325).
+        // The fake Jira's threads keep logging to the root logger while a test reads the list (BUG-334).
         logs.list = new CopyOnWriteArrayList<>();
         logs.start();
         root.addAppender(logs);
     }
 
     @Test
-    void readsTheCapturedLogsWhileAnotherThreadStillLogs_BUG_325() {
+    void readsTheCapturedLogsWhileAnotherThreadStillLogs_BUG_334() {
         LoggerFactory.getLogger("vn.tsolve.tracker").info("first");
         List<String> read = new ArrayList<>();
 
