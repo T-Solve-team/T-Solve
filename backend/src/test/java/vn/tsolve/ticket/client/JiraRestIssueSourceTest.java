@@ -42,6 +42,7 @@ import vn.tsolve.ticket.entity.IssueComment;
 import vn.tsolve.ticket.exception.JiraUnavailableException;
 import vn.tsolve.ticket.service.JiraIssue;
 import vn.tsolve.ticket.service.JiraIssuePage;
+import vn.tsolve.ticket.service.JiraIssueSource;
 import vn.tsolve.tracker.dto.JiraAccount;
 
 @ExtendWith(OutputCaptureExtension.class)
@@ -129,7 +130,7 @@ class JiraRestIssueSourceTest {
                                 + "],\"nextPageToken\":\"page-2\",\"isLast\":false}",
                         MediaType.APPLICATION_JSON));
 
-        JiraIssuePage page = source().resolvedIssues("KAN", FROM, TO, null, DEADLINE);
+        JiraIssuePage page = source().pull("KAN", FROM, TO, DEADLINE).page(null);
         assertThat(page.issues()).extracting(JiraIssue::key).containsExactly("KAN-7");
         assertThat(page.nextPageToken()).isEqualTo("page-2");
     }
@@ -140,7 +141,7 @@ class JiraRestIssueSourceTest {
                 .andExpect(queryParam("nextPageToken", "page-2"))
                 .andRespond(withSuccess("{\"issues\":[],\"isLast\":true}", MediaType.APPLICATION_JSON));
 
-        JiraIssuePage page = source().resolvedIssues("KAN", FROM, TO, "page-2", DEADLINE);
+        JiraIssuePage page = source().pull("KAN", FROM, TO, DEADLINE).page("page-2");
 
         assertThat(page.nextPageToken()).isNull();
     }
@@ -154,14 +155,15 @@ class JiraRestIssueSourceTest {
                 + issue("KAN-4", "2026-10-31T17:30:00.000+0000", null, NO_COMMENTS) // 00:30 on 1 Nov in Vietnam
                 + "],\"isLast\":true}");
 
-        assertThat(source().resolvedIssues("KAN", FROM, TO, null, DEADLINE).issues())
+        assertThat(source().pull("KAN", FROM, TO, DEADLINE).page(null).issues())
                 .extracting(JiraIssue::key)
                 .containsExactly("KAN-2", "KAN-3");
     }
 
     @Test
     void stopsWithMsg50WithoutCallingJiraOnceThePullTookMoreThan60Seconds_AC_001_13_BUG_189() {
-        assertThatThrownBy(() -> source().resolvedIssues("KAN", FROM, TO, null, NOW.minusMillis(1)))
+        assertThatThrownBy(
+                        () -> source().pull("KAN", FROM, TO, NOW.minusMillis(1)).page(null))
                 .isInstanceOf(JiraUnavailableException.class)
                 .hasFieldOrPropertyWithValue("reason", "The pull took more than 60 seconds");
     }
@@ -170,7 +172,8 @@ class JiraRestIssueSourceTest {
     void doesNotWaitForARetryThatWouldEndAfterTheDeadline_AC_001_13_BUG_189() {
         searchRequest().andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).header("Retry-After", "5"));
 
-        assertThatThrownBy(() -> source().resolvedIssues("KAN", FROM, TO, null, NOW.plusSeconds(3)))
+        assertThatThrownBy(
+                        () -> source().pull("KAN", FROM, TO, NOW.plusSeconds(3)).page(null))
                 .isInstanceOf(JiraUnavailableException.class)
                 .hasFieldOrPropertyWithValue("reason", "The pull took more than 60 seconds");
         assertThat(sleeps).isEmpty();
@@ -180,7 +183,7 @@ class JiraRestIssueSourceTest {
     void answersMsg50ForADateItCannotRead_AC_001_7_BUG_191() {
         searchReturns("{\"issues\":[" + issue("KAN-1", "02/10/2026 10:15", null, NO_COMMENTS) + "],\"isLast\":true}");
 
-        assertThatThrownBy(() -> source().resolvedIssues("KAN", FROM, TO, null, DEADLINE))
+        assertThatThrownBy(() -> source().pull("KAN", FROM, TO, DEADLINE).page(null))
                 .isInstanceOf(JiraUnavailableException.class);
     }
 
@@ -205,7 +208,7 @@ class JiraRestIssueSourceTest {
                                 + "],\"isLast\":true}",
                         MediaType.APPLICATION_JSON));
 
-        assertThat(source().resolvedIssues("KAN", FROM, TO, null, DEADLINE).issues())
+        assertThat(source().pull("KAN", FROM, TO, DEADLINE).page(null).issues())
                 .extracting(JiraIssue::key)
                 .containsExactly("KAN-1");
     }
@@ -222,7 +225,7 @@ class JiraRestIssueSourceTest {
                 + "," + issue("KAN-8", "2026-10-03T10:00:00.000+0700", null, NO_COMMENTS) + "],\"isLast\":true}");
 
         List<JiraIssue> issues =
-                source().resolvedIssues("KAN", FROM, TO, null, DEADLINE).issues();
+                source().pull("KAN", FROM, TO, DEADLINE).page(null).issues();
 
         JiraIssue first = issues.get(0);
         assertThat(first.summary()).isEqualTo("Summary of KAN-7");
@@ -261,7 +264,8 @@ class JiraRestIssueSourceTest {
                                 + "],\"total\":3,\"startAt\":2,\"maxResults\":2}",
                         MediaType.APPLICATION_JSON));
 
-        List<IssueComment> comments = source().resolvedIssues("KAN", FROM, TO, null, DEADLINE)
+        List<IssueComment> comments = source().pull("KAN", FROM, TO, DEADLINE)
+                .page(null)
                 .issues()
                 .get(0)
                 .comments();
@@ -274,7 +278,7 @@ class JiraRestIssueSourceTest {
         searchRequest()
                 .andRespond(withStatus(HttpStatus.UNAUTHORIZED).body("{\"errorMessages\":[\"bad " + TOKEN + "\"]}"));
 
-        assertThatThrownBy(() -> source().resolvedIssues("KAN", FROM, TO, null, DEADLINE))
+        assertThatThrownBy(() -> source().pull("KAN", FROM, TO, DEADLINE).page(null))
                 .isInstanceOf(JiraUnavailableException.class)
                 .hasFieldOrPropertyWithValue("reason", "Jira answered HTTP 401")
                 .hasMessageNotContaining(TOKEN)
@@ -287,14 +291,14 @@ class JiraRestIssueSourceTest {
         searchRequest().andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
         searchRequest().andRespond(withSuccess("{not json", MediaType.APPLICATION_JSON));
         searchRequest().andRespond(withException(new IOException("Connection reset")));
-        assertThatThrownBy(() -> source().resolvedIssues("KAN", FROM, TO, null, DEADLINE))
+        assertThatThrownBy(() -> source().pull("KAN", FROM, TO, DEADLINE).page(null))
                 .isInstanceOf(JiraUnavailableException.class)
                 .hasFieldOrPropertyWithValue("reason", "Jira answered HTTP 503");
 
-        assertThatThrownBy(() -> source().resolvedIssues("KAN", FROM, TO, null, DEADLINE))
+        assertThatThrownBy(() -> source().pull("KAN", FROM, TO, DEADLINE).page(null))
                 .isInstanceOf(JiraUnavailableException.class);
 
-        assertThatThrownBy(() -> source().resolvedIssues("KAN", FROM, TO, null, DEADLINE))
+        assertThatThrownBy(() -> source().pull("KAN", FROM, TO, DEADLINE).page(null))
                 .isInstanceOf(JiraUnavailableException.class)
                 .extracting("reason", STRING)
                 .startsWith("Jira did not answer");
@@ -304,7 +308,7 @@ class JiraRestIssueSourceTest {
     void givesUpWhenJiraIsSlowerThanTheReadTimeout_AC_001_7() {
         searchRequest().andRespond(withException(new SocketTimeoutException("Read timed out")));
 
-        assertThatThrownBy(() -> source().resolvedIssues("KAN", FROM, TO, null, DEADLINE))
+        assertThatThrownBy(() -> source().pull("KAN", FROM, TO, DEADLINE).page(null))
                 .isInstanceOf(JiraUnavailableException.class)
                 .extracting("reason", STRING)
                 .startsWith("Jira did not answer");
@@ -336,7 +340,7 @@ class JiraRestIssueSourceTest {
             JiraRestIssueSource slow = new JiraRestIssueSource(
                     () -> Optional.of(new JiraAccount(SITE_URL, CLOUD_ID, TOKEN)), realClient, Thread::sleep, clock);
 
-            assertThatThrownBy(() -> slow.resolvedIssues("KAN", FROM, TO, null, DEADLINE))
+            assertThatThrownBy(() -> slow.pull("KAN", FROM, TO, DEADLINE).page(null))
                     .isInstanceOf(JiraUnavailableException.class)
                     .hasFieldOrPropertyWithValue("reason", "Jira did not answer (SocketTimeoutException)");
         } finally {
@@ -348,7 +352,7 @@ class JiraRestIssueSourceTest {
     void reportsAWorkspaceWithoutAServiceAccountWithoutCallingJira_AC_001_7_AC_001_14_BUG_308() {
         JiraRestIssueSource unset = source(null);
 
-        assertThatThrownBy(() -> unset.resolvedIssues("KAN", FROM, TO, null, DEADLINE))
+        assertThatThrownBy(() -> unset.pull("KAN", FROM, TO, DEADLINE).page(null))
                 .isInstanceOf(JiraUnavailableException.class)
                 .hasFieldOrPropertyWithValue("reason", "The Jira connection is not configured");
         assertThat(sleeps).isEmpty();
@@ -373,16 +377,39 @@ class JiraRestIssueSourceTest {
                 .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer replaced-token"))
                 .andRespond(withSuccess("{\"issues\":[],\"isLast\":true}", MediaType.APPLICATION_JSON));
 
-        assertThat(source.resolvedIssues("KAN", FROM, TO, null, DEADLINE).issues())
+        assertThat(source.pull("KAN", FROM, TO, DEADLINE).page(null).issues())
                 .extracting(JiraIssue::url)
                 .containsExactly(SITE_URL + "/browse/KAN-7");
-        assertThat(source.resolvedIssues("KAN", FROM, TO, null, DEADLINE).issues())
-                .isEmpty();
+        assertThat(source.pull("KAN", FROM, TO, DEADLINE).page(null).issues()).isEmpty();
+    }
+
+    @Test
+    void readsTheWorkspaceAccountOnceForAllPagesOfOnePull_AC_001_12_BUG_311() {
+        int[] reads = {0};
+        JiraRestIssueSource source = new JiraRestIssueSource(
+                () -> {
+                    reads[0]++;
+                    return Optional.of(new JiraAccount(SITE_URL, CLOUD_ID, TOKEN));
+                },
+                builder,
+                sleeps::add,
+                clock);
+        searchReturns("{\"issues\":[],\"nextPageToken\":\"page-2\",\"isLast\":false}");
+        searchRequest()
+                .andExpect(queryParam("nextPageToken", "page-2"))
+                .andRespond(withSuccess("{\"issues\":[],\"isLast\":true}", MediaType.APPLICATION_JSON));
+
+        JiraIssueSource.Pull pull = source.pull("KAN", FROM, TO, DEADLINE);
+        assertThat(pull.page(null).nextPageToken()).isEqualTo("page-2");
+        assertThat(pull.page("page-2").nextPageToken()).isNull();
+
+        assertThat(reads[0]).isEqualTo(1);
     }
 
     @Test
     void refusesAProjectKeyThatCouldChangeTheQuery_AC_001_7() {
-        assertThatThrownBy(() -> source().resolvedIssues("KAN\" OR project = \"OPS", FROM, TO, null, DEADLINE))
+        assertThatThrownBy(() -> source().pull("KAN\" OR project = \"OPS", FROM, TO, DEADLINE)
+                        .page(null))
                 .isInstanceOf(JiraUnavailableException.class);
     }
 
@@ -391,7 +418,7 @@ class JiraRestIssueSourceTest {
         searchReturns("{\"issues\":[" + issue("KAN-7", "2026-10-02T10:15:30.000+0700", null, NO_COMMENTS)
                 + "],\"isLast\":true}");
 
-        assertThat(source().resolvedIssues("KAN", FROM, TO, null, DEADLINE).issues())
+        assertThat(source().pull("KAN", FROM, TO, DEADLINE).page(null).issues())
                 .extracting(JiraIssue::url)
                 .containsExactly(SITE_URL + "/browse/KAN-7");
         assertThat(sleeps).isEmpty();
@@ -402,8 +429,7 @@ class JiraRestIssueSourceTest {
         searchRequest().andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
         searchReturns("{\"issues\":[],\"isLast\":true}");
 
-        assertThat(source().resolvedIssues("KAN", FROM, TO, null, DEADLINE).issues())
-                .isEmpty();
+        assertThat(source().pull("KAN", FROM, TO, DEADLINE).page(null).issues()).isEmpty();
         assertThat(sleeps).containsExactly(Duration.ofSeconds(1));
     }
 
@@ -412,8 +438,7 @@ class JiraRestIssueSourceTest {
         searchRequest().andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE).header("Retry-After", "5"));
         searchReturns("{\"issues\":[],\"isLast\":true}");
 
-        assertThat(source().resolvedIssues("KAN", FROM, TO, null, DEADLINE).issues())
-                .isEmpty();
+        assertThat(source().pull("KAN", FROM, TO, DEADLINE).page(null).issues()).isEmpty();
         assertThat(sleeps).containsExactly(Duration.ofSeconds(5));
     }
 
@@ -421,7 +446,7 @@ class JiraRestIssueSourceTest {
     void AC_001_11_fails503WithoutRetryAfterAtOnce() {
         searchRequest().andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
 
-        assertThatThrownBy(() -> source().resolvedIssues("KAN", FROM, TO, null, DEADLINE))
+        assertThatThrownBy(() -> source().pull("KAN", FROM, TO, DEADLINE).page(null))
                 .isInstanceOf(JiraUnavailableException.class)
                 .hasFieldOrPropertyWithValue("reason", "Jira answered HTTP 503");
         assertThat(sleeps).isEmpty();
@@ -431,7 +456,7 @@ class JiraRestIssueSourceTest {
     void AC_001_11_failsRetryAfterSixSecondsAtOnce() {
         searchRequest().andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).header("Retry-After", "6"));
 
-        assertThatThrownBy(() -> source().resolvedIssues("KAN", FROM, TO, null, DEADLINE))
+        assertThatThrownBy(() -> source().pull("KAN", FROM, TO, DEADLINE).page(null))
                 .isInstanceOf(JiraUnavailableException.class)
                 .hasFieldOrPropertyWithValue("reason", "Jira answered HTTP 429");
         assertThat(sleeps).isEmpty();
@@ -446,7 +471,7 @@ class JiraRestIssueSourceTest {
                             .body(TOKEN));
         }
 
-        assertThatThrownBy(() -> source().resolvedIssues("KAN", FROM, TO, null, DEADLINE))
+        assertThatThrownBy(() -> source().pull("KAN", FROM, TO, DEADLINE).page(null))
                 .isInstanceOf(JiraUnavailableException.class)
                 .hasFieldOrPropertyWithValue("reason", "Jira answered HTTP 429")
                 .hasMessageNotContaining(TOKEN)
@@ -477,7 +502,8 @@ class JiraRestIssueSourceTest {
                             MediaType.APPLICATION_JSON));
         }
 
-        assertThat(source().resolvedIssues("KAN", FROM, TO, null, DEADLINE)
+        assertThat(source().pull("KAN", FROM, TO, DEADLINE)
+                        .page(null)
                         .issues()
                         .get(0)
                         .comments())
@@ -504,7 +530,7 @@ class JiraRestIssueSourceTest {
                 new JiraAccount(SITE_URL, CLOUD_ID, " "))) {
             JiraRestIssueSource unset = source(account);
 
-            assertThatThrownBy(() -> unset.resolvedIssues("KAN", FROM, TO, null, DEADLINE))
+            assertThatThrownBy(() -> unset.pull("KAN", FROM, TO, DEADLINE).page(null))
                     .isInstanceOf(JiraUnavailableException.class)
                     .hasFieldOrPropertyWithValue("reason", "The Jira connection is not configured");
         }
