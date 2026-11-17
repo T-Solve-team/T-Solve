@@ -22,6 +22,7 @@ owner: BA
 | 2026-11-17 | STORY-011, Requirement 10 | Wording only: after KAN-349 the same `JiraServiceAccount.current()` returns the Workspace's Jira site with the T-Solve Jira App's app token (Forge system token, `write:jira-work`) instead of a customer service-account token; AC-011.1, AC-011.6, Requirement 10, the issue note and Dependencies say "Jira App token". Behaviour, endpoints and tests unchanged. Definition of Done of KAN-241 ticked | KAN-349 merged into main (#271) and into the KAN-241 branch; the earlier row's "not the Forge token" no longer holds |
 | 2026-11-17 | STORY-012 (new), Requirement 9 | **Backend change (KAN-294).** New STORY-012: the Jira App's Ask T-Solve page asks for a Project instead of a user. Sources are the Published Solutions and the Wiki documents of the Project's Department (search `SolutionRetrieval.nearestInProjectDepartment`, new `WikiSources.nearestInProjectDepartment`); the answer is stored with no user, `source` `JIRA_APP` and the Project (changeset: `user_id` nullable, new `source` and `project_id`). On the web such an answer cannot be rated or turned into a Jira issue; the Jira page rates it through `rateForProject` ("Solved" / "Not solved", AC-012.7) | jira-app STORY-010 change of 17/11 (user): Ask T-Solve needs no sign-in, questions stay stored for the Knowledge Dashboard |
 | 2026-11-17 | STORY-012 | AC-012.1: the Wiki sources of a Jira question are the Company-wide documents only (`WikiSources.nearestCompanyWide`), as the MSG80 suggestion | KAN-294 risk review (user, 17/11): a requester outside the Department must not read its Department-only documents |
+| 2026-11-17 | STORY-012 | AC-012.1: `askForProject` takes the linked T-Solve user, if any, as `reader`: its Wiki sources are what that user may view; without one, Company-wide only | jira-app AC-010.4 change (user, 17/11) |
 
 ## Requirements
 
@@ -323,11 +324,12 @@ owner: BA
 - As the Jira App's Ask T-Solve page, I want an answer for the Jira project the question is asked in, without a
   T-Solve user, so that anyone in that project can try the known Solutions first (KAN-294, jira-app STORY-010).
 - Acceptance:
-  - AC-012.1: WHEN the `jiraapp` module calls `ChatbotAnswerService.askForProject(projectId, request)` with the public
+  - AC-012.1: WHEN the `jiraapp` module calls `ChatbotAnswerService.askForProject(projectId, reader, request)` with the public
     id of an Active Project, THE backend SHALL answer as STORY-005 to STORY-007 except that the sources SHALL be
     search's `SolutionRetrieval.nearestInProjectDepartment(projectId, ...)` and
-    `WikiSources.nearestCompanyWide(...)` (Company-wide Wiki documents only, the MSG80 rule), both with
-    `CHATBOT_MIN_SIMILARITY`, instead of the user's sources.
+    `WikiSources.nearestCompanyWide(...)` (Company-wide Wiki documents only, the MSG80 rule) when `reader` is empty,
+    or `WikiSources.nearest(reader, ...)` (every document that T-Solve user may view) when the asker's Jira account is
+    linked to one, all with `CHATBOT_MIN_SIMILARITY`; the answer is still stored without a user (AC-012.2).
   - AC-012.2: WHEN such an answer is returned, THE backend SHALL store one `chatbot_answer` row with `user_id` null,
     `source` `JIRA_APP`, `project_id` the Project's public id, the trimmed question, the outcome, the answer text and
     the time; a web answer SHALL be stored with `source` `WEB` and no `project_id`.

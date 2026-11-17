@@ -233,8 +233,8 @@
     }
   },
   "chatbot": {
-    "specHash": "39bed7087d59a8523f2e824abbbda58426626f170174e9e34b4f5cfa48b98805",
-    "approvedAt": "2026-11-17T11:01:30.946Z",
+    "specHash": "9e4ced8a57eedc16824ddc9ef0aca924b2ecdf7c5d27598b84d97e9ccc12b28c",
+    "approvedAt": "2026-11-17T11:12:12.053Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",
@@ -1312,8 +1312,8 @@
     }
   },
   "jira-app": {
-    "specHash": "9baeec2f97f4ce3420231f04e6ae33da51450cc9e086676e99c940170bfcd33b",
-    "approvedAt": "2026-11-17T11:01:28.175Z",
+    "specHash": "1377a3a4a44017590a35033d09cd45a766b47e5faa11be46259a48767d56308d",
+    "approvedAt": "2026-11-17T11:12:08.811Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the issue being viewed changes to a status of the Done status category, THE Jira App SHALL ask the server whether the form may open and open the form when it may.",
@@ -1348,7 +1348,7 @@
       "AC-010.1": "THE Jira App SHALL show a project page titled \"Ask T-Solve\" in every Jira project of the site, with a question box, a send button and the note \"Answers from T-Solve Solutions and Wiki\".",
       "AC-010.2": "IF the open Jira project is not the Jira project of an Active T-Solve Project, THEN THE page SHALL show \"This Jira project is not connected to T-Solve.\" (a Jira App text, not an SRS message — user, 2026-11-17) instead of the question box, or MSG124 instead when the Jira site belongs to no Workspace, and SHALL still show \"Not solved, create ticket\", which opens the Create dialog of AC-010.9 with nothing prefilled.",
       "AC-010.3": "WHEN the user sends a question, THE Jira App SHALL call  with the question and, as history, the earlier turns of the conversation — at most the last 10.",
-      "AC-010.4": "WHEN the server receives a valid question from a Jira project of an Active T-Solve Project, THE server SHALL return the chatbot answer for that Project (chatbot STORY-012) — the same citations and outcomes as the web Knowledge Chatbot, from the Published Solutions of the Project's Department and the Company-wide Wiki documents, as the MSG80 suggestion does (UC-36) — whoever the Jira user is, linked to T-Solve or not.",
+      "AC-010.4": "WHEN the server receives a valid question from a Jira project of an Active T-Solve Project, THE server SHALL return the chatbot answer for that Project (chatbot STORY-012) — the same citations and outcomes as the web Knowledge Chatbot, from the Published Solutions of the Project's Department and the Wiki documents the asker may read — the Company-wide ones for a Jira account not linked to an active T-Solve user (as the MSG80 suggestion, UC-36), and every document that user may view on the web for a linked one — whoever the Jira user is, linked to T-Solve or not.",
       "AC-010.5": "IF the question is empty or only white space, THEN THE Jira App SHALL show MSG01 under the box and send nothing; IF it is longer than 1,000 characters, THEN THE Jira App SHALL show MSG02 and send nothing; THE server SHALL answer 400 with the same codes whatever the Jira App checked.",
       "AC-010.6": "WHEN the answer has outcome , THE page SHALL show its text, its sources in number order — a Wiki document as \"[n] <title> · Wiki document\", a ticket source as \"[n] Solution from a ticket\" with its Solution, never the ticket's id, link or Project (GBR-36) — and the buttons \"Solved\" and \"Not solved, create ticket\".",
       "AC-010.7": "WHEN the answer has outcome , THE page SHALL show MSG109 and the buttons \"Solved\" and \"Not solved, create ticket\".",
