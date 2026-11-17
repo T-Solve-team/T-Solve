@@ -356,8 +356,8 @@ frontend/src/features/workspace/
   pages/WorkspaceSettingsPage.test.tsx          + AC-004.1
   pages/DepartmentDetailPage.tsx                replaces the placeholder
   pages/DepartmentDetailPage.test.tsx           new
-  components/DepartmentNameForm.tsx             new
-  hooks/useDepartmentMutations.ts               + useRenameDepartment
+  components/DepartmentEditForm.tsx             new
+  hooks/useDepartmentMutations.ts               + useSaveDepartment
   mocks/handlers.ts                             seeded list, GET and PUT handlers
 ```
 
@@ -705,7 +705,7 @@ Each outcome is logged at `warn` (`info` for READY) with the key and Jira's stat
 ### Web app
 
 - `useGetDepartment` now returns `DepartmentDetail`; `DepartmentDetailPage` passes it to the form unchanged.
-- `DepartmentNameForm` (name kept to limit churn; its Javadoc becomes "the name and default Project and their inline edit form, UC-13"): props `{ department: DepartmentDetail }`.
+- `DepartmentEditForm` (renamed from `DepartmentNameForm`, PR #269 review; its Javadoc becomes "the name and default Project and their inline edit form, UC-13"): props `{ department: DepartmentDetail }`.
   - View: a second `Descriptions` item, label "Default Project", `department.defaultProject?.jiraProjectKey ?? 'None'` (AC-013.1).
   - Edit: below "Department name", `FormField name="defaultProjectId" label="Default Project" extra=<AC-013.4 text>` holding an antd `Select` with options `[{ value: '', label: 'None' }, ...department.projects.map(p => ({ value: p.projectId, label: p.jiraProjectKey }))]` and `disabled={rename.isPending}` (AC-013.2, AC-013.3, AC-013.9). Initial value `department.defaultProject?.projectId ?? ''`.
   - Submit: `{ name: values.name.trim(), defaultProjectId: values.defaultProjectId || null }` (AC-013.5). `applyApiErrors` already places a `fieldErrors` entry on the form field of the same name with its params (`shared/forms/apply-api-errors.ts:10-19`), so MSG04, MSG156 and MSG157 land under the select (AC-013.7).
