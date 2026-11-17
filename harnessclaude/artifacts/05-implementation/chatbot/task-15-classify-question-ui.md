@@ -20,8 +20,8 @@
   AC-006.7 rejects unknown codes, decision D3 gives unnumbered messages provisional keys, and the workspace spec
   plans MSG157/MSG158. fe-foundation AC-006.7 and the chatbot spec reworded and re-approved; `catalog.test.ts`
   lists `MSG_NEW_5`–`MSG_NEW_7`. The quick change opened for `catalog.ts` was closed unused.
-- BUG-324 (review finding): the mock normalizer also strips `\p{Cf}` and U+FE00–U+FE0F; test "AC-004.7 strips emoji
-  joiners and selectors … (BUG-324)" red before, green after.
+- BUG-326 (review finding): the mock normalizer also strips `\p{Cf}` and U+FE00–U+FE0F; test "AC-004.7 strips emoji
+  joiners and selectors … (BUG-326)" red before, green after.
 
 ### Verify
 - Chatbot feature tests 145/145 (`--maxWorkers=1`), catalog tests 211/211, typecheck, lint (1 existing warning in
@@ -37,4 +37,4 @@ none
 
 ### Commit
 
-- `2a4ee786` feat(chatbot): show classified answers in the web app (KAN-243). Review passed (attempt 1); BUG-324 fixed in the mock too.
+- `2a4ee786` feat(chatbot): show classified answers in the web app (KAN-243). Review passed (attempt 1); BUG-326 fixed in the mock too.

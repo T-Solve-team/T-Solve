@@ -56,7 +56,7 @@ class QuestionClassifierTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"thanks \u2764\ufe0f", "\ud83d\udc68\u200d\ud83d\udcbb thanks", "thanks\u200b"})
-    void stripsEmojiJoinersAndSelectors_AC_009_1_BUG_324(String phrase) {
+    void stripsEmojiJoinersAndSelectors_AC_009_1_BUG_326(String phrase) {
         assertThat(QuestionClassifier.isGreeting(phrase)).isTrue();
     }
 

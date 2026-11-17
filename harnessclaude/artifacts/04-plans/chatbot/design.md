@@ -497,7 +497,7 @@ the two-value check. The constraint is `ck_chatbot_answer_outcome` (`013-chatbot
 ### Decided in planning (builder check, 17/11)
 
 - Decided in planning: greeting normalization is NFC, lower-case (`Locale.ROOT`), every `\p{P}`, `\p{Cf}`,
-  U+FE00–U+FE0F (added by BUG-324) and `\p{So}` /
+  U+FE00–U+FE0F (added by BUG-326) and `\p{So}` /
   `\p{Sk}` character replaced by a space, inner white space collapsed, trimmed; then an exact match on the phrase
   set (Unicode-aware, so Vietnamese diacritics stay). (builder check)
 - Decided in planning: the mock (AC-004.7) uses the same normalization; it runs after the AC-004.3 400 checks;

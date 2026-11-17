@@ -206,7 +206,7 @@ class ChatbotRatingIT {
     }
 
     @Test
-    void ratesNoGreetingOrRefusedAnswer_AC_003_1_BUG_326() {
+    void ratesNoGreetingOrRefusedAnswer_AC_003_1_BUG_328() {
         UUID project = UUID.randomUUID();
         for (String outcome : new String[] {"GREETING", "OFF_TOPIC", "INJECTION"}) {
             UUID web = seedAnswer(userA, outcome);

@@ -152,7 +152,7 @@ class ChatbotAnswerTimeoutIT {
     }
 
     @Test
-    void stalledClassifierFailsOpenWithinDeadline_AC_009_7_BUG_327() throws InterruptedException {
+    void stalledClassifierFailsOpenWithinDeadline_AC_009_7_BUG_329() throws InterruptedException {
         UUID userId = jdbc.queryForObject(
                 "INSERT INTO app_user (email, status, created_at) VALUES (?, 'ACTIVE', now()) RETURNING id",
                 UUID.class,

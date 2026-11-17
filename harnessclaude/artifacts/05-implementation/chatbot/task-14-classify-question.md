@@ -21,8 +21,8 @@
   `AiUnavailableException` from the classifier fails open (user decision 17/11); a timeout is 503 with no row.
 - Tests: `QuestionClassifierTest`, `ClassifierPromptTest`, new cases in `ChatbotAnswerServiceImplTest` and
   `ChatbotAnswerTimeoutIT.classifierCountsAgainstDeadline_AC_009_7`, all named in Task 14.
-- BUG-324 (review finding): the normalizer also strips `\p{Cf}` and U+FE00–U+FE0F;
-  `stripsEmojiJoinersAndSelectors_AC_009_1_BUG_324` red before, green after.
+- BUG-326 (review finding): the normalizer also strips `\p{Cf}` and U+FE00–U+FE0F;
+  `stripsEmojiJoinersAndSelectors_AC_009_1_BUG_326` red before, green after.
 
 ### Verify
 - `sdd.ts trace chatbot STORY-009 STORY-001 STORY-003 STORY-004 STORY-005 STORY-007`: 51/51 criteria have a test.
@@ -38,4 +38,4 @@ none
 
 ### Commit
 
-- `fd44833b` feat(chatbot): classify questions before the search (KAN-243). Review passed (attempt 1); BUG-324 fixed before the commit.
+- `fd44833b` feat(chatbot): classify questions before the search (KAN-243). Review passed (attempt 1); BUG-326 fixed before the commit.

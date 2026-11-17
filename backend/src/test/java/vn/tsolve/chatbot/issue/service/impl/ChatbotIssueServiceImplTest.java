@@ -243,7 +243,7 @@ class ChatbotIssueServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"GREETING", "OFF_TOPIC", "INJECTION"})
-    void rejectsUnsearchedAnswerBeforeAi_AC_010_1_BUG_325(String outcome) {
+    void rejectsUnsearchedAnswerBeforeAi_AC_010_1_BUG_327(String outcome) {
         when(answers.findByIdAndUserId(ANSWER_ID, USER.id())).thenReturn(Optional.of(answer(outcome)));
         when(answers.findForUpdateByIdAndUserId(ANSWER_ID, USER.id())).thenReturn(Optional.of(answer(outcome)));
         assertThatThrownBy(this::draft).isInstanceOf(NotFoundException.class).hasMessage("MSG04");
