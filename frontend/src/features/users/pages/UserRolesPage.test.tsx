@@ -12,7 +12,7 @@ import {
 } from '@/shared/api';
 import { problem } from '@/shared/api/mocks';
 import { setDevUser } from '@/shared/auth';
-import { HANDBOOK_SPACE_ID } from '../mocks/data';
+import { HANDBOOK_SPACE_ID, IT_SPACE_ID } from '../mocks/data';
 import { store } from '../mocks/state';
 import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
@@ -257,6 +257,45 @@ describe('User Detail roles and assignments', () => {
     expect(screen.getByRole('checkbox', { name: 'Admin' })).not.toBeChecked();
     expect(screen.getByRole('checkbox', { name: 'Ticket Resolver' })).toBeChecked();
     expect(screen.getByText('HR', { exact: true })).toBeVisible();
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+  });
+
+  it('AC-009.8 keeps role edits and prevents submission until recipient lookup retries successfully', async () => {
+    server.use(http.get('*/api/v1/users/:userId/handover-options', () => problem(500)));
+    const user = userEvent.setup();
+    const { queryClient } = renderApp(`/users/${account(3)}`, { role: 'ADMIN' });
+    await screen.findByRole('button', { name: 'Save' }, { timeout: 5000 });
+    await user.click(screen.getByRole('checkbox', { name: 'Knowledge Manager' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText(msg('MSG06'))).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: 'Knowledge Manager' })).not.toBeChecked();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect((await getUserDetail(account(3))).roles).toContain('KNOWLEDGE_MANAGER');
+    expect(queryClient.isMutating()).toBe(0);
+    server.resetHandlers();
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Hand Over Responsibilities' });
+    expect(
+      await within(dialog).findByRole('combobox', { name: 'IT Knowledge' }),
+    ).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+  });
+
+  it('AC-009.2 submits co-manager role removal directly without handover', async () => {
+    const coManager = store.users.find((item) => item.id === account(7));
+    if (!coManager) throw new Error('Missing fixture');
+    coManager.spaceIds.push(IT_SPACE_ID);
+    const user = userEvent.setup();
+    const { queryClient } = renderApp(`/users/${account(3)}`, { role: 'ADMIN' });
+    await screen.findByRole('button', { name: 'Save' }, { timeout: 5000 });
+    await user.click(screen.getByRole('checkbox', { name: 'Knowledge Manager' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect((await getUserDetail(account(3))).managedSpaces).toEqual([]);
+    expect(coManager.spaceIds).toContain(IT_SPACE_ID);
     await waitFor(() => expect(queryClient.isFetching()).toBe(0));
   });
 

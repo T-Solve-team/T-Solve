@@ -71,12 +71,10 @@ export const rolesHandler = http.put('*/api/v1/users/:userId', async ({ params, 
   const occupied = SPACES.find(
     (space) =>
       selectedSpaces.includes(space.spaceId) &&
-      store.users.some(
-        (user) =>
-          user.workspaceId === WORKSPACE_ID &&
-          user.id !== id &&
-          user.spaceIds.includes(space.spaceId),
-      ),
+      !target.spaceIds.includes(space.spaceId) &&
+      store.users.filter(
+        (user) => user.workspaceId === WORKSPACE_ID && user.spaceIds.includes(space.spaceId),
+      ).length >= 3,
   );
   if (occupied) return fieldError('spaceIds', 'MSG117', { space_name: occupied.name }, 409);
   if (target.roles.includes(Role.ADMIN) && !roles.includes(Role.ADMIN)) {
