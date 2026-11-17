@@ -1969,3 +1969,9 @@
 {"ts":"2026-11-17T11:12:12.055Z","type":"spec-approved","module":"chatbot","specHash":"9e4ced8a57eedc16824ddc9ef0aca924b2ecdf7c5d27598b84d97e9ccc12b28c"}
 {"ts":"2026-11-17T13:09:01.509Z","type":"quick-opened","what":"Show the Google account chooser on every sign-in (prompt=select_account on the Workspace Google identity provider) (KAN-355)","files":["backend/src/main/java/vn/tsolve/identity/keycloak/KeycloakAdminClient.java","backend/src/test/java/vn/tsolve/identity/keycloak/KeycloakAdminClientTest.java"]}
 {"ts":"2026-11-17T13:13:37.535Z","type":"quick-closed","what":"Show the Google account chooser on every sign-in (prompt=select_account on the Workspace Google identity provider) (KAN-355)","files":["backend/src/main/java/vn/tsolve/identity/keycloak/KeycloakAdminClient.java","backend/src/test/java/vn/tsolve/identity/keycloak/KeycloakAdminClientTest.java"]}
+{"ts":"2026-11-17T09:34:43.059Z","type":"feature-status","module":"search","feature":"membership-visible-scope","from":null,"to":"pending"}
+{"ts":"2026-11-17T12:26:04.324Z","type":"spec-approved","module":"search","specHash":"873621aaf1127691e6fd80621d23de0c1f620f6d4ef0a79a3ab57a6a44ab7156"}
+{"ts":"2026-11-17T12:26:08.466Z","type":"feature-status","module":"search","feature":"membership-visible-scope","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T12:49:24.718Z","type":"feature-status","module":"search","feature":"membership-visible-scope","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T12:49:25.146Z","type":"commit-recorded","module":"search","repo":"default","sha":"409ee2a219f3b33d9895339f3a02f313a09640af"}
+{"ts":"2026-11-17T13:29:51.892Z","type":"commit-recorded","module":"search","repo":"default","sha":"b9b481f4a04ba740d6a3dfc649cbe5059b8b46bc"}
