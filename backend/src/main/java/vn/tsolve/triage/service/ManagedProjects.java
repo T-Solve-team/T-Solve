@@ -4,8 +4,8 @@ import java.util.List;
 import vn.tsolve.triage.dto.ManagedProject;
 
 /**
- * The Projects a user manages ({@code project_membership.role_in_project = PROJECT_MANAGER}). The identity module
- * owns users and memberships; until it provides this, a fail-closed stand-in answers (design: Backend history API).
+ * The Projects a user manages ({@code project_membership.role_in_project = PROJECT_MANAGER}), only those an {@code
+ * ACTIVE} account holding the PROJECT_MANAGER Role manages in an {@code ACTIVE} Project and Department.
  */
 public interface ManagedProjects {
 
