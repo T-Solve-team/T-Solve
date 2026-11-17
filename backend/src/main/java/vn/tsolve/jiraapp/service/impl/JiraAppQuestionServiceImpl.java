@@ -25,16 +25,21 @@ import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse;
 import vn.tsolve.chatbot.answer.dto.ChatbotQuestionRequest;
 import vn.tsolve.chatbot.answer.service.ChatbotAnswerService;
 import vn.tsolve.common.security.JiraAppPrincipal;
-import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.identity.signin.port.TenantScope;
 import vn.tsolve.jiraapp.dto.JiraAppQuestionRequest;
+import vn.tsolve.jiraapp.dto.JiraAppRatingRequest;
 import vn.tsolve.jiraapp.dto.JiraAskerEligibility;
-import vn.tsolve.jiraapp.exception.JiraAskerNotLinkedException;
+import vn.tsolve.jiraapp.dto.JiraAskerEligibility.Status;
 import vn.tsolve.jiraapp.exception.JiraIssueAccessDeniedException;
+import vn.tsolve.jiraapp.exception.JiraSiteNotConnectedException;
 import vn.tsolve.jiraapp.service.JiraAppQuestionService;
-import vn.tsolve.jiraapp.service.JiraAskerLookup;
 import vn.tsolve.jiraapp.service.JiraWorkspaceLookup;
+import vn.tsolve.project.service.ProjectService;
 
+/**
+ * Ask T-Solve answers anyone in a Jira project of an Active T-Solve Project, from that Project's Department, without a
+ * T-Solve sign-in (KAN-294). The site and the project come only from the verified FIT (AC-010.13).
+ */
 @Service
 public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
 
@@ -42,7 +47,7 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
 
     private final JiraWorkspaceLookup workspaces;
     private final TenantScope tenantScope;
-    private final JiraAskerLookup askers;
+    private final ProjectService projects;
     private final ChatbotAnswerService answers;
     private final Executor executor;
     private final long timeoutNanos;
@@ -54,11 +59,11 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
     public JiraAppQuestionServiceImpl(
             JiraWorkspaceLookup workspaces,
             TenantScope tenantScope,
-            JiraAskerLookup askers,
+            ProjectService projects,
             ChatbotAnswerService answers,
             @Value("${JIRA_APP_ASK_THREADS:8}") int threads,
             @Value("${JIRA_APP_ASK_TIMEOUT:18s}") String timeout) {
-        this(workspaces, tenantScope, askers, answers, askPool(threads), DurationStyle.detectAndParse(timeout));
+        this(workspaces, tenantScope, projects, answers, askPool(threads), DurationStyle.detectAndParse(timeout));
     }
 
     /** At most {@code threads} questions at once and as many waiting; any more answer MSG06 at once (BUG-183). */
@@ -91,7 +96,7 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
     JiraAppQuestionServiceImpl(
             JiraWorkspaceLookup workspaces,
             TenantScope tenantScope,
-            JiraAskerLookup askers,
+            ProjectService projects,
             ChatbotAnswerService answers,
             Executor executor,
             Duration timeout) {
@@ -100,7 +105,7 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
         }
         this.workspaces = workspaces;
         this.tenantScope = tenantScope;
-        this.askers = askers;
+        this.projects = projects;
         this.answers = answers;
         this.executor = executor;
         this.timeoutNanos = timeout.toNanos();
@@ -109,25 +114,25 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
     @Override
     public JiraAskerEligibility eligibility(JiraAppPrincipal caller) {
         Optional<UUID> workspace = workspace(caller);
+        if (workspace.isEmpty()) {
+            return new JiraAskerEligibility(Status.SITE_NOT_CONNECTED);
+        }
         return new JiraAskerEligibility(
-                workspace.isPresent() && asker(workspace.get(), caller).isPresent());
+                project(workspace.get(), caller).isPresent() ? Status.CONNECTED : Status.PROJECT_NOT_CONNECTED);
     }
 
     @Override
     public ChatbotAnswerResponse ask(JiraAppPrincipal caller, JiraAppQuestionRequest request) {
-        if (!hasJiraUser(caller)) {
-            throw new JiraAskerNotLinkedException();
-        }
-        // The Account and the chatbot's data live in the Workspace of the caller's site (BUG-318).
-        UUID workspace = workspace(caller).orElseThrow(JiraIssueAccessDeniedException::new);
-        TSolveUser user = asker(workspace, caller).orElseThrow(JiraAskerNotLinkedException::new);
+        UUID workspace = workspace(caller).orElseThrow(JiraSiteNotConnectedException::new);
+        UUID project = project(workspace, caller).orElseThrow(JiraIssueAccessDeniedException::new);
         ChatbotQuestionRequest question = request.toChatbotQuestion();
         // The chatbot allows itself CHATBOT_ASK_TIMEOUT (60 s); the Jira App must answer within Forge's 25 s, so the
         // call runs on a worker and is abandoned at the Jira App deadline (AC-010.8). It may still finish and store
-        // its answer. The Workspace is bound per thread, so the worker binds it again.
+        // its answer. The Workspace is bound per thread, so the worker binds it again (BUG-318).
         try {
             return CompletableFuture.supplyAsync(
-                            () -> tenantScope.runIn(workspace, () -> answers.ask(user, question)), executor)
+                            () -> tenantScope.runIn(workspace, () -> answers.askForProject(project, question)),
+                            executor)
                     .orTimeout(timeoutNanos, TimeUnit.NANOSECONDS)
                     .join();
         } catch (RejectedExecutionException e) {
@@ -145,18 +150,27 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
         }
     }
 
-    private static boolean hasJiraUser(JiraAppPrincipal caller) {
-        return caller != null
-                && caller.accountId() != null
-                && !caller.accountId().isBlank();
+    @Override
+    public void rate(JiraAppPrincipal caller, UUID answerId, JiraAppRatingRequest request) {
+        UUID workspace = workspace(caller).orElseThrow(JiraSiteNotConnectedException::new);
+        UUID project = project(workspace, caller).orElseThrow(JiraIssueAccessDeniedException::new);
+        tenantScope.runIn(workspace, () -> {
+            answers.rateForProject(project, answerId, request.rating());
+            return null;
+        });
     }
 
-    // No Workspace for a call without a Jira user or from a site that is not registered.
+    // No Workspace for a site that is not registered.
     private Optional<UUID> workspace(JiraAppPrincipal caller) {
-        return hasJiraUser(caller) ? workspaces.workspaceOf(caller.cloudId()) : Optional.empty();
+        return caller == null || caller.cloudId() == null ? Optional.empty() : workspaces.workspaceOf(caller.cloudId());
     }
 
-    private Optional<TSolveUser> asker(UUID workspace, JiraAppPrincipal caller) {
-        return tenantScope.runIn(workspace, () -> askers.find(caller.cloudId(), caller.accountId()));
+    // The Active Project of the FIT's Jira project, read in the site's Workspace; none without a project.
+    private Optional<UUID> project(UUID workspace, JiraAppPrincipal caller) {
+        String key = caller.projectKey();
+        if (key == null || key.isBlank()) {
+            return Optional.empty();
+        }
+        return tenantScope.runIn(workspace, () -> projects.findActivePublicIdByJiraProjectKey(key));
     }
 }
