@@ -1101,8 +1101,8 @@
     }
   },
   "triage": {
-    "specHash": "6d573c26e1340a3f00cf97331b5f77ed997af8b30dc2b5f0970951172af387c3",
-    "approvedAt": "2026-11-07T19:30:42.167Z",
+    "specHash": "391a80281f2eb82db8d9a5ffae1d2595707bdd0fe3026e2378b57f736373069c",
+    "approvedAt": "2026-11-17T10:01:23.276Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager opens , THE frontend SHALL show screen 10.1 with columns Issue, Sources, Suggested solution and Reporter's answer, ordered by newest result first.",
@@ -1125,11 +1125,11 @@
       "AC-002.6": "WHEN the popup closes and another result is opened, THE frontend SHALL show only the newly selected issue's detail, with no stale suggestion or source data.",
       "AC-002.7": "IF the requested issue belongs to a Project the user does not manage or another Workspace, THEN THE mock detail API SHALL return 404/MSG04 without revealing whether a suggestion exists.",
       "AC-002.8": "THE popup SHALL provide no class correction, routing or other mutation controls.",
-      "AC-003.1": "WHEN a signed-in user holding PROJECT_MANAGER calls , THE backend SHALL return only the  rows of Projects where that user's  is , newest  first, as a paged list with page 0 and size 20 by default.",
+      "AC-003.1": "WHEN a signed-in user holding PROJECT_MANAGER calls , THE backend SHALL return only the  rows of  Projects in an  Department where that user's  is  and the user is  and holds the PROJECT_MANAGER Role, newest  first, as a paged list with page 0 and size 20 by default.",
       "AC-003.2": "WHEN ,  or a / pair is given, THE backend SHALL combine them with AND;  SHALL match rows with no reporter answer;  and  SHALL include both whole calendar days in Asia/Ho_Chi_Minh.",
       "AC-003.3": "IF the caller has no session, THEN THE backend SHALL return 401/MSG07; IF the caller lacks PROJECT_MANAGER or  is a Project they do not manage, THEN THE backend SHALL return 403/MSG08 without returning results.",
       "AC-003.4": "IF  is not ,  or ,  is negative or  is outside 1..100, THEN THE backend SHALL return 400/MSG06; IF only one of / is given, either is not a calendar date, or  is after , THEN THE backend SHALL return 400/MSG39.",
-      "AC-003.5": "THE backend SHALL return for each row the issue key,  built as the Workspace  plus  and the key, the Project id and Jira project key, , the Ticket and Wiki source counts from , the reporter answer, and a plain-text excerpt of at most 200 characters of  (null when none was posted).",
+      "AC-003.5": "THE backend SHALL return for each row the issue key,  built as the Workspace  (without a trailing ) plus  and the key, the Project id and Jira project key, , the Ticket and Wiki source counts from , the reporter answer, and a plain-text excerpt of at most 200 characters of  (null when none was posted).",
       "AC-003.6": "IF the Workspace has no , THEN THE backend SHALL return  as null and still return the row.",
       "AC-004.1": "WHEN a Project Manager calls  for an issue of a Project they manage, THE backend SHALL return the AC-003.5 fields plus the full  and one  entry (, , ) per  item in , and no Ticket source details.",
       "AC-004.2": "IF the issue has no result, belongs to a Project the caller does not manage, or the caller lacks PROJECT_MANAGER, THEN THE backend SHALL return 404/MSG04 without revealing whether a result exists.",
