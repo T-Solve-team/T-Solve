@@ -738,18 +738,18 @@
     }
   },
   "search": {
-    "specHash": "873621aaf1127691e6fd80621d23de0c1f620f6d4ef0a79a3ab57a6a44ab7156",
-    "approvedAt": "2026-11-17T12:26:04.316Z",
+    "specHash": "a728f2565506ddf147f332ad52505dc64ededf15d556a07cbc2e199b1a1a25aa",
+    "approvedAt": "2026-11-17T14:57:43.664Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Ticket Resolver or Project Manager opens , THE web app SHALL show 6.2 Ticket List",
       "AC-001.2": "WHEN the list is opened with no filter, page or sort in the URL, THE web app SHALL call",
-      "AC-001.3": "THE web app SHALL show each row's Ticket ID () as a link to 5.5 Ticket Detail of",
+      "AC-001.3": "THE web app SHALL show each row's No. as its position in the whole list ((page − 1) × 20 + its",
       "AC-001.4": "WHEN the user presses Enter in the Keyword box, THE web app SHALL reload the list from page 1 with",
       "AC-001.5": "THE Keyword box SHALL accept at most 100 characters.",
       "AC-001.6": "THE Department filter SHALL offer \"All Departments\" (the default) and each Department of the",
       "AC-001.7": "THE Source filter SHALL offer \"All\" (the default) and the four source labels; THE Status filter",
-      "AC-001.8": "THE columns Ticket ID, Title, Project, Review due date and Updated SHALL be sortable; WHEN the user",
+      "AC-001.8": "THE columns Title, Project, Review due date and Updated SHALL be sortable, and No. SHALL not be; WHEN the user",
       "AC-001.9": "THE table SHALL show \"Total N items\" and pagination of 20 rows per page; WHEN the user picks a page,",
       "AC-001.10": "THE keyword, Department, Source, Status, page and sort SHALL be kept in the URL, so that a reload",
       "AC-001.11": "WHILE the list is loading, THE web app SHALL show the loading state of the table (Figma 6.2 (c)).",
@@ -1645,8 +1645,8 @@
     }
   },
   "project-integration": {
-    "specHash": "550d07281b77e1ea39217e0f4180b1938ed94d6feaa567e664ab31868ea6413a",
-    "approvedAt": "2026-11-14T22:35:22.432Z",
+    "specHash": "8d7eda80ec3d958f659e250b04288b3f8ae9b9d6c28b03e17377ab8713269b2b",
+    "approvedAt": "2026-11-17T14:57:43.987Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the Project Manager of a Project requests , THE backend SHALL answer 200 with the Project id, Jira project key, Department name, the Project Manager's full name and the status ( or ).",
@@ -1744,7 +1744,7 @@
       "AC-007.7": "IF the caller's Department has no Projects, THEN THE system SHALL answer 200 with its Department and .",
       "AC-007.8": "THE Projects list SHALL make no Jira call and write no persisted data.",
       "AC-008.1": "WHEN a Project Manager opens , THE web app SHALL load  and show the returned Department name in a read-only field labelled \"Department\".",
-      "AC-008.2": "WHEN the list loads, THE web app SHALL show a Projects table with columns \"Project ID\", \"Jira project key\", \"Project Manager\", \"Members\" and \"Status\" using the returned order.",
+      "AC-008.2": "WHEN the list loads, THE web app SHALL show a Projects table with columns \"No.\" (the row's position, from 1), \"Jira project key\", \"Project Manager\", \"Members\" and \"Status\" using the returned order.",
       "AC-008.3": "WHEN a row has a , THE web app SHALL show its  in the Project Manager column.",
       "AC-008.4": "IF a row has , THEN THE web app SHALL show MSG54 in that column.",
       "AC-008.5": "WHEN a row has status  or , THE web app SHALL show respectively \"Active\" or \"Removed\".",
@@ -1753,6 +1753,7 @@
       "AC-008.8": "IF the loaded list is empty, THEN THE web app SHALL show MSG04 in place of the table.",
       "AC-008.9": "WHEN an Admin without the Project Manager role opens screen 3.1, THE web app SHALL keep the existing Jira Integration placeholder without sending a Projects request or showing the Add project button.",
       "AC-008.10": "IF a signed-in user has neither Admin nor Project Manager role, THEN THE web app SHALL show the route guard's MSG08 no-permission page without sending a Projects request.",
+      "AC-008.11": "WHEN a row's  is the signed-in user's id, THE web app SHALL show its Jira project key as a link to 3.2 Project Detail of that Project (); IF it is not, THEN THE web app SHALL show the key as plain text.",
       "AC-009.1": "WHEN a Project Manager clicks \"Add project\" on screen 3.1, THE web app SHALL open a  titled \"Add project\" with an empty required \"Project key\" field, \"Test connection\" and Cancel, with settings and Save hidden.",
       "AC-009.2": "IF Project key is empty or only whitespace when Test connection is clicked, THEN THE web app SHALL show MSG01 below it with params  and send no request.",
       "AC-009.3": "IF a nonblank Project key exceeds 20 UTF-16 code units as typed, THEN THE web app SHALL show MSG02 below it with params , preserve the whole input and send no request.",

@@ -18,13 +18,14 @@ owner: BA
 | 2026-11-06 | STORY-010 (new) | New STORY-010: the in-process `SolutionRetrieval` service the `chatbot` module calls for the Solutions nearest to a query vector, over every Published ticket of the Workspace with an ACTIVE Department (no Department scope, chatbot Requirement 2). Terms gain **Workspace Solution**; Interface Contracts gain the service; Definition of Done covers STORY-010. No other criterion changes | Plan of the chatbot backend (KAN-179): `backend/AGENTS.md` lets `chatbot` use search only through a `service/` interface, never its tables |
 | 2026-11-07 | STORY-011 (new) | New STORY-011: `SolutionRetrieval.nearestInProjectDepartment`, the in-process retrieval the `triage` module calls for the Published tickets of the Department that owns a Project, nearest to a query vector, with the ticket's `public_id`. Terms gain **Department Solution**; Interface Contracts gain the method and `RetrievedTicketSolution`; the KAN-38 Out of Scope line now excludes only Wiki retrieval; Definition of Done covers STORY-011. No other criterion changes | Plan of the AI Solution Suggestion backend (triage STORY-005, KAN-47): sources are the Published tickets of the issue's Department (user, 07/11); `triage` may use search only through a `service/` interface |
 | 2026-11-08 | STORY-011 | AC-011.1, AC-011.3 and the Interface Contract: `projectId` is the Project's `public_id` (`UUID`), not its internal id; AC-011.4 also rejects a null `projectId` | Review of Task 20 (attempt 1): after main's changeset 019 (KAN-22), the only Project id `triage` holds is `suggestion_result.project_id`, a UUID referencing `project.public_id`, and no service maps it to the internal id; `backend/AGENTS.md` makes a reference a `UUID` (user, 08/11) |
+| 2026-11-17 | STORY-001 | AC-001.1, AC-001.3 and AC-001.8 reworded, Requirement 1 follows: the Ticket List table drops the Ticket ID column and starts with a "No." column (the row's position across pages, not sortable); the Title, not the Ticket ID, is the link to 5.5 Ticket Detail; Ticket ID is no longer a sortable column. The keyword still matches the Ticket ID (AC-001.4 unchanged) | KAN-360: ids are noise in the table, users open a ticket from its title (user, 17/11) |
 | 2026-11-17 | STORY-006, STORY-012 (new) | New STORY-012: `MembershipVisibleScope`, the real `VisibleScope` built from the Workspace database, replaces the fail-closed `NoVisibleScope`, which is removed. The user's Departments are the ACTIVE Departments identity's `ScopeAccessService` grants (a Project Manager's own Department and the Departments of the Projects the user is a member of); the managed Projects are the user's `PROJECT_MANAGER` memberships (`ProjectMembershipLookup`); the writer is the user's account id matched against `ticket.writer_id` instead of the `ticket.writer` name. AC-006.1, AC-006.2, AC-006.11 and AC-006.12 reworded; the Visible scope term, Out of Scope, Interface Contracts (`Scope.writerId` is a `UUID`), Required from other modules and Definition of Done follow | KAN-354: on staging the Ticket List was empty for every user because no module implemented `VisibleScope`. User decisions of 17/11: Departments are the union of `app_user.department_id` and the Departments of the user's Projects; match the writer by `writer_id` |
 
 ## Requirements
 
 ### Functional
 1. A Ticket Resolver or Project Manager browses the tickets they may see on 6.2 Ticket List (UC-27), filtered and
-   sorted, and opens a ticket's 5.5 Ticket Detail from its Ticket ID.
+   sorted, and opens a ticket's 5.5 Ticket Detail from its Title.
 2. A Ticket Resolver or Project Manager searches the Published tickets of their own Departments on 6.1 Search
    (UC-26) with a query, filters the results, and opens a result's 5.5 Ticket Detail.
 3. A Ticket Resolver or Project Manager marks a Published ticket Helpful or Not helpful, with an optional comment,
@@ -69,12 +70,13 @@ owner: BA
   source and status, so that I can follow the knowledge of my Projects and open a ticket.
 - Acceptance:
   - AC-001.1: WHEN a Ticket Resolver or Project Manager opens `/tickets`, THE web app SHALL show 6.2 Ticket List
-    with the filters Keyword, Department, Source and Status, and a table with the columns Ticket ID, Title,
+    with the filters Keyword, Department, Source and Status, and a table with the columns No., Title,
     Project, Department, Source, Status, Review due date and Updated, in that order.
   - AC-001.2: WHEN the list is opened with no filter, page or sort in the URL, THE web app SHALL call
     `GET /api/v1/tickets` with page 0, size 20 and sort `updatedAt,desc`, and no filter.
-  - AC-001.3: THE web app SHALL show each row's Ticket ID (`sourceTicketId`) as a link to 5.5 Ticket Detail of
-    that ticket (`ticketId`), the Project name, the Department name, the source label (Solution Form · Jira
+  - AC-001.3: THE web app SHALL show each row's No. as its position in the whole list ((page − 1) × 20 + its
+    position on the page, from 1), its Title as a link to 5.5 Ticket Detail of that ticket (`ticketId`), the
+    Project name, the Department name, the source label (Solution Form · Jira
     import · CSV · Manual), the status as a status tag (Pending review · Changes requested · Published · Rejected
     · Unpublished · Expired), and Review due date and Updated as date and time; an empty Review due date SHALL
     show "—".
@@ -88,7 +90,7 @@ owner: BA
   - AC-001.7: THE Source filter SHALL offer "All" (the default) and the four source labels; THE Status filter
     SHALL offer "All statuses" (the default) and the six status labels. WHEN the user picks a value, THE web app
     SHALL reload the list from page 1 with `source` or `status`; the default SHALL remove it.
-  - AC-001.8: THE columns Ticket ID, Title, Project, Review due date and Updated SHALL be sortable; WHEN the user
+  - AC-001.8: THE columns Title, Project, Review due date and Updated SHALL be sortable, and No. SHALL not be; WHEN the user
     clicks a sortable header, THE web app SHALL reload the list with that sort.
   - AC-001.9: THE table SHALL show "Total N items" and pagination of 20 rows per page; WHEN the user picks a page,
     THE web app SHALL load that page with the same filters and sort.
