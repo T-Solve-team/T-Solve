@@ -42,6 +42,19 @@ class WikiPortsTest {
     }
 
     @Test
+    void givesTheChatbotOnlyCompanyWidePassagesForAJiraQuestion_AC_001_12() {
+        float[] vector = new float[1024];
+        vector[0] = 1;
+        UUID document = UUID.randomUUID();
+        var row = passage(document, "Runbook", "Restart the service", 0.85);
+        when(repository.nearestCompanyWide(Arrays.toString(vector), 0.7, 3)).thenReturn(List.of(row));
+
+        assertThat(new WikiSourcesImpl(repository).nearestCompanyWide(vector, 0.7, 3))
+                .containsExactly(new WikiPassage(document, "Runbook", "Restart the service", 0.85));
+        verify(repository).nearestCompanyWide(Arrays.toString(vector), 0.7, 3);
+    }
+
+    @Test
     void mapsCompanyWidePassagesAndForwardsThresholdAndLimit_AC_001_7() {
         float[] vector = new float[1024];
         vector[0] = 1;

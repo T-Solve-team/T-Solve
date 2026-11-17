@@ -27,4 +27,14 @@ public interface ChatbotAnswerRepository extends JpaRepository<ChatbotAnswer, UU
             @Param("userId") UUID userId,
             @Param("rating") ChatbotRating rating,
             @Param("ratedAt") Instant ratedAt);
+
+    // AC-012.7: only a question asked in Jira, in that Project.
+    @Modifying
+    @Query("UPDATE ChatbotAnswer a SET a.rating = :rating, a.ratedAt = :ratedAt "
+            + "WHERE a.id = :id AND a.source = 'JIRA_APP' AND a.projectId = :projectId")
+    int updateProjectRating(
+            @Param("id") UUID id,
+            @Param("projectId") UUID projectId,
+            @Param("rating") ChatbotRating rating,
+            @Param("ratedAt") Instant ratedAt);
 }

@@ -229,9 +229,10 @@
         "wiki-trash-ui": "passing",
         "wiki-permissions-api": "passing",
         "wiki-permissions-ui": "passing",
-        "wiki-trash-detail": "passing"
+        "wiki-trash-detail": "passing",
+        "wiki-project-department-sources": "evaluating"
       },
-      "lastUpdated": "2026-11-15T19:10:09.115Z",
+      "lastUpdated": "2026-11-17T10:15:31.050Z",
       "branch": "feat/wiki",
       "repos": [
         "default"
@@ -354,9 +355,10 @@
         "answer-rating-schema": "passing",
         "answer-rating-api": "passing",
         "jira-issue-draft": "passing",
-        "jira-issue-create": "passing"
+        "jira-issue-create": "passing",
+        "chatbot-ask-for-project": "evaluating"
       },
-      "lastUpdated": "2026-11-17T07:41:54.892Z",
+      "lastUpdated": "2026-11-17T10:22:27.876Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
@@ -387,11 +389,12 @@
         "close-keeps-draft": "passing",
         "resubmit-backend": "evaluating",
         "resubmit-forge": "evaluating",
-        "panel-rejected": "evaluating",
-        "panel-published": "evaluating",
-        "app-token-trigger": "evaluating"
+        "panel-rejected": "passing",
+        "panel-published": "passing",
+        "app-token-trigger": "evaluating",
+        "ask-without-sign-in": "evaluating"
       },
-      "lastUpdated": "2026-11-16T20:49:31.048Z",
+      "lastUpdated": "2026-11-17T10:37:55.476Z",
       "branch": "feat/KAN-337-jira-app-reject-reason",
       "repos": [
         "default"
@@ -411,9 +414,10 @@
         "dashboard-outcomes": "passing",
         "dashboard-reuse-gaps": "passing",
         "dashboard-page": "passing",
-        "dashboard-sections": "passing"
+        "dashboard-sections": "passing",
+        "jira-questions-gap": "evaluating"
       },
-      "lastUpdated": "2026-11-11T13:52:46.593Z",
+      "lastUpdated": "2026-11-17T10:24:20.052Z",
       "branch": "feat/dashboard-audit",
       "repos": [
         "default"
@@ -569,9 +573,9 @@
         "review-email-html": "passing",
         "review-email-outbox": "passing",
         "review-email-link-fallback": "passing",
-        "jira-rejected-feedback": "evaluating"
+        "jira-rejected-feedback": "passing"
       },
-      "lastUpdated": "2026-11-14T17:32:18.927Z",
+      "lastUpdated": "2026-11-17T10:00:47.548Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
