@@ -3,6 +3,7 @@ package vn.tsolve.jiraapp.service.impl;
 import jakarta.annotation.PreDestroy;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -25,17 +26,22 @@ import vn.tsolve.chatbot.answer.dto.ChatbotQuestionRequest;
 import vn.tsolve.chatbot.answer.service.ChatbotAnswerService;
 import vn.tsolve.common.security.JiraAppPrincipal;
 import vn.tsolve.common.security.TSolveUser;
+import vn.tsolve.identity.signin.port.TenantScope;
 import vn.tsolve.jiraapp.dto.JiraAppQuestionRequest;
 import vn.tsolve.jiraapp.dto.JiraAskerEligibility;
 import vn.tsolve.jiraapp.exception.JiraAskerNotLinkedException;
+import vn.tsolve.jiraapp.exception.JiraIssueAccessDeniedException;
 import vn.tsolve.jiraapp.service.JiraAppQuestionService;
 import vn.tsolve.jiraapp.service.JiraAskerLookup;
+import vn.tsolve.jiraapp.service.JiraWorkspaceLookup;
 
 @Service
 public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
 
     private static final Logger log = LoggerFactory.getLogger(JiraAppQuestionServiceImpl.class);
 
+    private final JiraWorkspaceLookup workspaces;
+    private final TenantScope tenantScope;
     private final JiraAskerLookup askers;
     private final ChatbotAnswerService answers;
     private final Executor executor;
@@ -46,11 +52,13 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
     // Spring Boot still creates its applicationTaskExecutor.
     @Autowired
     public JiraAppQuestionServiceImpl(
+            JiraWorkspaceLookup workspaces,
+            TenantScope tenantScope,
             JiraAskerLookup askers,
             ChatbotAnswerService answers,
             @Value("${JIRA_APP_ASK_THREADS:8}") int threads,
             @Value("${JIRA_APP_ASK_TIMEOUT:18s}") String timeout) {
-        this(askers, answers, askPool(threads), DurationStyle.detectAndParse(timeout));
+        this(workspaces, tenantScope, askers, answers, askPool(threads), DurationStyle.detectAndParse(timeout));
     }
 
     /** At most {@code threads} questions at once and as many waiting; any more answer MSG06 at once (BUG-183). */
@@ -81,10 +89,17 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
     }
 
     JiraAppQuestionServiceImpl(
-            JiraAskerLookup askers, ChatbotAnswerService answers, Executor executor, Duration timeout) {
+            JiraWorkspaceLookup workspaces,
+            TenantScope tenantScope,
+            JiraAskerLookup askers,
+            ChatbotAnswerService answers,
+            Executor executor,
+            Duration timeout) {
         if (timeout.isNegative() || timeout.isZero()) {
             throw new IllegalArgumentException("JIRA_APP_ASK_TIMEOUT must be positive");
         }
+        this.workspaces = workspaces;
+        this.tenantScope = tenantScope;
         this.askers = askers;
         this.answers = answers;
         this.executor = executor;
@@ -93,18 +108,26 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
 
     @Override
     public JiraAskerEligibility eligibility(JiraAppPrincipal caller) {
-        return new JiraAskerEligibility(asker(caller).isPresent());
+        Optional<UUID> workspace = workspace(caller);
+        return new JiraAskerEligibility(
+                workspace.isPresent() && asker(workspace.get(), caller).isPresent());
     }
 
     @Override
     public ChatbotAnswerResponse ask(JiraAppPrincipal caller, JiraAppQuestionRequest request) {
-        TSolveUser user = asker(caller).orElseThrow(JiraAskerNotLinkedException::new);
+        if (!hasJiraUser(caller)) {
+            throw new JiraAskerNotLinkedException();
+        }
+        // The Account and the chatbot's data live in the Workspace of the caller's site (BUG-318).
+        UUID workspace = workspace(caller).orElseThrow(JiraIssueAccessDeniedException::new);
+        TSolveUser user = asker(workspace, caller).orElseThrow(JiraAskerNotLinkedException::new);
         ChatbotQuestionRequest question = request.toChatbotQuestion();
         // The chatbot allows itself CHATBOT_ASK_TIMEOUT (60 s); the Jira App must answer within Forge's 25 s, so the
         // call runs on a worker and is abandoned at the Jira App deadline (AC-010.8). It may still finish and store
-        // its answer. No Workspace is bound to FIT calls yet; when one is, it must be bound on the worker too.
+        // its answer. The Workspace is bound per thread, so the worker binds it again.
         try {
-            return CompletableFuture.supplyAsync(() -> answers.ask(user, question), executor)
+            return CompletableFuture.supplyAsync(
+                            () -> tenantScope.runIn(workspace, () -> answers.ask(user, question)), executor)
                     .orTimeout(timeoutNanos, TimeUnit.NANOSECONDS)
                     .join();
         } catch (RejectedExecutionException e) {
@@ -122,10 +145,18 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
         }
     }
 
-    private Optional<TSolveUser> asker(JiraAppPrincipal caller) {
-        if (caller == null || caller.accountId() == null || caller.accountId().isBlank()) {
-            return Optional.empty();
-        }
-        return askers.find(caller.cloudId(), caller.accountId());
+    private static boolean hasJiraUser(JiraAppPrincipal caller) {
+        return caller != null
+                && caller.accountId() != null
+                && !caller.accountId().isBlank();
+    }
+
+    // No Workspace for a call without a Jira user or from a site that is not registered.
+    private Optional<UUID> workspace(JiraAppPrincipal caller) {
+        return hasJiraUser(caller) ? workspaces.workspaceOf(caller.cloudId()) : Optional.empty();
+    }
+
+    private Optional<TSolveUser> asker(UUID workspace, JiraAppPrincipal caller) {
+        return tenantScope.runIn(workspace, () -> askers.find(caller.cloudId(), caller.accountId()));
     }
 }

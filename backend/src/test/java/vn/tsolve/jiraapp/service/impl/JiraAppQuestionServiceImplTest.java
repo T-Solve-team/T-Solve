@@ -23,7 +23,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -35,9 +37,12 @@ import vn.tsolve.chatbot.answer.dto.ChatbotTurnRequest;
 import vn.tsolve.chatbot.answer.service.ChatbotAnswerService;
 import vn.tsolve.common.security.JiraAppPrincipal;
 import vn.tsolve.common.security.TSolveUser;
+import vn.tsolve.identity.signin.port.LocalTenantScope;
 import vn.tsolve.jiraapp.dto.JiraAppQuestionRequest;
 import vn.tsolve.jiraapp.exception.JiraAskerNotLinkedException;
+import vn.tsolve.jiraapp.exception.JiraIssueAccessDeniedException;
 import vn.tsolve.jiraapp.service.JiraAskerLookup;
+import vn.tsolve.jiraapp.service.JiraWorkspaceLookup;
 
 class JiraAppQuestionServiceImplTest {
 
@@ -50,9 +55,18 @@ class JiraAppQuestionServiceImplTest {
             "Restart the VPN [1]",
             List.of());
 
+    private static final UUID WORKSPACE = UUID.fromString("20000000-0000-0000-0000-000000000001");
+
+    private final JiraWorkspaceLookup workspaces = mock(JiraWorkspaceLookup.class);
+    private final LocalTenantScope tenantScope = new LocalTenantScope();
     private final JiraAskerLookup askers = mock(JiraAskerLookup.class);
     private final ChatbotAnswerService answers = mock(ChatbotAnswerService.class);
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+
+    @BeforeEach
+    void registerTheSite() {
+        when(workspaces.workspaceOf("cloud-1")).thenReturn(Optional.of(WORKSPACE));
+    }
 
     @AfterEach
     void stopExecutor() {
@@ -92,7 +106,7 @@ class JiraAppQuestionServiceImplTest {
             return ANSWER;
         });
         JiraAppQuestionServiceImpl service =
-                new JiraAppQuestionServiceImpl(askers, answers, one, Duration.ofSeconds(5));
+                new JiraAppQuestionServiceImpl(workspaces, tenantScope, askers, answers, one, Duration.ofSeconds(5));
         try {
             CompletableFuture<ChatbotAnswerResponse> first = CompletableFuture.supplyAsync(
                     () -> service.ask(CALLER, new JiraAppQuestionRequest("q1", List.of())));
@@ -213,11 +227,47 @@ class JiraAppQuestionServiceImplTest {
     }
 
     @Test
+    void findsTheAskerInTheWorkspaceOfTheSite_BUG_318() {
+        AtomicReference<UUID> boundAtLookup = new AtomicReference<>();
+        when(askers.find("cloud-1", "jira-1")).thenAnswer(call -> {
+            boundAtLookup.set(tenantScope.currentWorkspaceId());
+            return Optional.of(USER);
+        });
+
+        assertThat(service(Duration.ofSeconds(5)).eligibility(CALLER).linked()).isTrue();
+        assertThat(boundAtLookup).hasValue(WORKSPACE);
+    }
+
+    @Test
+    void asksTheChatbotInTheWorkspaceOfTheSite_BUG_318() {
+        AtomicReference<UUID> boundAtAnswer = new AtomicReference<>();
+        when(askers.find("cloud-1", "jira-1")).thenReturn(Optional.of(USER));
+        when(answers.ask(any(), any())).thenAnswer(call -> {
+            boundAtAnswer.set(tenantScope.currentWorkspaceId());
+            return ANSWER;
+        });
+
+        service(Duration.ofSeconds(5)).ask(CALLER, new JiraAppQuestionRequest("q", List.of()));
+
+        assertThat(boundAtAnswer).hasValue(WORKSPACE);
+    }
+
+    @Test
+    void treatsASiteWithNoWorkspaceAsUnlinkedAndRefusesItsQuestion_BUG_318() {
+        when(workspaces.workspaceOf("cloud-1")).thenReturn(Optional.empty());
+
+        assertThat(service(Duration.ofSeconds(5)).eligibility(CALLER).linked()).isFalse();
+        assertThatThrownBy(() -> service(Duration.ofSeconds(5)).ask(CALLER, new JiraAppQuestionRequest("q", List.of())))
+                .isInstanceOf(JiraIssueAccessDeniedException.class);
+        verifyNoInteractions(askers, answers);
+    }
+
+    @Test
     void refusesANonPositiveDeadline() {
         assertThatThrownBy(() -> service(Duration.ZERO)).isInstanceOf(IllegalArgumentException.class);
     }
 
     private JiraAppQuestionServiceImpl service(Duration timeout) {
-        return new JiraAppQuestionServiceImpl(askers, answers, executor, timeout);
+        return new JiraAppQuestionServiceImpl(workspaces, tenantScope, askers, answers, executor, timeout);
     }
 }
