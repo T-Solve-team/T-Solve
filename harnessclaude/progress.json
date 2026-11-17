@@ -349,15 +349,15 @@
         "answer-rating-schema": "passing",
         "answer-rating-api": "passing",
         "jira-issue-draft": "passing",
-        "jira-issue-create": "pending"
+        "jira-issue-create": "passing"
       },
-      "lastUpdated": "2026-11-17T06:44:25.884Z",
+      "lastUpdated": "2026-11-17T07:41:54.892Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "ba9dbfeed0154b8185e32be43dab552fd0cb640c"
+        "default": "4f9a94e2fde787153faf115f2f2a6131cb1be94d"
       }
     },
     "jira-app": {
