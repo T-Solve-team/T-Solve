@@ -28,7 +28,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
-import vn.tsolve.common.tenant.TenantContext;
 import vn.tsolve.identity.service.WorkspaceSiteService;
 import vn.tsolve.ticket.dto.ReviewNotification;
 import vn.tsolve.ticket.event.ReviewFeedbackDecidedEvent;
@@ -36,6 +35,7 @@ import vn.tsolve.ticket.service.ReviewNotificationService;
 import vn.tsolve.worker.dto.OutboundEmail;
 import vn.tsolve.worker.exception.EmailOutboxUnavailableException;
 import vn.tsolve.worker.service.EmailOutboxService;
+import vn.tsolve.worker.service.OutboxWorkspace;
 import vn.tsolve.worker.service.WorkerTenantService;
 import vn.tsolve.worker.service.mock.MockWorkerTenantService;
 
@@ -267,13 +267,12 @@ class ReviewNotificationEnqueueBugTest {
     void queuesFromTheWebRequestAndLinksTheSiteWhenOnlyTheOutboxIsEnabled_BUG_339() {
         ObjectProvider<EmailOutboxService> outboxProvider = mock(ObjectProvider.class);
         ObjectProvider<WorkerTenantService> noWorker = mock(ObjectProvider.class);
-        ObjectProvider<TenantContext> requestTenants = mock(ObjectProvider.class);
-        var tenantContext = mock(TenantContext.class);
+        ObjectProvider<OutboxWorkspace> requestTenants = mock(ObjectProvider.class);
+        OutboxWorkspace workspace = () -> Optional.of(A);
         var sites = mock(WorkspaceSiteService.class);
         when(outboxProvider.getIfAvailable()).thenReturn(outbox);
         when(noWorker.getIfAvailable()).thenReturn(null);
-        when(requestTenants.getIfAvailable()).thenReturn(tenantContext);
-        when(tenantContext.currentWorkspaceId()).thenReturn(Optional.of(A));
+        when(requestTenants.getIfAvailable()).thenReturn(workspace);
         when(sites.siteHost(A)).thenReturn(Optional.of("acme.t-solve.test"));
         var enqueuer =
                 new ReviewNotificationEnqueuer(outboxProvider, noWorker, notifications, sites, "", requestTenants);
