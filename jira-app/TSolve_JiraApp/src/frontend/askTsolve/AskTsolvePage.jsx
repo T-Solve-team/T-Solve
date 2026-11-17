@@ -84,6 +84,7 @@ export function AskTsolvePage() {
   const [access, setAccess] = useState('checking');
   const [conversation, dispatch] = useReducer(conversationReducer, initialConversation);
   const [draft, setDraft] = useState('');
+  const [boxVersion, setBoxVersion] = useState(0);
   const [fieldError, setFieldError] = useState(null);
 
   useEffect(() => {
@@ -115,6 +116,7 @@ export function AskTsolvePage() {
       const answer = await askQuestion(question, earlier);
       dispatch({ type: 'answer', answer });
       setDraft('');
+      setBoxVersion((version) => version + 1);
     } catch (failure) {
       const code = failure?.code ?? 'MSG06';
       if (code === 'MSG124') {
@@ -223,9 +225,12 @@ export function AskTsolvePage() {
             <Stack space="space.050">
               <Inline space="space.100" alignBlock="end">
                 <Box xcss={growStyle}>
+                  {/* Uncontrolled: a value sent back through the Forge bridge arrives late and undoes what a
+                      Vietnamese input method rewrites (BUG-332). A new key empties it after an answer. */}
                   <TextArea
+                    key={`question-${boxVersion}`}
                     id="tsolve-question"
-                    value={draft}
+                    defaultValue=""
                     placeholder={PLACEHOLDER}
                     minimumRows={1}
                     resize="smart"
