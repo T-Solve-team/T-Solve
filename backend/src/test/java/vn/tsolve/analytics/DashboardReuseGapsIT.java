@@ -420,6 +420,29 @@ class DashboardReuseGapsIT {
                 """, UUID.randomUUID(), asker, loggedDepartment, query, channel, results, timestamp(createdAt));
     }
 
+    @Test
+    void countsAJiraQuestionInTheDepartmentOfItsProject_AC_004_11() {
+        insertAnswer(manager, "Web question", "NO_SOURCE", START);
+        insertJiraAnswer(project, "Jira question", START);
+        insertJiraAnswer(otherProject, "Other Jira question", START);
+
+        var scoped = dashboard(Role.ADMIN, department, null).gaps();
+        assertThat(scoped.chatbotNoSource()).isEqualTo(2);
+        assertThat(scoped.chatbotQuestions())
+                .containsExactly(new ChatbotQuestion("Jira question", 1), new ChatbotQuestion("Web question", 1));
+        assertThat(dashboard(Role.ADMIN, otherDepartment, null).gaps().chatbotQuestions())
+                .containsExactly(new ChatbotQuestion("Other Jira question", 1));
+        assertThat(dashboard(Role.ADMIN, null, null).gaps().chatbotNoSource()).isEqualTo(3);
+    }
+
+    private void insertJiraAnswer(UUID askedIn, String question, String createdAt) {
+        jdbc.update("""
+                insert into chatbot_answer (chatbot_answer_id, source, project_id, question, outcome, answer_text,
+                    created_at)
+                values (?, 'JIRA_APP', ?, ?, 'NO_SOURCE', '', ?)
+                """, UUID.randomUUID(), askedIn, question, timestamp(createdAt));
+    }
+
     private void insertAnswer(UUID asker, String question, String outcome, String createdAt) {
         jdbc.update("""
                 insert into chatbot_answer (chatbot_answer_id, user_id, question, outcome, answer_text, created_at)

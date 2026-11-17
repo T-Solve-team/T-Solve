@@ -23,8 +23,15 @@ public class ChatbotAnswer {
     @Column(name = "chatbot_answer_id")
     private UUID id;
 
-    @Column(name = "user_id", nullable = false, updatable = false)
+    // Null for a question asked on the Jira App's Ask T-Solve page, which has no T-Solve user (AC-012.2).
+    @Column(name = "user_id", updatable = false)
     private UUID userId;
+
+    @Column(nullable = false, updatable = false, length = 10)
+    private String source;
+
+    @Column(name = "project_id", updatable = false)
+    private UUID projectId;
 
     @Column(nullable = false, updatable = false, columnDefinition = "text")
     private String question;
@@ -51,11 +58,34 @@ public class ChatbotAnswer {
 
     protected ChatbotAnswer() {}
 
+    public static final String WEB = "WEB";
+    public static final String JIRA_APP = "JIRA_APP";
+
     public ChatbotAnswer(UUID userId, String question, String outcome, String answerText) {
+        this(userId, WEB, null, question, outcome, answerText);
+    }
+
+    private ChatbotAnswer(
+            UUID userId, String source, UUID projectId, String question, String outcome, String answerText) {
         this.userId = userId;
+        this.source = source;
+        this.projectId = projectId;
         this.question = question;
         this.outcome = outcome;
         this.answerText = answerText;
+    }
+
+    /** A question asked on the Jira App's Ask T-Solve page: no user, the Project it was asked in (AC-012.2). */
+    public static ChatbotAnswer forProject(UUID projectId, String question, String outcome, String answerText) {
+        return new ChatbotAnswer(null, JIRA_APP, projectId, question, outcome, answerText);
+    }
+
+    public String getSource() {
+        return source;
+    }
+
+    public UUID getProjectId() {
+        return projectId;
     }
 
     public UUID getId() {

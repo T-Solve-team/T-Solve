@@ -7,5 +7,12 @@ package vn.tsolve.common.security;
  * @param cloudId the Jira site's cloudId ({@code context.cloudId})
  * @param accountId the Atlassian user behind a UI call ({@code principal}); {@code null} for product events
  * @param apiBaseUrl where calls back to Jira go ({@code app.apiBaseUrl}); {@code null} when absent
+ * @param projectKey the Jira project of the module that made the call ({@code context.extension.project.key}), signed
+ *     by Forge so a user cannot change it (jira-app AC-010.13); {@code null} when the module has no project
  */
-public record JiraAppPrincipal(String cloudId, String accountId, String apiBaseUrl) {}
+public record JiraAppPrincipal(String cloudId, String accountId, String apiBaseUrl, String projectKey) {
+
+    public JiraAppPrincipal(String cloudId, String accountId, String apiBaseUrl) {
+        this(cloudId, accountId, apiBaseUrl, null);
+    }
+}
