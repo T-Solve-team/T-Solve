@@ -362,3 +362,42 @@ Draft is not touched (AC-008.11). Jira App only; the panel already reloads on `J
 **Files:** Modify `jira-app/TSolve_JiraApp/src/frontend/panel/IssuePanel.jsx`; test `IssuePanel.test.jsx`.
 **Dependencies:** none
 **Estimated size:** small
+## Task 24: Ask T-Solve job — contract and backend
+
+**Story:** STORY-010
+**Feature:** ask-job-backend
+**Description:** Changelog 2026-11-18 (the 18 s cut). OpenAPI first: `askJiraAppQuestion` answers 202
+`JiraAppQuestionJob {jobId}` (400, 403 MSG124 / MSG08, 503 MSG06 stay); new `getJiraAppQuestionJob`
+`GET /api/v1/jira-app/questions/{jobId}` → `{status: PENDING|DONE|FAILED, answer?: ChatbotAnswerResponse}`, 404 MSG06;
+regenerate the frontend client. `JiraAppQuestionServiceImpl`: `start` writes the PENDING record to Redis (key
+`jira-app:ask:{jobId}`, owner cloudId + accountId + projectKey, TTL 300 s) and submits the job to the existing pool (full → delete
+the key, 503 MSG06); the job runs `askForProject` with the Workspace bound on the worker (BUG-318) and writes DONE/FAILED with KEEPTTL; `JIRA_APP_ASK_TIMEOUT` default 18s → 60s; `result`
+reads it, 404 MSG06 for a missing key or another owner. Logs: job id and error type only. Log the bug in
+`docs/bug-log.md` and name its id in one test. Tests: unit (`AC_010_4` 202 without waiting — a blocked fake chatbot,
+PENDING → DONE, FAILED on error and on timeout; `AC_010_16` other account / site / project / unknown; `AC_010_18` full
+pool) with a fake job store; `@WebMvcTest` for 202 and 404; one Redis IT only if no shared Redis IT can take the TTL
+check (`AC_010_17`) — prefer adding it to an existing Redis IT class (backend AGENTS §8).
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`,
+  `backend/src/main/java/vn/tsolve/jiraapp/controller/JiraAppQuestionController.java`,
+  `jiraapp/service/JiraAppQuestionService.java`, `jiraapp/service/impl/JiraAppQuestionServiceImpl.java`,
+  `backend/.env.example` (or the root `.env.example` that lists `JIRA_APP_ASK_TIMEOUT`), `docs/bug-log.md`, their tests
+- Create: `jiraapp/dto/JiraAppQuestionJob.java`, `jiraapp/dto/JiraAppQuestionJobResult.java`,
+  `jiraapp/service/impl/RedisAskJobStore.java` (package-private, behind a small interface only if the test needs the fake)
+**Dependencies:** none
+**Estimated size:** medium
+
+## Task 25: Ask T-Solve job — Forge client and page
+
+**Story:** STORY-010
+**Feature:** ask-job-forge
+**Description:** `askQuestion` keeps its signature for the page: POST → `jobId`, then GET every 1.5 s
+(`ASK_POLL_MS`) until DONE (return the answer) or FAILED (MSG06); 404 / 5xx / a call over 20 s → MSG06; the whole
+question over 75 s (`ASK_DEADLINE_MS`) → MSG06 and no further GET (AC-010.3, AC-010.8). Polling stops when the page
+unmounts. Fix the comment on `ASK_TIMEOUT_MS` ("the backend stops at 18 s"). The mock mode is unchanged. Tests with
+fake timers (`AC_010_3`, `AC_010_8`). Check on the dev site: a question the chatbot answers in 30–50 s shows the
+answer, not MSG06.
+**Files:**
+- Modify: `jira-app/TSolve_JiraApp/src/frontend/api/tsolveClient.js`, `api/tsolveClient.test.js`,
+  `askTsolve/AskTsolvePage.jsx` (only the unmount stop), `askTsolve/AskTsolvePage.test.jsx`
+**Dependencies:** Task 24
