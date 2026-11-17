@@ -233,8 +233,8 @@
     }
   },
   "chatbot": {
-    "specHash": "f5a8db7175549ee64631d619058c32f628e198d519a885bad182bf0eb6fad8ec",
-    "approvedAt": "2026-11-17T12:04:37.521Z",
+    "specHash": "fc53fda3c93ff71bb6d5515cd67e77b7452c91fcf2dcaae93458139d0d4abbd2",
+    "approvedAt": "2026-11-17T13:04:46.609Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",
@@ -309,9 +309,9 @@
       "AC-009.2": "WHEN the question is not a greeting phrase, THE backend SHALL call the  module's",
       "AC-009.3": "WHEN the classifier answers  or , THE backend SHALL answer that  with an",
       "AC-009.4": "WHEN the backend answers ,  or , THE backend SHALL store one",
-      "AC-009.5": "WHEN the classifier answers  with a  that is not blank, THE backend SHALL use the",
+      "AC-009.5": "WHEN the classifier answers  with a non-blank  for a follow-up, THE backend SHALL use",
       "AC-009.6": "IF the classifier gives no usable answer, THEN THE backend SHALL continue as for a question with the",
-      "AC-009.7": "IF the ask times out, THEN THE backend SHALL answer 503 with MSG06 as in AC-005.7 and store no row,",
+      "AC-009.7": "IF the ask times out, THEN THE backend SHALL answer 503 with MSG06 as in AC-005.7 and store no row",
       "AC-009.8": "THE chatbot changeset SHALL widen the  check to , ,",
       "AC-010.1": "WHEN a signed-in user sends  () for an  or  answer of their own, THE backend SHALL answer 200  with , ,  (the suggested Department, or null) and .",
       "AC-010.2": "THE backend SHALL offer as  exactly the  Departments whose default Project is an",

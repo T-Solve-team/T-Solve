@@ -91,6 +91,7 @@ Master registry of all artifacts in this workspace.
 | — | tasks | chatbot | draft | artifacts/04-plans/chatbot/iteration-2/tasks.md |
 | — | design | chatbot | draft | artifacts/04-plans/chatbot/iteration-3/design.md |
 | — | tasks | chatbot | draft | artifacts/04-plans/chatbot/iteration-3/tasks.md |
+| — | decisions | chatbot | draft | artifacts/04-plans/chatbot/iteration-3/decisions.md |
 | — | spec | platform | draft | artifacts/03-modules/platform/spec.md |
 | — | design | platform | draft | artifacts/04-plans/platform/design.md |
 | — | design | platform | draft | artifacts/04-plans/platform/iteration-1/design.md |
