@@ -276,7 +276,7 @@ class JiraAppQuestionServiceImplTest {
     }
 
     @Test
-    void returnsAJobBeforeTheChatbotAnswersThenPendingBecomesDone_AC_010_4_BUG_339() {
+    void returnsAJobBeforeTheChatbotAnswersThenPendingBecomesDone_AC_010_4_BUG_342() {
         List<ChatbotTurnRequest> history = List.of(new ChatbotTurnRequest("VPN fails", "Check the client [1]"));
         when(answers.askForProject(any(), any(), any())).thenReturn(ANSWER);
         var service = service(Duration.ofSeconds(60));

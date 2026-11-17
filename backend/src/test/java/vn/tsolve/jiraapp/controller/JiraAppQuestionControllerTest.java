@@ -76,7 +76,7 @@ class JiraAppQuestionControllerTest {
     private JwtDecoder fitJwtDecoder;
 
     @Test
-    void acceptsWithoutWaitingForTheChatbot_AC_010_4_BUG_339() throws Exception {
+    void acceptsWithoutWaitingForTheChatbot_AC_010_4_BUG_342() throws Exception {
         when(questions.start(eq(CALLER), any())).thenReturn(new JiraAppQuestionJob(JOB_ID));
 
         mvc.perform(ask("{\"question\":\"VPN fails\",\"history\":[{\"question\":\"q\",\"answer\":\"a\"}]}"))
