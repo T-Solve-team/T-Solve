@@ -2039,6 +2039,8 @@
 {"ts":"2026-11-17T14:57:43.990Z","type":"spec-approved","module":"project-integration","specHash":"8d7eda80ec3d958f659e250b04288b3f8ae9b9d6c28b03e17377ab8713269b2b"}
 {"ts":"2026-11-17T15:18:08.366Z","type":"commit-recorded","module":"search","repo":"default","sha":"2cdb750e142857df28d5e567b6e25c66ea169fa9"}
 {"ts":"2026-11-17T15:18:09.205Z","type":"commit-recorded","module":"project-integration","repo":"default","sha":"2cdb750e142857df28d5e567b6e25c66ea169fa9"}
+{"ts":"2026-11-17T14:59:27.211Z","type":"quick-opened","what":"BUG-325: make the log appender of ProjectConnectionSecrecyTest thread-safe","files":["backend/src/test/java/vn/tsolve/project/controller/ProjectConnectionSecrecyTest.java"]}
+{"ts":"2026-11-17T15:01:33.859Z","type":"quick-closed","what":"BUG-325: make the log appender of ProjectConnectionSecrecyTest thread-safe","files":["backend/src/test/java/vn/tsolve/project/controller/ProjectConnectionSecrecyTest.java"]}
 {"ts":"2026-11-17T15:11:44.751Z","type":"spec-approved","module":"identity","specHash":"4a4f39ee63b493ec1683f4f44e2222953d866be12a0c3e81434fa2966b3a3928"}
 {"ts":"2026-11-17T15:12:42.217Z","type":"spec-approved","module":"identity","specHash":"42367864a4a764298bf2d188b1ddbcd3e33e607448f43bf21a05c473859e888a"}
 {"ts":"2026-11-17T15:15:19.182Z","type":"feature-status","module":"identity","feature":"multi-km-per-space-backend","from":null,"to":"pending"}
@@ -2061,6 +2063,8 @@
 {"ts":"2026-11-17T15:51:37.881Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"de1b19bf22056e427e1c58592b6da829feeb0a97"}
 {"ts":"2026-11-17T15:11:05.979Z","type":"spec-approved","module":"chatbot","specHash":"342300752ea59274bf0c24942e978b5538ca6083af777ea14539024d4eb62a30"}
 {"ts":"2026-11-17T15:40:42.156Z","type":"spec-approved","module":"chatbot","specHash":"dd32f6721cc04e3daa484635f18ad9e760e28a3b15fe06e8af96e65df4db22bb"}
+{"ts":"2026-11-17T16:08:20.046Z","type":"quick-opened","what":"Renumber BUG-325 to BUG-334 in the secrecy test after main took BUG-325","files":["backend/src/test/java/vn/tsolve/project/controller/ProjectConnectionSecrecyTest.java"]}
+{"ts":"2026-11-17T16:09:15.714Z","type":"quick-closed","what":"Renumber BUG-325 to BUG-334 in the secrecy test after main took BUG-325","files":["backend/src/test/java/vn/tsolve/project/controller/ProjectConnectionSecrecyTest.java"]}
 {"ts":"2026-11-17T16:01:20.813Z","type":"spec-approved","module":"fe-foundation","specHash":"7bba61aa861d507f5c85f2a403f2c70b2df3426591fe80f260bfe65e762912b0"}
 {"ts":"2026-11-17T16:03:37.723Z","type":"quick-opened","what":"BUG-326: make the Ask T-Solve and Solution Form text boxes uncontrolled so Vietnamese input methods work","files":["jira-app/TSolve_JiraApp/src/frontend/askTsolve/AskTsolvePage.jsx","jira-app/TSolve_JiraApp/src/frontend/askTsolve/AskTsolvePage.test.jsx","jira-app/TSolve_JiraApp/src/frontend/form/SolutionFormModal.jsx","jira-app/TSolve_JiraApp/src/frontend/form/SolutionFormModal.test.jsx","jira-app/TSolve_JiraApp/test/forge-react.jsx"]}
 {"ts":"2026-11-17T16:06:16.984Z","type":"quick-closed","what":"BUG-326: make the Ask T-Solve and Solution Form text boxes uncontrolled so Vietnamese input methods work","files":["jira-app/TSolve_JiraApp/src/frontend/askTsolve/AskTsolvePage.jsx","jira-app/TSolve_JiraApp/src/frontend/askTsolve/AskTsolvePage.test.jsx","jira-app/TSolve_JiraApp/src/frontend/form/SolutionFormModal.jsx","jira-app/TSolve_JiraApp/src/frontend/form/SolutionFormModal.test.jsx","jira-app/TSolve_JiraApp/test/forge-react.jsx"]}
