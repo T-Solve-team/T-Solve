@@ -6,6 +6,8 @@ import { getGetUsersQueryKey } from '@/shared/api';
 import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
+import { IT_SPACE_ID } from '../mocks/data';
+import { store } from '../mocks/state';
 
 describe('UserDetailPage creation', () => {
   beforeAll(async () => {
@@ -97,6 +99,12 @@ describe('UserDetailPage creation', () => {
   });
 
   it('AC-005.6 requires API-provided Spaces and shows assignment conflicts', async () => {
+    for (const n of [6, 7]) {
+      const manager = store.users.find((item) => item.id.endsWith(String(n).padStart(12, '0')));
+      if (!manager) throw new Error('Missing fixture');
+      manager.roles = ['EMPLOYEE', 'KNOWLEDGE_MANAGER'];
+      manager.spaceIds.push(IT_SPACE_ID);
+    }
     const user = userEvent.setup();
     renderApp('/users/new', { role: 'ADMIN' });
     await user.type(

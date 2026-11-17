@@ -199,7 +199,7 @@ export const MESSAGES = {
     type: 'confirm',
     text: 'Remove the Ticket Resolver role from {user_name}? They will be removed from {count} Project(s). Their tickets are kept.',
   },
-  MSG117: { type: 'field', text: '{space_name} already has a Knowledge Manager.' },
+  MSG117: { type: 'field', text: '{space_name} already has the maximum of 3 Knowledge Managers.' },
   MSG118: {
     type: 'inline',
     text: 'No other active Knowledge Manager is available. Add a Knowledge Manager first.',

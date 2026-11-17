@@ -82,13 +82,41 @@ class WikiPermissionIT extends WikiReadTestSupport {
     }
 
     @Test
+    void bothCoManagersCanOpenSettingsWithNamesInCaseInsensitiveOrder_AC_006_11() {
+        UUID coManager = account("alice Manager", null);
+        jdbc.update(
+                "INSERT INTO user_role(user_id, role, assigned_at) VALUES (?, 'KNOWLEDGE_MANAGER', now())", coManager);
+        jdbc.update("INSERT INTO space_manager(space_id, user_id, assigned_at) VALUES (?, ?, now())", space, coManager);
+
+        assertThat(service.getSettings(user, spaceId).knowledgeManagers())
+                .containsExactly("alice Manager", "Reader Name");
+        var principal =
+                new TSolveUser(coManager, "alice@example.test", "alice Manager", Set.of(Role.KNOWLEDGE_MANAGER));
+        SecurityContextHolder.getContext()
+                .setAuthentication(new UsernamePasswordAuthenticationToken(principal, null, principal.authorities()));
+        assertThat(service.getSettings(coManager, spaceId).knowledgeManagers())
+                .containsExactly("alice Manager", "Reader Name");
+    }
+
+    @Test
+    void omitsDeactivatedCoManagerFromSettings_AC_006_11() {
+        UUID coManager = account("alice Manager", null);
+        jdbc.update(
+                "INSERT INTO user_role(user_id, role, assigned_at) VALUES (?, 'KNOWLEDGE_MANAGER', now())", coManager);
+        jdbc.update("INSERT INTO space_manager(space_id, user_id, assigned_at) VALUES (?, ?, now())", space, coManager);
+        jdbc.update("UPDATE app_user SET status = 'DEACTIVATED' WHERE id = ?", coManager);
+
+        assertThat(service.getSettings(user, spaceId).knowledgeManagers()).containsExactly("Reader Name");
+    }
+
+    @Test
     void omitsADemotedOrDeactivatedManagerFromTheHeader_AC_006_1_BUG_309() {
         var repository = context.getBean(WikiPermissionRepository.class);
         jdbc.update("DELETE FROM user_role WHERE user_id = ? AND role = 'KNOWLEDGE_MANAGER'", user);
-        assertThat(repository.getSettings(space).knowledgeManager()).isNull();
+        assertThat(repository.getSettings(space).knowledgeManagers()).isEmpty();
         jdbc.update("INSERT INTO user_role(user_id, role, assigned_at) VALUES (?, 'KNOWLEDGE_MANAGER', now())", user);
         jdbc.update("UPDATE app_user SET status = 'DEACTIVATED' WHERE id = ?", user);
-        assertThat(repository.getSettings(space).knowledgeManager()).isNull();
+        assertThat(repository.getSettings(space).knowledgeManagers()).isEmpty();
     }
 
     @Test
@@ -101,7 +129,7 @@ class WikiPermissionIT extends WikiReadTestSupport {
         assertThat(settings.spaceId()).isEqualTo(spaceId);
         assertThat(settings.name()).isEqualTo("Support Wiki");
         assertThat(settings.departmentName()).isEqualTo("Support");
-        assertThat(settings.knowledgeManager()).isEqualTo("Reader Name");
+        assertThat(settings.knowledgeManagers()).containsExactly("Reader Name");
         assertThat(settings.ownDepartment())
                 .isEqualTo(new WikiSpaceSettings.OwnDepartment(departmentId(department), "Support", true));
         assertThat(settings.departments())

@@ -81,7 +81,7 @@ export function applyHandover(
   for (const choice of spaces) {
     const recipient = workspaceUser(choice.recipientId);
     if (recipient) {
-      recipient.spaceIds.push(choice.spaceId);
+      if (!recipient.spaceIds.includes(choice.spaceId)) recipient.spaceIds.push(choice.spaceId);
       store.spaceHistory.push({
         spaceId: choice.spaceId,
         previousUserId: id,

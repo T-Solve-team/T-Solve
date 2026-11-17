@@ -66,7 +66,7 @@ describe('Workspace user mock contracts', () => {
     expect((await getUsers()).page.totalElements).toBe(24);
   });
 
-  it('AC-005.6 uses Workspace options and enforces one Knowledge Manager per Space atomically', async () => {
+  it('AC-005.6 uses Workspace options and enforces three Knowledge Managers per Space atomically', async () => {
     const options = await getUserCreationOptions();
     expect(options.companyDomain).toBe('company.example');
     expect(options.spaces.map((space) => space.name)).toEqual([
@@ -81,29 +81,29 @@ describe('Workspace user mock contracts', () => {
       createUser({
         email: 'km@company.example',
         roles: ['KNOWLEDGE_MANAGER'],
-        spaceIds: [IT_SPACE_ID],
-      }),
-    ).rejects.toMatchObject({ code: 'MSG117', params: { space_name: 'IT Knowledge' } });
-    await expect(
-      createUser({
-        email: 'km@company.example',
-        roles: ['KNOWLEDGE_MANAGER'],
         spaceIds: ['00000000-0000-4000-8000-000000000999'],
       }),
     ).rejects.toMatchObject({ code: 'MSG01' });
-    await createUser({
-      email: 'km@company.example',
-      roles: ['KNOWLEDGE_MANAGER'],
-      spaceIds: [HANDBOOK_SPACE_ID],
-    });
+    for (const email of ['km1', 'km2']) {
+      await createUser({
+        email: `${email}@company.example`,
+        roles: ['KNOWLEDGE_MANAGER'],
+        spaceIds: [IT_SPACE_ID],
+      });
+    }
     await expect(
       createUser({
-        email: 'km2@company.example',
+        email: 'fourth@company.example',
         roles: ['KNOWLEDGE_MANAGER'],
-        spaceIds: [HANDBOOK_SPACE_ID],
+        spaceIds: [HANDBOOK_SPACE_ID, IT_SPACE_ID],
       }),
-    ).rejects.toMatchObject({ code: 'MSG117' });
-    expect((await getUsers()).page.totalElements).toBe(25);
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'MSG117',
+      params: { space_name: 'IT Knowledge' },
+      fieldErrors: [{ field: 'spaceIds', code: 'MSG117' }],
+    });
+    expect((await getUsers()).page.totalElements).toBe(26);
   });
 
   it('AC-005.7 rejects duplicate pending submissions without creating two accounts', async () => {

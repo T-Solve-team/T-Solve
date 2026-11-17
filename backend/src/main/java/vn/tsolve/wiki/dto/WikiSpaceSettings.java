@@ -8,7 +8,7 @@ public record WikiSpaceSettings(
         UUID spaceId,
         String name,
         String departmentName,
-        String knowledgeManager,
+        List<String> knowledgeManagers,
         OwnDepartment ownDepartment,
         List<DepartmentPermission> departments,
         List<UserPermission> users) {

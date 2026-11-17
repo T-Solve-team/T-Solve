@@ -155,11 +155,11 @@ class UserCreationServiceImplTest {
     }
 
     @Test
-    void rejectsOccupiedSpace_AC_005_13() throws Exception {
+    void rejectsFourthManager_AC_005_13() throws Exception {
         UUID id = UUID.randomUUID();
         when(repository.lockActiveSpaces(List.of(id)))
                 .thenReturn(List.of(new UserCreationRepository.Space(1L, id, "Wiki")));
-        when(repository.isOccupied(1L)).thenReturn(true);
+        when(repository.managerCount(1L)).thenReturn(3L);
         error(
                 mapper.writeValueAsString(
                         Map.of("email", "a@acme.test", "roles", List.of("KNOWLEDGE_MANAGER"), "spaceIds", List.of(id))),
@@ -274,7 +274,7 @@ class UserCreationServiceImplTest {
     }
 
     @Test
-    void releasesClaimOnSpaceConflictAtInsert_AC_005_13_AC_005_16() throws Exception {
+    void releasesClaimOnSpaceInsertFailure_AC_005_16() throws Exception {
         UUID id = UUID.randomUUID();
         when(repository.lockActiveSpaces(List.of(id)))
                 .thenReturn(List.of(new UserCreationRepository.Space(1L, id, "Wiki")));
@@ -282,12 +282,9 @@ class UserCreationServiceImplTest {
         when(repository.insertAccount(any(), anyString(), any())).thenReturn(true);
         JsonNode body = json(mapper.writeValueAsString(
                 Map.of("email", "a@acme.test", "roles", List.of("KNOWLEDGE_MANAGER"), "spaceIds", List.of(id))));
-        assertThatThrownBy(() -> service.create(body)).isInstanceOfSatisfying(FieldMessageCodeException.class, e -> {
-            assertThat(e.getCode()).isEqualTo("MSG117");
-            assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT);
-            assertThat(e.getField()).isEqualTo("spaceIds");
-            assertThat(e.getParams()).containsEntry("space_name", "Wiki");
-        });
+        var failure = new org.springframework.dao.DataIntegrityViolationException("insert failed");
+        org.mockito.Mockito.doThrow(failure).when(repository).insertManager(org.mockito.ArgumentMatchers.eq(1L), any());
+        assertThatThrownBy(() -> service.create(body)).isSameAs(failure);
         verify(registry).release(workspace, "a@acme.test");
         verifyNoInteractions(audit);
     }
@@ -330,5 +327,22 @@ class UserCreationServiceImplTest {
         } finally {
             TransactionSynchronizationManager.clearSynchronization();
         }
+    }
+
+    @Test
+    void acceptsThirdManagerAfterLockingSpace_AC_005_13() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(repository.lockActiveSpaces(List.of(id)))
+                .thenReturn(List.of(new UserCreationRepository.Space(1L, id, "Wiki")));
+        when(repository.managerCount(1L)).thenReturn(2L);
+        when(registry.claim(workspace, "third@acme.test")).thenReturn(true);
+        when(repository.insertAccount(any(), anyString(), any())).thenReturn(true);
+        service.create(mapper.valueToTree(
+                Map.of("email", "third@acme.test", "roles", List.of("KNOWLEDGE_MANAGER"), "spaceIds", List.of(id))));
+        var order = org.mockito.Mockito.inOrder(repository);
+        order.verify(repository).lockActiveSpaces(List.of(id));
+        order.verify(repository).managerCount(1L);
+        order.verify(repository).insertAccount(any(), anyString(), any());
+        verify(repository).insertManager(org.mockito.ArgumentMatchers.eq(1L), any());
     }
 }
