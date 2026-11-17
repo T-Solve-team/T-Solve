@@ -1938,6 +1938,9 @@
 {"ts":"2026-11-17T10:01:43.910Z","type":"feature-status","module":"triage","feature":"managed-projects","from":"pending","to":"in-progress"}
 {"ts":"2026-11-17T10:14:41.189Z","type":"feature-status","module":"triage","feature":"managed-projects","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-17T10:17:19.680Z","type":"feature-status","module":"triage","feature":"managed-projects","from":"evaluating","to":"passing"}
+{"ts":"2026-11-17T10:17:33.172Z","type":"feature-status","module":"triage","feature":"jira-site","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T10:17:33.535Z","type":"feature-status","module":"triage","feature":"jira-site","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T10:17:33.861Z","type":"feature-status","module":"triage","feature":"jira-site","from":"evaluating","to":"passing"}
 {"ts":"2026-11-17T10:00:47.082Z","type":"feature-status","module":"jira-app","feature":"panel-rejected","from":"evaluating","to":"passing"}
 {"ts":"2026-11-17T10:00:47.316Z","type":"feature-status","module":"jira-app","feature":"panel-published","from":"evaluating","to":"passing"}
 {"ts":"2026-11-17T10:00:47.549Z","type":"feature-status","module":"ticket-review","feature":"jira-rejected-feedback","from":"evaluating","to":"passing"}

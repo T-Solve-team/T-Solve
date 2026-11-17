@@ -322,7 +322,7 @@ class SuggestionResultServiceImplTest {
         SuggestionResultServiceImpl service = new SuggestionResultServiceImpl(
                 repository,
                 managedProjects,
-                new NoJiraSite(),
+                () -> Optional.empty(),
                 wikiDocuments,
                 new SuggestionResultMapperImpl(),
                 new ObjectMapper());
