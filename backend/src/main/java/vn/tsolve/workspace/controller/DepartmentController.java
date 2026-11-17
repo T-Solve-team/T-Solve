@@ -22,6 +22,7 @@ import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.common.security.Roles;
 import vn.tsolve.identity.dto.DepartmentRefResponse;
 import vn.tsolve.workspace.dto.CreateDepartmentRequest;
+import vn.tsolve.workspace.dto.DepartmentDetailResponse;
 import vn.tsolve.workspace.dto.UpdateDepartmentRequest;
 import vn.tsolve.workspace.service.DepartmentService;
 
@@ -53,18 +54,20 @@ public class DepartmentController {
     @ApiResponse(responseCode = "403", description = "Admin role required")
     @ApiResponse(responseCode = "404", description = "Department not found")
     @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public DepartmentRefResponse get(@PathVariable UUID departmentId) {
+    public DepartmentDetailResponse get(@PathVariable UUID departmentId) {
         return service.get(departmentId);
     }
 
     @PutMapping(value = DEPARTMENT_PATH, consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(operationId = "updateDepartment", summary = "Rename a Department and its Space")
-    @ApiResponse(responseCode = "400", description = "Invalid Department name")
+    @Operation(
+            operationId = "updateDepartment",
+            summary = "Rename a Department and its Space, and set its default Project")
+    @ApiResponse(responseCode = "400", description = "Invalid Department name or default Project")
     @ApiResponse(responseCode = "403", description = "Admin role required")
     @ApiResponse(responseCode = "404", description = "Department not found")
     @ApiResponse(responseCode = "409", description = "Department name already used")
     @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public DepartmentRefResponse update(
+    public DepartmentDetailResponse update(
             @PathVariable UUID departmentId, @Valid @RequestBody UpdateDepartmentRequest request) {
         return service.update(departmentId, request);
     }

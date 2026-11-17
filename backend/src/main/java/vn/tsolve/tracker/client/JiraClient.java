@@ -3,6 +3,7 @@ package vn.tsolve.tracker.client;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -19,6 +20,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import vn.tsolve.tracker.dto.JiraAccount;
+import vn.tsolve.tracker.dto.TrackerCreateField;
 import vn.tsolve.tracker.dto.TrackerStatus;
 import vn.tsolve.tracker.exception.JiraPermissionMissingException;
 import vn.tsolve.tracker.exception.JiraRejectedException;
@@ -34,6 +36,12 @@ public class JiraClient implements TicketTrackerClient {
 
     // Jira lists comments oldest first by default; the newest page is enough to find the one T-Solve posted.
     private static final String COMMENTS = "/rest/api/3/issue/{issueKey}/comment?orderBy=-created&maxResults=100";
+
+    private static final int PAGE_SIZE = 200;
+    private static final String ISSUE_TYPES =
+            "/rest/api/3/issue/createmeta/{projectKey}/issuetypes?startAt={startAt}&maxResults=" + PAGE_SIZE;
+    private static final String CREATE_FIELDS = "/rest/api/3/issue/createmeta/{projectKey}/issuetypes/{issueTypeId}"
+            + "?startAt={startAt}&maxResults=" + PAGE_SIZE;
 
     private static final String GATEWAY = "https://api.atlassian.com/ex/jira/";
     // Only a canonical UUID may become part of the gateway path (workspace AC-011.8).
@@ -174,6 +182,75 @@ public class JiraClient implements TicketTrackerClient {
             }
         }
         return List.copyOf(statuses);
+    }
+
+    @Override
+    public boolean hasProjectPermissions(JiraAccount account, String projectKey, List<String> permissions) {
+        // The permission names are T-Solve's constants; only the project key comes from data, so it is a variable.
+        JsonNode answer = call(() -> http(account)
+                .get()
+                .uri(
+                        "/rest/api/3/mypermissions?projectKey={projectKey}&permissions="
+                                + String.join(",", permissions),
+                        projectKey)
+                .retrieve()
+                .body(JsonNode.class));
+        if (answer == null || !answer.path("permissions").isObject()) {
+            throw new JiraUnavailableException(0);
+        }
+        return permissions.stream().allMatch(permission -> answer.path("permissions")
+                .path(permission)
+                .path("havePermission")
+                .booleanValue());
+    }
+
+    @Override
+    public Optional<List<TrackerCreateField>> createFields(
+            JiraAccount account, String projectKey, String issueTypeName) {
+        RestClient http = http(account);
+        Optional<String> issueTypeId = Optional.empty();
+        for (JsonNode type : pages(http, ISSUE_TYPES, "issueTypes", projectKey)) {
+            if (issueTypeName.equalsIgnoreCase(type.path("name").asText())
+                    && !type.path("subtask").booleanValue()) {
+                issueTypeId = Optional.of(requiredText(type, "id"));
+                break;
+            }
+        }
+        if (issueTypeId.isEmpty()) {
+            return Optional.empty();
+        }
+        List<TrackerCreateField> fields = new ArrayList<>();
+        for (JsonNode field : pages(http, CREATE_FIELDS, "fields", projectKey, issueTypeId.get())) {
+            fields.add(new TrackerCreateField(
+                    requiredText(field, "fieldId"),
+                    field.path("required").booleanValue(),
+                    field.path("hasDefaultValue").booleanValue()));
+        }
+        return Optional.of(List.copyOf(fields));
+    }
+
+    // Every item of a startAt/total paged list; {@code uri} ends with the startAt variable, after {@code args}.
+    private List<JsonNode> pages(RestClient http, String uri, String listName, Object... args) {
+        List<JsonNode> all = new ArrayList<>();
+        while (true) {
+            Object[] page = Arrays.copyOf(args, args.length + 1);
+            page[args.length] = all.size();
+            JsonNode answer = call(() -> http.get().uri(uri, page).retrieve().body(JsonNode.class));
+            JsonNode items = items(answer, listName);
+            items.forEach(all::add);
+            if (items.isEmpty() || all.size() >= answer.path("total").asInt(0)) {
+                return all;
+            }
+        }
+    }
+
+    // Jira Cloud names the list issueTypes / fields; older answers call it values.
+    private static JsonNode items(JsonNode page, String name) {
+        JsonNode items = page == null ? null : page.has(name) ? page.get(name) : page.get("values");
+        if (items == null || !items.isArray()) {
+            throw new JiraUnavailableException(0);
+        }
+        return items;
     }
 
     private static String requiredString(JsonNode node, String field) {

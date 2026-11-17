@@ -42,6 +42,8 @@ export * from './dashboardQuestionGap';
 export * from './dashboardRatedTicket';
 export * from './dashboardSearchGap';
 export * from './dashboardSuggestions';
+export * from './departmentDetail';
+export * from './departmentProjectOption';
 export * from './departmentRef';
 export * from './downloadCsvTemplateParams';
 export * from './draftSavedResponse';

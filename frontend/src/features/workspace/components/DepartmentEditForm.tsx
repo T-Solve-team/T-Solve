@@ -1,20 +1,21 @@
-import { Button, Descriptions, Flex, Form, Input } from 'antd';
+import { Button, Descriptions, Flex, Form, Input, Select } from 'antd';
 import { useEffect, useRef, useState } from 'react';
-import type { DepartmentRef, UpdateDepartmentRequest } from '@/shared/api';
+import type { DepartmentDetail, UpdateDepartmentRequest } from '@/shared/api';
 import { applyApiErrors, rules } from '@/shared/forms';
 import { showMessage } from '@/shared/messages';
 import { AppForm, FormField } from '@/shared/ui';
-import { useRenameDepartment } from '../hooks/useDepartmentMutations';
+import { useSaveDepartment } from '../hooks/useDepartmentMutations';
 
-type DepartmentFormValues = Pick<UpdateDepartmentRequest, 'name'>;
+/** "None" is `''` inside the form only; the request sends null (K121, decided in planning). */
+type DepartmentFormValues = Pick<UpdateDepartmentRequest, 'name'> & { defaultProjectId: string };
 
-type DepartmentNameFormProps = { department: DepartmentRef };
+type DepartmentEditFormProps = { department: DepartmentDetail };
 
-/** 2.3 Department Detail — the name and its inline rename form, UC-13. */
-export function DepartmentNameForm({ department }: DepartmentNameFormProps) {
+/** 2.3 Department Detail — the name and default Project and their inline edit form, UC-13. */
+export function DepartmentEditForm({ department }: DepartmentEditFormProps) {
   const [form] = Form.useForm<DepartmentFormValues>();
   const [isEditing, setIsEditing] = useState(false);
-  const rename = useRenameDepartment();
+  const save = useSaveDepartment();
   const isSubmitting = useRef(false);
   const editButtonRef = useRef<HTMLButtonElement>(null);
   const shouldFocusEdit = useRef(false);
@@ -34,8 +35,14 @@ export function DepartmentNameForm({ department }: DepartmentNameFormProps) {
   function handleSubmit(values: DepartmentFormValues) {
     if (isSubmitting.current) return;
     isSubmitting.current = true;
-    rename.mutate(
-      { departmentId: department.departmentId, data: { name: values.name.trim() } },
+    save.mutate(
+      {
+        departmentId: department.departmentId,
+        data: {
+          name: values.name.trim(),
+          defaultProjectId: values.defaultProjectId || null,
+        },
+      },
       {
         onSuccess: closeForm,
         onSettled: () => {
@@ -59,7 +66,14 @@ export function DepartmentNameForm({ department }: DepartmentNameFormProps) {
       <Flex vertical gap="middle" align="flex-start">
         <Descriptions
           column={1}
-          items={[{ key: 'name', label: 'Name', children: department.name }]}
+          items={[
+            { key: 'name', label: 'Name', children: department.name },
+            {
+              key: 'defaultProject',
+              label: 'Default Project',
+              children: department.defaultProject?.jiraProjectKey ?? 'None',
+            },
+          ]}
         />
         <Button ref={editButtonRef} onClick={() => setIsEditing(true)}>
           Edit
@@ -71,7 +85,10 @@ export function DepartmentNameForm({ department }: DepartmentNameFormProps) {
   return (
     <AppForm<DepartmentFormValues>
       form={form}
-      initialValues={{ name: department.name }}
+      initialValues={{
+        name: department.name,
+        defaultProjectId: department.defaultProject?.projectId ?? '',
+      }}
       clearOnDestroy
       onFinish={handleSubmit}
     >
@@ -82,13 +99,22 @@ export function DepartmentNameForm({ department }: DepartmentNameFormProps) {
       >
         <Input autoFocus count={{ show: true, max: 50 }} />
       </FormField>
+      <FormField<DepartmentFormValues>
+        name="defaultProjectId"
+        label="Default Project"
+        extra="Leave it as None for a Department that does not handle support requests. Issues from the Knowledge Chatbot are created in this Project with the type Task."
+      >
+        <Select
+          virtual={false}
+          disabled={save.isPending}
+          options={[
+            { value: '', label: 'None' },
+            ...department.projects.map((p) => ({ value: p.projectId, label: p.jiraProjectKey })),
+          ]}
+        />
+      </FormField>
       <Flex gap="small">
-        <Button
-          type="primary"
-          htmlType="submit"
-          loading={rename.isPending}
-          disabled={rename.isPending}
-        >
+        <Button type="primary" htmlType="submit" loading={save.isPending} disabled={save.isPending}>
           Save
         </Button>
         <Button onClick={handleCancel}>Cancel</Button>

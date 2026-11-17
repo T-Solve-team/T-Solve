@@ -3,6 +3,7 @@ package vn.tsolve.tracker.client;
 import java.util.List;
 import java.util.Optional;
 import vn.tsolve.tracker.dto.JiraAccount;
+import vn.tsolve.tracker.dto.TrackerCreateField;
 import vn.tsolve.tracker.dto.TrackerStatus;
 
 /**
@@ -31,4 +32,13 @@ public interface TicketTrackerClient {
 
     /** Returns statuses across the project's issue types in encounter order, including duplicates. */
     List<TrackerStatus> projectStatuses(JiraAccount account, String projectKey);
+
+    /** True when the account has every one of these project permissions in the project. */
+    boolean hasProjectPermissions(JiraAccount account, String projectKey, List<String> permissions);
+
+    /**
+     * The create-screen fields of the project's first non-sub-task issue type with this name (ignoring case), or
+     * empty when the project has no such type.
+     */
+    Optional<List<TrackerCreateField>> createFields(JiraAccount account, String projectKey, String issueTypeName);
 }
