@@ -2084,3 +2084,11 @@
 {"ts":"2026-11-17T20:04:38.790Z","type":"feature-status","module":"jira-app","feature":"ask-job-backend","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-17T20:04:39.071Z","type":"feature-status","module":"jira-app","feature":"ask-job-backend","from":"evaluating","to":"passing"}
 {"ts":"2026-11-17T20:11:40.651Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"6be552667a04eb0f694081bd3b23567119bfe8de"}
+{"ts":"2026-11-17T20:12:11.665Z","type":"feature-status","module":"jira-app","feature":"ask-job-forge","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T20:20:56.161Z","type":"spec-approved","module":"jira-app","specHash":"a7059846a83cd24899a78edb6211cba65c1e511b5147eec57108b0c3ca209015"}
+{"ts":"2026-11-17T20:20:56.465Z","type":"feature-status","module":"jira-app","feature":"rewrite-job-backend","from":null,"to":"pending"}
+{"ts":"2026-11-17T20:20:56.755Z","type":"feature-status","module":"jira-app","feature":"rewrite-job-forge","from":null,"to":"pending"}
+{"ts":"2026-11-17T20:21:22.812Z","type":"feature-status","module":"jira-app","feature":"rewrite-job-backend","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T20:24:57.840Z","type":"feature-status","module":"jira-app","feature":"ask-job-forge","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T20:30:41.152Z","type":"feature-status","module":"jira-app","feature":"ask-job-forge","from":"evaluating","to":"passing"}
+{"ts":"2026-11-17T20:31:17.186Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"b0ed26a3d96e63148ef02128a47530f1d3fa7dac"}

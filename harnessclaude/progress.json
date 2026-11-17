@@ -409,15 +409,17 @@
         "account-page-global": "evaluating",
         "draft-only-when-done": "evaluating",
         "ask-job-backend": "passing",
-        "ask-job-forge": "pending"
+        "ask-job-forge": "passing",
+        "rewrite-job-backend": "in-progress",
+        "rewrite-job-forge": "pending"
       },
-      "lastUpdated": "2026-11-17T20:11:40.648Z",
+      "lastUpdated": "2026-11-17T20:31:17.183Z",
       "branch": "feat/KAN-337-jira-app-reject-reason",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "6be552667a04eb0f694081bd3b23567119bfe8de"
+        "default": "b0ed26a3d96e63148ef02128a47530f1d3fa7dac"
       }
     },
     "dashboard-audit": {

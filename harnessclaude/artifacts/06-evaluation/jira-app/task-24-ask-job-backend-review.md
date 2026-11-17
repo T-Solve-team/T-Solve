@@ -19,7 +19,7 @@ The change is uncommitted in the working tree on `fix/KAN-294-jira-app-ask-job`.
 | Criterion | Result | Detail |
 |-----------|--------|--------|
 | Functionality | pass | AC-010.4 (202 without waiting; PENDING, then DONE or FAILED), AC-010.16, AC-010.17 (TTL 300 s, KEEPTTL, XX) and AC-010.18 are implemented as the spec says |
-| Completeness | pass | OpenAPI has 202 `JiraAppQuestionJob` and `getJiraAppQuestionJob` (200/401/404); the generated client and MSW match; `.env.example` sets 60s; BUG-339 is logged and two tests name it |
+| Completeness | pass | OpenAPI has 202 `JiraAppQuestionJob` and `getJiraAppQuestionJob` (200/401/404); the generated client and MSW match; `.env.example` sets 60s; BUG-342 is logged and two tests name it |
 | Correctness | pass | Surefire: JiraAppQuestionServiceImplTest 21/0, RedisAskJobStoreTest 3/0, JiraAppQuestionControllerTest 21/0. No test sleeps or waits on the clock (queued executor, injected deadline) |
 | Integration | pass (note) | The Forge client (Task 25) still expects a synchronous answer, so Task 24 must not be deployed without Task 25 |
 
@@ -30,7 +30,7 @@ The change is uncommitted in the working tree on `fix/KAN-294-jira-app-ask-job`.
 1. `backend/src/main/java/vn/tsolve/jiraapp/service/impl/JiraAppQuestionServiceImpl.java:185` — minor — If Redis is down, `jobs.create` throws a `DataAccessException`. The catch-all handler turns it into 500 MSG06 and an ERROR log, but OpenAPI declares only 503 for POST. Lettuce's default 60 s command timeout can also hold the request well past AC-010.4's 2 s. Fix: catch `DataAccessException` around `create` (as `JiraAccountLinkPageServiceImpl:84` does), log the class name and throw `AiUnavailableException`. Separately, consider setting `spring.data.redis.timeout`, which applies to the whole app.
 2. `JiraAppQuestionServiceImpl.java:192` — minor — The `whenComplete` callback blocks on Redis I/O, and on timeout it runs on the JDK's single `CompletableFuture` delayer thread. That thread is shared with the `orTimeout` calls in ChatbotAnswerServiceImpl, ChatbotIssueServiceImpl and SolutionFormAiImpl, so a stalled Redis delays their deadlines. Fix: `whenCompleteAsync(…, executor)` on a small dedicated executor (or the ask pool, with a fallback when it rejects).
 3. `JiraAppQuestionServiceImpl.java:197` — minor — A chatbot exception reaches `whenComplete` wrapped, so the log always says `CompletionException`, not the real type (for example `AiUnavailableException`). Fix: unwrap `CompletionException` before `getSimpleName()`.
-4. `docs/bug-log.md:357` — minor — BUG-339 is marked `Fixed` while the user-visible fix also needs Task 25 (the Forge polling client). Fix: keep it open (or "Fixed in backend") until Task 25 lands, and fill in the PR column then.
+4. `docs/bug-log.md:357` — minor — BUG-342 is marked `Fixed` while the user-visible fix also needs Task 25 (the Forge polling client). Fix: keep it open (or "Fixed in backend") until Task 25 lands, and fill in the PR column then.
 
 ## Assumptions made
 - I did not run Maven, because the dispatcher forbade it while another `mvn verify` was running. Test results come from `backend/target/surefire-reports`. Those reports are dated 01:50, which is after the newest source and test edits (01:42). Spotless, the full suite and ITs were not checked by me.

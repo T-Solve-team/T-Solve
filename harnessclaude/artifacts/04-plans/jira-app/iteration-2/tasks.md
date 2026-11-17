@@ -401,3 +401,42 @@ answer, not MSG06.
 - Modify: `jira-app/TSolve_JiraApp/src/frontend/api/tsolveClient.js`, `api/tsolveClient.test.js`,
   `askTsolve/AskTsolvePage.jsx` (only the unmount stop), `askTsolve/AskTsolvePage.test.jsx`
 **Dependencies:** Task 24
+
+## Task 26: Rewrite with AI job — contract and backend
+
+**Story:** STORY-007
+**Feature:** rewrite-job-backend
+**Description:** Changelog 2026-11-18 (STORY-007). OpenAPI first: `rewriteSolution` answers 202 `SolutionRewriteJob
+{jobId}`; new `getSolutionRewriteJob` `GET /api/v1/jira-app/solution-rewrites/{jobId}` →
+`{status: PENDING|DONE|FAILED, sections?: SolutionSections}`, 404 MSG68, 503 MSG68; regenerate the frontend client.
+`JiraAppSolutionServiceImpl.rewrite` → `startRewrite` (access check stays synchronous) + `rewriteResult`; the job runs
+the existing `SolutionFormAi.rewrite` path on `SolutionFormAiImpl`'s pool with `JIRA_APP_REWRITE_TIMEOUT` (60s; the
+draft keeps `JIRA_APP_AI_TIMEOUT`); Redis key `jira-app:rewrite:{jobId}` (owner cloudId + accountId, TTL 300 s,
+KEEPTTL XX) by generalising `RedisAskJobStore`; Redis error or full pool → 503 MSG68; GET of another owner / unknown →
+404 MSG68; callbacks on the pool, unwrapped error types in logs, no Solution text logged. Tests `AC_007_5` …
+`AC_007_8` (unit + `@WebMvcTest`), Ask tests still green.
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`, `.env.example`,
+  `backend/src/main/java/vn/tsolve/jiraapp/controller/JiraAppSolutionController.java`,
+  `jiraapp/service/JiraAppSolutionService.java`, `jiraapp/service/SolutionFormAi.java`,
+  `jiraapp/service/impl/JiraAppSolutionServiceImpl.java`, `jiraapp/service/impl/SolutionFormAiImpl.java`,
+  `jiraapp/service/impl/RedisAskJobStore.java`, `jiraapp/service/impl/JiraAppQuestionServiceImpl.java` (store API only),
+  their tests
+- Create: `jiraapp/dto/SolutionRewriteJob.java`, `jiraapp/dto/SolutionRewriteJobResult.java`, a not-found exception
+**Dependencies:** Task 24
+**Estimated size:** medium
+
+## Task 27: Rewrite with AI job — Forge client and form
+
+**Story:** STORY-007, STORY-012
+**Feature:** rewrite-job-forge
+**Description:** `rewriteSolution(sections)` keeps returning the rewritten sections to the form: POST → `jobId`, GET
+every 1.5 s until DONE / FAILED, 20 s per call, 75 s overall, abortable — share the polling helper written for
+`askQuestion` (Task 25), do not copy it. Any failure → MSG68 (AC-007.4). The form aborts on close/unmount; the
+resubmission form uses the same path (AC-012.7). Tests `AC-007.1`, `AC-007.4` with fake timers. Dev-site check: a
+rewrite that takes 30–50 s shows the preview.
+**Files:**
+- Modify: `jira-app/TSolve_JiraApp/src/frontend/api/tsolveClient.js`, `api/solutionClient.test.js` (or
+  `tsolveClient.test.js`), `form/SolutionFormModal.jsx`, `form/SolutionFormModal.test.jsx`
+**Dependencies:** Task 25, Task 26
+**Estimated size:** small

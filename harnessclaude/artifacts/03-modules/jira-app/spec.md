@@ -45,6 +45,7 @@ an issue has at most one.
 | 2026-11-17 | STORY-014, STORY-008 | AC-014.1: the "T-Solve account" page is a Forge `jira:globalPage` in the Apps section of Jira's navigation instead of a `jira:personalSettingsPage` in the profile menu; the story and the term "settings page" follow. AC-008.1's link opens that page. No other criterion changes | KAN-358 dev-site test (user, 17/11): the profile menu of bdang798 showed no "T-Solve account" item (a Forge Preview module), although the page worked by its URL; the user chose the Apps section, which is not a Preview module |
 | 2026-11-18 | STORY-008 | AC-008.3: MSG77 and the button that reopens the form with the Draft show only while the issue is in a Done status. New AC-008.11: while the issue is not Done, the panel shows neither and the Draft is kept; when the issue is Done again, the panel shows them again and the form opens with the Draft (AC-001.1, AC-005.2) | Dev-site test (user, 18/11, KAN-365): an issue moved from Done back to In Progress still offered "Continue draft". User chose to hide it and keep the Draft |
 | 2026-11-18 | STORY-010 | Ask T-Solve answers through a job: `POST /api/v1/jira-app/questions` answers 202 with a job id at once (AC-010.4), the page polls the new `GET /api/v1/jira-app/questions/{jobId}` every 1.5 s (AC-010.3) and gives up after 75 s (AC-010.8); the chatbot gets 60 s instead of the 18 s cut. New AC-010.16 (a job of another Jira account, site or project, or an expired one, is not found), AC-010.17 (the server keeps a job 5 minutes), AC-010.18 (too many jobs: 503 MSG06 at once, BUG-183). NF 2 reworded. Streaming the answer goes to Out of Scope | Dev-site test (18/11): answers that take the chatbot more than 18 s showed MSG06, because one `invokeRemote` call must finish within Forge's 25 s. User chose a backend job with polling over Forge Async Events + Realtime (the app has no Forge function, and an async consumer has no FIT of the viewer for AC-010.13), and Redis with a 5-minute TTL for the job so every backend instance can answer a poll |
+| 2026-11-18 | STORY-007 | Rewrite with AI runs as a job like Ask T-Solve: `POST /api/v1/jira-app/solution-rewrites` answers 202 with a job id at once, the form polls the new `GET /api/v1/jira-app/solution-rewrites/{jobId}` every 1.5 s and shows MSG68 after 75 s (AC-007.1, AC-007.4 reworded); the AI rewrite gets 60 s. New AC-007.5 (202 and the job statuses), AC-007.6 (a job of another Jira account or site is not found), AC-007.7 (kept 5 minutes, no text in logs), AC-007.8 (too many jobs: 503 MSG68 at once). NF 2 and Out of Scope follow: only the AI draft keeps the 20-second limit | User, 18/11: the rewrite has the same Forge 25 s problem (cut at `JIRA_APP_AI_TIMEOUT` 18 s); make it work like the Ask T-Solve job |
 
 ## Requirements
 
@@ -65,9 +66,9 @@ an issue has at most one.
 
 ### Non-Functional
 1. Every Jira App API call is verified with a FIT (tracker STORY-001); the user comes from the FIT `principal`.
-2. UI calls answer within 20 seconds (Forge's limit is 25 s). The Solution Form's AI calls (STORY-002, STORY-007)
-   count as unavailable when they take longer; an Ask T-Solve answer runs as a job on the server, so no call waits
-   for it (STORY-010).
+2. UI calls answer within 20 seconds (Forge's limit is 25 s). The Solution Form's AI draft (STORY-002) counts as
+   unavailable when it takes longer; an AI rewrite (STORY-007) and an Ask T-Solve answer (STORY-010) run as jobs on
+   the server, so no call waits for them.
 3. UI Kit components only; every server call goes through one client module in `jira-app/`; logs carry ids,
    issue keys and error types only — never question, answer or Solution text, or personal data.
 4. AI failures never block the user: the form and creating an issue stay usable without AI (GBR-12).
@@ -112,10 +113,14 @@ an issue has at most one.
 ### STORY-007: Rewrite with AI
 - As a Ticket Resolver, I want AI to improve my Solution's wording so that it is clearer, while I stay in control (GBR-12).
 - Acceptance:
-  - AC-007.1: WHEN the user clicks Rewrite with AI, THE Jira App SHALL show 4.2 AI Rewrite Preview with the current Solution and the rewritten Solution section by section.
+  - AC-007.1: WHEN the user clicks Rewrite with AI, THE Jira App SHALL call `POST /api/v1/jira-app/solution-rewrites` with the five sections, then call `GET /api/v1/jira-app/solution-rewrites/{jobId}` every 1.5 seconds until the job is `DONE` or `FAILED`, and when it is `DONE` SHALL show 4.2 AI Rewrite Preview with the current Solution and the rewritten Solution section by section.
   - AC-007.2: WHEN the user clicks Accept, THE Jira App SHALL replace the form's five sections with the rewritten ones and go back to the form.
   - AC-007.3: WHEN the user clicks Discard, THE Jira App SHALL go back to the form with the Solution unchanged.
-  - AC-007.4: IF the rewrite fails, is unavailable or takes longer than the UI call allows, THEN THE Jira App SHALL show MSG68 and leave the Solution unchanged.
+  - AC-007.4: IF a call of AC-007.1 fails, does not answer within 20 seconds or is answered 404 or 5xx, the job is `FAILED`, or the job is not `DONE` 75 seconds after the click, THEN THE Jira App SHALL stop polling, show MSG68 and leave the Solution unchanged.
+  - AC-007.5: WHEN the server receives valid sections from a user who may use the Solution Form, THE server SHALL answer 202 with a new job id within 2 seconds, without waiting for the AI, and SHALL rewrite the sections in that job; `GET /api/v1/jira-app/solution-rewrites/{jobId}` SHALL answer 200 with status `PENDING` while the job runs, `DONE` with the rewritten five sections when it ends, and `FAILED` when the rewrite fails or does not end within 60 seconds.
+  - AC-007.6: IF `GET /api/v1/jira-app/solution-rewrites/{jobId}` names a job that does not exist, has expired, or was started from another Jira account or site than the FIT's, THEN THE server SHALL answer 404 MSG68 and show nothing of that job.
+  - AC-007.7: THE server SHALL keep a rewrite job's sections for at most 5 minutes after the job starts, shared by every backend instance, and SHALL log no Solution text of a job.
+  - AC-007.8: IF the server already runs as many rewrite jobs as its AI pool allows and as many more wait, or cannot store the job, THEN THE server SHALL answer `POST /api/v1/jira-app/solution-rewrites` with 503 MSG68 at once and start no job.
 
 ### STORY-008: Issue Panel
 - As a Ticket Resolver, I want the panel to show the issue's Solution status so that I know what is left to do for it.
@@ -195,7 +200,7 @@ an issue has at most one.
 ## Out of Scope
 - Streaming the answer word by word (Forge Async Events + Realtime) — needs a streaming answer from `chatbot` and
   `ai`; the page shows the whole answer when the job ends (user, 2026-11-18).
-- A job for the Solution Form's AI draft and rewrite — they keep the 20-second limit of NF 2.
+- A job for the Solution Form's AI draft — it keeps the 20-second limit of NF 2.
 - Evidence in the Jira App (attach, MSG34, MSG72, the Evidence list of 3.4): Forge UI calls carry at most 500 KB
   (RESEARCH-003); Evidence is added on the T-Solve web app (user, 2026-11-01, kept 2026-11-11). KAN-126 "Done when"
   items about Evidence are not met — reported to the team.
@@ -230,7 +235,8 @@ feedback endpoint (AC-008.7).
 | `POST /api/v1/jira-app/issues/{issueKey}/solution-form` (issue summary + description, `resubmit`) → may open, Draft or AI draft or prefill or the ticket's Solution, MSG67 flag | 4.1 | 001, 002, 005, 012 |
 | `POST /api/v1/jira-app/issues/{issueKey}/solution` (JSON: five sections) → a new ticket, or the resubmitted one | 4.1 | 004, 012 |
 | `PUT /api/v1/jira-app/issues/{issueKey}/solution-draft` (on Close) | 4.1 | 005 |
-| `POST /api/v1/jira-app/solution-rewrites` (five sections → rewritten five sections) | 4.2 | 007 |
+| `POST /api/v1/jira-app/solution-rewrites` (five sections → 202 `{jobId}`; 400, 403 and 503 MSG68 at once) | 4.2 | 007 |
+| `GET /api/v1/jira-app/solution-rewrites/{jobId}` (→ `{status: PENDING \| DONE \| FAILED, sections}`: the rewritten five sections when `DONE`; 404 MSG68, 503 MSG68) | 4.2 (AC-007.1, AC-007.6) | 007 |
 | `GET /api/v1/jira-app/issues/{issueKey}/panel` → linked, ticket status, Draft, may open, may resubmit | 3.3 | 001, 008, 012 |
 | `GET /api/v1/jira-app/questions/eligibility` (→ `status`: `CONNECTED`, `SITE_NOT_CONNECTED` or `PROJECT_NOT_CONNECTED` for the FIT's site and project; calls no AI) | Ask T-Solve (on open, AC-010.2, AC-010.14) | 010 |
 | `POST /api/v1/jira-app/questions` (question + history → 202 `{jobId}`; 400, 403 MSG124 / MSG08 and 503 MSG06 at once) | Ask T-Solve | 010 |
