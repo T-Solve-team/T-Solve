@@ -236,3 +236,21 @@ Order: search Task 19 → Task 6 → Task 7 → Task 8 → Task 9 → Task 10.
 **Covers:** AC-011.1 – AC-011.11 (edge cases J1, J2, J5, J7)
 **Dependencies:** Task 13
 **Estimated size:** medium
+
+---
+
+## Task 15: Answer a question for a Jira project (KAN-294)
+
+**Story:** STORY-012
+**Feature:** chatbot-ask-for-project
+**Description:** `ChatbotAnswerService.askForProject(projectId, request)` (AC-012.1, AC-012.4, AC-012.6): the same answer
+flow with search's `SolutionRetrieval.nearestInProjectDepartment` and `WikiSources.nearestInProjectDepartment`; an
+unknown or inactive Project throws before any AI call. Changeset `045-chatbot-answer-jira-app`: `user_id` nullable,
+`source` (`WEB`/`JIRA_APP`, default `WEB`), `project_id`, the source check, rollback (AC-012.5). The entity stores a
+`JIRA_APP` row without a user (AC-012.2); rating, prefill and create find only the caller's own `WEB` rows, so a
+`JIRA_APP` id answers 404 MSG04 (AC-012.3). `rateForProject(projectId, answerId, rating)` rates only a `JIRA_APP` row of that Project, else throws for 404 MSG04 (AC-012.7).
+**Files:** Modify `chatbot/answer/service/ChatbotAnswerService.java`, `chatbot/answer/service/impl/ChatbotAnswerServiceImpl.java`,
+`chatbot/answer/entity/ChatbotAnswer.java`, the rating and issue lookups if they do not already filter by user; add
+`db/changelog/changes/045-chatbot-answer-jira-app.sql` and its master entry; tests `ChatbotAnswerServiceImplTest`,
+the rating and issue service tests, an IT for the changeset (CI).
+**Estimated size:** medium

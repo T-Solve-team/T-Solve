@@ -167,3 +167,16 @@ ticket links for Project Managers only.
 **Covers:** AC-005.6, AC-005.8, AC-005.9
 **Dependencies:** Task 7
 **Estimated size:** medium
+
+---
+
+## Task 9: Jira questions in the knowledge gaps (KAN-294)
+
+**Story:** STORY-004
+**Feature:** jira-questions-gap
+**Description:** AC-004.11: the `NO_SOURCE` Chatbot questions of the period include the Jira App's (no user); a
+Department scope counts a question by its asker's Department or, without an asker, by the Department of its
+`project_id`. The query joins `app_user` and `project` with outer joins and uses the first Department found.
+**Files:** Modify `backend/src/main/java/vn/tsolve/analytics/repository/DashboardRepository.java`; test the query in the
+dashboard repository IT (CI).
+**Estimated size:** small

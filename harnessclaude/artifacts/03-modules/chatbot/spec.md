@@ -20,6 +20,7 @@ owner: BA
 | 2026-11-09 | STORY-008 (new) | **Backend change.** New STORY-008 rate an answer on the backend (KAN-182): the latest rating and its time as two nullable columns on `chatbot_answer`, own answers only, 404 MSG04 otherwise, 400 MSG06 for a bad body. Out of Scope: no conversation API (KAN-183); no cross-user rating, comment or rating history. Interface Contracts (table columns, rating errors) and Definition of Done follow. Earlier criteria unchanged | User decisions of 09/11: KAN-183 builds no backend API, the conversations stay in `sessionStorage` and KAN-183 is checked end to end; ratings are columns on `chatbot_answer` (one answer has one asker), not a separate table |
 | 2026-11-17 | STORY-010, STORY-011 (new) | **Backend change (KAN-241, UC-58, GBR-40).** New STORY-010 AI-prefilled Jira issue draft of an answer and STORY-011 create the Jira issue with the Workspace service account, the linked Jira account as reporter. Requirement 10 added; KAN-241 leaves Out of Scope; Interface Contracts (two endpoints, `jira_issue_key` column, error codes) and Definition of Done follow. Earlier criteria unchanged | User decisions of 17/11: both endpoints hang off an own `answerId` (search first, `ANSWERED` or `NO_SOURCE`, so MSG145 needs no intent detection); an AI failure gives an empty draft (GBR-12); the issue key is stored on the answer and a second create returns it; the Workspace service account (KAN-344/345), not the Forge token (KAN-349); a chatbot-owned Jira adapter, no edit in `tracker/` (KAN-125); a refused reporter fails with MSG148; the backend returns MSG codes only (MSG146 not linked, MSG148 refused, MSG149 unreachable, MSG157 misconfigured default Project); the texts are in System_Messages, not in the repo |
 | 2026-11-17 | STORY-011, Requirement 10 | Wording only: after KAN-349 the same `JiraServiceAccount.current()` returns the Workspace's Jira site with the T-Solve Jira App's app token (Forge system token, `write:jira-work`) instead of a customer service-account token; AC-011.1, AC-011.6, Requirement 10, the issue note and Dependencies say "Jira App token". Behaviour, endpoints and tests unchanged. Definition of Done of KAN-241 ticked | KAN-349 merged into main (#271) and into the KAN-241 branch; the earlier row's "not the Forge token" no longer holds |
+| 2026-11-17 | STORY-012 (new), Requirement 9 | **Backend change (KAN-294).** New STORY-012: the Jira App's Ask T-Solve page asks for a Project instead of a user. Sources are the Published Solutions and the Wiki documents of the Project's Department (search `SolutionRetrieval.nearestInProjectDepartment`, new `WikiSources.nearestInProjectDepartment`); the answer is stored with no user, `source` `JIRA_APP` and the Project (changeset: `user_id` nullable, new `source` and `project_id`). On the web such an answer cannot be rated or turned into a Jira issue; the Jira page rates it through `rateForProject` ("Solved" / "Not solved", AC-012.7) | jira-app STORY-010 change of 17/11 (user): Ask T-Solve needs no sign-in, questions stay stored for the Knowledge Dashboard |
 
 ## Requirements
 
@@ -49,7 +50,7 @@ owner: BA
    GBR-12). Only the question, the earlier turns and the source texts are sent to it. When the AI server is slow or
    down, the Chatbot fails gracefully as GBR-12 says: the question gets MSG06 (AC-001.13) and the rest of T-Solve
    keeps working.
-9. Answers (backend): every `200` answer is stored as one `chatbot_answer` row; its id is the `answerId` the rating
+9. Answers (backend): every `200` answer, of the web Chatbot or of the Jira App's Ask T-Solve page (STORY-012), is stored as one `chatbot_answer` row; its id is the `answerId` the rating
    (STORY-003) uses. A failed ask stores nothing.
 10. Jira issue from the Chatbot (backend, UC-58, GBR-40): after an answer of their own (`ANSWERED` or `NO_SOURCE`),
     a user who has linked a Jira account (UC-59) gets a form prefilled by the AI from the conversation (summary,
@@ -317,6 +318,35 @@ owner: BA
   - AC-011.11: THE chatbot changeset SHALL add to `chatbot_answer` the nullable column `jira_issue_key`
     (`VARCHAR(255)`) and a `--rollback` that drops it.
 
+### STORY-012: Answer a question for a Jira project on the backend
+- As the Jira App's Ask T-Solve page, I want an answer for the Jira project the question is asked in, without a
+  T-Solve user, so that anyone in that project can try the known Solutions first (KAN-294, jira-app STORY-010).
+- Acceptance:
+  - AC-012.1: WHEN the `jiraapp` module calls `ChatbotAnswerService.askForProject(projectId, request)` with the public
+    id of an Active Project, THE backend SHALL answer as STORY-005 to STORY-007 except that the sources SHALL be
+    search's `SolutionRetrieval.nearestInProjectDepartment(projectId, ...)` and
+    `WikiSources.nearestInProjectDepartment(projectId, ...)`, both with `CHATBOT_MIN_SIMILARITY`, instead of the
+    user's sources.
+  - AC-012.2: WHEN such an answer is returned, THE backend SHALL store one `chatbot_answer` row with `user_id` null,
+    `source` `JIRA_APP`, `project_id` the Project's public id, the trimmed question, the outcome, the answer text and
+    the time; a web answer SHALL be stored with `source` `WEB` and no `project_id`.
+  - AC-012.3: IF the answer id of a `JIRA_APP` row is used on the web to rate (STORY-008), prefill (STORY-010) or
+    create a Jira issue (STORY-011), THEN THE backend SHALL answer 404 with MSG04, as for an unknown id, and change
+    nothing.
+  - AC-012.4: IF the Project is unknown or not Active, THEN `askForProject` SHALL call no AI, store nothing and throw
+    the error that the caller answers with 403 MSG08 (jira-app AC-010.11).
+  - AC-012.5: THE chatbot changeset SHALL make `chatbot_answer.user_id` nullable and add `source VARCHAR(10) NOT NULL
+    DEFAULT 'WEB'` (`WEB` or `JIRA_APP`) and `project_id UUID NULL`, with a check that a `WEB` row has a `user_id`
+    and no `project_id` and a `JIRA_APP` row has a `project_id` and no `user_id`, and a `--rollback` that deletes the
+    `JIRA_APP` rows and restores the table.
+  - AC-012.6: WHEN `askForProject` is called, THE backend SHALL apply AC-005.7, AC-005.8 and AC-005.10 as for a web
+    question (503 MSG06 on an AI failure, the question limits, nothing of the question, history, answer or sources in
+    the application log).
+  - AC-012.7: WHEN the `jiraapp` module calls `ChatbotAnswerService.rateForProject(projectId, answerId, rating)`,
+    THE backend SHALL store the rating and its time on that answer as AC-008.1 does, replacing an earlier one, only
+    WHILE the answer is a `JIRA_APP` row of that Project; IF it is not (unknown id, a web answer, another Project),
+    THEN it SHALL change nothing and throw the error the caller answers with 404 MSG04 (jira-app AC-010.15).
+
 ## Out of Scope
 - A conversation or session history API (KAN-183, user 09/11): the conversations of the session stay in
   `sessionStorage` only (AC-002.7), so the backend stores no conversation; KAN-183 is the end-to-end check of
@@ -451,7 +481,7 @@ Backend table (chatbot changeset; AC-005.11):
 ```sql
 chatbot_answer
   chatbot_answer_id UUID PK DEFAULT gen_random_uuid()      -- the answerId of the contract
-  user_id           UUID NOT NULL  FK app_user(id)
+  user_id           UUID NULL      FK app_user(id)          -- null for a JIRA_APP row (STORY-012)
   question          TEXT NOT NULL                          -- the trimmed new question only (AC-007.4)
   outcome           VARCHAR(20) NOT NULL CHECK IN ('ANSWERED', 'NO_SOURCE')
   answer_text       TEXT NOT NULL                          -- empty for NO_SOURCE
@@ -459,6 +489,8 @@ chatbot_answer
   rating            VARCHAR(20) NULL CHECK IN ('HELPFUL', 'NOT_HELPFUL')   -- STORY-008 (AC-008.6)
   rated_at          TIMESTAMPTZ NULL                       -- set with rating, cleared with it
   jira_issue_key    VARCHAR(255) NULL                      -- STORY-011 (AC-011.11): the issue created from it
+  source            VARCHAR(10) NOT NULL DEFAULT 'WEB' CHECK IN ('WEB', 'JIRA_APP')   -- STORY-012 (AC-012.5)
+  project_id        UUID NULL                              -- the Project of a JIRA_APP row (public id)
 ```
 
 Rating errors (STORY-008): 400 code MSG06 with no field error, 401 MSG07, 404 MSG04.
@@ -470,6 +502,8 @@ package vn.tsolve.chatbot.source.service;
 public interface WikiSources {
     /** Passages of Wiki documents the user may view, nearest to queryVector (bge-m3, 1024 dims), most similar first. */
     List<WikiPassage> nearest(TSolveUser user, float[] queryVector, double minSimilarity, int limit);
+    /** Passages a member of the Department of the Project (public id) may read: Ask T-Solve in Jira (STORY-012). */
+    List<WikiPassage> nearestInProjectDepartment(UUID projectId, float[] queryVector, double minSimilarity, int limit);
     /** The given ids the user cannot view: unknown, deleted, unpublished or not visible to them. */
     Set<UUID> unavailable(TSolveUser user, Set<UUID> wikiDocumentIds);
     record WikiPassage(UUID wikiDocumentId, String title, String text, double similarity) {}
