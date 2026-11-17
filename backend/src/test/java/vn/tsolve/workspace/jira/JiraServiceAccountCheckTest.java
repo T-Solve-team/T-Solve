@@ -28,6 +28,7 @@ import org.springframework.web.client.RestClient;
 import vn.tsolve.tracker.client.JiraClient;
 import vn.tsolve.tracker.client.TicketTrackerClient;
 import vn.tsolve.tracker.dto.JiraAccount;
+import vn.tsolve.tracker.exception.JiraPermissionMissingException;
 import vn.tsolve.tracker.exception.JiraRejectedException;
 import vn.tsolve.tracker.exception.JiraUnavailableException;
 
@@ -119,6 +120,25 @@ class JiraServiceAccountCheckTest {
                 "\"" + permission + "\": {\"havePermission\": false}"));
 
         assertPermissionRejected();
+    }
+
+    @DisplayName("AC-011.1 names every permission that is not true, in the fixed order")
+    @Test
+    void namesTheMissingPermissions() {
+        expectPermissions("""
+                {"permissions": {
+                  "MODIFY_REPORTER": {"havePermission": false},
+                  "CREATE_ISSUES": {"havePermission": true}
+                }}
+                """);
+
+        assertThatThrownBy(() -> client.checkServiceAccount(ACCOUNT))
+                .isInstanceOfSatisfying(JiraPermissionMissingException.class, error -> {
+                    assertThat(error.getStatus()).isEqualTo(403);
+                    assertThat(error.getMissingPermissions()).containsExactly("BROWSE_PROJECTS", "MODIFY_REPORTER");
+                })
+                .hasNoCause();
+        jira.verify();
     }
 
     @DisplayName("AC-011.1 rejects a missing required permission")

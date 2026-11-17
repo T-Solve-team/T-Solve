@@ -44,3 +44,41 @@ company name and the read-only site, no email (AC-010.1). MSW handlers and fixtu
 - Test: `WorkspaceSetupPage.test.tsx` (AC-009.2, AC-009.4), `WorkspaceSettingsPage.test.tsx` (AC-010.1)
 **Dependencies:** Task 10
 **Estimated size:** small
+
+---
+
+## Task 12: MSG156 reason and WARN log in the backend
+
+**Story:** STORY-005, STORY-007, STORY-011
+**Feature:** jira-check-reason
+**Description:** Branch `feat/KAN-344-workspace-jira-check-reason`. `JiraClient#checkServiceAccount` throws
+`JiraPermissionMissingException` (a `JiraRejectedException` with status 403) naming the keys whose `havePermission` is
+not true, in the order `BROWSE_PROJECTS`, `CREATE_ISSUES`, `MODIFY_REPORTER` (AC-011.1). `WorkspaceServiceImpl` maps a
+failed check to `MSG156` params `tracker_name`, `reason` and, for `MISSING_PERMISSIONS`, `missing_permissions`
+(AC-011.9: permission missing → `MISSING_PERMISSIONS`; other `JiraRejectedException` → `TOKEN_REJECTED`;
+`JiraUnavailableException`, 5xx, or an unreadable cloud id on Update → `JIRA_UNREACHABLE`) and logs one WARN line with
+step, reason, status and missing keys (AC-011.10). An undecryptable stored token keeps `MSG156` without a reason
+(AC-007.5).
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/tracker/exception/JiraPermissionMissingException.java`
+- Modify: `tracker/client/JiraClient.java`, `tracker/client/TicketTrackerClient.java` (javadoc),
+  `workspace/service/impl/WorkspaceServiceImpl.java`
+- Test: `JiraClientServiceAccountCheckTest` (or the existing check test), `WorkspaceServiceImplTest`
+**Dependencies:** Task 10
+**Estimated size:** small
+
+---
+
+## Task 13: Reason line under the token field
+
+**Story:** STORY-009, STORY-010
+**Feature:** jira-check-reason-screen
+**Description:** A workspace helper turns the `MSG156` params into the line of AC-009.8; 2.1 Setup and 2.2 Settings
+show it under the token field below the `MSG156` text (AC-009.8, AC-010.9). Unknown or absent reason → no line.
+**Files:**
+- Create: `frontend/src/features/workspace/components/serviceAccountReason.ts` (+ test)
+- Modify: `frontend/src/features/workspace/components/WorkspaceInfoForm.tsx`,
+  `frontend/src/features/workspace/components/WorkspaceSetupForm.tsx`
+- Test: `WorkspaceSetupPage.test.tsx` (AC-009.8), `WorkspaceSettingsCompanyInfo.test.tsx` (AC-010.9)
+**Dependencies:** Task 12 (params shape)
+**Estimated size:** small

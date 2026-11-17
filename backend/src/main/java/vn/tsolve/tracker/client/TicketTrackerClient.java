@@ -12,7 +12,10 @@ import vn.tsolve.tracker.dto.TrackerStatus;
  */
 public interface TicketTrackerClient {
 
-    /** Checks that the account authenticates and has Browse projects, Create Issues and Modify Reporter. */
+    /**
+     * Checks that the account authenticates and has Browse projects, Create Issues and Modify Reporter; a missing
+     * permission is a {@code JiraPermissionMissingException} naming it.
+     */
     void checkServiceAccount(JiraAccount account);
 
     /** Adds a comment made of these paragraphs to the issue and returns the new comment's id. */

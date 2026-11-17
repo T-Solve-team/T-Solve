@@ -172,7 +172,9 @@
         "jira-cloud-id": "evaluating",
         "workspace-form-no-email": "evaluating",
         "default-project-api": "passing",
-        "default-project-screen": "passing"
+        "default-project-screen": "passing",
+        "jira-check-reason": "evaluating",
+        "jira-check-reason-screen": "evaluating"
       },
       "lastUpdated": "2026-11-17T04:06:47.852Z",
       "branch": "feat/workspace",

@@ -1340,8 +1340,8 @@
     }
   },
   "workspace": {
-    "specHash": "b8cc01b75e3b292ca76a65e08a1d4f7b75def6abde72aa87bccdd95167cb5a24",
-    "approvedAt": "2026-11-16T20:00:08.903Z",
+    "specHash": "d952c481789c8eba6cb884b18c663db2a60eb2b7c1c0c26a0c16b36e043c7a41",
+    "approvedAt": "2026-11-17T06:55:54.825Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN an Admin sends  with an allowed name, THE system SHALL store one Department in status  under that name with leading and trailing whitespace removed and inner spaces kept, and answer 201 with its  and stored .",
@@ -1450,6 +1450,7 @@
       "AC-009.5": "WHEN Setup succeeds, THE web app SHALL show , refetch  and open the User List.",
       "AC-009.6": "IF the backend answers 409 (), THEN THE web app SHALL show no error, refetch  and",
       "AC-009.7": "WHILE the request is in flight, THE Save button SHALL be disabled, so the form is not sent twice.",
+      "AC-009.8": "WHEN the backend answers  with a , THE screen SHALL show under the token field, below",
       "AC-010.1": "WHEN an Admin opens 2.2 Workspace Settings, THE screen SHALL load  and show the",
       "AC-010.2": "THE API token field SHALL start empty with the hint that leaving it empty keeps the current token, and",
       "AC-010.3": "WHEN the Admin saves valid values, THE screen SHALL send  (the token only when",
@@ -1458,6 +1459,7 @@
       "AC-010.6": "IF loading fails, THEN THE screen SHALL show the shared error state with a retry.",
       "AC-010.7": "WHILE  is true, THE screen SHALL show above the API token field a read-only",
       "AC-010.8": "IF  is false, THEN THE screen SHALL show \"Current token\" as \"Not set\" and SHALL",
+      "AC-010.9": "WHEN the backend answers  with a , THE screen SHALL show the reason line of AC-009.8",
       "AC-011.1": "WHEN the service account is checked, THE backend SHALL call  and then",
       "AC-011.2": "IF Jira answers 401 or 403, any other error status, times out or cannot be reached, THEN THE check SHALL",
       "AC-011.3": "THE site rule SHALL accept only an address that, after trimming and lower-casing, is , has no",
@@ -1466,6 +1468,8 @@
       "AC-011.6": "IF  is missing or is not the Base64 form of exactly 32 bytes, THEN THE backend SHALL",
       "AC-011.7": "THE token SHALL not appear in any response body, log line, audit entry, exception message or",
       "AC-011.8": "WHEN the backend needs the site's cloud id (AC-005.6, AC-007.11), THE backend SHALL read it from",
+      "AC-011.9": "WHEN a service account check of Setup or Update fails, THE backend SHALL add to the  params a",
+      "AC-011.10": "WHEN a service account check of Setup or Update fails, THE backend SHALL log one WARN line with the",
       "AC-012.1": "WHEN an Admin sends  for an Active Department, THE system SHALL answer 200 with , ,  (the current default Project as a Project option, or null) and  (every Active Project of that Department as a Project option, ordered by , empty when it has none).",
       "AC-012.2": "WHEN  succeeds, THE system SHALL answer 200 with the body of AC-012.1 as stored after the save.",
       "AC-012.3": "IF the stored default Project is not Active, THEN THE system SHALL answer  null and treat the Department as having no default Project in every check of this story.",
