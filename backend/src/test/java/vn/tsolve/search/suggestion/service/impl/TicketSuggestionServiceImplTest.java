@@ -34,13 +34,15 @@ import vn.tsolve.search.scope.service.VisibleScope;
 import vn.tsolve.search.suggestion.dto.TicketSuggestionRequest;
 
 class TicketSuggestionServiceImplTest {
+    private static final UUID WRITER_ID = UUID.fromString("00000000-0000-0000-0000-0000000000aa");
+
     private final VisibleScope visibleScope = mock(VisibleScope.class);
     private final TicketRankingService ranking = mock(TicketRankingService.class);
     private final SearchLogRepository logs = mock(SearchLogRepository.class);
     private final TicketSuggestionServiceImpl service = new TicketSuggestionServiceImpl(visibleScope, ranking, logs);
     private final TSolveUser user =
             new TSolveUser(UUID.randomUUID(), "writer@example.test", "Writer", Set.of(Role.TICKET_RESOLVER));
-    private final VisibleScope.Scope scope = new VisibleScope.Scope(Set.of(7L), Set.of(9L), Optional.of("Writer"));
+    private final VisibleScope.Scope scope = new VisibleScope.Scope(Set.of(7L), Set.of(9L), Optional.of(WRITER_ID));
     private final PageRequest pageRequest = PageRequest.of(0, 5);
     private final RankFilter noFilter = new RankFilter(null, null, null, null);
 

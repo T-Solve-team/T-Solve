@@ -210,7 +210,7 @@ class ChatbotAnswerServiceImplTest {
     }
 
     @Test
-    void classifierTimeoutFailsOpen_AC_009_7_BUG_326() {
+    void classifierTimeoutFailsOpen_AC_009_7_BUG_327() {
         // Simulate the exceptional completion of a timed-out classifier future without waiting on a clock.
         when(llm.chat(any(), notNull())).thenAnswer(invocation -> {
             throw new TimeoutException();
@@ -221,7 +221,7 @@ class ChatbotAnswerServiceImplTest {
     }
 
     @Test
-    void classifierUnexpectedFailureFailsOpen_AC_009_6_BUG_327() {
+    void classifierUnexpectedFailureFailsOpen_AC_009_6_BUG_328() {
         when(llm.chat(any(), notNull())).thenThrow(new IllegalStateException("unexpected response shape"));
         var response = service.ask(USER, question());
         assertThat(response.outcome()).isEqualTo(Outcome.NO_SOURCE);
@@ -229,7 +229,7 @@ class ChatbotAnswerServiceImplTest {
     }
 
     @Test
-    void firstQuestionIsEmbeddedAsAsked_AC_009_5_BUG_328() {
+    void firstQuestionIsEmbeddedAsAsked_AC_009_5_BUG_329() {
         when(llm.chat(any(), notNull())).thenReturn("{\"category\":\"QUESTION\",\"query\":\"VPN connection error\"}");
         service.ask(USER, new ChatbotQuestionRequest("  lỗi VPN 809 khi kết nối  ", List.of()));
         verify(embeddings).embed(List.of("lỗi VPN 809 khi kết nối"));

@@ -19,7 +19,7 @@ public interface ChatbotAnswerRepository extends JpaRepository<ChatbotAnswer, UU
     @Query("SELECT a FROM ChatbotAnswer a WHERE a.id = :id AND a.userId = :userId")
     Optional<ChatbotAnswer> findForUpdateByIdAndUserId(@Param("id") UUID id, @Param("userId") UUID userId);
 
-    // BUG-325: only an ANSWERED or NO_SOURCE answer can be rated (AC-003.1); a refused or greeting row matches nothing.
+    // BUG-326: only an ANSWERED or NO_SOURCE answer can be rated (AC-003.1); a refused or greeting row matches nothing.
     @Modifying
     @Query("UPDATE ChatbotAnswer a SET a.rating = :rating, a.ratedAt = :ratedAt "
             + "WHERE a.id = :id AND a.userId = :userId AND a.outcome IN ('ANSWERED', 'NO_SOURCE')")
@@ -29,7 +29,7 @@ public interface ChatbotAnswerRepository extends JpaRepository<ChatbotAnswer, UU
             @Param("rating") ChatbotRating rating,
             @Param("ratedAt") Instant ratedAt);
 
-    // AC-012.7: only a question asked in Jira, in that Project; BUG-325: only a searched answer.
+    // AC-012.7: only a question asked in Jira, in that Project; BUG-326: only a searched answer.
     @Modifying
     @Query("UPDATE ChatbotAnswer a SET a.rating = :rating, a.ratedAt = :ratedAt "
             + "WHERE a.id = :id AND a.source = 'JIRA_APP' AND a.projectId = :projectId "

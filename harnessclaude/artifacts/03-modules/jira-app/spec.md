@@ -9,7 +9,7 @@ depth: Normal
 
 The T-Solve Jira App (Forge UI Kit, `jira-app/`) and the Jira App API endpoints it calls
 (`/api/v1/jira-app/**`). STORY-001 to STORY-008 (KAN-126): Solution Form, AI Rewrite, Issue Panel (STORY-003, STORY-006
-and STORY-009 retired). STORY-010 (KAN-294): Ask T-Solve page. STORY-012 (KAN-130): resubmit after Changes requested. Sources: Report3 (UC-19, GBR-04, 06, 08, 10, 12, 19, 26,
+and STORY-009 retired). STORY-010 (KAN-294): Ask T-Solve page. STORY-012 (KAN-130): resubmit after Changes requested. STORY-014: link the Jira account to T-Solve. Sources: Report3 (UC-19, GBR-04, 06, 08, 10, 12, 19, 26,
 33, 36, System Messages), RESEARCH-003, RESEARCH-004, the `ticket-review` spec (STORY-009, STORY-012), the `chatbot`
 spec (STORY-005 to STORY-007). Terms: **user** = the active T-Solve Account linked to the Jira account in the FIT
 `principal`; **Project** = the ACTIVE T-Solve Project whose `jira_project_key` is the issue's project key;
@@ -41,6 +41,7 @@ an issue has at most one.
 | 2026-11-17 | STORY-010 | KAN-294: Ask T-Solve needs no T-Solve sign-in. The page answers anyone in a Jira project that is an Active T-Solve Project, from the Published Solutions and the Wiki of that Project's Department (chatbot STORY-012); the project comes only from the verified FIT (new AC-010.13). AC-010.2 now covers a Jira project or site that is not connected (Jira App text "This Jira project is not connected to T-Solve.", MSG124 for a site), AC-010.4 and AC-010.11 reworded, AC-010.12 says the server stores the question without a user; new AC-010.14 the eligibility answer; new AC-010.15 "Solved" and "Not solved, create ticket" rate the last answer HELPFUL or NOT_HELPFUL. MSG62 is no longer shown on the page | User decisions of 17/11: the page helps people solve a problem in the project they are in, so who asks does not matter; scope = the Project's Department; questions are still stored (without a user) and counted on the Knowledge Dashboard |
 | 2026-11-17 | STORY-010 | KAN-294 review of the risks: AC-010.4 answers from the Department's Solutions and only Company-wide Wiki documents (the MSG80 rule, UC-36), so the page never shows a Department-only Wiki document to a requester outside the Department; AC-010.11 and AC-010.14 also refuse a FIT without a Jira user (anonymous access to a Jira project) | User decision of 17/11 after the risk review: same protection as the MSG80 comment |
 | 2026-11-17 | STORY-010 | AC-010.4: a Jira account linked to an active T-Solve user also gets the Wiki documents that user may view (Department-only ones included); an unlinked one keeps the Company-wide documents only | User decision of 17/11: Department-only documents for the people allowed to read them, no sign-in required |
+| 2026-11-17 | STORY-014 (new), STORY-008, STORY-013 | New STORY-014 (AC-014.1 to AC-014.11): a Jira personal settings page "T-Solve account" links the Jira account to a T-Solve Account through identity's link request (identity AC-001.69 to AC-001.72) and shows the linked Account; the server reads the linked Account from `jira_account_links` (identity AC-001.77) and no longer from the `TSOLVE_STUB_JIRA_ASKERS` stand-in. AC-008.1: the panel shows MSG62 with a link to that page. AC-013.2: scope `read:jira-user` added for the Jira display name of the link request. Requirement 6, Out of Scope, the Exposed table and Required from `identity` follow | User decisions of 17/11: a personal settings page rather than a button in every panel; the linked state shows name and email with "Link another account" (no unlink); the page re-checks every 5 s after the click; the display name is read from Jira with the app token (new scope); the panel links to the page |
 
 ## Requirements
 
@@ -56,6 +57,8 @@ an issue has at most one.
 5. An "Ask T-Solve" page in each Jira project lets a linked user ask the Knowledge Chatbot before creating an issue;
    "Not solved, create ticket" opens Jira's Create dialog prefilled with the conversation (STORY-010). Requirements 1
    to 4 belong to KAN-126.
+6. A "T-Solve account" personal settings page links the Jira account to a T-Solve Account and shows the linked
+   Account; every Jira App call finds its T-Solve user through that link (STORY-014).
 
 ### Non-Functional
 1. Every Jira App API call is verified with a FIT (tracker STORY-001); the user comes from the FIT `principal`.
@@ -112,7 +115,7 @@ an issue has at most one.
 ### STORY-008: Issue Panel
 - As a Ticket Resolver, I want the panel to show the issue's Solution status so that I know what is left to do for it.
 - Acceptance:
-  - AC-008.1: IF the Jira account is not linked to an active T-Solve Account, THEN THE panel SHALL show MSG62 and nothing else.
+  - AC-008.1: IF the Jira account is not linked to an active T-Solve Account, THEN THE panel SHALL show MSG62 and a link "Open T-Solve account settings" (a Jira App label — user, 2026-11-17) that opens the settings page of STORY-014, and nothing else.
   - AC-008.2: WHILE the issue's ticket is in Pending review, THE panel SHALL show MSG65.
   - AC-008.3: WHILE the user has a Draft for the issue and the issue's ticket does not exist, THE panel SHALL show MSG77 with a button that reopens the form with the Draft.
   - AC-008.7: WHILE the issue's Solution Form ticket written by the user is in Changes requested, THE panel SHALL show MSG64 with the Project Manager's name and comment, read from `ticket-review`'s `GET /api/v1/jira-app/issues/{issueKey}/review-feedback`, as `Changes requested by {manager_name}: "{comment}".` — the SRS text without its last sentence "Update the solution and resubmit." (user, 2026-11-14).
@@ -158,10 +161,27 @@ an issue has at most one.
   - AC-013.1: THE manifest SHALL declare a scheduled trigger with interval `hour` and a trigger on the app's install and
     upgrade events, each invoking the remote endpoint of `POST /api/v1/jira-app/app-token` directly (not through a
     Forge function), with `auth` `appSystemToken: true` and no user token.
-  - AC-013.2: THE manifest SHALL request the scopes `read:jira-work` and `write:jira-work` and no administration scope
-    (`manage:*`), so the app token can read issues, projects and comments and add comments and issues only.
+  - AC-013.2: THE manifest SHALL request the scopes `read:jira-work`, `write:jira-work` and `read:jira-user` and no
+    administration scope (`manage:*`), so the app token can read issues, projects, comments and a user's display name
+    (AC-014.6) and add comments and issues only.
   - AC-013.3: WHEN the backend answers the token call with an error, THE Jira App SHALL do nothing else; the next run
     sends a new call (no retry loop in the app).
+
+### STORY-014: Link the Jira account to T-Solve
+- As a Ticket Resolver, I want to link my Jira account to my T-Solve Account once, from my Jira personal settings, so that the panel and the Solution Form know who I am in T-Solve (GBR-19, UC-59).
+- Terms: **settings page** = the "T-Solve account" Jira personal settings page; **linked Account** = the Active T-Solve Account that identity's `jira_account_links` row of the FIT's Jira account points to, in the Workspace of the FIT's site (identity AC-001.77).
+- Acceptance:
+  - AC-014.1: THE Jira App SHALL add a personal settings page titled "T-Solve account" (Forge `jira:personalSettingsPage`) to the profile menu of every Jira user of the site.
+  - AC-014.2: WHEN the settings page opens, THE Jira App SHALL call `GET /api/v1/jira-app/account-link`, which SHALL answer, for the FIT's site and Jira user only, `status` `LINKED` with the linked Account's full name and email and the link time, `NOT_LINKED`, or `SITE_NOT_CONNECTED` (the site belongs to no Workspace), and SHALL call no AI and store nothing.
+  - AC-014.3: WHILE the status is `NOT_LINKED`, THE settings page SHALL show "Your Jira account is not linked to T-Solve." and a button "Sign in to T-Solve" (Jira App labels — user, 2026-11-17).
+  - AC-014.4: WHILE the status is `LINKED`, THE settings page SHALL show `Linked to T-Solve as {full_name} ({email}).` with the linked Account's full name and email, and a button "Link another account" (Jira App labels — user, 2026-11-17), and SHALL offer no unlink.
+  - AC-014.5: WHILE the status is `SITE_NOT_CONNECTED`, THE settings page SHALL show MSG124 and no button.
+  - AC-014.6: WHEN the user clicks "Sign in to T-Solve" or "Link another account", THE Jira App SHALL call `POST /api/v1/jira-app/account-link`; THE server SHALL read the display name of the FIT's Jira account from Jira (`GET /rest/api/3/user?accountId=`) with the Workspace's app token (STORY-013), ask identity's `JiraLinkRequestService` for a link request with the Workspace of the FIT's site, the FIT's Jira account, that display name and the Jira site name (the host of the Workspace's Jira site URL) (identity AC-001.69), and answer with the link it returns.
+  - AC-014.7: WHEN the link arrives, THE Jira App SHALL open it in a new browser tab and, instead of the button, show MSG74 with "page" in place of "panel": "Finish signing in in the new tab. This page will update when you are done." (user, 2026-11-17).
+  - AC-014.8: WHILE MSG74 is shown, THE Jira App SHALL call `GET /api/v1/jira-app/account-link` every 5 seconds and SHALL show the state of AC-014.4 as soon as the answer is `LINKED` with a link time later than the click; WHEN 10 minutes have passed without that answer (the link request has expired), THE Jira App SHALL stop calling and show the state of the last answer again, with its button.
+  - AC-014.9: IF the site belongs to no Workspace, THEN THE server SHALL answer `POST /api/v1/jira-app/account-link` with 403 MSG124; IF the FIT has no Jira user (`principal`), THEN with 403 MSG08; IF Jira or the link request store cannot be reached, or Jira returns no display name, THEN with 503 MSG06; in every case THE server SHALL create no link request, and THE Jira App SHALL show that message, open no tab and keep the button.
+  - AC-014.10: THE server SHALL take the site and the Jira account of a link request only from the verified FIT, never from the request body, a parameter or a header (identity AC-001.38, GBR-19).
+  - AC-014.11: THE server SHALL find the T-Solve user of every Jira App call — the panel, the Solution Form, the resubmission and the Ask T-Solve answer (AC-010.4) — only as the linked Account (identity AC-001.77): no link, or a link to an Account that is not Active, means not linked; THE server SHALL no longer read the `TSOLVE_STUB_JIRA_ASKERS` setting.
 
 ## Out of Scope
 - Evidence in the Jira App (attach, MSG34, MSG72, the Evidence list of 3.4): Forge UI calls carry at most 500 KB
@@ -182,7 +202,8 @@ an issue has at most one.
 - Recording "Solved" on the server — after the chatbot ratings backend (KAN-182).
 - Sources limited to the open Jira project — the page answers like the web chatbot (user, 2026-11-07).
 - Anything on Jira's own Create dialog (RESEARCH-004 Options A, A+, B).
-- Linking the Jira account to a T-Solve user — `identity`; a configured stub until then.
+- Recording the link and the `/jira-link` confirm page — `identity` (AC-001.69 to AC-001.72). Unlinking a Jira
+  account (user, 2026-11-17: "Link another account" replaces the link instead).
 
 ## Interface Contracts
 
@@ -202,9 +223,12 @@ feedback endpoint (AC-008.7).
 | `GET /api/v1/jira-app/questions/eligibility` (→ `status`: `CONNECTED`, `SITE_NOT_CONNECTED` or `PROJECT_NOT_CONNECTED` for the FIT's site and project; calls no AI) | Ask T-Solve (on open, AC-010.2, AC-010.14) | 010 |
 | `POST /api/v1/jira-app/questions` (question + history → the chatbot answer: outcome, text, citations) | Ask T-Solve | 010 |
 | `PUT /api/v1/jira-app/questions/{answerId}/rating` (`{ rating: HELPFUL | NOT_HELPFUL }` → 204; 404 MSG04 for an answer of another Project) | Ask T-Solve, "Solved" / "Not solved" (AC-010.15) | 010 |
+| `GET /api/v1/jira-app/account-link` (→ `status` `LINKED` / `NOT_LINKED` / `SITE_NOT_CONNECTED`; when linked, `fullName`, `email`, `linkedAt`) | T-Solve account (AC-014.2) | 014 |
+| `POST /api/v1/jira-app/account-link` (no body → `{ url }`, the `/jira-link?request=<id>` link; 403 MSG124 / MSG08, 503 MSG06) | T-Solve account (AC-014.6, AC-014.9) | 014 |
 
 Forge: `jira:issueViewBackgroundScript` (opens the form), `jira:issuePanel` (panel), Modal for 4.1/4.2,
-`requestJira` for the issue summary/description; `jira:projectPage` for the Ask T-Solve page, `invokeRemote` to the
+`requestJira` for the issue summary/description; `jira:personalSettingsPage` (a Forge Preview module) for the
+T-Solve account page; `jira:projectPage` for the Ask T-Solve page, `invokeRemote` to the
 endpoints above, and `CreateIssueModal`
 (`@forge/jira-bridge`) for the prefilled Create dialog — whether it can prefill labels and where the page shows in
 Jira's navigation are checked in a spike first (RESEARCH-004, open questions).
@@ -212,7 +236,7 @@ Jira's navigation are checked in a spike first (RESEARCH-004, open questions).
 ### Required from other modules
 | Owner | Needed operation |
 |-------|------------------|
-| `identity` | Jira accountId → T-Solve user (id, active) — stub until built |
+| `identity` | `JiraAccountLinkLookup`: Jira accountId → the linked Active Account (AC-001.77); `JiraLinkRequestService.create` (AC-001.69) |
 | `project` / `review` | Project of a Jira project key, the user's `project_membership` rows (today read by `ticket-review`'s `ProjectMembershipRepository`) |
 | `ticket-review` (Phạm Tùng Dương) | The Solution Form ticket storage it reviews (`ticket`, source `SOLUTION_FORM`, entry time and due date, AC-009.11/AC-012.2); `GET /api/v1/jira-app/issues/{issueKey}/review-feedback` (MSG64) |
 | `ai` (Trần Hải Anh) | Chat client (`LlmClient`) for the AI draft and rewrite — prompts owned here, a configured stand-in for demos |

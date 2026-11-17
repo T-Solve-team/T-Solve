@@ -128,7 +128,7 @@ No blocking issues. The informational items 1 to 5 are listed in Stage 2. Item 1
 - Probe: the greeting regex on emoji samples (Issue 1), a throw-away script in the scratchpad.
 
 ## Resolution (2026-11-17, before commit)
-- The emoji normalization finding is fixed as BUG-323 (`docs/bug-log.md`): both normalizers also strip `\p{Cf}`
-  (ZWJ, zero-width space) and U+FE00–U+FE0F. New tests `QuestionClassifierTest.stripsEmojiJoinersAndSelectors_AC_009_1_BUG_323`
-  and `handlers.test.ts` "AC-004.7 strips emoji joiners and selectors … (BUG-323)" failed before the fix and pass
+- The emoji normalization finding is fixed as BUG-324 (`docs/bug-log.md`): both normalizers also strip `\p{Cf}`
+  (ZWJ, zero-width space) and U+FE00–U+FE0F. New tests `QuestionClassifierTest.stripsEmojiJoinersAndSelectors_AC_009_1_BUG_324`
+  and `handlers.test.ts` "AC-004.7 strips emoji joiners and selectors … (BUG-324)" failed before the fix and pass
   after it. The keycap mark U+20E3 is not stripped (a "1️⃣" greeting goes to the classifier).

@@ -4,7 +4,8 @@
 // No Published-ticket search in Jira (spec change 2026-11-14): search is on the T-Solve web app.
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button, Inline, SectionMessage, Spinner, Stack, Text, useProductContext } from '@forge/react';
-import { events, requestJira, showFlag } from '@forge/bridge';
+import { events, requestJira, router, showFlag } from '@forge/bridge';
+import { settingsPagePath } from '../accountSettings/settingsPage';
 import { getIssuePanel, getReviewFeedback, openSolutionForm } from '../api/tsolveClient';
 import { DONE, readIssue } from '../background/watchDone';
 import { doneFlag, SolutionFormModal } from '../form/SolutionFormModal';
@@ -17,6 +18,8 @@ export const PANEL_LABELS = {
   editAndResubmit: 'Edit and resubmit',
   // A Jira App text, not an SRS message (AC-008.10 — user, 2026-11-15).
   published: 'Solution approved and published.',
+  // A Jira App label, not an SRS message (AC-008.1 — user, 2026-11-17).
+  openAccountSettings: 'Open T-Solve account settings',
 };
 
 export function IssuePanel() {
@@ -108,7 +111,20 @@ export function IssuePanel() {
     return <Spinner label="loading" />;
   }
   if (!panel.linked) {
-    return <Text>{message('MSG62')}</Text>;
+    // MSG62 and the way to the T-Solve account settings page (AC-008.1, STORY-014).
+    const settings = settingsPagePath(context);
+    return (
+      <Stack space="space.100">
+        <Text>{message('MSG62')}</Text>
+        {settings && (
+          <Inline>
+            <Button appearance="link" onClick={() => router.navigate(settings).catch(() => {})}>
+              {PANEL_LABELS.openAccountSettings}
+            </Button>
+          </Inline>
+        )}
+      </Stack>
+    );
   }
 
   const done = issue?.category === DONE;
