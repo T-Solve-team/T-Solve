@@ -1890,3 +1890,5 @@
 {"ts":"2026-11-16T20:45:09.516Z","type":"feature-status","module":"workspace","feature":"default-project-screen","from":"pending","to":"in-progress"}
 {"ts":"2026-11-17T03:58:44.575Z","type":"feature-status","module":"workspace","feature":"default-project-screen","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-17T03:58:45.135Z","type":"commit-recorded","module":"workspace","repo":"default","sha":"030ed7b71dc85c45fe3a3d21731bfde87c8f653a"}
+{"ts":"2026-11-17T04:06:47.554Z","type":"feature-status","module":"workspace","feature":"default-project-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-17T04:06:47.854Z","type":"feature-status","module":"workspace","feature":"default-project-screen","from":"evaluating","to":"passing"}

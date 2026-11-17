@@ -171,10 +171,10 @@
         "workspace-token-hint": "pending",
         "jira-cloud-id": "evaluating",
         "workspace-form-no-email": "evaluating",
-        "default-project-api": "evaluating",
-        "default-project-screen": "evaluating"
+        "default-project-api": "passing",
+        "default-project-screen": "passing"
       },
-      "lastUpdated": "2026-11-17T03:58:45.131Z",
+      "lastUpdated": "2026-11-17T04:06:47.852Z",
       "branch": "feat/workspace",
       "repos": [
         "default"
