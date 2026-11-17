@@ -1329,8 +1329,8 @@
     }
   },
   "jira-app": {
-    "specHash": "c56daf7c1aff255ea05d3d34d4a714c7111d4f79c84639522d0519462b129b8e",
-    "approvedAt": "2026-11-17T14:23:21.356Z",
+    "specHash": "f644e8ebaeb49390806de4e2bf46c4620648caa820dd7fff3dce0802cd94e106",
+    "approvedAt": "2026-11-17T15:50:14.518Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the issue being viewed changes to a status of the Done status category, THE Jira App SHALL ask the server whether the form may open and open the form when it may.",
@@ -1387,7 +1387,7 @@
       "AC-013.1": "THE manifest SHALL declare a scheduled trigger with interval  and a trigger on the app's install and",
       "AC-013.2": "THE manifest SHALL request the scopes ,  and  and no",
       "AC-013.3": "WHEN the backend answers the token call with an error, THE Jira App SHALL do nothing else; the next run",
-      "AC-014.1": "THE Jira App SHALL add a personal settings page titled \"T-Solve account\" (Forge ) to the profile menu of every Jira user of the site.",
+      "AC-014.1": "THE Jira App SHALL add a page titled \"T-Solve account\" (Forge ) to the Apps section of Jira's navigation for every Jira user of the site.",
       "AC-014.2": "WHEN the settings page opens, THE Jira App SHALL call , which SHALL answer, for the FIT's site and Jira user only,   with the linked Account's full name and email and the link time, , or  (the site belongs to no Workspace), and SHALL call no AI and store nothing.",
       "AC-014.3": "WHILE the status is , THE settings page SHALL show \"Your Jira account is not linked to T-Solve.\" and a button \"Sign in to T-Solve\" (Jira App labels — user, 2026-11-17).",
       "AC-014.4": "WHILE the status is , THE settings page SHALL show  with the linked Account's full name and email, and a button \"Link another account\" (Jira App labels — user, 2026-11-17), and SHALL offer no unlink.",

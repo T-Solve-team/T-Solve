@@ -2035,5 +2035,10 @@
 {"ts":"2026-11-17T14:20:38.489Z","type":"quick-closed","what":"Add prompt=select_account to the Google identity providers in the staging Keycloak realm files, with a guard test (KAN-357)","files":["infra/keycloak/staging/realm-tsolve.json","infra/keycloak/staging/realm-tsolve-ops.json","backend/src/test/java/vn/tsolve/identity/keycloak/StagingRealmFilesTest.java"]}
 {"ts":"2026-11-17T14:24:21.075Z","type":"quick-opened","what":"Add PR #280 and KAN-357 to the BUG-322 row (KAN-357)","files":["docs/bug-log.md"]}
 {"ts":"2026-11-17T14:24:33.730Z","type":"quick-closed","what":"Add PR #280 and KAN-357 to the BUG-322 row (KAN-357)","files":["docs/bug-log.md"]}
+{"ts":"2026-11-17T15:50:14.525Z","type":"spec-approved","module":"jira-app","specHash":"f644e8ebaeb49390806de4e2bf46c4620648caa820dd7fff3dce0802cd94e106"}
+{"ts":"2026-11-17T15:50:14.791Z","type":"feature-status","module":"jira-app","feature":"account-page-global","from":null,"to":"pending"}
+{"ts":"2026-11-17T15:50:15.033Z","type":"feature-status","module":"jira-app","feature":"account-page-global","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T15:51:37.153Z","type":"feature-status","module":"jira-app","feature":"account-page-global","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T15:51:37.881Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"de1b19bf22056e427e1c58592b6da829feeb0a97"}
 {"ts":"2026-11-17T15:11:05.979Z","type":"spec-approved","module":"chatbot","specHash":"342300752ea59274bf0c24942e978b5538ca6083af777ea14539024d4eb62a30"}
 {"ts":"2026-11-17T15:40:42.156Z","type":"spec-approved","module":"chatbot","specHash":"dd32f6721cc04e3daa484635f18ad9e760e28a3b15fe06e8af96e65df4db22bb"}

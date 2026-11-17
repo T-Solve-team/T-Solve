@@ -42,6 +42,7 @@ an issue has at most one.
 | 2026-11-17 | STORY-010 | KAN-294 review of the risks: AC-010.4 answers from the Department's Solutions and only Company-wide Wiki documents (the MSG80 rule, UC-36), so the page never shows a Department-only Wiki document to a requester outside the Department; AC-010.11 and AC-010.14 also refuse a FIT without a Jira user (anonymous access to a Jira project) | User decision of 17/11 after the risk review: same protection as the MSG80 comment |
 | 2026-11-17 | STORY-010 | AC-010.4: a Jira account linked to an active T-Solve user also gets the Wiki documents that user may view (Department-only ones included); an unlinked one keeps the Company-wide documents only | User decision of 17/11: Department-only documents for the people allowed to read them, no sign-in required |
 | 2026-11-17 | STORY-014 (new), STORY-008, STORY-013 | New STORY-014 (AC-014.1 to AC-014.11): a Jira personal settings page "T-Solve account" links the Jira account to a T-Solve Account through identity's link request (identity AC-001.69 to AC-001.72) and shows the linked Account; the server reads the linked Account from `jira_account_links` (identity AC-001.77) and no longer from the `TSOLVE_STUB_JIRA_ASKERS` stand-in. AC-008.1: the panel shows MSG62 with a link to that page. AC-013.2: scope `read:jira-user` added for the Jira display name of the link request. Requirement 6, Out of Scope, the Exposed table and Required from `identity` follow | User decisions of 17/11: a personal settings page rather than a button in every panel; the linked state shows name and email with "Link another account" (no unlink); the page re-checks every 5 s after the click; the display name is read from Jira with the app token (new scope); the panel links to the page |
+| 2026-11-17 | STORY-014, STORY-008 | AC-014.1: the "T-Solve account" page is a Forge `jira:globalPage` in the Apps section of Jira's navigation instead of a `jira:personalSettingsPage` in the profile menu; the story and the term "settings page" follow. AC-008.1's link opens that page. No other criterion changes | KAN-358 dev-site test (user, 17/11): the profile menu of bdang798 showed no "T-Solve account" item (a Forge Preview module), although the page worked by its URL; the user chose the Apps section, which is not a Preview module |
 
 ## Requirements
 
@@ -57,7 +58,7 @@ an issue has at most one.
 5. An "Ask T-Solve" page in each Jira project lets a linked user ask the Knowledge Chatbot before creating an issue;
    "Not solved, create ticket" opens Jira's Create dialog prefilled with the conversation (STORY-010). Requirements 1
    to 4 belong to KAN-126.
-6. A "T-Solve account" personal settings page links the Jira account to a T-Solve Account and shows the linked
+6. A "T-Solve account" page in Jira's Apps section links the Jira account to a T-Solve Account and shows the linked
    Account; every Jira App call finds its T-Solve user through that link (STORY-014).
 
 ### Non-Functional
@@ -168,10 +169,10 @@ an issue has at most one.
     sends a new call (no retry loop in the app).
 
 ### STORY-014: Link the Jira account to T-Solve
-- As a Ticket Resolver, I want to link my Jira account to my T-Solve Account once, from my Jira personal settings, so that the panel and the Solution Form know who I am in T-Solve (GBR-19, UC-59).
-- Terms: **settings page** = the "T-Solve account" Jira personal settings page; **linked Account** = the Active T-Solve Account that identity's `jira_account_links` row of the FIT's Jira account points to, in the Workspace of the FIT's site (identity AC-001.77).
+- As a Ticket Resolver, I want to link my Jira account to my T-Solve Account once, from the T-Solve app in Jira, so that the panel and the Solution Form know who I am in T-Solve (GBR-19, UC-59).
+- Terms: **settings page** = the app's "T-Solve account" page in the Apps section of Jira's navigation; **linked Account** = the Active T-Solve Account that identity's `jira_account_links` row of the FIT's Jira account points to, in the Workspace of the FIT's site (identity AC-001.77).
 - Acceptance:
-  - AC-014.1: THE Jira App SHALL add a personal settings page titled "T-Solve account" (Forge `jira:personalSettingsPage`) to the profile menu of every Jira user of the site.
+  - AC-014.1: THE Jira App SHALL add a page titled "T-Solve account" (Forge `jira:globalPage`) to the Apps section of Jira's navigation for every Jira user of the site.
   - AC-014.2: WHEN the settings page opens, THE Jira App SHALL call `GET /api/v1/jira-app/account-link`, which SHALL answer, for the FIT's site and Jira user only, `status` `LINKED` with the linked Account's full name and email and the link time, `NOT_LINKED`, or `SITE_NOT_CONNECTED` (the site belongs to no Workspace), and SHALL call no AI and store nothing.
   - AC-014.3: WHILE the status is `NOT_LINKED`, THE settings page SHALL show "Your Jira account is not linked to T-Solve." and a button "Sign in to T-Solve" (Jira App labels — user, 2026-11-17).
   - AC-014.4: WHILE the status is `LINKED`, THE settings page SHALL show `Linked to T-Solve as {full_name} ({email}).` with the linked Account's full name and email, and a button "Link another account" (Jira App labels — user, 2026-11-17), and SHALL offer no unlink.
@@ -227,8 +228,7 @@ feedback endpoint (AC-008.7).
 | `POST /api/v1/jira-app/account-link` (no body → `{ url }`, the `/jira-link?request=<id>` link; 403 MSG124 / MSG08, 503 MSG06) | T-Solve account (AC-014.6, AC-014.9) | 014 |
 
 Forge: `jira:issueViewBackgroundScript` (opens the form), `jira:issuePanel` (panel), Modal for 4.1/4.2,
-`requestJira` for the issue summary/description; `jira:personalSettingsPage` (a Forge Preview module) for the
-T-Solve account page; `jira:projectPage` for the Ask T-Solve page, `invokeRemote` to the
+`requestJira` for the issue summary/description; `jira:globalPage` for the T-Solve account page (Apps section); `jira:projectPage` for the Ask T-Solve page, `invokeRemote` to the
 endpoints above, and `CreateIssueModal`
 (`@forge/jira-bridge`) for the prefilled Create dialog — whether it can prefill labels and where the page shows in
 Jira's navigation are checked in a spike first (RESEARCH-004, open questions).

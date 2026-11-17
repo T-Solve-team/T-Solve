@@ -65,7 +65,7 @@ describe('IssuePanel', () => {
     expect(screen.getByText(message('MSG62'))).toBeInTheDocument();
     expect(screen.getAllByRole('button')).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: PANEL_LABELS.openAccountSettings }));
-    expect(router.navigate).toHaveBeenCalledWith(`/jira/settings/personal/apps/${APP}/${ENV}`);
+    expect(router.navigate).toHaveBeenCalledWith(`/jira/apps/${APP}/${ENV}`);
   });
 
   it('AC-008.2 shows MSG65 while the ticket is in Pending review', async () => {
