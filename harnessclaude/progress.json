@@ -172,15 +172,15 @@
         "jira-cloud-id": "evaluating",
         "workspace-form-no-email": "evaluating",
         "default-project-api": "evaluating",
-        "default-project-screen": "pending"
+        "default-project-screen": "evaluating"
       },
-      "lastUpdated": "2026-11-16T20:44:58.653Z",
+      "lastUpdated": "2026-11-17T03:58:45.131Z",
       "branch": "feat/workspace",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "5a363ceb5b07c2ad3ad5ebce59ba4b0ccd7bd97e"
+        "default": "030ed7b71dc85c45fe3a3d21731bfde87c8f653a"
       }
     },
     "project-integration": {
