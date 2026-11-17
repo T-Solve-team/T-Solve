@@ -25,6 +25,8 @@ import vn.tsolve.search.scope.entity.SearchTicket;
 import vn.tsolve.search.scope.service.VisibleScope;
 
 class TicketFeedbackServiceImplTest {
+    private static final UUID WRITER_ID = UUID.fromString("00000000-0000-0000-0000-0000000000aa");
+
     private final FeedbackTicketRepository tickets = mock(FeedbackTicketRepository.class);
     private final TicketFeedbackRepository feedback = mock(TicketFeedbackRepository.class);
     private final VisibleScope visibleScope = mock(VisibleScope.class);
@@ -67,8 +69,8 @@ class TicketFeedbackServiceImplTest {
                 switch (scenario) {
                     case "empty" -> VisibleScope.Scope.empty();
                     case "managedOnly" -> new VisibleScope.Scope(Set.of(), Set.of(7L), Optional.empty());
-                    case "writerOnly" -> new VisibleScope.Scope(Set.of(), Set.of(), Optional.of("resolver"));
-                    default -> new VisibleScope.Scope(Set.of(1L), Set.of(7L), Optional.of("resolver"));
+                    case "writerOnly" -> new VisibleScope.Scope(Set.of(), Set.of(), Optional.of(WRITER_ID));
+                    default -> new VisibleScope.Scope(Set.of(1L), Set.of(7L), Optional.of(WRITER_ID));
                 };
         when(visibleScope.of(user)).thenReturn(scope);
         if (!"empty".equals(scenario)) {

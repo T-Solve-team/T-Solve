@@ -208,7 +208,7 @@ One subpackage per feature so the parallel branches touch disjoint files (user, 
 backend/src/main/java/vn/tsolve/search/
 ├── scope/                                   branch 1 (shared)
 │   ├── service/VisibleScope.java            port: Scope of(TSolveUser) — departmentIds, managedProjectIds, writer
-│   ├── service/impl/NoVisibleScope.java     @Component stand-in: empty sets, no writer (fail closed)
+│   ├── service/impl/MembershipVisibleScope.java  @Component: identity's ScopeAccessService + ProjectMembershipLookup (STORY-012)
 │   ├── entity/SearchTicket.java             @Immutable @Subselect read model: ticket ⋈ project ⋈ department
 │   └── dto/TicketProjectRef.java, dto/TicketDepartmentRef.java   (projectId/departmentId UUID, name)
 ├── config/SearchSchedulingConfig.java     branch 1: its own @EnableScheduling for the catch-up job
@@ -282,17 +282,17 @@ changeset covers it.
 
 | Port (search-owned) | Stand-in | Until | Effect |
 |---------------------|----------|-------|--------|
-| `scope.service.VisibleScope.of(TSolveUser)` → `Scope(departmentIds, managedProjectIds, writer)` | `NoVisibleScope` (default) | `identity` / `project-integration` provide membership | every list, search and suggestion empty; every Feedback 404 (AC-006.2, AC-006.12) |
+| `scope.service.VisibleScope.of(TSolveUser)` → `Scope(departmentIds, managedProjectIds, writerId)` | `MembershipVisibleScope` (default, real; STORY-012, 17/11) | — | Departments identity grants, `PROJECT_MANAGER` memberships, the account id as `writer_id` (AC-006.2, AC-006.12, AC-012.1 – AC-012.6) |
 | same port | `DevAllVisibleScope`, only when `SEARCH_DEV_SCOPE=all` | local demo only | every `ACTIVE` Department, every Project, no writer; one startup warning (AC-006.11) |
 
 Exactly one of the two beans exists: `DevAllVisibleScope` carries
-`@ConditionalOnExpression("'${SEARCH_DEV_SCOPE:}' == 'all'")` and `NoVisibleScope` carries the exact mirror
+`@ConditionalOnExpression("'${SEARCH_DEV_SCOPE:}' == 'all'")` and `MembershipVisibleScope` carries the exact mirror
 `@ConditionalOnExpression("'${SEARCH_DEV_SCOPE:}' != 'all'")`. Both compare case-sensitively; `@ConditionalOnProperty`
 is not used because its `havingValue` ignores case (`ALL` would turn the dev scope on). Unset, empty or any other value
 gives the fail-closed stand-in (AC-006.12). The startup warning of AC-006.11 is logged from the bean's constructor. `DevAllVisibleScope` reads the ids through `scope/repository/ScopeTicketRepository`
 (`JpaRepository<SearchTicket, Long>`: `select distinct departmentId … where departmentStatus = 'ACTIVE'`,
 `select distinct projectId …`), so a Department or Project with no ticket is left out, which changes no answer.
-It is the counterpart of ticket's `StubProjectAccess` and is deleted with `NoVisibleScope` when the real bean lands.
+It is the counterpart of ticket's `StubProjectAccess` and replaced `NoVisibleScope`, deleted by KAN-354 (STORY-012).
 It gives data, not a signed-in user: the backend has no dev principal today, so a local demo still needs the
 `identity` sign-in (edge case #44).
 
@@ -518,3 +518,14 @@ keyword fallback: the chatbot embeds the question once and shares the vector wit
 | Decision | Chosen | Alternatives | Rationale |
 |----------|--------|--------------|-----------|
 | Chatbot access to Solutions | A search `service/` interface taking a vector | Chatbot reads `ticket_embedding`; reuse `TicketRankingService` | `backend/AGENTS.md` module rule; the chatbot scope is the Workspace, not the user's Departments |
+
+## Change 2026-11-17: MembershipVisibleScope (STORY-012, KAN-354)
+
+`NoVisibleScope` made the Ticket List empty for every user on staging. `MembershipVisibleScope` replaces it.
+
+| Decision | Chosen | Alternatives | Rationale |
+|----------|--------|--------------|-----------|
+| Source of the user's Departments | identity's `ScopeAccessService.canAccessDepartment` for each `ACTIVE` Department (native query on `department` in `ScopeTicketRepository`) | Search's own SQL over `app_user`, `user_role`, `project_membership`; a new identity method | `backend/AGENTS.md` lets search use identity only through `service/` interfaces; the same rule then guards Ticket Detail, Spaces and search; no identity change. One `EXISTS` query per Active Department is cheap at Workspace size |
+| Managed Projects | `ProjectMembershipLookup.findProjects` rows with `PROJECT_MANAGER`, mapped from `public_id` to `project_id` in `ScopeTicketRepository` | `canAccessProject` per Project plus the PM role | One query, the same counted memberships as `/me` |
+| Writer | `Optional<UUID> writerId` = `TSolveUser.id`, compared with `ticket.writer_id` (`SearchTicket.writerId`) | Keep the `ticket.writer` name | Two people with the same name would see each other's drafts (user, 17/11) |
+| Cache | None (AC-012.5) | Per-request or TTL cache | A membership change must apply at the next request; the queries are small |
