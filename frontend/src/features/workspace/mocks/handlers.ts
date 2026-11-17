@@ -1,5 +1,10 @@
 import { delay, http, HttpResponse, type HttpHandler } from 'msw';
-import type { DepartmentDetail, DepartmentRef, WorkspaceInfo } from '@/shared/api';
+import type {
+  DepartmentDetail,
+  DepartmentProjectOption,
+  DepartmentRef,
+  WorkspaceInfo,
+} from '@/shared/api';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
 import { getDevUser } from '@/shared/auth';
 import type { MsgCode, MsgParams } from '@/shared/messages';
@@ -51,18 +56,42 @@ function validate(input: Record<string, unknown>, isSetup: boolean) {
   return undefined;
 }
 
-// Copies of the users mock's IT and HR (users/mocks/data.ts), so 2.3 opens from 2.2 in mock mode (K121-D18).
-const seed = (): DepartmentRef[] => [
-  { departmentId: '00000000-0000-4000-8000-0000000000d1', name: 'IT' },
-  { departmentId: '00000000-0000-4000-8000-0000000000d2', name: 'HR' },
-];
-let departments: DepartmentRef[] = seed();
+type MockDepartment = DepartmentRef & {
+  defaultProjectId: string | null;
+  projects: DepartmentProjectOption[];
+};
 
-// No default Project and no Projects until the select of 2.3 is built (Task 13).
-const detail = (department: DepartmentRef): DepartmentDetail => ({
-  ...department,
-  defaultProject: null,
-  projects: [],
+// Copies of the users mock's IT and HR (users/mocks/data.ts), so 2.3 opens from 2.2 in mock mode (K121-D18).
+// IT has two Active Projects to choose from; HR has none.
+const seed = (): MockDepartment[] => [
+  {
+    departmentId: '00000000-0000-4000-8000-0000000000d1',
+    name: 'IT',
+    defaultProjectId: null,
+    projects: [
+      { projectId: '00000000-0000-4000-8000-0000000000e1', jiraProjectKey: 'OPS' },
+      { projectId: '00000000-0000-4000-8000-0000000000e2', jiraProjectKey: 'SUP' },
+    ],
+  },
+  {
+    departmentId: '00000000-0000-4000-8000-0000000000d2',
+    name: 'HR',
+    defaultProjectId: null,
+    projects: [],
+  },
+];
+let departments: MockDepartment[] = seed();
+
+const detail = ({
+  departmentId,
+  name,
+  defaultProjectId,
+  projects,
+}: MockDepartment): DepartmentDetail => ({
+  departmentId,
+  name,
+  defaultProject: projects.find((p) => p.projectId === defaultProjectId) ?? null,
+  projects,
 });
 
 function departmentNameError(code: MsgCode, params?: MsgParams, status = 400) {
@@ -135,7 +164,7 @@ export const handlers: HttpHandler[] = [
       departmentId: crypto.randomUUID(),
       name: String(name).trim(),
     };
-    departments.push(department);
+    departments.push({ ...department, defaultProjectId: null, projects: [] });
     return HttpResponse.json<DepartmentRef>(department, { status: 201 });
   }),
   http.get('*/api/v1/departments/:departmentId', async ({ params }) => {
@@ -147,10 +176,16 @@ export const handlers: HttpHandler[] = [
     await delay(MOCK_DELAY_MS);
     const found = departments.find((d) => d.departmentId === params.departmentId);
     if (!found) return problem(404, 'MSG04');
-    const name = nameOf(await request.json().catch(() => null));
+    const input: unknown = await request.json().catch(() => null);
+    const name = nameOf(input);
     const invalid = checkName(name, found.departmentId);
     if (invalid) return invalid;
+    // Absent or null clears the default Project (K121-D29); MSG156 and MSG157 are driven in tests with server.use.
+    const projectId = isRecord(input) ? (input.defaultProjectId ?? null) : null;
+    if (projectId !== null && !found.projects.some((p) => p.projectId === projectId))
+      return fieldError('defaultProjectId', 'MSG04');
     found.name = String(name).trim();
+    found.defaultProjectId = typeof projectId === 'string' ? projectId : null;
     return HttpResponse.json<DepartmentDetail>(detail(found));
   }),
 ];

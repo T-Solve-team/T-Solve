@@ -8,7 +8,8 @@ import {
   getGetUserDepartmentsQueryKey,
   getGetUsersQueryKey,
   updateDepartment,
-  type DepartmentRef,
+  type DepartmentDetail,
+  type DepartmentProjectOption,
 } from '@/shared/api';
 import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
@@ -19,10 +20,28 @@ import { resetMockData } from '../mocks/handlers';
 const IT_ID = '00000000-0000-4000-8000-0000000000d1';
 const HR_ID = '00000000-0000-4000-8000-0000000000d2';
 const ONE_URL = `*/api/v1/departments/${IT_ID}`;
+const OPS: DepartmentProjectOption = {
+  projectId: '00000000-0000-4000-8000-0000000000e1',
+  jiraProjectKey: 'OPS',
+};
+const SUP: DepartmentProjectOption = {
+  projectId: '00000000-0000-4000-8000-0000000000e2',
+  jiraProjectKey: 'SUP',
+};
+const HELP =
+  'Leave it as None for a Department that does not handle support requests. Issues from the Knowledge Chatbot are created in this Project with the type Task.';
+
+/** The IT Department as the server answers it, with OPS and SUP and no default Project unless given. */
+const itDetail = (
+  name = 'IT',
+  defaultProject: DepartmentProjectOption | null = null,
+): DepartmentDetail => ({ departmentId: IT_ID, name, defaultProject, projects: [OPS, SUP] });
 
 const nameField = () => screen.findByRole('textbox', { name: 'Department name' });
 const editButton = () => screen.findByRole('button', { name: 'Edit' }, { timeout: 5000 });
 const saveButton = () => screen.getByRole('button', { name: 'Save' });
+const projectSelect = () => screen.getByRole('combobox', { name: 'Default Project' });
+const projectOptions = () => screen.getAllByRole('option').map((option) => option.textContent);
 
 type User = ReturnType<typeof userEvent.setup>;
 
@@ -33,6 +52,11 @@ function openIt(role: 'ADMIN' | 'EMPLOYEE' = 'ADMIN') {
 async function startEdit(user: User) {
   await user.click(await editButton());
   return nameField();
+}
+
+async function chooseProject(user: User, key: string) {
+  await user.click(projectSelect());
+  await user.click(await screen.findByRole('option', { name: key }));
 }
 
 async function typeName(user: User, text: string) {
@@ -168,7 +192,7 @@ describe('DepartmentDetailPage', () => {
       http.put(ONE_URL, async ({ request }) => {
         bodies.push(await request.json());
         await pending;
-        return HttpResponse.json<DepartmentRef>({ departmentId: IT_ID, name: 'IT Support' });
+        return HttpResponse.json<DepartmentDetail>(itDetail('IT Support'));
       }),
     );
     const user = userEvent.setup();
@@ -203,12 +227,12 @@ describe('DepartmentDetailPage', () => {
       http.get(ONE_URL, async () => {
         gets++;
         if (getsAtPut > 0) await pending;
-        return HttpResponse.json<DepartmentRef>({ departmentId: IT_ID, name: stored });
+        return HttpResponse.json<DepartmentDetail>(itDetail(stored));
       }),
       http.put(ONE_URL, () => {
         getsAtPut = gets;
         stored = 'IT Support';
-        return HttpResponse.json<DepartmentRef>({ departmentId: IT_ID, name: stored });
+        return HttpResponse.json<DepartmentDetail>(itDetail(stored));
       }),
     );
     const user = userEvent.setup();
@@ -245,11 +269,9 @@ describe('DepartmentDetailPage', () => {
       http.get(ONE_URL, () => {
         gets++;
         if (gets > 1) return problem(500, 'MSG06');
-        return HttpResponse.json<DepartmentRef>({ departmentId: IT_ID, name: 'IT' });
+        return HttpResponse.json<DepartmentDetail>(itDetail());
       }),
-      http.put(ONE_URL, () =>
-        HttpResponse.json<DepartmentRef>({ departmentId: IT_ID, name: 'IT Support' }),
-      ),
+      http.put(ONE_URL, () => HttpResponse.json<DepartmentDetail>(itDetail('IT Support'))),
     );
     const user = userEvent.setup();
     const { queryClient } = openIt();
@@ -351,7 +373,7 @@ describe('DepartmentDetailPage', () => {
     server.use(
       http.put(ONE_URL, async () => {
         await pending;
-        return HttpResponse.json<DepartmentRef>({ departmentId: IT_ID, name: 'IT Support' });
+        return HttpResponse.json<DepartmentDetail>(itDetail('IT Support'));
       }),
     );
     const user = userEvent.setup();
@@ -376,6 +398,164 @@ describe('DepartmentDetailPage', () => {
     openIt('EMPLOYEE');
     expect(await screen.findByText(msg('MSG08'), {}, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+  });
+
+  it('AC-013.1 shows the key of the default Project below the name', async () => {
+    server.use(http.get(ONE_URL, () => HttpResponse.json<DepartmentDetail>(itDetail('IT', SUP))));
+    openIt();
+    expect(await editButton()).toBeInTheDocument();
+    expect(screen.getByText('Default Project')).toBeInTheDocument();
+    expect(screen.getByText('SUP')).toBeInTheDocument();
+  });
+
+  it('AC-013.1 shows None on HR, which has no default Project', async () => {
+    renderApp(paths.departmentDetail(HR_ID), { role: 'ADMIN' });
+    expect(await editButton()).toBeInTheDocument();
+    expect(screen.getByText('Default Project')).toBeInTheDocument();
+    expect(screen.getByText('None')).toBeInTheDocument();
+  });
+
+  it('AC-013.2 Edit shows the select below the name, holding the current default, with None, OPS and SUP', async () => {
+    server.use(http.get(ONE_URL, () => HttpResponse.json<DepartmentDetail>(itDetail('IT', SUP))));
+    const user = userEvent.setup();
+    openIt();
+    const name = await startEdit(user);
+    const select = projectSelect();
+    expect(name.compareDocumentPosition(select) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(select).not.toBeRequired();
+    expect(screen.getByTitle('SUP')).toBeInTheDocument();
+    await user.click(select);
+    await screen.findByRole('option', { name: 'OPS' });
+    expect(projectOptions()).toEqual(['None', 'OPS', 'SUP']);
+  });
+
+  it('AC-013.3 offers only None when the Department has no Active Project', async () => {
+    const user = userEvent.setup();
+    renderApp(paths.departmentDetail(HR_ID), { role: 'ADMIN' });
+    await startEdit(user);
+    expect(screen.getByTitle('None')).toBeInTheDocument();
+    await user.click(projectSelect());
+    await screen.findByRole('option', { name: 'None' });
+    expect(projectOptions()).toEqual(['None']);
+  });
+
+  it('AC-013.4 shows the help text of the select', async () => {
+    const user = userEvent.setup();
+    openIt();
+    await startEdit(user);
+    expect(screen.getByText(HELP)).toBeInTheDocument();
+  });
+
+  it.each([
+    [null, 'OPS', OPS.projectId],
+    [SUP, 'None', null],
+  ] as const)(
+    'AC-013.5 sends the trimmed name and the chosen Project (from %j, choose %s) in one PUT',
+    async (current, choice, sent) => {
+      const bodies: unknown[] = [];
+      server.use(
+        http.get(ONE_URL, () => HttpResponse.json<DepartmentDetail>(itDetail('IT', current))),
+        http.put(ONE_URL, async ({ request }) => {
+          bodies.push(await request.json());
+          return HttpResponse.json<DepartmentDetail>(itDetail('IT Support'));
+        }),
+      );
+      const user = userEvent.setup();
+      openIt();
+      await startEdit(user);
+      await typeName(user, '  IT Support  ');
+      await chooseProject(user, choice);
+      await user.click(saveButton());
+      expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
+      expect(bodies).toEqual([{ name: 'IT Support', defaultProjectId: sent }]);
+    },
+  );
+
+  it('AC-013.6 closes with MSG05 and shows the stored default Project', async () => {
+    const user = userEvent.setup();
+    openIt();
+    await startEdit(user);
+    await chooseProject(user, 'SUP');
+    await user.click(saveButton());
+    expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
+    expect(await editButton()).toBeInTheDocument();
+    expect(await screen.findByText('SUP')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Default Project' })).not.toBeInTheDocument();
+    await startEdit(user);
+    expect(screen.getByTitle('SUP')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['MSG156', { tracker_name: 'Jira' }],
+    ['MSG157', { project_name: 'SUP' }],
+    ['MSG04', undefined],
+  ] as const)(
+    'AC-013.7 shows %s below the select and keeps the form, the name and the choice',
+    async (code, params) => {
+      server.use(
+        http.put(ONE_URL, () =>
+          problem(400, code, {
+            params,
+            fieldErrors: [{ field: 'defaultProjectId', code, params }],
+          }),
+        ),
+      );
+      const user = userEvent.setup();
+      openIt();
+      await startEdit(user);
+      const input = await typeName(user, 'IT Support');
+      await chooseProject(user, 'SUP');
+      await user.click(saveButton());
+      const message = msg(code, params);
+      expect(await screen.findByText(message)).toBeInTheDocument();
+      expect(projectSelect()).toHaveAccessibleDescription(`${message} ${HELP}`);
+      expect(input).toHaveValue('IT Support');
+      expect(screen.getByRole('option', { name: 'SUP', selected: true })).toBeInTheDocument();
+      expect(await screen.findByRole('button', { name: 'Save' })).toBeInTheDocument();
+    },
+  );
+
+  it('AC-013.8 Cancel after changing the select shows the stored default, and the next Edit holds it', async () => {
+    const requests = recordPuts();
+    const user = userEvent.setup();
+    openIt();
+    await startEdit(user);
+    await chooseProject(user, 'OPS');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(await editButton()).toBeInTheDocument();
+    expect(screen.getByText('None')).toBeInTheDocument();
+    expect(screen.queryByText('OPS')).not.toBeInTheDocument();
+    await startEdit(user);
+    expect(screen.getByTitle('None')).toBeInTheDocument();
+    expect(requests).toHaveLength(0);
+  });
+
+  it('AC-013.9 disables the select while the save is running', async () => {
+    let finish: (() => void) | undefined;
+    const pending = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    const requests = recordPuts();
+    server.use(
+      http.put(ONE_URL, async () => {
+        await pending;
+        return HttpResponse.json<DepartmentDetail>(itDetail('IT', OPS));
+      }),
+    );
+    const user = userEvent.setup();
+    const { queryClient } = openIt();
+    try {
+      await startEdit(user);
+      expect(projectSelect()).toBeEnabled();
+      await chooseProject(user, 'OPS');
+      await user.click(saveButton());
+      await waitFor(() => expect(requests).toHaveLength(1));
+      expect(projectSelect()).toBeDisabled();
+    } finally {
+      finish?.();
+      await waitFor(() => expect(queryClient.isMutating()).toBe(0));
+    }
+    expect(await editButton()).toBeInTheDocument();
   });
 });
 
@@ -408,7 +588,7 @@ describe('Department mock handlers', () => {
       departmentId: IT_ID,
       name: 'IT',
       defaultProject: null,
-      projects: [],
+      projects: [OPS, SUP],
     });
   });
 
@@ -427,14 +607,33 @@ describe('Department mock handlers', () => {
       departmentId: IT_ID,
       name: 'it',
       defaultProject: null,
-      projects: [],
+      projects: [OPS, SUP],
     });
     expect(await getDepartment(IT_ID)).toEqual({
       departmentId: IT_ID,
       name: 'it',
       defaultProject: null,
-      projects: [],
+      projects: [OPS, SUP],
     });
+  });
+
+  it('stores, clears and rejects a default Project outside the Department with MSG04', async () => {
+    expect(await updateDepartment(IT_ID, { name: 'IT', defaultProjectId: SUP.projectId })).toEqual(
+      itDetail('IT', SUP),
+    );
+    await expect(
+      updateDepartment(HR_ID, { name: 'HR', defaultProjectId: SUP.projectId }),
+    ).rejects.toMatchObject({
+      status: 400,
+      code: 'MSG04',
+      fieldErrors: [{ field: 'defaultProjectId', code: 'MSG04' }],
+    });
+    expect(await updateDepartment(IT_ID, { name: 'IT', defaultProjectId: null })).toEqual(
+      itDetail(),
+    );
+    await updateDepartment(IT_ID, { name: 'IT', defaultProjectId: OPS.projectId });
+    resetMockData();
+    expect(await getDepartment(IT_ID)).toEqual(itDetail());
   });
 
   it('restores both seeds and removes created Departments on reset', async () => {
@@ -446,7 +645,7 @@ describe('Department mock handlers', () => {
       departmentId: IT_ID,
       name: 'IT',
       defaultProject: null,
-      projects: [],
+      projects: [OPS, SUP],
     });
     expect(await getDepartment(HR_ID)).toEqual({
       departmentId: HR_ID,
