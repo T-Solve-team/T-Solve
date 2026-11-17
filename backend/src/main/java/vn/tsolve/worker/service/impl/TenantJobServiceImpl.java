@@ -21,7 +21,7 @@ public class TenantJobServiceImpl implements TenantJobService {
 
     /**
      * {@code requestWorkspace} is the Workspace the platform bound to the current request (its TenantContext). An
-     * after-commit listener of that request has no worker binding but is still bound to that Workspace (BUG-323).
+     * after-commit listener of that request has no worker binding but is still bound to that Workspace (BUG-324).
      */
     public TenantJobServiceImpl(
             WorkerTenantService tenants,

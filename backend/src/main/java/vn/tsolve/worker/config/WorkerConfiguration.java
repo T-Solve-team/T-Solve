@@ -56,7 +56,7 @@ public class WorkerConfiguration {
     @Bean
     TenantJobService tenantJobService(
             JobRunrRuntime runtime, TenantJobRequestHandler handler, ObjectProvider<TenantContext> tenantContext) {
-        // A request's after-commit listener enqueues in the Workspace the platform bound to it (BUG-323).
+        // A request's after-commit listener enqueues in the Workspace the platform bound to it (BUG-324).
         return new TenantJobServiceImpl(
                 tenants, runtime.scheduler(), handler, () -> Optional.ofNullable(tenantContext.getIfAvailable())
                         .flatMap(TenantContext::currentWorkspaceId));

@@ -78,7 +78,7 @@ class TenantJobServiceImplTest {
     }
 
     @Test
-    void capturesTheWorkspaceTheRequestIsBoundTo_BUG_323() {
+    void capturesTheWorkspaceTheRequestIsBoundTo_BUG_324() {
         storage.setJobMapper(mapper);
         // An after-commit listener of an HTTP request: no worker binding, but the request's TenantContext has one.
         var queue = new TenantJobServiceImpl(
@@ -92,7 +92,7 @@ class TenantJobServiceImplTest {
     }
 
     @Test
-    void stillRejectsAThreadWithNoBindingAnywhere_AC_002_2_BUG_323() {
+    void stillRejectsAThreadWithNoBindingAnywhere_AC_002_2_BUG_324() {
         storage.setJobMapper(mapper);
         var queue = new TenantJobServiceImpl(context, new JobRequestScheduler(storage), handler, Optional::empty);
 
