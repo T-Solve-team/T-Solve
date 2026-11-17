@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -73,6 +74,31 @@ class TenantJobServiceImplTest {
             assertThatThrownBy(() -> queue.enqueue("test-record", null)).isInstanceOf(NullPointerException.class);
             assertThatThrownBy(() -> queue.enqueue(null, recordId)).isInstanceOf(RuntimeException.class);
         });
+        assertThat(storage.getJobStats().getTotal()).isZero();
+    }
+
+    @Test
+    void capturesTheWorkspaceTheRequestIsBoundTo_BUG_323() {
+        storage.setJobMapper(mapper);
+        // An after-commit listener of an HTTP request: no worker binding, but the request's TenantContext has one.
+        var queue = new TenantJobServiceImpl(
+                context, new JobRequestScheduler(storage), handler, () -> Optional.of(workspace));
+
+        UUID jobId = queue.enqueue("test-record", recordId);
+
+        var request =
+                (TenantJobRequest) storage.getJobById(jobId).getJobDetails().getJobParameterValues()[0];
+        assertThat(request.workspaceId()).isEqualTo(workspace);
+    }
+
+    @Test
+    void stillRejectsAThreadWithNoBindingAnywhere_AC_002_2_BUG_323() {
+        storage.setJobMapper(mapper);
+        var queue = new TenantJobServiceImpl(context, new JobRequestScheduler(storage), handler, Optional::empty);
+
+        assertThatThrownBy(() -> queue.enqueue("test-record", recordId))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Enqueue requires a bound workspace");
         assertThat(storage.getJobStats().getTotal()).isZero();
     }
 

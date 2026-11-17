@@ -1,13 +1,16 @@
 package vn.tsolve.worker.config;
 
 import java.util.List;
+import java.util.Optional;
 import org.jobrunr.server.JobActivator;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import vn.tsolve.common.tenant.TenantContext;
 import vn.tsolve.worker.service.TenantExecutionService;
 import vn.tsolve.worker.service.TenantJobHandler;
 import vn.tsolve.worker.service.TenantJobService;
@@ -51,7 +54,11 @@ public class WorkerConfiguration {
     }
 
     @Bean
-    TenantJobService tenantJobService(JobRunrRuntime runtime, TenantJobRequestHandler handler) {
-        return new TenantJobServiceImpl(tenants, runtime.scheduler(), handler);
+    TenantJobService tenantJobService(
+            JobRunrRuntime runtime, TenantJobRequestHandler handler, ObjectProvider<TenantContext> tenantContext) {
+        // A request's after-commit listener enqueues in the Workspace the platform bound to it (BUG-323).
+        return new TenantJobServiceImpl(
+                tenants, runtime.scheduler(), handler, () -> Optional.ofNullable(tenantContext.getIfAvailable())
+                        .flatMap(TenantContext::currentWorkspaceId));
     }
 }
