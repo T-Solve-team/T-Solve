@@ -3,6 +3,7 @@ package vn.tsolve.tracker.client;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -203,44 +204,37 @@ public class JiraClient implements TicketTrackerClient {
             JiraAccount account, String projectKey, String issueTypeName) {
         RestClient http = http(account);
         Optional<String> issueTypeId = Optional.empty();
-        for (int startAt = 0; issueTypeId.isEmpty(); ) {
-            int from = startAt;
-            JsonNode page = call(() ->
-                    http.get().uri(ISSUE_TYPES, projectKey, from).retrieve().body(JsonNode.class));
-            JsonNode types = items(page, "issueTypes");
-            for (JsonNode type : types) {
-                if (issueTypeName.equalsIgnoreCase(type.path("name").asText())
-                        && !type.path("subtask").booleanValue()) {
-                    issueTypeId = Optional.of(requiredText(type, "id"));
-                    break;
-                }
-            }
-            startAt += types.size();
-            if (types.isEmpty() || startAt >= page.path("total").asInt(0)) {
+        for (JsonNode type : pages(http, ISSUE_TYPES, "issueTypes", projectKey)) {
+            if (issueTypeName.equalsIgnoreCase(type.path("name").asText())
+                    && !type.path("subtask").booleanValue()) {
+                issueTypeId = Optional.of(requiredText(type, "id"));
                 break;
             }
         }
         if (issueTypeId.isEmpty()) {
             return Optional.empty();
         }
-        String typeId = issueTypeId.get();
         List<TrackerCreateField> fields = new ArrayList<>();
-        for (int startAt = 0; ; ) {
-            int from = startAt;
-            JsonNode page = call(() -> http.get()
-                    .uri(CREATE_FIELDS, projectKey, typeId, from)
-                    .retrieve()
-                    .body(JsonNode.class));
-            JsonNode items = items(page, "fields");
-            for (JsonNode field : items) {
-                fields.add(new TrackerCreateField(
-                        requiredText(field, "fieldId"),
-                        field.path("required").booleanValue(),
-                        field.path("hasDefaultValue").booleanValue()));
-            }
-            startAt += items.size();
-            if (items.isEmpty() || startAt >= page.path("total").asInt(0)) {
-                return Optional.of(List.copyOf(fields));
+        for (JsonNode field : pages(http, CREATE_FIELDS, "fields", projectKey, issueTypeId.get())) {
+            fields.add(new TrackerCreateField(
+                    requiredText(field, "fieldId"),
+                    field.path("required").booleanValue(),
+                    field.path("hasDefaultValue").booleanValue()));
+        }
+        return Optional.of(List.copyOf(fields));
+    }
+
+    // Every item of a startAt/total paged list; {@code uri} ends with the startAt variable, after {@code args}.
+    private List<JsonNode> pages(RestClient http, String uri, String listName, Object... args) {
+        List<JsonNode> all = new ArrayList<>();
+        while (true) {
+            Object[] page = Arrays.copyOf(args, args.length + 1);
+            page[args.length] = all.size();
+            JsonNode answer = call(() -> http.get().uri(uri, page).retrieve().body(JsonNode.class));
+            JsonNode items = items(answer, listName);
+            items.forEach(all::add);
+            if (items.isEmpty() || all.size() >= answer.path("total").asInt(0)) {
+                return all;
             }
         }
     }

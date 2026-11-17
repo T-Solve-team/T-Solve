@@ -287,6 +287,20 @@ class DepartmentServiceImplTest {
     }
 
     @Test
+    void neverStoresAnUncheckedDefaultAfterAConcurrentChange_AC_012_7_BUG_315() {
+        // The pre-read sees OPS, so no Jira check; another save sets SUP before this one takes the lock.
+        when(repository.findActive(ID)).thenReturn(Optional.of(withDefault(OPS)));
+        when(repository.lockActive(ID)).thenReturn(Optional.of(withDefault(SUP)));
+        when(repository.lockActiveProject(42L, SUP_ID)).thenReturn(Optional.of(SUP));
+
+        var result = service.update(ID, new UpdateDepartmentRequest("IT", OPS_ID));
+
+        assertThat(result.defaultProject()).isEqualTo(new DepartmentProjectOptionResponse(SUP_ID, "SUP"));
+        verify(repository, never()).setDefaultProject(anyLong(), any());
+        verifyNoInteractions(tracker, audit);
+    }
+
+    @Test
     void sendsNoJiraCallForNullWithoutDefault_AC_012_10() {
         stored(current("IT"));
 

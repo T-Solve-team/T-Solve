@@ -4,18 +4,18 @@ import type { DepartmentDetail, UpdateDepartmentRequest } from '@/shared/api';
 import { applyApiErrors, rules } from '@/shared/forms';
 import { showMessage } from '@/shared/messages';
 import { AppForm, FormField } from '@/shared/ui';
-import { useRenameDepartment } from '../hooks/useDepartmentMutations';
+import { useSaveDepartment } from '../hooks/useDepartmentMutations';
 
 /** "None" is `''` inside the form only; the request sends null (K121, decided in planning). */
 type DepartmentFormValues = Pick<UpdateDepartmentRequest, 'name'> & { defaultProjectId: string };
 
-type DepartmentNameFormProps = { department: DepartmentDetail };
+type DepartmentEditFormProps = { department: DepartmentDetail };
 
 /** 2.3 Department Detail — the name and default Project and their inline edit form, UC-13. */
-export function DepartmentNameForm({ department }: DepartmentNameFormProps) {
+export function DepartmentEditForm({ department }: DepartmentEditFormProps) {
   const [form] = Form.useForm<DepartmentFormValues>();
   const [isEditing, setIsEditing] = useState(false);
-  const rename = useRenameDepartment();
+  const save = useSaveDepartment();
   const isSubmitting = useRef(false);
   const editButtonRef = useRef<HTMLButtonElement>(null);
   const shouldFocusEdit = useRef(false);
@@ -35,7 +35,7 @@ export function DepartmentNameForm({ department }: DepartmentNameFormProps) {
   function handleSubmit(values: DepartmentFormValues) {
     if (isSubmitting.current) return;
     isSubmitting.current = true;
-    rename.mutate(
+    save.mutate(
       {
         departmentId: department.departmentId,
         data: {
@@ -106,7 +106,7 @@ export function DepartmentNameForm({ department }: DepartmentNameFormProps) {
       >
         <Select
           virtual={false}
-          disabled={rename.isPending}
+          disabled={save.isPending}
           options={[
             { value: '', label: 'None' },
             ...department.projects.map((p) => ({ value: p.projectId, label: p.jiraProjectKey })),
@@ -114,12 +114,7 @@ export function DepartmentNameForm({ department }: DepartmentNameFormProps) {
         />
       </FormField>
       <Flex gap="small">
-        <Button
-          type="primary"
-          htmlType="submit"
-          loading={rename.isPending}
-          disabled={rename.isPending}
-        >
+        <Button type="primary" htmlType="submit" loading={save.isPending} disabled={save.isPending}>
           Save
         </Button>
         <Button onClick={handleCancel}>Cancel</Button>

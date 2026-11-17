@@ -101,12 +101,15 @@ public class DepartmentServiceImpl implements DepartmentService {
                 case DENIED, UNAVAILABLE -> throw projectError("MSG156", Map.of("tracker_name", "Jira"));
             }
         }
-        return transaction.execute(status -> save(departmentId, name, wanted));
+        boolean checked = toCheck != null;
+        return transaction.execute(status -> save(departmentId, name, wanted, checked));
     }
 
-    private DepartmentDetailResponse save(UUID departmentId, String name, UUID wanted) {
+    private DepartmentDetailResponse save(UUID departmentId, String name, UUID requested, boolean checked) {
         Current current = repository.lockActive(departmentId).orElseThrow(DepartmentServiceImpl::notFound);
-        // A pre-read default changed by a concurrent save is stored without a new check: it passed when chosen.
+        // A Project this request did not check in Jira is never stored: if a concurrent save changed the default
+        // after the pre-read, that save's (checked) default is kept (AC-012.7, BUG-315).
+        UUID wanted = requested == null || checked ? requested : current.defaultProjectId();
         ProjectOption chosen = wanted == null
                 ? null
                 : repository
