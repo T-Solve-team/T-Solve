@@ -4,11 +4,12 @@
 import { invokeRemote } from '@forge/bridge';
 import { MOCK_DELAY_MS, mockAnswer } from './mockAnswers';
 import { USE_MOCK } from './mode';
+import { SECTIONS } from '../form/sections';
 
 /** Per-call limit (AC-010.8, NF 2): the answer runs as a job, so no call waits for the AI. */
 export const ASK_TIMEOUT_MS = 20000;
 
-/** Ask jobs are polled every 1.5 seconds, with 75 seconds total from sending the question (AC-010.3, AC-010.8). */
+/** Ask and rewrite jobs share this cadence and total deadline (AC-010.3, AC-010.8, AC-007.1, AC-007.4). */
 export const ASK_POLL_MS = 1500;
 export const ASK_DEADLINE_MS = 75000;
 
@@ -106,8 +107,29 @@ export async function askQuestion(question, history = [], useMock = USE_MOCK, { 
     }
     return answer;
   }
+  let job;
+  try {
+    job = await pollJob(QUESTIONS, { question, history: history.slice(-MAX_HISTORY) }, { signal, sleep, now });
+  } catch (failure) {
+    // Keep POST validation/eligibility errors. Every GET failure is already MSG06 in pollJob.
+    if (failure.status === 404 || failure.status >= 500) {
+      throw new TsolveError('MSG06', { status: failure.status });
+    }
+    throw failure;
+  }
+  if (!job.answer || typeof job.answer !== 'object') {
+    throw new TsolveError('MSG06');
+  }
+  return job.answer;
+}
+
+/**
+ * Start a job and return only its DONE result. Payload validation belongs to the caller. POST refusals are left
+ * to the caller too; poll failures always use failCode, so eligibility errors cannot change a page mid-poll.
+ */
+async function pollJob(path, body, { signal, sleep = wait, now = Date.now, failCode = 'MSG06' } = {}) {
   // Count from the POST, including its duration and all waits/calls. Each operation is bounded by the time left,
-  // so a GET started near the deadline cannot extend the question by another 20 seconds.
+  // so a GET started near the deadline cannot extend the job by another 20 seconds.
   const deadline = now() + ASK_DEADLINE_MS;
   const remaining = () => {
     if (signal?.aborted) {
@@ -115,43 +137,39 @@ export async function askQuestion(question, history = [], useMock = USE_MOCK, { 
     }
     const ms = deadline - now();
     if (ms <= 0) {
-      throw new TsolveError('MSG06');
+      throw new TsolveError(failCode);
     }
     return ms;
   };
-  const callJob = async (request) => {
-    try {
-      return await call(request, { signal, timeoutMs: remaining() });
-    } catch (failure) {
-      // Ask always shows MSG06 for missing jobs and server failures. Other endpoints may preserve MSG68.
-      if (failure.status === 404 || failure.status >= 500) {
-        throw new TsolveError('MSG06', { status: failure.status });
-      }
-      throw failure;
-    }
-  };
-  const response = await callJob({
-    path: QUESTIONS,
-    method: 'POST',
-    headers: JSON_HEADERS,
-    body: { question, history: history.slice(-MAX_HISTORY) },
-  });
+  const response = await call(
+    { path, method: 'POST', headers: JSON_HEADERS, body },
+    { signal, timeoutMs: remaining() },
+  );
   remaining();
   const jobId = response.body?.jobId;
   if (typeof jobId !== 'string' || !jobId.trim()) {
-    throw new TsolveError('MSG06');
+    throw new TsolveError(failCode);
   }
 
   for (;;) {
-    await within(() => sleep(Math.min(ASK_POLL_MS, remaining()), signal), remaining(), signal);
-    const poll = await callJob({ path: `${QUESTIONS}/${encodeURIComponent(jobId)}`, method: 'GET' });
-    remaining();
-    const job = poll.body;
-    if (job?.status === 'DONE' && job.answer && typeof job.answer === 'object') {
-      return job.answer;
-    }
-    if (job?.status !== 'PENDING') {
-      throw new TsolveError('MSG06');
+    try {
+      await within(() => sleep(Math.min(ASK_POLL_MS, remaining()), signal), remaining(), signal);
+      // remaining() is checked after the wait and before invoking Forge: no GET at or after the deadline.
+      const poll = await call(
+        { path: `${path}/${encodeURIComponent(jobId)}`, method: 'GET' },
+        { signal, timeoutMs: remaining() },
+      );
+      remaining();
+      const job = poll.body;
+      if (job?.status === 'DONE') {
+        return job;
+      }
+      if (job?.status !== 'PENDING') {
+        throw new TsolveError(failCode);
+      }
+    } catch (failure) {
+      if (failure?.name === 'AbortError') throw failure;
+      throw new TsolveError(failCode, { status: failure?.status });
     }
   }
 }
@@ -231,14 +249,18 @@ export async function saveSolutionDraft(issueKey, sections) {
 }
 
 /** The AI rewrite of the five sections (AC-007.1); MSG68 when it fails (AC-007.4). */
-export async function rewriteSolution(sections) {
-  const response = await call({
-    path: `${JIRA_APP}/solution-rewrites`,
-    method: 'POST',
-    headers: JSON_HEADERS,
-    body: sections,
-  });
-  return response.body;
+export async function rewriteSolution(sections, { signal, sleep, now } = {}) {
+  try {
+    const job = await pollJob(`${JIRA_APP}/solution-rewrites`, sections, { signal, sleep, now, failCode: 'MSG68' });
+    // Do not normalize an incomplete result into empty fields: Accept would silently erase the user's Solution.
+    if (!SECTIONS.every(({ field }) => typeof job.sections?.[field] === 'string')) {
+      throw new TsolveError('MSG68');
+    }
+    return job.sections;
+  } catch (failure) {
+    if (failure?.name === 'AbortError') throw failure;
+    throw new TsolveError('MSG68', { status: failure?.status });
+  }
 }
 
 /** What the Issue Panel shows `{linked, ticketStatus, hasDraft, mayOpenForm}` (STORY-001, STORY-008). */

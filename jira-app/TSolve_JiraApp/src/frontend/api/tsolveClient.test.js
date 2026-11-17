@@ -142,6 +142,16 @@ describe('tsolveClient', () => {
     expect(invokeRemote).toHaveBeenCalledTimes(2);
   });
 
+  it.each([[403, 'MSG08'], [401, 'MSG124']])(
+    'AC-010.8 maps a mid-poll GET %s %s to MSG06 (Task 25 review finding 1)',
+    async (status, code) => {
+      startJob();
+      respond(status, { code });
+      await expect(askNow('VPN fails')).rejects.toMatchObject({ code: 'MSG06', status });
+      expect(invokeRemote).toHaveBeenCalledTimes(2);
+    },
+  );
+
   it('AC-010.8 a GET that never answers gives MSG06 after 20 seconds', async () => {
     jest.useFakeTimers();
     startJob();
