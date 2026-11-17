@@ -1,6 +1,7 @@
 package vn.tsolve.chatbot.answer.repository;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -10,6 +11,8 @@ import vn.tsolve.chatbot.answer.entity.ChatbotAnswer;
 import vn.tsolve.chatbot.rating.entity.ChatbotRating;
 
 public interface ChatbotAnswerRepository extends JpaRepository<ChatbotAnswer, UUID> {
+    Optional<ChatbotAnswer> findByIdAndUserId(UUID id, UUID userId);
+
     @Modifying
     @Query(
             "UPDATE ChatbotAnswer a SET a.rating = :rating, a.ratedAt = :ratedAt WHERE a.id = :id AND a.userId = :userId")
