@@ -11,6 +11,7 @@ import {
 } from '@/shared/api';
 import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
+import { MESSAGES } from '@/shared/messages/catalog';
 import { renderApp } from '@/test/render';
 
 /** Wiki document ids of the mock answers (mocks/data.ts) and the signed-in Employee of `openChatbot`. */
@@ -477,6 +478,68 @@ describe('KnowledgeChatbotPage', () => {
     expect(answer).toHaveTextContent('create an issue in Jira');
     expect(within(thread()).queryByRole('list', { name: 'Citations' })).not.toBeInTheDocument();
   });
+
+  it.each([
+    ['GREETING', 'MSG_NEW_5', "Hi! Ask me about your team's Solutions or Wiki."],
+    ['OFF_TOPIC', 'MSG_NEW_6', "I can only answer questions about your team's knowledge."],
+    [
+      'INJECTION',
+      'MSG_NEW_7',
+      "I can't change how I work. Ask a question about your team's knowledge.",
+    ],
+  ] as const)(
+    'AC-001.15 shows the catalog message for %s without citations and clears the sent question',
+    async (outcome, code, text) => {
+      expect(MESSAGES).toHaveProperty(code, { type: 'inline', text });
+      answerWith({
+        outcome,
+        text: 'This answer text must not be displayed.',
+        citations: [
+          { number: 1, type: 'WIKI_DOCUMENT', wikiDocumentId: DOC_9001, title: 'VPN guide' },
+        ],
+      });
+      const { user, box } = await openChatbot();
+
+      await enter(user, box, 'Hello{Enter}');
+
+      expect(await within(thread()).findByText(msg(code))).toBeInTheDocument();
+      expect(
+        within(thread()).queryByText('This answer text must not be displayed.'),
+      ).not.toBeInTheDocument();
+      expect(within(thread()).queryByRole('list', { name: 'Citations' })).not.toBeInTheDocument();
+      expect(box).toHaveValue('');
+    },
+  );
+
+  it('AC-001.15 keeps a follow-up typed while a classified answer is pending', async () => {
+    const release = holdAnswer({ outcome: 'GREETING' });
+    const { user, box } = await openChatbot();
+
+    await enter(user, box, 'Hello{Enter}');
+    await within(thread()).findByTestId('pending-answer');
+    await user.clear(box);
+    await enter(user, box, VPN_QUESTION);
+    release();
+
+    expect(await within(thread()).findByText(msg('MSG_NEW_5'))).toBeInTheDocument();
+    expect(box).toHaveValue(VPN_QUESTION);
+  });
+
+  it.each(['GREETING', 'OFF_TOPIC', 'INJECTION'] as const)(
+    'AC-003.1 hides rating buttons for a %s answer',
+    async (outcome) => {
+      answerWith({ outcome });
+      const { user, box } = await openChatbot();
+
+      await enter(user, box, 'Hello{Enter}');
+      await waitFor(() => expect(box).toHaveValue(''));
+
+      expect(within(thread()).queryByRole('button', { name: 'Helpful' })).not.toBeInTheDocument();
+      expect(
+        within(thread()).queryByRole('button', { name: 'Not helpful' }),
+      ).not.toBeInTheDocument();
+    },
+  );
 
   it.each([
     ['the AI module is unavailable (503)', () => problem(503, 'MSG06')],

@@ -205,6 +205,27 @@ class ChatbotRatingIT {
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
 
+    @Test
+    void ratesNoGreetingOrRefusedAnswer_AC_003_1_BUG_328() {
+        UUID project = UUID.randomUUID();
+        for (String outcome : new String[] {"GREETING", "OFF_TOPIC", "INJECTION"}) {
+            UUID web = seedAnswer(userA, outcome);
+            assertThatThrownBy(() -> rate(userA, web.toString(), new ChatbotRatingRequest(ChatbotRating.HELPFUL)))
+                    .isInstanceOf(ChatbotAnswerNotFoundException.class)
+                    .hasMessage("MSG04");
+            assertThat(row(web)).containsEntry("rating", null).containsEntry("rated_at", null);
+
+            UUID jira = jdbc.queryForObject(
+                    "INSERT INTO chatbot_answer (source, project_id, question, outcome, answer_text) "
+                            + "VALUES ('JIRA_APP', ?, 'question', ?, '') RETURNING chatbot_answer_id",
+                    UUID.class,
+                    project,
+                    outcome);
+            assertThat(rateInProject(jira, project, ChatbotRating.HELPFUL)).isZero();
+            assertThat(row(jira)).containsEntry("rating", null);
+        }
+    }
+
     private int rateInProject(UUID id, UUID project, ChatbotRating rating) {
         Integer changed = transactions.execute(status -> repository.updateProjectRating(id, project, rating, RATED_AT));
         return changed == null ? 0 : changed;
