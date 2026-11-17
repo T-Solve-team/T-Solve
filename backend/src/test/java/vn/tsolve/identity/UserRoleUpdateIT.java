@@ -29,6 +29,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
@@ -403,6 +404,60 @@ class UserRoleUpdateIT {
         } finally {
             restoreAdmins(others);
         }
+    }
+
+    @Test
+    void concurrentUpdatesForLastPlaceYieldOneConflict_AC_007_14() throws Exception {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        addManager(SPACE, RECIPIENT);
+        account(TwoTenantDatabases.tenantA(), BETA_USER, "Contender", DEPARTMENT);
+        List<MvcResult> results = race(
+                () -> {
+                    var context = SecurityContextHolder.createEmptyContext();
+                    context.setAuthentication(authentication);
+                    SecurityContextHolder.setContext(context);
+                    try {
+                        return perform(
+                                        SECOND,
+                                        update(
+                                                List.of("PROJECT_MANAGER", "KNOWLEDGE_MANAGER"),
+                                                OTHER_DEPARTMENT,
+                                                List.of(SPACE)))
+                                .andReturn();
+                    } finally {
+                        SecurityContextHolder.clearContext();
+                    }
+                },
+                () -> {
+                    var context = SecurityContextHolder.createEmptyContext();
+                    context.setAuthentication(authentication);
+                    SecurityContextHolder.setContext(context);
+                    try {
+                        return perform(BETA_USER, update(List.of("KNOWLEDGE_MANAGER"), null, List.of(SPACE)))
+                                .andReturn();
+                    } finally {
+                        SecurityContextHolder.clearContext();
+                    }
+                });
+        assertThat(results.stream()
+                        .map(result -> result.getResponse().getStatus())
+                        .sorted()
+                        .toList())
+                .containsExactly(200, 409);
+        MvcResult rejected = results.stream()
+                .filter(result -> result.getResponse().getStatus() == 409)
+                .findFirst()
+                .orElseThrow();
+        assertThat(mapper.readTree(rejected.getResponse().getContentAsString())
+                        .path("code")
+                        .asText())
+                .isEqualTo("MSG117");
+        assertThat(TwoTenantDatabases.tenantA()
+                        .queryForObject(
+                                "SELECT count(*) FROM space_manager WHERE space_id = (SELECT space_id FROM space WHERE public_id = ?)",
+                                Integer.class,
+                                SPACE))
+                .isEqualTo(3);
     }
 
     @Test

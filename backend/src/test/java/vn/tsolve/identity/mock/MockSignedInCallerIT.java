@@ -49,6 +49,51 @@ class MockSignedInCallerIT {
     private MockIdentityProperties properties;
 
     @Test
+    void seedsKnowledgeManagersWithTheTwoColumnKey_BUG_326() {
+        JdbcTemplate db = TwoTenantDatabases.tenantA();
+        seeder.run(new DefaultApplicationArguments());
+        seeder.run(new DefaultApplicationArguments());
+        Long spaceId = db.queryForObject(
+                "SELECT s.space_id FROM space s JOIN department d ON d.department_id = s.department_id WHERE d.name = 'Customer Support'",
+                Long.class);
+        var managers = db.queryForList("SELECT * FROM space_manager WHERE space_id = ?", spaceId);
+        assertThat(managers).hasSize(1);
+        assertThat(db.queryForList(
+                        "SELECT u.email FROM space_manager sm JOIN app_user u ON u.id = sm.user_id WHERE sm.space_id = ?",
+                        String.class,
+                        spaceId))
+                .containsExactly("knowledge@acme.test");
+        assertThat(db.queryForObject(
+                        "SELECT count(*) FROM app_user u JOIN user_role r ON r.user_id = u.id WHERE u.email IN ('knowledge@acme.test', 'knowledge-replacement@roles-demo.test') AND r.role = 'KNOWLEDGE_MANAGER'",
+                        Integer.class))
+                .isEqualTo(2);
+        assertThat(db.queryForObject(
+                        "SELECT count(*) FROM space_manager sm JOIN app_user u ON u.id = sm.user_id WHERE u.email = 'knowledge-replacement@roles-demo.test'",
+                        Integer.class))
+                .isZero();
+        // A different manager already occupying the demo Space must survive subsequent seeding alone.
+        try {
+            db.update("DELETE FROM space_manager WHERE space_id = ?", spaceId);
+            db.update(
+                    "INSERT INTO space_manager(space_id, user_id, assigned_at) SELECT ?, id, now() FROM app_user WHERE email = 'knowledge-replacement@roles-demo.test'",
+                    spaceId);
+            var occupied = db.queryForList("SELECT * FROM space_manager WHERE space_id = ?", spaceId);
+            seeder.run(new DefaultApplicationArguments());
+            seeder.run(new DefaultApplicationArguments());
+            assertThat(db.queryForList("SELECT * FROM space_manager WHERE space_id = ?", spaceId))
+                    .isEqualTo(occupied);
+        } finally {
+            db.update("DELETE FROM space_manager WHERE space_id = ?", spaceId);
+            var original = managers.getFirst();
+            db.update(
+                    "INSERT INTO space_manager(space_id, user_id, assigned_at) VALUES (?, ?, ?)",
+                    spaceId,
+                    original.get("user_id"),
+                    original.get("assigned_at"));
+        }
+    }
+
+    @Test
     void seedsSecondKnowledgeManagerWithoutDepartmentOrSpace_AC_006_19() throws Exception {
         JdbcTemplate db = TwoTenantDatabases.tenantA();
         var row = db.queryForMap(
