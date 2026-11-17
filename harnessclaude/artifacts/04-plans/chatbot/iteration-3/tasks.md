@@ -74,14 +74,14 @@ All three tasks are Jira KAN-243, so one branch `feat/KAN-243-chatbot-classify-q
 **Feature:** classify-question-ui
 **Jira:** KAN-243 · branch `feat/KAN-243-chatbot-classify-questions`
 **Description:**
-- Quick change (Non-Functional 5; the FE Lead decides, the user confirms `sdd.ts quick`): MSG157, MSG158, MSG159 in `frontend/src/shared/messages/catalog.ts` with the
+- fe-foundation AC-006.7 (reworded 17/11) allows them: MSG_NEW_5, MSG_NEW_6, MSG_NEW_7 in `frontend/src/shared/messages/catalog.ts` with the
   spec texts.
 - `ChatAnswer.tsx`: outcome → text or message (AC-001.15); rating buttons only for `ANSWERED` / `NO_SOURCE`
   (AC-003.1); `chatbot-storage.ts` accepts the five outcomes (Q7).
 - Mock `handlers.ts` / `data.ts`: the AC-004.7 answers before the keyword answers.
 - Frontend `verify` passes; `generate:api` leaves no diff.
 **Files:**
-- Modify: `frontend/src/shared/messages/catalog.ts`, `frontend/src/features/chatbot/components/ChatAnswer.tsx`,
+- Modify: `frontend/src/shared/messages/catalog.ts`, `frontend/src/shared/messages/catalog.test.ts` (AC-006.7 list), `frontend/src/features/chatbot/components/ChatAnswer.tsx`,
   `frontend/src/features/chatbot/mocks/data.ts`,
   `frontend/src/features/chatbot/hooks/chatbot-storage.ts`, `frontend/src/features/chatbot/mocks/handlers.ts`
 - Test: `frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx` (`AC-001.15 …`, `AC-003.1 …`),

@@ -1,7 +1,7 @@
 {
   "fe-foundation": {
-    "specHash": "6aef3f501ac532c7dbd01e18dadf819752bf01bb6837f8c278089960be7765d6",
-    "approvedAt": "2026-11-12T16:56:54.365Z",
+    "specHash": "f3736c582e96d8e787befb7d0dabd18457988ace7dad0a6633c34422d110a634",
+    "approvedAt": "2026-11-17T06:43:42.056Z",
     "by": "user",
     "acs": {
       "AC-001.1": "THE web app SHALL know exactly five roles — , , ,",
@@ -36,7 +36,7 @@
       "AC-006.4": "WHEN a message has the placeholder , THE web app SHALL fill it with the one configured",
       "AC-006.5": "WHEN a message is shown with parameters, THE web app SHALL replace each  placeholder with its",
       "AC-006.6": "IF a placeholder has no value, THEN THE web app SHALL leave the placeholder text as it is.",
-      "AC-006.7": "THE catalog SHALL hold no code other than the Report3 codes of AC-006.1, , ,",
+      "AC-006.7": "THE catalog SHALL hold no code other than the Report3 codes of AC-006.1, the provisional codes",
       "AC-006.8": "THE catalog SHALL hold the multi-tenant web codes with their exact Report3 text: MSG119, MSG120,",
       "AC-006.9": "THE catalog SHALL hold  (type inline) until System_Messages numbers it (import-ticket-list",
       "AC-007.1": "THE Status Tag SHALL have the values Simple and Complex for the triage class (GBR-35), next to the six",
@@ -233,8 +233,8 @@
     }
   },
   "chatbot": {
-    "specHash": "6ca54b5072fa049cdd13b137ad24a4486891f7239fc00f2ef933930a47710609",
-    "approvedAt": "2026-11-17T05:13:43.299Z",
+    "specHash": "e42bff12ce9770f3ce319cc32e00a77712a38f13929c98acb3b90e6e7046491a",
+    "approvedAt": "2026-11-17T06:44:37.136Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",

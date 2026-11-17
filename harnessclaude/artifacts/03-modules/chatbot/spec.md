@@ -18,7 +18,8 @@ owner: BA
 | 2026-10-25 | STORY-002 | New AC-002.12: Wiki document ids and the user id are UUID strings; conversations stored with numeric ids are dropped. Interface Contracts: `wikiDocumentId` and `wikiDocumentIds` are `string` with `format: uuid` | Change request KAN-196 Q2 (the user, 25/10): UUID primary keys in every module, so ids are UUID strings in the contract (Phan_cong v6 §1); SPEC-P1-7 |
 | 2026-11-06 | STORY-005..STORY-007 (new) | **Backend change.** New STORY-005 answer a question from Workspace Solutions and Wiki passages (KAN-179), STORY-006 cite the sources and check cited documents (KAN-180), STORY-007 follow-up questions with the conversation as context (KAN-181). Requirements 7 and 8 reworded: no PII masking (cancelled 29/10, KAN-138) and the end-of-session deletion waits for an identity logout event; Requirement 9 added (answer table). Out of Scope, Interface Contracts (the `chatbot_answer` table, the chatbot-owned `WikiSources` port, search's `SolutionRetrieval`), Required from other modules and Definition of Done follow. STORY-001..STORY-004 criteria unchanged | User decisions of 06/11: Wiki through a fail-closed `WikiSources` port until wiki KAN-169 (chunking and embedding are Minh's); a follow-up is retrieved with the previous question prepended (no extra LLM call); 400 for a bad `history` or `wikiDocumentIds` is code MSG06 with no field error (builder check); no deletion job until identity has a logout event; `CHATBOT_MIN_SIMILARITY` defaults to 0.7, set by the operator in `.env` (a user-chosen threshold on screen 12.1 later). Since 25/10: one database per Workspace (KAN-98), so singular table names and no `workspace_id` |
 | 2026-11-09 | STORY-008 (new) | **Backend change.** New STORY-008 rate an answer on the backend (KAN-182): the latest rating and its time as two nullable columns on `chatbot_answer`, own answers only, 404 MSG04 otherwise, 400 MSG06 for a bad body. Out of Scope: no conversation API (KAN-183); no cross-user rating, comment or rating history. Interface Contracts (table columns, rating errors) and Definition of Done follow. Earlier criteria unchanged | User decisions of 09/11: KAN-183 builds no backend API, the conversations stay in `sessionStorage` and KAN-183 is checked end to end; ratings are columns on `chatbot_answer` (one answer has one asker), not a separate table |
-| 2026-11-17 | STORY-009 (new), STORY-001, STORY-003, STORY-004, STORY-005, STORY-007 | **Backend and frontend change.** New STORY-009 classify a question before the search (KAN-243): greeting rules with no AI call, then one structured classify-and-rewrite call; outcomes `GREETING`, `OFF_TOPIC`, `INJECTION`. New AC-001.15 (MSG157–159 shown), AC-004.7 (mock outcomes). Reworded AC-003.1 (no rating buttons on the new outcomes), AC-005.1 and AC-007.1 (retrieval text from AC-009.5). Requirement 10 added; Requirement 7: `INJECTION` rows kept, `GREETING` / `OFF_TOPIC` deleted with unrated answers. Out of Scope, Interface Contracts (outcome enum, table check, greeting phrases, classifier schema), Required from other modules and Definition of Done follow | KAN-243 back in To Do (17/11) after the 16/11 drop; user decisions of 17/11 in RESEARCH-006: Option C, new ids MSG157–159 (MSG142/MSG143 are taken), three outcome values, fail open to search on a bad classifier answer (an `AiUnavailableException` from the classifier included, builder check), no rating on the new outcomes |
+| 2026-11-17 | STORY-009 (new), STORY-001, STORY-003, STORY-004, STORY-005, STORY-007 | **Backend and frontend change.** New STORY-009 classify a question before the search (KAN-243): greeting rules with no AI call, then one structured classify-and-rewrite call; outcomes `GREETING`, `OFF_TOPIC`, `INJECTION`. New AC-001.15 (MSG_NEW_5–7 shown), AC-004.7 (mock outcomes). Reworded AC-003.1 (no rating buttons on the new outcomes), AC-005.1 and AC-007.1 (retrieval text from AC-009.5). Requirement 10 added; Requirement 7: `INJECTION` rows kept, `GREETING` / `OFF_TOPIC` deleted with unrated answers. Out of Scope, Interface Contracts (outcome enum, table check, greeting phrases, classifier schema), Required from other modules and Definition of Done follow | KAN-243 back in To Do (17/11) after the 16/11 drop; user decisions of 17/11 in RESEARCH-006: Option C, new ids MSG_NEW_5–7 (MSG142/MSG143 are taken), three outcome values, fail open to search on a bad classifier answer (an `AiUnavailableException` from the classifier included, builder check), no rating on the new outcomes |
+| 2026-11-17 | STORY-009, STORY-001 | Message ids renamed MSG157–MSG159 → `MSG_NEW_5`–`MSG_NEW_7` (texts unchanged) in AC-001.15, Interface Contracts and Required from other modules | The catalog test of fe-foundation AC-006.7 rejects unknown codes, decision D3 gives unnumbered messages provisional keys, and the workspace spec already plans MSG157/MSG158 (user, 17/11) |
 
 ## Requirements
 
@@ -106,7 +107,7 @@ owner: BA
   - AC-001.14: IF the answer request fails with field errors (400), THEN THE web app SHALL show the field's MSG under
     the question box and keep the question in the box.
   - AC-001.15: WHEN the answer arrives with `outcome` `GREETING`, `OFF_TOPIC` or `INJECTION`, THE web app SHALL show
-    MSG157, MSG158 or MSG159 respectively as the answer, with no citations, and empty the question box as in
+    MSG_NEW_5, MSG_NEW_6 or MSG_NEW_7 respectively as the answer, with no citations, and empty the question box as in
     AC-001.7 (KAN-243).
 
 ### STORY-002: Session conversations
@@ -411,8 +412,8 @@ Classifier answer (AC-009.2), the JSON schema passed to `LlmClient.chat`:
                   "query":    { "type": "string" } } }
 ```
 
-Messages (web app, STORY-009): MSG157 "Hi! Ask me about your team's Solutions or Wiki." · MSG158 "I can only answer
-questions about your team's knowledge." · MSG159 "I can't change how I work. Ask a question about your team's
+Messages (web app, STORY-009): MSG_NEW_5 "Hi! Ask me about your team's Solutions or Wiki." · MSG_NEW_6 "I can only answer
+questions about your team's knowledge." · MSG_NEW_7 "I can't change how I work. Ask a question about your team's
 knowledge."
 
 Chatbot-owned port, implemented later by `wiki` (KAN-169; AC-006.7):
@@ -434,8 +435,8 @@ Backend settings (`.env.example`): `CHATBOT_MIN_SIMILARITY=0.7`, `CHATBOT_SOURCE
 ### Required from other modules
 - `fe-foundation` (done): route `/chatbot` for every signed-in user, `paths.wikiDocument`, MSG01, MSG02, MSG06,
   MSG109, MSG110 in the catalog, `rules.required` / `rules.maxLength`, and removal of `tsolve.session.*` keys at
-  logout and on a global 401. KAN-243 also needs MSG157, MSG158 and MSG159 added to
-  `frontend/src/shared/messages/catalog.ts` (a quick change, Non-Functional 5).
+  logout and on a global 401. KAN-243 also needs MSG_NEW_5, MSG_NEW_6 and MSG_NEW_7 added to
+  `frontend/src/shared/messages/catalog.ts`, allowed by fe-foundation AC-006.7 (reworded 17/11).
 - `search` (backend): `vn.tsolve.search.retrieval.service.SolutionRetrieval.nearest(queryVector, minSimilarity,
   limit)` returning `RetrievedSolution` (the five sections and the similarity) of Workspace Solutions (search
   STORY-010).

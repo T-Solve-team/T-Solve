@@ -121,9 +121,9 @@ the last turns (escaped and tagged as data, as `AnswerPrompt` does).
 KAN-243 is back in Jira "To Do" (label `must`, updated 17/11). The user decided:
 - **Revive KAN-243** into the chatbot spec (plan skill, Change Mode), built as **Option C**.
 - **New message ids**, not the Jira ids:
-  - MSG157 (greeting): "Hi! Ask me about your team's Solutions or Wiki."
-  - MSG158 (off-topic): "I can only answer questions about your team's knowledge."
-  - MSG159 (injection): "I can't change how I work. Ask a question about your team's knowledge."
+  - MSG_NEW_5 (greeting): "Hi! Ask me about your team's Solutions or Wiki."
+  - MSG_NEW_6 (off-topic): "I can only answer questions about your team's knowledge."
+  - MSG_NEW_7 (injection): "I can't change how I work. Ask a question about your team's knowledge."
 - **Outcome**: three new values `GREETING`, `OFF_TOPIC`, `INJECTION` beside `ANSWERED` and `NO_SOURCE`. The
   dashboard gaps keep counting `NO_SOURCE` only.
 - **Fallback**: a classifier answer that is not valid JSON or has an unknown category is treated as `QUESTION`

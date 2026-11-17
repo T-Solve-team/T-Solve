@@ -1888,3 +1888,9 @@
 {"ts":"2026-11-17T05:14:03.583Z","type":"feature-status","module":"chatbot","feature":"classify-outcome-schema","from":"pending","to":"in-progress"}
 {"ts":"2026-11-17T06:07:34.838Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"807452ffd9ccc63e9e0743a0a5e7274887e456c8"}
 {"ts":"2026-11-17T06:07:35.116Z","type":"feature-status","module":"chatbot","feature":"classify-outcome-schema","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T06:17:35.564Z","type":"feature-status","module":"chatbot","feature":"classify-question","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T06:21:37.071Z","type":"quick-opened","what":"Add Chatbot messages MSG157-MSG159 for KAN-243 (chatbot spec Interface Contracts)","files":["frontend/src/shared/messages/catalog.ts"]}
+{"ts":"2026-11-17T06:21:53.928Z","type":"feature-status","module":"chatbot","feature":"classify-question-ui","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T06:43:42.059Z","type":"spec-approved","module":"fe-foundation","specHash":"f3736c582e96d8e787befb7d0dabd18457988ace7dad0a6633c34422d110a634"}
+{"ts":"2026-11-17T06:44:37.139Z","type":"spec-approved","module":"chatbot","specHash":"e42bff12ce9770f3ce319cc32e00a77712a38f13929c98acb3b90e6e7046491a"}
+{"ts":"2026-11-17T06:44:57.374Z","type":"quick-closed","what":"Add Chatbot messages MSG157-MSG159 for KAN-243 (chatbot spec Interface Contracts)","files":["frontend/src/shared/messages/catalog.ts"]}

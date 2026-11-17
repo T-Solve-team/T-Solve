@@ -460,23 +460,23 @@ the two-value check. The constraint is `ck_chatbot_answer_outcome` (`013-chatbot
 
 ### Frontend
 
-- `ChatAnswer.tsx`: `ANSWERED` → text; `NO_SOURCE` → MSG109; `GREETING` / `OFF_TOPIC` / `INJECTION` → MSG157 /
-  MSG158 / MSG159 (one lookup object).
+- `ChatAnswer.tsx`: `ANSWERED` → text; `NO_SOURCE` → MSG109; `GREETING` / `OFF_TOPIC` / `INJECTION` → MSG_NEW_5 /
+  MSG_NEW_6 / MSG_NEW_7 (one lookup object).
 - The rating buttons are rendered only for `ANSWERED` and `NO_SOURCE` (AC-003.1).
 - `chatbot-storage.ts` accepts the five outcomes when it reads stored conversations; otherwise AC-002.8 would drop
   a conversation holding a greeting.
 - `model.ts` already sends `''` as the answer of every non-`ANSWERED` turn (contract `ChatbotTurn`).
 - Mock `handlers.ts`: the AC-004.7 checks run before the keyword answers.
-- MSG157–159 go into `shared/messages/catalog.ts` through a quick change (Non-Functional 5), in the same branch.
+- MSG_NEW_5–7 go into `shared/messages/catalog.ts` allowed by fe-foundation AC-006.7 (reworded 17/11), in the same branch.
 
 ### Key Decisions (KAN-243)
 
 | Decision | Chosen | Alternatives | Rationale |
 |----------|--------|--------------|-----------|
 | Approach | Greeting rules, then one structured LLM call | Rules only; LLM only | User 17/11 (RESEARCH-006): rules cannot rewrite or catch injection; LLM-only breaks "no AI call" for greetings |
-| Message ids | New MSG157–159 | Jira's MSG142/143/154 | User 17/11: MSG142/143 are taken |
+| Message ids | New MSG_NEW_5–7 | Jira's MSG142/143/154 | User 17/11: MSG142/143 are taken |
 | Outcome | Three new enum values | One `REFUSED` + reason column | User 17/11: no new column; dashboard counts `NO_SOURCE` only, so no dashboard change |
-| Bad classifier answer | Fail open to search (QUESTION, today's text) | Fail closed (MSG158) | User 17/11: a misbehaving model must not hide real answers; AnswerPrompt keeps its own data-not-instructions guard |
+| Bad classifier answer | Fail open to search (QUESTION, today's text) | Fail closed (MSG_NEW_6) | User 17/11: a misbehaving model must not hide real answers; AnswerPrompt keeps its own data-not-instructions guard |
 | Rating the new outcomes | Hidden in the web app; endpoint unchanged | Reject on the backend | User 17/11: nothing to rate; no backend change needed |
 | Category parsing | Case-insensitive, trimmed | Exact match | Decided in planning: a `"question"` reply is still usable; anything else fails open |
 
@@ -496,7 +496,8 @@ the two-value check. The constraint is `ck_chatbot_answer_outcome` (`013-chatbot
 
 ### Decided in planning (builder check, 17/11)
 
-- Decided in planning: greeting normalization is NFC, lower-case (`Locale.ROOT`), every `\p{P}` and `\p{So}` /
+- Decided in planning: greeting normalization is NFC, lower-case (`Locale.ROOT`), every `\p{P}`, `\p{Cf}`,
+  U+FE00–U+FE0F (added by BUG-314) and `\p{So}` /
   `\p{Sk}` character replaced by a space, inner white space collapsed, trimmed; then an exact match on the phrase
   set (Unicode-aware, so Vietnamese diacritics stay). (builder check)
 - Decided in planning: the mock (AC-004.7) uses the same normalization; it runs after the AC-004.3 400 checks;

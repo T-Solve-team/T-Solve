@@ -347,10 +347,10 @@
         "answer-rating-schema": "passing",
         "answer-rating-api": "passing",
         "classify-outcome-schema": "evaluating",
-        "classify-question": "pending",
-        "classify-question-ui": "pending"
+        "classify-question": "in-progress",
+        "classify-question-ui": "in-progress"
       },
-      "lastUpdated": "2026-11-17T06:07:35.115Z",
+      "lastUpdated": "2026-11-17T06:21:53.926Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
