@@ -47,8 +47,8 @@ class ReviewNotificationEnqueuerTest {
 
     private final WorkerTenantService tenants = mock(WorkerTenantService.class);
     private final WorkspaceSiteService sites = mock(WorkspaceSiteService.class);
-    private final ReviewNotificationEnqueuer enqueuer =
-            new ReviewNotificationEnqueuer(outboxes, tenantProvider(), notifications, sites);
+    private final ReviewNotificationEnqueuer enqueuer = new ReviewNotificationEnqueuer(
+            outboxes, tenantProvider(), notifications, sites, "https://{slug}.example.test");
 
     @SuppressWarnings("unchecked")
     private ObjectProvider<WorkerTenantService> tenantProvider() {
@@ -69,6 +69,42 @@ class ReviewNotificationEnqueuerTest {
                 "Reviewer",
                 "Writer",
                 Instant.parse("2026-11-14T18:42:00Z"));
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+        "http://{slug}.localhost:5173, acme.localhost, http://acme.localhost:5173",
+        "https://{slug}.tsolve.io.vn, acme.tsolve.io.vn, https://acme.tsolve.io.vn"
+    })
+    void linksToTheSiteOrigin_BUG_244(String template, String host, String origin) {
+        var email = enqueueLinkNotification(host, template);
+        String link = origin + "/tickets/00000000-0000-0000-0000-000000000001";
+        assertThat(email.bodyText()).contains(link);
+        assertThat(email.bodyHtml()).contains("href=\"" + link + "\"");
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.NullAndEmptySource
+    @org.junit.jupiter.params.provider.ValueSource(strings = "   ")
+    void fallsBackToHttpsWithoutOriginTemplate_BUG_244(String template) {
+        var email = enqueueLinkNotification("acme.tsolve.io.vn", template);
+        String link = "https://acme.tsolve.io.vn/tickets/00000000-0000-0000-0000-000000000001";
+        assertThat(email.bodyText()).contains(link);
+        assertThat(email.bodyHtml()).contains("href=\"" + link + "\"");
+    }
+
+    private OutboundEmail enqueueLinkNotification(String host, String template) {
+        UUID workspace = UUID.randomUUID();
+        when(tenants.currentWorkspaceId()).thenReturn(Optional.of(workspace));
+        when(sites.siteHost(workspace)).thenReturn(Optional.of(host));
+        when(outboxes.getIfAvailable()).thenReturn(outbox);
+        when(notifications.findNotification(DECISION))
+                .thenReturn(Optional.of(notification(ReviewNotification.Kind.REJECTED)));
+        new ReviewNotificationEnqueuer(outboxes, tenantProvider(), notifications, sites, template)
+                .onDecided(new ReviewFeedbackDecidedEvent(List.of(DECISION)));
+        var outbound = ArgumentCaptor.forClass(OutboundEmail.class);
+        verify(outbox).queue(outbound.capture());
+        return outbound.getValue();
     }
 
     @ParameterizedTest
