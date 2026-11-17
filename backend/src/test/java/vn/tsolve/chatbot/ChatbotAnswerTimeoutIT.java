@@ -7,14 +7,18 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import liquibase.Liquibase;
 import liquibase.database.DatabaseFactory;
@@ -127,6 +131,7 @@ class ChatbotAnswerTimeoutIT {
                 .withPropertyValues("CHATBOT_ASK_TIMEOUT=" + ASK_TIMEOUT)
                 .withBean(EmbeddingClient.class, () -> embeddings)
                 .withBean(LlmClient.class, () -> mock(LlmClient.class))
+                .withBean(ObjectMapper.class, ObjectMapper::new)
                 .withBean(SolutionRetrieval.class, () -> mock(SolutionRetrieval.class))
                 .withBean(WikiSources.class, () -> mock(WikiSources.class))
                 .withBean(ChatbotAnswerRepository.class, () -> slowAnswers)
@@ -144,6 +149,71 @@ class ChatbotAnswerTimeoutIT {
                     assertThat(jdbc.queryForObject("SELECT count(*) FROM chatbot_answer", Integer.class))
                             .isZero();
                 });
+    }
+
+    @Test
+    void classifierCountsAgainstDeadline_AC_009_7() throws InterruptedException {
+        UUID userId = jdbc.queryForObject(
+                "INSERT INTO app_user (email, status, created_at) VALUES (?, 'ACTIVE', now()) RETURNING id",
+                UUID.class,
+                "asker@example.test");
+        var user = new TSolveUser(userId, "asker@example.test", "Asker", Set.of());
+        var entityManager = SharedEntityManagerCreator.createSharedEntityManager(factory.getObject());
+        var repository = new JpaRepositoryFactory(entityManager).getRepository(ChatbotAnswerRepository.class);
+        var embeddings = mock(EmbeddingClient.class);
+        when(embeddings.embed(any())).thenReturn(List.of(new float[1024]));
+        var llm = mock(LlmClient.class);
+        var solutions = mock(SolutionRetrieval.class);
+        var wiki = mock(WikiSources.class);
+        var stalled = new CountDownLatch(1);
+        var classifierStarted = new CountDownLatch(1);
+        var classifierFinished = new CountDownLatch(1);
+        when(llm.chat(any(), any())).thenAnswer(invocation -> {
+            classifierStarted.countDown();
+            try {
+                stalled.await();
+                return "{\"category\":\"OFF_TOPIC\",\"query\":\"\"}";
+            } finally {
+                classifierFinished.countDown();
+            }
+        });
+        var executor = Executors.newSingleThreadExecutor();
+        try {
+            new ApplicationContextRunner()
+                    .withUserConfiguration(ChatbotAnswerServiceImpl.class)
+                    .withPropertyValues("CHATBOT_ASK_TIMEOUT=" + ASK_TIMEOUT)
+                    .withBean(EmbeddingClient.class, () -> embeddings)
+                    .withBean(LlmClient.class, () -> llm)
+                    .withBean(ObjectMapper.class, ObjectMapper::new)
+                    .withBean(SolutionRetrieval.class, () -> solutions)
+                    .withBean(WikiSources.class, () -> wiki)
+                    .withBean(ChatbotAnswerRepository.class, () -> repository)
+                    .withBean(PlatformTransactionManager.class, () -> new JpaTransactionManager(factory.getObject()))
+                    .withBean("applicationTaskExecutor", Executor.class, () -> executor)
+                    .run(context -> {
+                        assertThat(context).hasNotFailed();
+                        var service = context.getBean(ChatbotAnswerService.class);
+                        assertThatThrownBy(() -> service.ask(user, new ChatbotQuestionRequest("question", List.of())))
+                                .isInstanceOf(AiUnavailableException.class)
+                                .hasMessage("MSG06")
+                                .hasNoCause();
+                        assertThat(classifierStarted.getCount()).isZero();
+                        verify(llm).chat(any(), any());
+                        verifyNoInteractions(embeddings, solutions, wiki);
+                        assertThat(jdbc.queryForObject("SELECT count(*) FROM chatbot_answer", Integer.class))
+                                .isZero();
+                        stalled.countDown();
+                        assertThat(classifierFinished.await(2, TimeUnit.SECONDS))
+                                .isTrue();
+                    });
+        } finally {
+            stalled.countDown();
+            executor.shutdownNow();
+            assertThat(executor.awaitTermination(2, TimeUnit.SECONDS)).isTrue();
+        }
+        // The late classifier result must not resume the request or insert a row.
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM chatbot_answer", Integer.class))
+                .isZero();
     }
 
     private Liquibase liquibase() throws Exception {

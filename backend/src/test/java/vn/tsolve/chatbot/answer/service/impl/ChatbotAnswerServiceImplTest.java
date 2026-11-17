@@ -5,15 +5,20 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.notNull;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.util.List;
 import java.util.Set;
@@ -22,6 +27,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,6 +75,8 @@ class ChatbotAnswerServiceImplTest {
     @BeforeEach
     void setUp() {
         when(transactions.getTransaction(any())).thenAnswer(invocation -> new SimpleTransactionStatus());
+        when(embeddings.embed(any())).thenReturn(List.of(vector));
+        when(llm.chat(any(), notNull())).thenReturn("{\"category\":\"QUESTION\",\"query\":\"\"}");
         service = service(Duration.ofSeconds(2), 5);
         when(answers.save(any())).thenAnswer(invocation -> {
             ChatbotAnswer answer = invocation.getArgument(0);
@@ -81,6 +89,204 @@ class ChatbotAnswerServiceImplTest {
     void stopExecutor() throws InterruptedException {
         executor.shutdownNow();
         assertThat(executor.awaitTermination(2, TimeUnit.SECONDS)).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"  HELLO!! 👋🏽 ", "Cảm ơn!! 🙏", "thank-you", "ca\u0309m o\u031bn"})
+    void greetingCallsNoAi_AC_009_1(String question) {
+        var response = service.ask(USER, new ChatbotQuestionRequest(question, List.of()));
+        assertThat(response.outcome()).isEqualTo(Outcome.GREETING);
+        assertThat(response.text()).isEmpty();
+        assertThat(response.citations()).isEmpty();
+        assertThat(response.answerId()).isEqualTo(ANSWER_ID);
+        verifyNoInteractions(llm, embeddings, solutions, wiki);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"OFF_TOPIC", "INJECTION"})
+    void refusesOffTopicAndInjectionWithoutSearch_AC_009_3(String category) {
+        when(llm.chat(any(), notNull())).thenReturn("{\"category\":\"" + category + "\",\"query\":\"\"}");
+        var response = service.ask(USER, question());
+        assertThat(response.outcome()).isEqualTo(Outcome.valueOf(category));
+        assertThat(response.text()).isEmpty();
+        assertThat(response.citations()).isEmpty();
+        verify(llm).chat(any(), notNull());
+        verifyNoMoreInteractions(llm);
+        verifyNoInteractions(embeddings, solutions, wiki);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"GREETING", "OFF_TOPIC", "INJECTION"})
+    void storesClassifiedRowWithEmptyText_AC_009_4(String category) {
+        when(llm.chat(any(), notNull())).thenReturn("{\"category\":\"" + category + "\",\"query\":\"\"}");
+        Thread requestThread = Thread.currentThread();
+        doAnswer(invocation -> {
+                    assertThat(Thread.currentThread()).isSameAs(requestThread);
+                    ChatbotAnswer saved = invocation.getArgument(0);
+                    ReflectionTestUtils.setField(saved, "id", ANSWER_ID);
+                    return saved;
+                })
+                .when(answers)
+                .save(any());
+        var response = service.ask(USER, new ChatbotQuestionRequest("  message  ", List.of()));
+        ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
+        verify(answers).save(saved.capture());
+        assertThat(saved.getValue().getUserId()).isEqualTo(USER.id());
+        assertThat(saved.getValue().getQuestion()).isEqualTo("message");
+        assertThat(saved.getValue().getOutcome()).isEqualTo(category);
+        assertThat(saved.getValue().getAnswerText()).isEmpty();
+        assertThat(response.answerId()).isEqualTo(ANSWER_ID);
+        verify(answers).flush();
+        verify(transactions).commit(any());
+        verify(transactions, never()).rollback(any());
+    }
+
+    @Test
+    void searchesWithQueryAnswersWithQuestion_AC_009_5() {
+        withSolution();
+        when(llm.chat(any(), notNull())).thenReturn("{\"category\":\"QUESTION\",\"query\":\"  VPN Windows setup  \"}");
+        when(llm.chat(any(), isNull())).thenReturn("Answer [1]");
+        var response = service.ask(
+                USER,
+                new ChatbotQuestionRequest(
+                        "  What about Windows?  ",
+                        List.of(new ChatbotTurnRequest("How do I connect to VPN?", "earlier answer"))));
+        verify(embeddings).embed(List.of("VPN Windows setup"));
+        ArgumentCaptor<List<ChatMessage>> prompt = ArgumentCaptor.forClass(List.class);
+        verify(llm).chat(prompt.capture(), isNull());
+        assertThat(prompt.getValue().getLast().content()).contains("<question>What about Windows?</question>");
+        assertThat(prompt.getValue()).extracting(ChatMessage::content).allSatisfy(text -> assertThat(text)
+                .doesNotContain("VPN Windows setup"));
+        assertThat(response.text()).isEqualTo("Answer [1]");
+        ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
+        verify(answers).save(saved.capture());
+        assertThat(saved.getValue().getQuestion()).isEqualTo("What about Windows?");
+        assertThat(saved.getValue().getAnswerText()).isEqualTo("Answer [1]");
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "prose",
+                "{",
+                "{\"category\":\"OTHER\",\"query\":\"ignored\"}",
+                "{\"category\":\"QUESTION\",\"query\":\"  \"}"
+            })
+    void fallsBackToTodaysRetrievalText_AC_009_6(String json) {
+        when(llm.chat(any(), notNull())).thenReturn(json);
+        when(embeddings.embed(any())).thenReturn(List.of(vector));
+        var response = service.ask(USER, new ChatbotQuestionRequest("  VPN question  ", List.of()));
+        verify(embeddings).embed(List.of("VPN question"));
+        assertThat(response.outcome()).isEqualTo(Outcome.NO_SOURCE);
+        verify(llm).chat(any(), notNull());
+    }
+
+    @Test
+    void classifierAiUnavailableFailsOpen_AC_009_6() {
+        withSolution();
+        when(llm.chat(any(), notNull())).thenThrow(new AiUnavailableException());
+        when(llm.chat(any(), isNull())).thenReturn("Answer [1]");
+        var response = service.ask(
+                USER,
+                new ChatbotQuestionRequest(
+                        "  new question  ",
+                        List.of(new ChatbotTurnRequest("  previous question  ", "earlier answer"))));
+        assertThat(response.outcome()).isEqualTo(Outcome.ANSWERED);
+        verify(embeddings).embed(List.of("previous question\nnew question"));
+        verify(llm).chat(any(), notNull());
+        verify(llm).chat(any(), isNull());
+        verifyNoMoreInteractions(llm);
+    }
+
+    @Test
+    void classifierTimeoutIs503StoresNothing_AC_009_7() {
+        // Simulate the exceptional completion of a timed-out classifier future without waiting on a clock.
+        when(llm.chat(any(), notNull())).thenAnswer(invocation -> {
+            throw new TimeoutException();
+        });
+        assertThatThrownBy(() -> service.ask(USER, question()))
+                .isInstanceOf(AiUnavailableException.class)
+                .hasMessage("MSG06")
+                .hasNoCause();
+        verifyNoInteractions(embeddings, solutions, wiki, answers);
+        verify(llm).chat(any(), notNull());
+    }
+
+    @Test
+    void classifierCalledOnceBeforeEmbeddingWithSchema_AC_009_2() {
+        withSolution();
+        Thread requestThread = Thread.currentThread();
+        when(llm.chat(any(), notNull())).thenAnswer(invocation -> {
+            assertThat(Thread.currentThread()).isNotSameAs(requestThread);
+            return "{\"category\":\"QUESTION\",\"query\":\"VPN reset\"}";
+        });
+        when(llm.chat(any(), isNull())).thenReturn("Answer [1]");
+        var response = service.ask(USER, new ChatbotQuestionRequest("hi, how do I reset my VPN?", List.of()));
+        assertThat(response.outcome()).isEqualTo(Outcome.ANSWERED);
+        var ordered = inOrder(llm, embeddings, solutions, wiki);
+        ArgumentCaptor<List<ChatMessage>> prompt = ArgumentCaptor.forClass(List.class);
+        ordered.verify(llm).chat(prompt.capture(), eq(ClassifierPrompt.CLASSIFIER_SCHEMA));
+        assertThat(prompt.getValue().getLast().content()).isEqualTo("<question>hi, how do I reset my VPN?</question>");
+        ordered.verify(embeddings).embed(List.of("VPN reset"));
+        ordered.verify(solutions).nearest(vector, 0.7, 5);
+        ordered.verify(wiki).nearest(USER, vector, 0.7, 5);
+        ordered.verify(llm).chat(any(), isNull());
+        ordered.verifyNoMoreInteractions();
+    }
+
+    @Test
+    void classifierGreetingAnswersGreeting_AC_009_3() {
+        when(llm.chat(any(), notNull())).thenReturn("{\"category\":\" greeting \",\"query\":\"\"}");
+        var response = service.ask(USER, new ChatbotQuestionRequest("How are you today?", List.of()));
+        assertThat(response.outcome()).isEqualTo(Outcome.GREETING);
+        assertThat(response.text()).isEmpty();
+        assertThat(response.citations()).isEmpty();
+        verify(llm).chat(any(), notNull());
+        verifyNoMoreInteractions(llm);
+        verifyNoInteractions(embeddings, solutions, wiki);
+    }
+
+    @Test
+    void neverLogsQuery_AC_009_5(CapturedOutput output) {
+        withSolution();
+        when(llm.chat(any(), notNull()))
+                .thenReturn("{\"category\":\"QUESTION\",\"query\":\"private-rewritten-query\"}");
+        when(llm.chat(any(), isNull())).thenReturn("Answer [1]");
+        var response = service.ask(USER, question());
+        verify(embeddings).embed(List.of("private-rewritten-query"));
+        assertThat(output.getAll()).doesNotContain("private-rewritten-query");
+        assertThat(response.toString()).doesNotContain("private-rewritten-query");
+        ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
+        verify(answers).save(saved.capture());
+        assertThat(saved.getValue().getQuestion()).isEqualTo("question");
+        assertThat(saved.getValue().getAnswerText()).isEqualTo("Answer [1]");
+    }
+
+    @Test
+    void embedsQueryOnce_AC_005_1() {
+        when(llm.chat(any(), notNull())).thenReturn("{\"category\":\"QUESTION\",\"query\":\"rewritten query\"}");
+        when(embeddings.embed(any())).thenReturn(List.of(vector));
+        service.ask(USER, question());
+        verify(embeddings).embed(List.of("rewritten query"));
+        verifyNoMoreInteractions(embeddings);
+        verify(solutions).nearest(vector, 0.7, 5);
+        verify(wiki).nearest(USER, vector, 0.7, 5);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"prose", "{\"category\":\"QUESTION\",\"query\":\"\"}"})
+    void followUpFallbackPrependsLastQuestion_AC_007_1(String json) {
+        when(llm.chat(any(), notNull())).thenReturn(json);
+        when(embeddings.embed(any())).thenReturn(List.of(vector));
+        service.ask(
+                USER,
+                new ChatbotQuestionRequest(
+                        "  new question  ",
+                        List.of(
+                                new ChatbotTurnRequest("first question", "first answer"),
+                                new ChatbotTurnRequest("  last question  ", "last answer"))));
+        verify(embeddings).embed(List.of("last question\nnew question"));
+        verify(llm).chat(any(), notNull());
     }
 
     @Test
@@ -154,7 +360,7 @@ class ChatbotAnswerServiceImplTest {
         assertThat(saved.getValue().getAnswerText()).isEqualTo(hasSources ? "New answer [1]" : "");
         assertThat(response.outcome()).isEqualTo(hasSources ? Outcome.ANSWERED : Outcome.NO_SOURCE);
         if (!hasSources) {
-            verifyNoInteractions(llm);
+            verify(llm, never()).chat(any(), isNull());
             assertThat(response.citations()).isEmpty();
         }
     }
@@ -199,7 +405,7 @@ class ChatbotAnswerServiceImplTest {
         assertThat(response.text()).isEmpty();
         assertThat(response.citations()).isEmpty();
         assertThat(response.answerId()).isEqualTo(ANSWER_ID);
-        verifyNoInteractions(llm);
+        verify(llm, never()).chat(any(), isNull());
         ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
         verify(answers).save(saved.capture());
         assertThat(saved.getValue().getOutcome()).isEqualTo("NO_SOURCE");
@@ -291,7 +497,8 @@ class ChatbotAnswerServiceImplTest {
         verifyNoInteractions(answers);
         verify(embeddings, times(1)).embed(any());
         if (embeddingFails) {
-            verifyNoInteractions(solutions, wiki, llm);
+            verifyNoInteractions(solutions, wiki);
+            verify(llm, never()).chat(any(), isNull());
         } else {
             verify(llm, times(1)).chat(any(), isNull());
         }
@@ -393,7 +600,17 @@ class ChatbotAnswerServiceImplTest {
 
     private ChatbotAnswerServiceImpl service(Duration timeout, int limit) {
         return new ChatbotAnswerServiceImpl(
-                embeddings, llm, solutions, wiki, answers, transactions, executor, 0.7, limit, timeout);
+                embeddings,
+                llm,
+                solutions,
+                wiki,
+                answers,
+                transactions,
+                new ObjectMapper(),
+                executor,
+                0.7,
+                limit,
+                timeout);
     }
 
     private void withSolution() {

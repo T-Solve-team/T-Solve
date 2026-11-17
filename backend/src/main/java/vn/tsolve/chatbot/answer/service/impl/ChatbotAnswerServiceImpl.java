@@ -1,5 +1,6 @@
 package vn.tsolve.chatbot.answer.service.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -28,6 +29,7 @@ import vn.tsolve.chatbot.answer.dto.TicketSolutionCitation;
 import vn.tsolve.chatbot.answer.entity.ChatbotAnswer;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
 import vn.tsolve.chatbot.answer.service.ChatbotAnswerService;
+import vn.tsolve.chatbot.answer.service.impl.QuestionClassifier.Category;
 import vn.tsolve.chatbot.source.service.WikiSources;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.search.retrieval.service.SolutionRetrieval;
@@ -44,6 +46,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
     private final double minSimilarity;
     private final int sourceLimit;
     private final long timeoutNanos;
+    private final QuestionClassifier classifier;
 
     @Autowired
     public ChatbotAnswerServiceImpl(
@@ -53,6 +56,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
             WikiSources wiki,
             ChatbotAnswerRepository answers,
             PlatformTransactionManager transactionManager,
+            ObjectMapper json,
             @Qualifier("applicationTaskExecutor") Executor executor,
             @Value("${CHATBOT_MIN_SIMILARITY:0.7}") double minSimilarity,
             @Value("${CHATBOT_SOURCE_LIMIT:5}") int sourceLimit,
@@ -64,6 +68,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
                 wiki,
                 answers,
                 transactionManager,
+                json,
                 executor,
                 minSimilarity,
                 sourceLimit,
@@ -77,6 +82,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
             WikiSources wiki,
             ChatbotAnswerRepository answers,
             PlatformTransactionManager transactionManager,
+            ObjectMapper json,
             Executor executor,
             double minSimilarity,
             int sourceLimit,
@@ -99,16 +105,38 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         this.minSimilarity = minSimilarity;
         this.sourceLimit = sourceLimit;
         this.timeoutNanos = timeout.toNanos();
+        this.classifier = new QuestionClassifier(json);
     }
 
     @Override
     public ChatbotAnswerResponse ask(TSolveUser user, ChatbotQuestionRequest request) {
         long deadline = System.nanoTime() + timeoutNanos;
         String question = request.question().trim();
-        // ponytail: No LLM rewrite yet; upgrade to LLM query rewriting if follow-up retrieval quality needs it.
-        String retrievalText = request.history().isEmpty()
+        if (QuestionClassifier.isGreeting(question)) {
+            return save(user, question, Outcome.GREETING, "", List.of(), deadline);
+        }
+        var classifierMessages = ClassifierPrompt.messages(question, request.history());
+        String reply = callAi(
+                () -> {
+                    try {
+                        return llm.chat(classifierMessages, ClassifierPrompt.CLASSIFIER_SCHEMA);
+                    } catch (AiUnavailableException failure) {
+                        // Provider failures fail open here; callAi still enforces the shared deadline.
+                        return null;
+                    }
+                },
+                deadline);
+        remaining(deadline);
+        var classification = classifier.parse(reply);
+        if (classification.category() != Category.QUESTION) {
+            return save(
+                    user, question, Outcome.valueOf(classification.category().name()), "", List.of(), deadline);
+        }
+        // Use the private rewritten query only for retrieval; an unusable reply keeps the existing fallback.
+        String fallbackText = request.history().isEmpty()
                 ? question
                 : request.history().getLast().question().trim() + "\n" + question;
+        String retrievalText = classification.query().isEmpty() ? fallbackText : classification.query();
         float[] vector =
                 callAi(() -> embeddings.embed(List.of(retrievalText)), deadline).getFirst();
         // Fail fast before the vector search if embedding has exhausted the deadline.
