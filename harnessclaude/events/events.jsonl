@@ -1894,3 +1894,6 @@
 {"ts":"2026-11-17T06:43:42.059Z","type":"spec-approved","module":"fe-foundation","specHash":"f3736c582e96d8e787befb7d0dabd18457988ace7dad0a6633c34422d110a634"}
 {"ts":"2026-11-17T06:44:37.139Z","type":"spec-approved","module":"chatbot","specHash":"e42bff12ce9770f3ce319cc32e00a77712a38f13929c98acb3b90e6e7046491a"}
 {"ts":"2026-11-17T06:44:57.374Z","type":"quick-closed","what":"Add Chatbot messages MSG157-MSG159 for KAN-243 (chatbot spec Interface Contracts)","files":["frontend/src/shared/messages/catalog.ts"]}
+{"ts":"2026-11-17T11:51:41.066Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"fd44833b6d1915002c076ff061c15ee85445b039"}
+{"ts":"2026-11-17T11:51:41.341Z","type":"feature-status","module":"chatbot","feature":"classify-question","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T11:51:41.610Z","type":"feature-status","module":"chatbot","feature":"classify-question","from":"evaluating","to":"passing"}
