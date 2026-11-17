@@ -6,6 +6,7 @@ import {
   type UpdateUserStatusRequest,
   type UserDetail,
 } from '@/shared/api';
+import { useUserHandoverOptions } from './useUserDetail';
 import { useChangeUserRoles } from './useUserMutations';
 import type { MsgParams } from '@/shared/messages';
 
@@ -13,7 +14,11 @@ type Handovers = Pick<UpdateUserStatusRequest, 'projectHandovers' | 'spaceHandov
 
 export function useRoleUpdateFlow(user: UserDetail, onError: (error: ApiError) => void) {
   const change = useChangeUserRoles();
-  const [step, setStep] = useState<'confirm-tr' | 'handover' | null>(null);
+  const options = useUserHandoverOptions(user.id, false);
+  const checking = useRef(false);
+  const [step, setStep] = useState<'confirm-tr' | 'handover' | 'checking' | 'options-error' | null>(
+    null,
+  );
   const [requested, setRequested] = useState<UpdateUserRolesRequest | null>(null);
   const [confirmationParams, setConfirmationParams] = useState<MsgParams>({});
   const submitting = useRef(false);
@@ -62,11 +67,30 @@ export function useRoleUpdateFlow(user: UserDetail, onError: (error: ApiError) =
     );
   }
 
-  function proceed(data: UpdateUserRolesRequest) {
+  async function proceed(data: UpdateUserRolesRequest) {
+    if (checking.current || submitting.current) return;
     const removed = scope(data);
     setRequested(data);
-    if (removed.projectIds.length || removed.spaceIds.length) setStep('handover');
-    else perform(data);
+    if (!removed.projectIds.length && !removed.spaceIds.length) {
+      perform(data);
+      return;
+    }
+    checking.current = true;
+    setStep('checking');
+    const result = await options.refetch();
+    checking.current = false;
+    if (!result.isSuccess) {
+      setStep('options-error');
+      return;
+    }
+    const needsHandover =
+      result.data.projects.some((item) => removed.projectIds.includes(item.project.projectId)) ||
+      result.data.spaces.some((item) => removed.spaceIds.includes(item.space.spaceId));
+    if (needsHandover) setStep('handover');
+    else {
+      setStep(null);
+      perform(data);
+    }
   }
 
   function submit(values: UpdateUserRolesRequest) {
@@ -89,7 +113,7 @@ export function useRoleUpdateFlow(user: UserDetail, onError: (error: ApiError) =
       setConfirmationParams({ count: removedMembershipCount });
       setRequested(data);
       setStep('confirm-tr');
-    } else proceed(data);
+    } else void proceed(data);
   }
 
   function cancelStep() {
@@ -100,6 +124,10 @@ export function useRoleUpdateFlow(user: UserDetail, onError: (error: ApiError) =
 
   return {
     step,
+    optionsError: options.error,
+    retryOptions: () => {
+      if (requested) void proceed(requested);
+    },
     confirmationParams: {
       user_name: user.fullName ?? user.email,
       count: user.ticketResolverProjectIds.length,
@@ -110,7 +138,7 @@ export function useRoleUpdateFlow(user: UserDetail, onError: (error: ApiError) =
     cancelStep,
     handoverScope: requested ? scope(requested) : undefined,
     confirmRemoval: () => {
-      if (requested) proceed({ ...requested, confirmTicketResolverRemoval: true });
+      if (requested) void proceed({ ...requested, confirmTicketResolverRemoval: true });
     },
     handover: (values: Handovers, reportError: (error: ApiError) => void) => {
       if (requested) perform({ ...requested, ...values }, reportError);

@@ -3137,12 +3137,15 @@ components:
   schemas:
     WikiSpaceSettings:
       type: object
-      required: [spaceId, name, departmentName, knowledgeManager, ownDepartment, departments, users]
+      required: [spaceId, name, departmentName, knowledgeManagers, ownDepartment, departments, users]
       properties:
         spaceId: { type: string, format: uuid }
         name: { type: string }
         departmentName: { type: string }
-        knowledgeManager: { type: [string, 'null'], description: Knowledge Manager's full name. }
+        knowledgeManagers:
+          type: array
+          description: Full names of the Space's Active Knowledge Managers, ordered by name ignoring case; empty when none.
+          items: { type: string }
         ownDepartment:
           type: object
           required: [departmentId, name, locked]

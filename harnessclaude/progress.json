@@ -142,15 +142,17 @@
         "profile-spaces-backend": "passing",
         "my-solutions-backend": "passing",
         "my-solutions-summary-backend": "pending",
-        "jira-account-link-lookup": "evaluating"
+        "jira-account-link-lookup": "evaluating",
+        "multi-km-per-space-backend": "evaluating",
+        "multi-km-per-space-frontend": "evaluating"
       },
-      "lastUpdated": "2026-11-17T14:30:06.437Z",
+      "lastUpdated": "2026-11-17T15:48:00.579Z",
       "branch": "feat/identity",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "b906c83d1d252fde82b738ccede16c9678cb90e5"
+        "default": "64c47ea6055b60efab6852df1c752facd95b82f1"
       }
     },
     "workspace": {
@@ -231,15 +233,16 @@
         "wiki-permissions-api": "passing",
         "wiki-permissions-ui": "passing",
         "wiki-trash-detail": "passing",
-        "wiki-project-department-sources": "evaluating"
+        "wiki-project-department-sources": "evaluating",
+        "wiki-space-managers-list": "evaluating"
       },
-      "lastUpdated": "2026-11-17T10:15:31.050Z",
+      "lastUpdated": "2026-11-17T15:48:00.760Z",
       "branch": "feat/wiki",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "38d16367f63e4f1ea3b8e79cc57d4a6a6f1b5829"
+        "default": "64c47ea6055b60efab6852df1c752facd95b82f1"
       }
     },
     "ticket-repository": {

@@ -51,7 +51,8 @@ public class MockUserListSeeder implements ApplicationRunner {
                     SELECT s.space_id, u.id, now() FROM space s
                     JOIN department d ON d.department_id = s.department_id
                     CROSS JOIN app_user u WHERE d.name = 'Customer Support' AND u.email = 'knowledge@acme.test'
-                    ON CONFLICT (space_id) DO NOTHING
+                      AND NOT EXISTS (SELECT 1 FROM space_manager sm WHERE sm.space_id = s.space_id)
+                    ON CONFLICT (space_id, user_id) DO NOTHING
                     """).update();
             account("employee@acme.test", "Demo Employee", "ACTIVE", null, null);
             account("deactivated@acme.test", "Demo Deactivated", "DEACTIVATED", null, null);

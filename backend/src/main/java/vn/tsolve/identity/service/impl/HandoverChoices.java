@@ -2,6 +2,7 @@ package vn.tsolve.identity.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -27,6 +28,12 @@ final class HandoverChoices {
                     item.get(idKey).textValue(), item.get("recipientId").textValue()));
         }
         return result;
+    }
+
+    static List<SpaceOption> soleSpaces(List<SpaceOption> spaces, Collection<UUID> ids) {
+        return spaces.stream()
+                .filter(option -> ids.contains(option.space().spaceId()))
+                .toList();
     }
 
     static boolean matchesProjects(List<ProjectOption> options, List<Choice> choices) {

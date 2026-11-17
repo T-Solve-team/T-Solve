@@ -329,7 +329,7 @@ export const handlers: HttpHandler[] = [
       [
         getGetWikiSpaceSettingsMockHandler({
           ...space,
-          knowledgeManager: me.user.fullName,
+          knowledgeManagers: [me.user.fullName],
           ownDepartment: { ...ownDepartment, locked: true },
           departments: [...(permissionState.get(spaceId)?.departments ?? [])].sort((a, b) =>
             a.name.localeCompare(b.name),

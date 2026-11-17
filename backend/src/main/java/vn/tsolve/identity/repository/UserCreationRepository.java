@@ -60,11 +60,9 @@ public class UserCreationRepository {
                         new Space(rs.getLong("space_id"), rs.getObject("public_id", UUID.class), rs.getString("name")));
     }
 
-    public boolean isOccupied(long spaceId) {
-        return Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT EXISTS (SELECT 1 FROM space_manager WHERE space_id = :id)",
-                Map.of("id", spaceId),
-                Boolean.class));
+    public long managerCount(long spaceId) {
+        return jdbc.queryForObject(
+                "SELECT count(*) FROM space_manager WHERE space_id = :id", Map.of("id", spaceId), Long.class);
     }
 
     /** A targeted conflict clause leaves the transaction usable and does not hide other constraints. */
@@ -91,13 +89,10 @@ public class UserCreationRepository {
         }
     }
 
-    public boolean insertManager(long spaceId, UUID userId) {
-        return jdbc.update(
-                        """
+    public void insertManager(long spaceId, UUID userId) {
+        jdbc.update("""
                 INSERT INTO space_manager(space_id, user_id, assigned_at) VALUES (:space, :user, now())
-                ON CONFLICT (space_id) DO NOTHING
-                """,
-                        Map.of("space", spaceId, "user", userId))
-                == 1;
+                ON CONFLICT (space_id, user_id) DO NOTHING
+                """, Map.of("space", spaceId, "user", userId));
     }
 }

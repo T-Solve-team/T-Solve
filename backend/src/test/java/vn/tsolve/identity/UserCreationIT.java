@@ -293,8 +293,10 @@ class UserCreationIT {
     }
 
     @Test
-    void rejectsOccupiedSpace_AC_005_13() throws Exception {
+    void acceptsThirdAndRejectsFourthManager_AC_005_13() throws Exception {
         created(create("owner", List.of("KNOWLEDGE_MANAGER"), null, List.of(space)));
+        created(create("coowner", List.of("KNOWLEDGE_MANAGER"), null, List.of(space)));
+        created(create("third", List.of("KNOWLEDGE_MANAGER"), null, List.of(space)));
         perform(create("second", List.of("KNOWLEDGE_MANAGER"), null, List.of(space)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("MSG117"))
@@ -303,8 +305,10 @@ class UserCreationIT {
     }
 
     @Test
-    void concurrentClaimsLeaveOneManagerAndOneConflict_AC_005_13() throws Exception {
-        var context = SecurityContextHolder.getContext();
+    void concurrentClaimsForLastPlaceYieldOneConflict_AC_005_13() throws Exception {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        created(create("owner1", List.of("KNOWLEDGE_MANAGER"), null, List.of(space)));
+        created(create("owner2", List.of("KNOWLEDGE_MANAGER"), null, List.of(space)));
         var ready = new CountDownLatch(2);
         var start = new CountDownLatch(1);
         try (var pool = Executors.newFixedThreadPool(2)) {
@@ -312,6 +316,8 @@ class UserCreationIT {
                     new ArrayList<java.util.concurrent.Future<org.springframework.mock.web.MockHttpServletResponse>>();
             for (String suffix : List.of("race1", "race2")) {
                 futures.add(pool.submit(() -> {
+                    var context = SecurityContextHolder.createEmptyContext();
+                    context.setAuthentication(authentication);
                     SecurityContextHolder.setContext(context);
                     try {
                         ready.countDown();
@@ -344,7 +350,7 @@ class UserCreationIT {
                                 "SELECT count(*) FROM space_manager WHERE space_id = (SELECT space_id FROM space WHERE public_id = ?)",
                                 Integer.class,
                                 space))
-                .isEqualTo(1);
+                .isEqualTo(3);
         assertThat(TwoTenantDatabases.tenantA()
                         .queryForObject(
                                 "SELECT count(*) FROM app_user WHERE email IN (?, ?)",
@@ -368,6 +374,7 @@ class UserCreationIT {
     @Test
     void optionsIncludeOccupiedActiveSpacesInNameOrder_AC_005_14_AC_005_15() throws Exception {
         created(create("options", List.of("KNOWLEDGE_MANAGER"), null, List.of(space)));
+        created(create("options2", List.of("KNOWLEDGE_MANAGER"), null, List.of(space)));
         JsonNode body = mapper.readTree(perform(get("/api/v1/users/creation-options"))
                 .andExpect(status().isOk())
                 .andReturn()

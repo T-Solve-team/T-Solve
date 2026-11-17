@@ -34,12 +34,8 @@ public class WikiPermissionRepository {
     public WikiSpaceSettings getSettings(long spaceId) {
         var header = jdbc.queryForObject(
                 """
-                SELECT s.public_id, s.name, d.public_id AS department_public_id, d.name AS department_name,
-                       km.full_name AS knowledge_manager
+                SELECT s.public_id, s.name, d.public_id AS department_public_id, d.name AS department_name
                 FROM space s JOIN department d ON d.department_id = s.department_id
-                LEFT JOIN space_manager sm ON sm.space_id = s.space_id
-                LEFT JOIN app_user km ON km.id = sm.user_id AND km.status = 'ACTIVE'
-                    AND EXISTS (SELECT 1 FROM user_role r WHERE r.user_id = km.id AND r.role = 'KNOWLEDGE_MANAGER')
                 WHERE s.space_id = :spaceId
                 """,
                 Map.of("spaceId", spaceId),
@@ -47,7 +43,7 @@ public class WikiPermissionRepository {
                         row.getObject("public_id", UUID.class),
                         row.getString("name"),
                         row.getString("department_name"),
-                        row.getString("knowledge_manager"),
+                        List.of(),
                         new WikiSpaceSettings.OwnDepartment(
                                 row.getObject("department_public_id", UUID.class),
                                 row.getString("department_name"),
@@ -58,10 +54,20 @@ public class WikiPermissionRepository {
                 header.spaceId(),
                 header.name(),
                 header.departmentName(),
-                header.knowledgeManager(),
+                listKnowledgeManagers(spaceId),
                 header.ownDepartment(),
                 listDepartments(spaceId),
                 listUsers(spaceId));
+    }
+
+    private List<String> listKnowledgeManagers(long spaceId) {
+        return jdbc.queryForList("""
+                SELECT km.full_name
+                FROM space_manager sm JOIN app_user km ON km.id = sm.user_id
+                WHERE sm.space_id = :spaceId AND km.status = 'ACTIVE'
+                  AND EXISTS (SELECT 1 FROM user_role r WHERE r.user_id = km.id AND r.role = 'KNOWLEDGE_MANAGER')
+                ORDER BY lower(km.full_name)
+                """, Map.of("spaceId", spaceId), String.class);
     }
 
     private List<WikiSpaceSettings.DepartmentPermission> listDepartments(long spaceId) {

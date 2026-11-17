@@ -64,8 +64,17 @@ describe('message catalog', () => {
     expect(Object.keys(report3)).toHaveLength(143);
   });
 
-  it.each(webMessages)('AC-006.1 holds %s with the exact Report3 text', (code, { text }) => {
-    expect(entry(code)?.text).toBe(text);
+  it.each(webMessages.filter(([code]) => code !== 'MSG117'))(
+    'AC-006.1 holds %s with the exact Report3 text',
+    (code, { text }) => {
+      expect(entry(code)?.text).toBe(text);
+    },
+  );
+
+  it('AC-006.1 holds MSG117 with the KAN-362 text instead of Report3', () => {
+    expect(entry('MSG117')?.text).toBe(
+      '{space_name} already has the maximum of 3 Knowledge Managers.',
+    );
   });
 
   it('AC-006.1 leaves out the Jira App messages, the Retired codes, the Platform Console codes and the codes of D2 and D3', () => {
