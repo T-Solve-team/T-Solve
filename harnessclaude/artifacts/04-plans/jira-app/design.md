@@ -225,3 +225,9 @@ MSG62 links to the page.
   (`localId` / `environmentId`).
 - **Risk.** `jira:personalSettingsPage` is a Forge Preview module: it may change before GA; the dev site is enough
   for the demo. Reported to the team.
+
+**Change 2026-11-17 (dev-site test):** the profile menu of bdang798 did not show the `jira:personalSettingsPage`
+item, although the page worked by its URL. The page becomes the app's single `jira:globalPage` (key
+`tsolve-account-settings`, title "T-Solve account", same resource and resolver), shown under **Apps** in Jira's
+navigation; its URL is `/jira/apps/{appId}/{envId}`, which the panel's MSG62 link now opens. An app may register only
+one `jira:globalPage`.
