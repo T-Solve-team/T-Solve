@@ -141,9 +141,10 @@
         "jira-link-record": "passing",
         "profile-spaces-backend": "passing",
         "my-solutions-backend": "passing",
-        "my-solutions-summary-backend": "pending"
+        "my-solutions-summary-backend": "pending",
+        "jira-account-link-lookup": "pending"
       },
-      "lastUpdated": "2026-11-14T18:40:18.990Z",
+      "lastUpdated": "2026-11-17T14:25:07.121Z",
       "branch": "feat/identity",
       "repos": [
         "default"
@@ -395,9 +396,12 @@
         "panel-rejected": "passing",
         "panel-published": "passing",
         "app-token-trigger": "evaluating",
-        "ask-without-sign-in": "evaluating"
+        "ask-without-sign-in": "evaluating",
+        "linked-asker-lookup": "pending",
+        "account-link-endpoints": "pending",
+        "account-settings-page": "pending"
       },
-      "lastUpdated": "2026-11-17T10:37:55.476Z",
+      "lastUpdated": "2026-11-17T14:25:06.873Z",
       "branch": "feat/KAN-337-jira-app-reject-reason",
       "repos": [
         "default"

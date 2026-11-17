@@ -917,3 +917,21 @@ Notes, not scope of Tasks 23, 23b or 23c: (1) an optional real-Google IdP switch
 **PR / Jira:** branch `feat/KAN-118-identity-scope-checks` from main; Jira KAN-118.
 **Estimated size:** small (4 production files); about 25 tests
 **Verification:** Tests name AC-011.1 to AC-011.11; `sdd.ts trace identity STORY-011`; `cd backend && mvn verify`; `generate:api` no diff.
+
+## Task 37: Jira account link lookup (for the jira-app account link page)
+
+**Story:** STORY-001
+**Feature:** jira-account-link-lookup
+**Acceptance criteria:** AC-001.77
+**Description:** `JiraAccountLinkLookup` in `identity/service` with `Optional<LinkedAccount> find(String trackerAccountId)`
+(`TSolveUser` and the link time) for the Workspace bound by `TenantScope`: the `jira_account_links` row of that
+tracker account whose `app_user` is `ACTIVE`; nothing otherwise. Used by jira-app Task 19.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/identity/service/JiraAccountLinkLookup.java`,
+  `backend/src/main/java/vn/tsolve/identity/service/impl/JiraAccountLinkLookupImpl.java`,
+  `backend/src/main/java/vn/tsolve/identity/dto/LinkedAccount.java`; modify
+  `backend/src/main/java/vn/tsolve/identity/jiralink/JiraAccountLinkRepository.java` (a read)
+- Test: `backend/src/test/java/vn/tsolve/identity/service/impl/JiraAccountLinkLookupImplTest.java`; the read in
+  `JiraAccountLinkRepositoryIT`.
+**Dependencies:** none (the table and the confirm exist, KAN-234)
+**Estimated size:** small
