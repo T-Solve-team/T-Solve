@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -67,7 +68,7 @@ class JiraImportServiceImplTest {
     private static final LocalDate FROM = LocalDate.of(2026, 11, 1);
     private static final LocalDate TO = LocalDate.of(2026, 11, 7);
 
-    private final JiraIssueSource jira = mock(JiraIssueSource.class);
+    private final JiraIssueSource jira = mock(JiraIssueSource.class, CALLS_REAL_METHODS);
     private final ImportPreviewRepository previews = mock(ImportPreviewRepository.class);
     private final ImportPreviewRowRepository rows = mock(ImportPreviewRowRepository.class);
     private final TicketRepository tickets = mock(TicketRepository.class);
@@ -147,6 +148,7 @@ class JiraImportServiceImplTest {
         assertThat(response.needsSolutionCount()).isEqualTo(4);
         assertThat(response.message()).isNull();
         assertThat(response.rows().getContent()).hasSize(4);
+        verify(jira, times(1)).pull(eq(KEY), eq(FROM), eq(TO), any()); // one account read for both pages (BUG-311)
     }
 
     @Test

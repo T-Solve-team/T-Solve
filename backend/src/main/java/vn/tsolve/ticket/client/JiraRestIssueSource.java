@@ -32,7 +32,7 @@ import vn.tsolve.tracker.service.JiraServiceAccount;
 
 /**
  * {@link JiraIssueSource} over the Jira Cloud REST API v3 with the Workspace's service account (read from
- * {@code workspace} for each pull, KAN-345): its scoped API token sent as Bearer through the Atlassian gateway. No
+ * {@code workspace} once per pull, KAN-345, BUG-311): its scoped API token sent as Bearer through the Atlassian gateway. No
  * account answers MSG50 (AC-001.7, AC-001.14). Logs and errors carry only the project key, an HTTP status or an error type (NFR 2, 4).
  */
 @Component
@@ -59,7 +59,7 @@ public class JiraRestIssueSource implements JiraIssueSource {
     private final Sleeper sleeper;
     private final Clock clock;
 
-    /** The Workspace's account is read for each pull (AC-001.12, KAN-345); nothing comes from the environment. */
+    /** The Workspace's account is read once per pull (AC-001.12, KAN-345); nothing comes from the environment. */
     @Autowired
     public JiraRestIssueSource(JiraServiceAccount accounts, Clock clock) {
         this(accounts, clientBuilder(Duration.ofSeconds(10), Duration.ofSeconds(30)), Thread::sleep, clock);
@@ -109,10 +109,21 @@ public class JiraRestIssueSource implements JiraIssueSource {
     @Override
     public JiraIssuePage resolvedIssues(
             String projectKey, LocalDate from, LocalDate to, String pageToken, Instant deadline) {
+        return pull(projectKey, from, to, deadline).page(pageToken);
+    }
+
+    /** Reads the account once; every page of the pull uses it (AC-001.12, BUG-311). */
+    @Override
+    public Pull pull(String projectKey, LocalDate from, LocalDate to, Instant deadline) {
         if (projectKey == null || !PROJECT_KEY.matcher(projectKey).matches()) {
             throw new JiraUnavailableException("The Project's Jira key is not valid");
         }
         Connection jira = connect();
+        return pageToken -> page(jira, projectKey, from, to, pageToken, deadline);
+    }
+
+    private JiraIssuePage page(
+            Connection jira, String projectKey, LocalDate from, LocalDate to, String pageToken, Instant deadline) {
         // JQL dates follow the account's profile time zone, at most 19 h away from Vietnam time: ask for a day more on
         // each side and keep only the Vietnam-time range below (AC-001.1, BUG-188)
         String jql = "project = \"" + projectKey + "\" AND resolved >= \"" + from.minusDays(1) + "\" AND resolved < \""

@@ -42,6 +42,7 @@ import vn.tsolve.ticket.entity.IssueComment;
 import vn.tsolve.ticket.exception.JiraUnavailableException;
 import vn.tsolve.ticket.service.JiraIssue;
 import vn.tsolve.ticket.service.JiraIssuePage;
+import vn.tsolve.ticket.service.JiraIssueSource;
 import vn.tsolve.tracker.dto.JiraAccount;
 
 @ExtendWith(OutputCaptureExtension.class)
@@ -378,6 +379,29 @@ class JiraRestIssueSourceTest {
                 .containsExactly(SITE_URL + "/browse/KAN-7");
         assertThat(source.resolvedIssues("KAN", FROM, TO, null, DEADLINE).issues())
                 .isEmpty();
+    }
+
+    @Test
+    void readsTheWorkspaceAccountOnceForAllPagesOfOnePull_AC_001_12_BUG_311() {
+        int[] reads = {0};
+        JiraRestIssueSource source = new JiraRestIssueSource(
+                () -> {
+                    reads[0]++;
+                    return Optional.of(new JiraAccount(SITE_URL, CLOUD_ID, TOKEN));
+                },
+                builder,
+                sleeps::add,
+                clock);
+        searchReturns("{\"issues\":[],\"nextPageToken\":\"page-2\",\"isLast\":false}");
+        searchRequest()
+                .andExpect(queryParam("nextPageToken", "page-2"))
+                .andRespond(withSuccess("{\"issues\":[],\"isLast\":true}", MediaType.APPLICATION_JSON));
+
+        JiraIssueSource.Pull pull = source.pull("KAN", FROM, TO, DEADLINE);
+        assertThat(pull.page(null).nextPageToken()).isEqualTo("page-2");
+        assertThat(pull.page("page-2").nextPageToken()).isNull();
+
+        assertThat(reads[0]).isEqualTo(1);
     }
 
     @Test
