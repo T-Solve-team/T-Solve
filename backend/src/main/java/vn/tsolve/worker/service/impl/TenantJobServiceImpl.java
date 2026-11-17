@@ -1,6 +1,7 @@
 package vn.tsolve.worker.service.impl;
 
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import org.jobrunr.scheduling.JobRequestScheduler;
 import vn.tsolve.worker.dto.TenantJobRequest;
 import vn.tsolve.worker.service.TenantJobService;
@@ -26,5 +27,17 @@ public class TenantJobServiceImpl implements TenantJobService {
         return scheduler
                 .enqueue(new TenantJobRequest(workspaceId, handlerType, recordId))
                 .asUUID();
+    }
+
+    @Override
+    public UUID enqueueFromRequest(String handlerType, UUID recordId) {
+        if (tenants.currentWorkspaceId().isPresent()) {
+            return enqueue(handlerType, recordId);
+        }
+        UUID workspaceId = tenants.enqueueWorkspaceId()
+                .orElseThrow(() -> new IllegalStateException("Enqueue requires a bound workspace"));
+        AtomicReference<UUID> jobId = new AtomicReference<>();
+        tenants.runIn(workspaceId, () -> jobId.set(enqueue(handlerType, recordId)));
+        return jobId.get();
     }
 }

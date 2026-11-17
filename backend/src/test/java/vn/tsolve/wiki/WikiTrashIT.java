@@ -225,9 +225,9 @@ class WikiTrashIT extends WikiReadTestSupport {
                     return null;
                 })
                 .when(jobs)
-                .enqueue("wiki-index", id);
+                .enqueueFromRequest("wiki-index", id);
         service.restore(user, id);
-        verify(jobs).enqueue("wiki-index", id);
+        verify(jobs).enqueueFromRequest("wiki-index", id);
     }
 
     @Test
