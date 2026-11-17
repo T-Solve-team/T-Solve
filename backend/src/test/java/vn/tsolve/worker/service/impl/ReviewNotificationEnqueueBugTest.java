@@ -35,6 +35,7 @@ import vn.tsolve.ticket.service.ReviewNotificationService;
 import vn.tsolve.worker.dto.OutboundEmail;
 import vn.tsolve.worker.exception.EmailOutboxUnavailableException;
 import vn.tsolve.worker.service.EmailOutboxService;
+import vn.tsolve.worker.service.OutboxWorkspace;
 import vn.tsolve.worker.service.WorkerTenantService;
 import vn.tsolve.worker.service.mock.MockWorkerTenantService;
 
@@ -239,6 +240,49 @@ class ReviewNotificationEnqueueBugTest {
                 .singleElement()
                 .satisfies(
                         entry -> assertThat(entry.getFormattedMessage()).contains("2 of 2", "IllegalStateException"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void warnsInsteadOfReturningSilentlyWhenTheOutboxIsMissing_BUG_339() {
+        ObjectProvider<EmailOutboxService> outboxProvider = mock(ObjectProvider.class);
+        ObjectProvider<WorkerTenantService> tenantProvider = mock(ObjectProvider.class);
+        when(outboxProvider.getIfAvailable()).thenReturn(null);
+        var enqueuer = new ReviewNotificationEnqueuer(
+                outboxProvider, tenantProvider, notifications, mock(WorkspaceSiteService.class));
+
+        enqueuer.onDecided(new ReviewFeedbackDecidedEvent(List.of(RECORD_ID, new UUID(0, 4))));
+
+        verifyNoInteractions(notifications, outbox);
+        assertThat(enqueuerLog.list)
+                .filteredOn(entry -> entry.getLevel() == Level.WARN)
+                .singleElement()
+                .satisfies(entry -> assertThat(entry.getFormattedMessage())
+                        .contains("2 of 2", "email outbox is not available")
+                        .doesNotContain("writer@example.test"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void queuesFromTheWebRequestAndLinksTheSiteWhenOnlyTheOutboxIsEnabled_BUG_339() {
+        ObjectProvider<EmailOutboxService> outboxProvider = mock(ObjectProvider.class);
+        ObjectProvider<WorkerTenantService> noWorker = mock(ObjectProvider.class);
+        ObjectProvider<OutboxWorkspace> requestTenants = mock(ObjectProvider.class);
+        OutboxWorkspace workspace = () -> Optional.of(A);
+        var sites = mock(WorkspaceSiteService.class);
+        when(outboxProvider.getIfAvailable()).thenReturn(outbox);
+        when(noWorker.getIfAvailable()).thenReturn(null);
+        when(requestTenants.getIfAvailable()).thenReturn(workspace);
+        when(sites.siteHost(A)).thenReturn(Optional.of("acme.t-solve.test"));
+        var enqueuer =
+                new ReviewNotificationEnqueuer(outboxProvider, noWorker, notifications, sites, "", requestTenants);
+
+        enqueuer.onDecided(new ReviewFeedbackDecidedEvent(List.of(RECORD_ID)));
+
+        var queued = org.mockito.ArgumentCaptor.forClass(OutboundEmail.class);
+        verify(outbox).queue(queued.capture());
+        assertThat(queued.getValue().recipient()).isEqualTo("writer@example.test");
+        assertThat(queued.getValue().bodyText()).contains("https://acme.t-solve.test/tickets/" + RECORD_ID);
     }
 
     @SuppressWarnings("unchecked")
