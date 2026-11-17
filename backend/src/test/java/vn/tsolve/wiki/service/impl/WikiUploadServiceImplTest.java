@@ -223,7 +223,7 @@ class WikiUploadServiceImplTest {
                     return UUID.randomUUID();
                 })
                 .when(jobs)
-                .enqueue(eq("wiki-index"), any());
+                .enqueueFromRequest(eq("wiki-index"), any());
         var result = publish(user, space, List.of(file("guide.pdf", "guide.pdf")), metadata("  Guide  "));
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().title()).isEqualTo("Guide");
@@ -251,12 +251,12 @@ class WikiUploadServiceImplTest {
                                 && details.get("spaceId").equals(space)
                                 && details.containsKey("folderId")
                                 && details.get("visibility").equals("DEPARTMENT")));
-        verify(jobs).enqueue("wiki-index", document.getId());
+        verify(jobs).enqueueFromRequest("wiki-index", document.getId());
     }
 
     @Test
     void anEnqueueFailureAfterCommitStillReturnsEveryPublishedDocument_BUG_295() throws IOException {
-        when(jobs.enqueue(eq("wiki-index"), any()))
+        when(jobs.enqueueFromRequest(eq("wiki-index"), any()))
                 .thenThrow(new IllegalStateException("JobRunr down"))
                 .thenReturn(UUID.randomUUID());
         var result = publish(
@@ -265,7 +265,7 @@ class WikiUploadServiceImplTest {
                 List.of(file("guide.pdf", "a.pdf"), file("guide.pdf", "b.pdf")),
                 new WikiPublishMetadata(null, List.of(row("A"), row("B"))));
         assertThat(result).extracting(WikiDocumentRef::title).containsExactly("A", "B");
-        verify(jobs, org.mockito.Mockito.times(2)).enqueue(eq("wiki-index"), any());
+        verify(jobs, org.mockito.Mockito.times(2)).enqueueFromRequest(eq("wiki-index"), any());
         assertThat(storage.files).hasSize(2);
     }
 

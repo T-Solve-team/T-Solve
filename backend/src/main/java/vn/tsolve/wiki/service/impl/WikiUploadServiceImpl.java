@@ -175,7 +175,7 @@ public class WikiUploadServiceImpl implements WikiUploadService {
                             try {
                                 TenantJobService worker = jobs.getIfAvailable();
                                 if (worker == null) throw new IllegalStateException("No worker configured");
-                                worker.enqueue("wiki-index", document.documentId());
+                                worker.enqueueFromRequest("wiki-index", document.documentId());
                             } catch (RuntimeException failure) {
                                 // ponytail: no re-index sweep yet; PENDING documents need a manual re-enqueue.
                                 log.error(
