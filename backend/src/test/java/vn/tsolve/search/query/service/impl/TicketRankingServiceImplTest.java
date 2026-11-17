@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -23,6 +24,8 @@ import vn.tsolve.search.query.repository.TicketRankingRepository;
 import vn.tsolve.search.scope.service.VisibleScope.Scope;
 
 class TicketRankingServiceImplTest {
+    private static final UUID WRITER_ID = UUID.fromString("00000000-0000-0000-0000-0000000000aa");
+
     private final EmbeddingClient embeddings = mock(EmbeddingClient.class);
     private final TicketRankingRepository repository = mock(TicketRankingRepository.class);
     private final TicketSearchResultMapper mapper = mock(TicketSearchResultMapper.class);
@@ -54,7 +57,7 @@ class TicketRankingServiceImplTest {
         var result = service.rank("query", "query", filter, Scope.empty(), paging);
         assertThat(result.page()).isEmpty();
         assertThat(result.isFallback()).isFalse();
-        service.rank("query", "query", filter, new Scope(Set.of(), Set.of(1L), Optional.of("writer")), paging);
+        service.rank("query", "query", filter, new Scope(Set.of(), Set.of(1L), Optional.of(WRITER_ID)), paging);
         verifyNoInteractions(embeddings, repository, mapper);
     }
 
