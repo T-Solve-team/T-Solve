@@ -1860,6 +1860,14 @@
 {"ts":"2026-11-16T15:21:09.927Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-workspace-account","from":null,"to":"pending"}
 {"ts":"2026-11-16T15:24:32.340Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-workspace-account","from":"pending","to":"in-progress"}
 {"ts":"2026-11-16T15:24:32.583Z","type":"feature-status","module":"ticket-repository","feature":"jira-import-workspace-account","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-16T15:52:45.213Z","type":"spec-approved","module":"workspace","specHash":"4684ae66fa3cbb936612e934249e83a55fb0f95b51453d613795a833bc4a38f9"}
+{"ts":"2026-11-16T15:53:06.597Z","type":"feature-status","module":"workspace","feature":"jira-check-reason","from":null,"to":"pending"}
+{"ts":"2026-11-16T15:53:06.878Z","type":"feature-status","module":"workspace","feature":"jira-check-reason-screen","from":null,"to":"pending"}
+{"ts":"2026-11-16T15:53:29.581Z","type":"spec-approved","module":"workspace","specHash":"4ba54cb5b8cbfb3157e105736a1bdc947a9dac13a39e26b1a3f9f57f23b4e3dc"}
+{"ts":"2026-11-16T15:55:58.181Z","type":"feature-status","module":"workspace","feature":"jira-check-reason","from":"pending","to":"in-progress"}
+{"ts":"2026-11-16T15:55:58.431Z","type":"feature-status","module":"workspace","feature":"jira-check-reason","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-16T15:55:58.697Z","type":"feature-status","module":"workspace","feature":"jira-check-reason-screen","from":"pending","to":"in-progress"}
+{"ts":"2026-11-16T16:11:56.261Z","type":"feature-status","module":"workspace","feature":"jira-check-reason-screen","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-15T19:54:09.630Z","type":"feature-status","module":"ticket-repository","feature":"import-batch-date-range","from":"pending","to":"in-progress"}
 {"ts":"2026-11-15T19:54:09.893Z","type":"feature-status","module":"ticket-repository","feature":"import-batch-date-range","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-15T19:54:10.160Z","type":"feature-status","module":"ticket-repository","feature":"import-history-api","from":"pending","to":"in-progress"}
@@ -1903,3 +1911,4 @@
 {"ts":"2026-11-17T07:41:54.074Z","type":"feature-status","module":"chatbot","feature":"jira-issue-create","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-17T07:41:54.397Z","type":"feature-status","module":"chatbot","feature":"jira-issue-create","from":"evaluating","to":"passing"}
 {"ts":"2026-11-17T07:41:54.894Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"4f9a94e2fde787153faf115f2f2a6131cb1be94d"}
+{"ts":"2026-11-17T06:55:54.831Z","type":"spec-approved","module":"workspace","specHash":"d952c481789c8eba6cb884b18c663db2a60eb2b7c1c0c26a0c16b36e043c7a41"}

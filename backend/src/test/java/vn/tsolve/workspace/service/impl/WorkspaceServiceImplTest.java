@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.persistence.EntityManager;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -24,11 +25,14 @@ import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mapstruct.factory.Mappers;
 import org.mockito.ArgumentCaptor;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.SimpleTransactionStatus;
@@ -40,6 +44,7 @@ import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.identity.signin.port.TenantScope;
 import vn.tsolve.tracker.client.TicketTrackerClient;
 import vn.tsolve.tracker.dto.JiraAccount;
+import vn.tsolve.tracker.exception.JiraPermissionMissingException;
 import vn.tsolve.tracker.exception.JiraRejectedException;
 import vn.tsolve.tracker.exception.JiraUnavailableException;
 import vn.tsolve.workspace.crypto.TokenCipher;
@@ -53,6 +58,7 @@ import vn.tsolve.workspace.site.JiraSiteLinkRefusedException;
 import vn.tsolve.workspace.site.JiraSiteLinkRefusedException.Reason;
 import vn.tsolve.workspace.site.JiraSiteLinker;
 
+@ExtendWith(OutputCaptureExtension.class)
 class WorkspaceServiceImplTest {
     private static final String SITE = "https://fake.atlassian.net";
     private static final String TOKEN = "obviously-fake-jira-token";
@@ -214,8 +220,44 @@ class WorkspaceServiceImplTest {
                 ? new JiraRejectedException(status)
                 : new JiraUnavailableException(status);
         doThrow(failure).when(tracker).checkServiceAccount(any());
-        error(valid(), "serviceAccountToken", "MSG156", Map.of("tracker_name", "Jira"));
+        error(valid(), "serviceAccountToken", "MSG156", Map.of("tracker_name", "Jira", "reason", reasonOf(status)));
         verify(linker, never()).linkJiraSite(any());
+    }
+
+    @Test
+    @DisplayName("AC-011.9 a missing permission on Setup returns MISSING_PERMISSIONS with the missing keys")
+    void namesMissingPermissionsOnSetup_AC_011_9() {
+        doThrow(new JiraPermissionMissingException(List.of("CREATE_ISSUES", "MODIFY_REPORTER")))
+                .when(tracker)
+                .checkServiceAccount(any());
+        error(
+                valid(),
+                "serviceAccountToken",
+                "MSG156",
+                Map.of(
+                        "tracker_name",
+                        "Jira",
+                        "reason",
+                        "MISSING_PERMISSIONS",
+                        "missing_permissions",
+                        "CREATE_ISSUES,MODIFY_REPORTER"));
+    }
+
+    @Test
+    @DisplayName("AC-011.10 a failed Setup check logs one WARN line with step, reason, status and missing keys")
+    void logsTheFailedSetupCheck_AC_011_10(CapturedOutput output) {
+        doThrow(new JiraPermissionMissingException(List.of("MODIFY_REPORTER")))
+                .when(tracker)
+                .checkServiceAccount(any());
+        assertThatThrownBy(() -> service.setup(valid())).isInstanceOf(FieldMessageCodeException.class);
+        assertThat(output)
+                .contains("WARN")
+                .contains("step=setup, reason=MISSING_PERMISSIONS, status=403, missing=MODIFY_REPORTER")
+                .doesNotContain(TOKEN);
+    }
+
+    private static String reasonOf(int status) {
+        return status == 401 || status == 403 ? "TOKEN_REJECTED" : "JIRA_UNREACHABLE";
     }
 
     @ParameterizedTest
@@ -536,7 +578,10 @@ class WorkspaceServiceImplTest {
                 : new JiraUnavailableException(status);
         doThrow(failure).when(tracker).checkServiceAccount(any());
         updateError(
-                valid().put("companyName", "Renamed"), "serviceAccountToken", "MSG156", Map.of("tracker_name", "Jira"));
+                valid().put("companyName", "Renamed"),
+                "serviceAccountToken",
+                "MSG156",
+                Map.of("tracker_name", "Jira", "reason", reasonOf(status)));
         assertThat(stored.getCompanyName()).isEqualTo("Fake company");
         assertThat(stored.getServiceAccountApiToken()).isEqualTo("fake-ciphertext");
         verifyNoInteractions(cipher, linker);
@@ -609,9 +654,21 @@ class WorkspaceServiceImplTest {
     void rejectsAnUnreadableCloudIdForAnOldRow() {
         WorkspaceInfo stored = storedWorkspaceWithoutCloudId();
         when(linker.readCloudId(SITE)).thenThrow(new JiraSiteLinkRefusedException(Reason.UNREADABLE));
-        updateError(valid(), "serviceAccountToken", "MSG156", Map.of("tracker_name", "Jira"));
+        updateError(
+                valid(), "serviceAccountToken", "MSG156", Map.of("tracker_name", "Jira", "reason", "JIRA_UNREACHABLE"));
         assertThat(stored.getJiraCloudId()).isNull();
         verifyNoInteractions(tracker, cipher);
+    }
+
+    @Test
+    @DisplayName("AC-011.10 a failed Update check logs the step, reason and Jira status without the token")
+    void logsTheFailedUpdateCheck_AC_011_10(CapturedOutput output) {
+        storedWorkspace();
+        doThrow(new JiraRejectedException(401)).when(tracker).checkServiceAccount(any());
+        assertThatThrownBy(() -> service.update(valid())).isInstanceOf(FieldMessageCodeException.class);
+        assertThat(output)
+                .contains("step=update, reason=TOKEN_REJECTED, status=401, missing=")
+                .doesNotContain(TOKEN);
     }
 
     @Test

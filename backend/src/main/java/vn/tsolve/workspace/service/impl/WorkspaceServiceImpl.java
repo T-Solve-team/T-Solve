@@ -3,6 +3,7 @@ package vn.tsolve.workspace.service.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceException;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.hibernate.exception.ConstraintViolationException;
@@ -22,6 +23,7 @@ import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.identity.signin.port.TenantScope;
 import vn.tsolve.tracker.client.TicketTrackerClient;
 import vn.tsolve.tracker.dto.JiraAccount;
+import vn.tsolve.tracker.exception.JiraPermissionMissingException;
 import vn.tsolve.tracker.exception.JiraRejectedException;
 import vn.tsolve.tracker.exception.JiraUnavailableException;
 import vn.tsolve.workspace.crypto.TokenCipher;
@@ -93,7 +95,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
             tracker.checkServiceAccount(new JiraAccount(site, cloudId, token));
         } catch (JiraRejectedException | JiraUnavailableException failure) {
             // The underlying Jira exception/body must never be propagated with the credential error.
-            throw error("serviceAccountToken", "MSG156", Map.of("tracker_name", "Jira"));
+            throw checkFailed("setup", failure);
         }
         // D30: the Jira check above runs with no transaction open; link (AC-005.8), insert and audit commit together.
         return transaction.execute(status -> {
@@ -161,13 +163,13 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                     cloudId = linker.readCloudId(stored.getJiraSiteAddress());
                 } catch (JiraSiteLinkRefusedException failure) {
                     log.warn("Jira tenant information could not be read during a Workspace update");
-                    throw error("serviceAccountToken", "MSG156", Map.of("tracker_name", "Jira"));
+                    throw checkFailed("update", new JiraUnavailableException(0));
                 }
             }
             try {
                 tracker.checkServiceAccount(new JiraAccount(stored.getJiraSiteAddress(), cloudId, token));
             } catch (JiraRejectedException | JiraUnavailableException failure) {
-                throw error("serviceAccountToken", "MSG156", Map.of("tracker_name", "Jira"));
+                throw checkFailed("update", failure);
             }
         }
         String encryptedToken = tokenChanged ? cipher.encrypt(workspaceId, token) : stored.getServiceAccountApiToken();
@@ -214,6 +216,35 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
     private static BusinessRuleException alreadySetUp() {
         return new BusinessRuleException("WORKSPACE_ALREADY_SET_UP", Map.of());
+    }
+
+    /** AC-011.9, AC-011.10: MSG156 says why the check failed; the log keeps only our own keys and the status. */
+    private static FieldMessageCodeException checkFailed(String step, RuntimeException failure) {
+        String reason;
+        int status;
+        List<String> missing = List.of();
+        if (failure instanceof JiraPermissionMissingException permissions) {
+            reason = "MISSING_PERMISSIONS";
+            status = permissions.getStatus();
+            missing = permissions.getMissingPermissions();
+        } else if (failure instanceof JiraRejectedException rejected) {
+            reason = "TOKEN_REJECTED";
+            status = rejected.getStatus();
+        } else {
+            reason = "JIRA_UNREACHABLE";
+            status = failure instanceof JiraUnavailableException unavailable ? unavailable.getStatus() : 0;
+        }
+        String missingKeys = String.join(",", missing);
+        log.warn(
+                "Jira service account check failed: step={}, reason={}, status={}, missing={}",
+                step,
+                reason,
+                status,
+                missingKeys);
+        Map<String, Object> params = missing.isEmpty()
+                ? Map.of("tracker_name", "Jira", "reason", reason)
+                : Map.of("tracker_name", "Jira", "reason", reason, "missing_permissions", missingKeys);
+        return error("serviceAccountToken", "MSG156", params);
     }
 
     private static FieldMessageCodeException error(String field, String code, Map<String, Object> params) {

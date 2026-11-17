@@ -1,9 +1,10 @@
 import { Button, Flex, Form, Input, Typography } from 'antd';
 import type { WorkspaceInfo, WorkspaceUpdateRequest } from '@/shared/api';
-import { applyApiErrors, rules } from '@/shared/forms';
+import { rules } from '@/shared/forms';
 import { showMessage } from '@/shared/messages';
 import { AppForm, FormField, SectionCard } from '@/shared/ui';
 import { useUpdateWorkspaceInfo } from '../hooks/useWorkspace';
+import { applyWorkspaceApiErrors } from './serviceAccountReason';
 
 type WorkspaceInfoFormProps = { workspace: WorkspaceInfo };
 
@@ -28,7 +29,7 @@ export function WorkspaceInfoForm({ workspace }: WorkspaceInfoFormProps) {
       {
         onSuccess: () => form.resetFields(['serviceAccountToken']),
         onError: (error) => {
-          if (!applyApiErrors(form, error)) showMessage(error.code, error.params);
+          if (!applyWorkspaceApiErrors(form, error)) showMessage(error.code, error.params);
         },
       },
     );
