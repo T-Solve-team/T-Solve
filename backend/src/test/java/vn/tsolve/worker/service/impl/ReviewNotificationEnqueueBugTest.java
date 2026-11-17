@@ -34,6 +34,7 @@ import vn.tsolve.ticket.event.ReviewFeedbackDecidedEvent;
 import vn.tsolve.ticket.service.ReviewNotificationService;
 import vn.tsolve.worker.dto.OutboundEmail;
 import vn.tsolve.worker.exception.EmailOutboxUnavailableException;
+import vn.tsolve.worker.exception.InvalidOutboundEmailException;
 import vn.tsolve.worker.service.EmailOutboxService;
 import vn.tsolve.worker.service.OutboxWorkspace;
 import vn.tsolve.worker.service.WorkerTenantService;
@@ -283,6 +284,43 @@ class ReviewNotificationEnqueueBugTest {
         verify(outbox).queue(queued.capture());
         assertThat(queued.getValue().recipient()).isEqualTo("writer@example.test");
         assertThat(queued.getValue().bodyText()).contains("https://acme.t-solve.test/tickets/" + RECORD_ID);
+    }
+
+    @Test
+    void warnsThatNoWorkspaceIsBoundWhenTheWebOutboxFindsNone_BUG_341() {
+        webEnqueuer(Optional::empty).onDecided(new ReviewFeedbackDecidedEvent(List.of(RECORD_ID)));
+
+        verifyNoInteractions(outbox);
+        assertThat(enqueuerLog.list)
+                .filteredOn(entry -> entry.getLevel() == Level.WARN)
+                .singleElement()
+                .satisfies(
+                        entry -> assertThat(entry.getFormattedMessage()).contains("1 of 1", "(no Workspace to bind)"));
+    }
+
+    @Test
+    void namesTheEmailWhenTheOutboxRejectsIt_BUG_341() {
+        when(outbox.queue(any())).thenThrow(new InvalidOutboundEmailException());
+
+        webEnqueuer(() -> Optional.of(A)).onDecided(new ReviewFeedbackDecidedEvent(List.of(RECORD_ID)));
+
+        assertThat(enqueuerLog.list)
+                .filteredOn(entry -> entry.getLevel() == Level.WARN)
+                .singleElement()
+                .satisfies(entry -> assertThat(entry.getFormattedMessage())
+                        .contains("1 of 1", "the email was rejected")
+                        .doesNotContain("writer@example.test"));
+    }
+
+    @SuppressWarnings("unchecked")
+    private ReviewNotificationEnqueuer webEnqueuer(OutboxWorkspace workspace) {
+        ObjectProvider<EmailOutboxService> outboxProvider = mock(ObjectProvider.class);
+        ObjectProvider<WorkerTenantService> noWorker = mock(ObjectProvider.class);
+        ObjectProvider<OutboxWorkspace> web = mock(ObjectProvider.class);
+        when(outboxProvider.getIfAvailable()).thenReturn(outbox);
+        when(web.getIfAvailable()).thenReturn(workspace);
+        return new ReviewNotificationEnqueuer(
+                outboxProvider, noWorker, notifications, mock(WorkspaceSiteService.class), "", web);
     }
 
     @SuppressWarnings("unchecked")

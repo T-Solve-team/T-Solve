@@ -44,6 +44,7 @@ The queue is available in both API and worker processes when `tsolve.worker.enab
 that only queues mail (staging's `backend` service) sets `tsolve.worker.outbox-enabled=true` instead
 (`OutboxOnlyConfiguration`, BUG-339): the outbox with its own Jobs pool and migration, taking the Workspace from the
 request's `TenantContext` when one exists, else the single Active Workspace of `tsolve.worker.mock.active-workspaces`
+(falling back to `TSOLVE_MOCK_ACTIVE_WORKSPACES`, since only the `worker-mock` profile maps it; BUG-341)
 (the staging web process has no `TenantContext` bean; several Workspaces are never guessed between). It starts no JobRunr, registers no handler, needs no `worker-mock`, and is ignored when
 `tsolve.worker.enabled=true`; the worker process still sends the mail.
 Inject `ObjectProvider<EmailOutboxService>` into a consuming module's after-commit listener.
