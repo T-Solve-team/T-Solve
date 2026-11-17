@@ -14,15 +14,81 @@ import type { HttpResponseResolver, RequestHandlerOptions } from 'msw';
 import type {
   CreateWikiFolderRequest,
   ExtractWikiUploadsBody,
+  GrantWikiPermissionsRequest,
   PublishWikiDocumentsBody,
   UpdateWikiFolderRequest,
   WikiDocumentDetail,
   WikiDocumentRef,
   WikiDocumentSummary,
   WikiFolder,
+  WikiPermissionCandidates,
+  WikiRestoreResult,
   WikiSpace,
+  WikiSpaceSettings,
+  WikiTrashItem,
   WikiUploadPreview,
 } from '../model';
+
+export const getGetWikiSpaceSettingsResponseMock = (
+  overrideResponse: Partial<Extract<WikiSpaceSettings, object>> = {},
+): WikiSpaceSettings => ({
+  spaceId: faker.string.uuid(),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  departmentName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  knowledgeManager: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ownDepartment: {
+    departmentId: faker.string.uuid(),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    locked: true,
+  },
+  departments: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      permissionId: faker.string.uuid(),
+      departmentId: faker.string.uuid(),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      grantedBy: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      grantedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+    }),
+  ),
+  users: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    permissionId: faker.string.uuid(),
+    userId: faker.string.uuid(),
+    fullName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    email: faker.internet.email(),
+    homeDepartment: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    active: faker.datatype.boolean(),
+    grantedBy: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    grantedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+  })),
+  ...overrideResponse,
+});
+
+export const getListWikiPermissionCandidatesResponseMock = (
+  overrideResponse: Partial<Extract<WikiPermissionCandidates, object>> = {},
+): WikiPermissionCandidates => ({
+  departments: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      departmentId: faker.string.uuid(),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  users: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    userId: faker.string.uuid(),
+    fullName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    email: faker.internet.email(),
+    homeDepartment: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  ...overrideResponse,
+});
 
 export const getListWikiSpacesResponseMock = (): WikiSpace[] =>
   Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -149,8 +215,122 @@ export const getGetWikiDocumentResponseMock = (): WikiDocumentDetail => ({
     fileName: faker.string.alpha({ length: { min: 10, max: 20 } }),
     fileSize: faker.number.int(),
     canDelete: faker.datatype.boolean(),
+    inTrash: faker.datatype.boolean(),
   },
 });
+
+export const getListWikiTrashResponseMock = (): WikiTrashItem[] =>
+  Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    documentId: faker.string.uuid(),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    folderName: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    owner: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    deletedBy: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    deletedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+  }));
+
+export const getRestoreWikiDocumentResponseMock = (
+  overrideResponse: Partial<Extract<WikiRestoreResult, object>> = {},
+): WikiRestoreResult => ({
+  title: faker.string.alpha({ length: { min: 10, max: 200 } }),
+  renamed: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getGetWikiSpaceSettingsMockHandler = (
+  overrideResponse?:
+    | WikiSpaceSettings
+    | ((
+        info: Parameters<HttpResponseResolver<{ spaceId: string }>>[0],
+      ) => Promise<WikiSpaceSettings> | WikiSpaceSettings),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get<{ spaceId: string }>(
+    '*/api/v1/wiki/spaces/:spaceId/settings',
+    async (info: Parameters<HttpResponseResolver<{ spaceId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetWikiSpaceSettingsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListWikiPermissionCandidatesMockHandler = (
+  overrideResponse?:
+    | WikiPermissionCandidates
+    | ((
+        info: Parameters<HttpResponseResolver<{ spaceId: string }>>[0],
+      ) => Promise<WikiPermissionCandidates> | WikiPermissionCandidates),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get<{ spaceId: string }>(
+    '*/api/v1/wiki/spaces/:spaceId/permission-candidates',
+    async (info: Parameters<HttpResponseResolver<{ spaceId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListWikiPermissionCandidatesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGrantWikiPermissionsMockHandler = (
+  overrideResponse?:
+    | void
+    | ((
+        info: Parameters<HttpResponseResolver<{ spaceId: string }, GrantWikiPermissionsRequest>>[0],
+      ) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<{ spaceId: string }, GrantWikiPermissionsRequest>(
+    '*/api/v1/wiki/spaces/:spaceId/permissions',
+    async (
+      info: Parameters<HttpResponseResolver<{ spaceId: string }, GrantWikiPermissionsRequest>>[0],
+    ) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 201 });
+    },
+    options,
+  );
+};
+
+export const getRevokeWikiPermissionMockHandler = (
+  overrideResponse?:
+    | void
+    | ((
+        info: Parameters<HttpResponseResolver<{ permissionId: string }>>[0],
+      ) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete<{ permissionId: string }>(
+    '*/api/v1/wiki/permissions/:permissionId',
+    async (info: Parameters<HttpResponseResolver<{ permissionId: string }>>[0]) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
 
 export const getListWikiSpacesMockHandler = (
   overrideResponse?:
@@ -417,6 +597,25 @@ export const getSearchWikiDocumentsMockHandler = (
   );
 };
 
+export const getTrashWikiDocumentMockHandler = (
+  overrideResponse?:
+    | void
+    | ((info: Parameters<HttpResponseResolver<{ documentId: string }>>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete<{ documentId: string }>(
+    '*/api/v1/wiki/documents/:documentId',
+    async (info: Parameters<HttpResponseResolver<{ documentId: string }>>[0]) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
 export const getGetWikiDocumentMockHandler = (
   overrideResponse?:
     | WikiDocumentDetail
@@ -440,7 +639,78 @@ export const getGetWikiDocumentMockHandler = (
     options,
   );
 };
+
+export const getListWikiTrashMockHandler = (
+  overrideResponse?:
+    | WikiTrashItem[]
+    | ((
+        info: Parameters<HttpResponseResolver<{ spaceId: string }>>[0],
+      ) => Promise<WikiTrashItem[]> | WikiTrashItem[]),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get<{ spaceId: string }>(
+    '*/api/v1/wiki/spaces/:spaceId/trash',
+    async (info: Parameters<HttpResponseResolver<{ spaceId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListWikiTrashResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRestoreWikiDocumentMockHandler = (
+  overrideResponse?:
+    | WikiRestoreResult
+    | ((
+        info: Parameters<HttpResponseResolver<{ documentId: string }>>[0],
+      ) => Promise<WikiRestoreResult> | WikiRestoreResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<{ documentId: string }>(
+    '*/api/v1/wiki/documents/:documentId/restore',
+    async (info: Parameters<HttpResponseResolver<{ documentId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRestoreWikiDocumentResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteWikiDocumentPermanentlyMockHandler = (
+  overrideResponse?:
+    | void
+    | ((info: Parameters<HttpResponseResolver<{ documentId: string }>>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete<{ documentId: string }>(
+    '*/api/v1/wiki/documents/:documentId/permanent',
+    async (info: Parameters<HttpResponseResolver<{ documentId: string }>>[0]) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
 export const getWikiMock = () => [
+  getGetWikiSpaceSettingsMockHandler(),
+  getListWikiPermissionCandidatesMockHandler(),
+  getGrantWikiPermissionsMockHandler(),
+  getRevokeWikiPermissionMockHandler(),
   getListWikiSpacesMockHandler(),
   getListCompanyWideDocumentsMockHandler(),
   getCreateWikiFolderMockHandler(),
@@ -452,5 +722,9 @@ export const getWikiMock = () => [
   getExtractWikiUploadsMockHandler(),
   getDownloadWikiDocumentFileMockHandler(),
   getSearchWikiDocumentsMockHandler(),
+  getTrashWikiDocumentMockHandler(),
   getGetWikiDocumentMockHandler(),
+  getListWikiTrashMockHandler(),
+  getRestoreWikiDocumentMockHandler(),
+  getDeleteWikiDocumentPermanentlyMockHandler(),
 ];

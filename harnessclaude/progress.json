@@ -153,8 +153,8 @@
       }
     },
     "workspace": {
-      "status": "evaluating",
-      "currentPhase": "evaluate",
+      "status": "implementing",
+      "currentPhase": "implement",
       "features": {
         "create-department-api": "passing",
         "create-department-screen": "passing",
@@ -167,15 +167,25 @@
         "workspace-setup-screen": "passing",
         "workspace-settings-screen": "passing",
         "rename-department-api": "passing",
-        "rename-department-screen": "passing"
+        "rename-department-screen": "passing",
+        "workspace-token-hint": "pending",
+        "jira-cloud-id": "evaluating",
+        "workspace-form-no-email": "evaluating",
+        "default-project-api": "passing",
+        "default-project-screen": "passing",
+        "jira-check-reason": "evaluating",
+        "jira-check-reason-screen": "evaluating",
+        "jira-app-token": "evaluating",
+        "workspace-without-service-account": "evaluating",
+        "workspace-jira-app-status-screen": "evaluating"
       },
-      "lastUpdated": "2026-11-12T19:46:35.915Z",
+      "lastUpdated": "2026-11-17T04:06:47.852Z",
       "branch": "feat/workspace",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "dcdc6063c3134ae17f645c18adb7ebcbf836dd16"
+        "default": "030ed7b71dc85c45fe3a3d21731bfde87c8f653a"
       }
     },
     "project-integration": {
@@ -212,21 +222,23 @@
         "wiki-home-ui": "passing",
         "wiki-folder-api": "passing",
         "wiki-folder-ui": "passing",
-        "wiki-upload-api": "evaluating",
-        "wiki-indexing": "evaluating",
-        "wiki-upload-ui": "evaluating",
-        "wiki-trash-api": "pending",
-        "wiki-trash-ui": "pending",
-        "wiki-permissions-api": "pending",
-        "wiki-permissions-ui": "pending"
+        "wiki-upload-api": "passing",
+        "wiki-indexing": "passing",
+        "wiki-upload-ui": "passing",
+        "wiki-trash-api": "passing",
+        "wiki-trash-ui": "passing",
+        "wiki-permissions-api": "passing",
+        "wiki-permissions-ui": "passing",
+        "wiki-trash-detail": "passing",
+        "wiki-project-department-sources": "evaluating"
       },
-      "lastUpdated": "2026-11-15T05:58:28.995Z",
+      "lastUpdated": "2026-11-17T10:15:31.050Z",
       "branch": "feat/wiki",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "186f3b38ff677b97644a1e42cf77f0837be6767b"
+        "default": "38d16367f63e4f1ea3b8e79cc57d4a6a6f1b5829"
       }
     },
     "ticket-repository": {
@@ -244,7 +256,7 @@
         "jira-import-preview-page": "passing",
         "jira-import-verify": "passing",
         "jira-gateway-auth": "passing",
-        "jira-pull-deadline": "evaluating",
+        "jira-pull-deadline": "passing",
         "ticket-status-model": "passing",
         "manual-ticket-contract": "passing",
         "manual-ticket-create": "passing",
@@ -253,18 +265,19 @@
         "manual-evidence-contract": "passing",
         "manual-evidence-backend": "passing",
         "manual-evidence-tab": "passing",
-        "import-batch-date-range": "pending",
-        "import-history-api": "pending",
-        "import-history-page": "pending",
-        "ticket-detail-scope": "pending",
-        "ticket-detail-page": "pending",
+        "import-batch-date-range": "passing",
+        "import-history-api": "passing",
+        "import-history-page": "passing",
+        "ticket-detail-scope": "passing",
+        "ticket-detail-page": "passing",
         "ticket-publication-contract": "passing",
         "ticket-publication": "passing",
         "ticket-publication-buttons": "passing",
-        "ticket-decision-table": "evaluating",
-        "drop-legacy-solution-tables": "evaluating"
+        "ticket-decision-table": "passing",
+        "drop-legacy-solution-tables": "passing",
+        "jira-import-workspace-account": "passing"
       },
-      "lastUpdated": "2026-11-15T05:09:52.823Z",
+      "lastUpdated": "2026-11-16T17:48:57.779Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
@@ -314,9 +327,11 @@
         "suggestion-history": "passing",
         "suggestion-history-contract": "passing",
         "suggestion-history-api": "passing",
-        "suggestion-generation": "passing"
+        "suggestion-generation": "passing",
+        "jira-site": "passing",
+        "managed-projects": "passing"
       },
-      "lastUpdated": "2026-11-07T20:18:44.302Z",
+      "lastUpdated": "2026-11-17T10:17:33.860Z",
       "branch": "feat/triage",
       "repos": [
         "default"
@@ -340,15 +355,18 @@
         "cited-documents": "passing",
         "follow-up-context": "passing",
         "answer-rating-schema": "passing",
-        "answer-rating-api": "passing"
+        "answer-rating-api": "passing",
+        "jira-issue-draft": "passing",
+        "jira-issue-create": "passing",
+        "chatbot-ask-for-project": "evaluating"
       },
-      "lastUpdated": "2026-11-11T09:02:24.623Z",
+      "lastUpdated": "2026-11-17T10:22:27.876Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "0e250a6df1826245c5b34dc36faed36e2baa80e4"
+        "default": "4f9a94e2fde787153faf115f2f2a6131cb1be94d"
       }
     },
     "jira-app": {
@@ -373,10 +391,12 @@
         "close-keeps-draft": "passing",
         "resubmit-backend": "evaluating",
         "resubmit-forge": "evaluating",
-        "panel-rejected": "evaluating",
-        "panel-published": "evaluating"
+        "panel-rejected": "passing",
+        "panel-published": "passing",
+        "app-token-trigger": "evaluating",
+        "ask-without-sign-in": "evaluating"
       },
-      "lastUpdated": "2026-11-14T19:08:51.881Z",
+      "lastUpdated": "2026-11-17T10:37:55.476Z",
       "branch": "feat/KAN-337-jira-app-reject-reason",
       "repos": [
         "default"
@@ -396,9 +416,10 @@
         "dashboard-outcomes": "passing",
         "dashboard-reuse-gaps": "passing",
         "dashboard-page": "passing",
-        "dashboard-sections": "passing"
+        "dashboard-sections": "passing",
+        "jira-questions-gap": "evaluating"
       },
-      "lastUpdated": "2026-11-11T13:52:46.593Z",
+      "lastUpdated": "2026-11-17T10:24:20.052Z",
       "branch": "feat/dashboard-audit",
       "repos": [
         "default"
@@ -416,7 +437,7 @@
         "row-level-security": "pending",
         "workspace-registry": "pending",
         "web-tenant-resolver": "pending",
-        "file-storage": "evaluating",
+        "file-storage": "passing",
         "local-compose": "pending",
         "ci-images": "pending",
         "staging-servers": "pending",
@@ -444,7 +465,7 @@
         "cross-module-isolation": "passing",
         "e2e-smoke": "passing"
       },
-      "lastUpdated": "2026-11-14T06:06:15.574Z",
+      "lastUpdated": "2026-11-15T19:54:14.488Z",
       "branch": "feat/platform",
       "repos": [
         "default"
@@ -517,9 +538,10 @@
         "suggestion-job-worker": "passing",
         "suggestion-uuid-keys": "evaluating",
         "suggestion-comment": "passing",
-        "jira-project-read": "passing"
+        "jira-project-read": "passing",
+        "jira-gateway-bearer": "evaluating"
       },
-      "lastUpdated": "2026-11-13T09:41:30.891Z",
+      "lastUpdated": "2026-11-16T14:29:52.260Z",
       "branch": "feat/tracker",
       "repos": [
         "default"
@@ -553,9 +575,9 @@
         "review-email-html": "passing",
         "review-email-outbox": "passing",
         "review-email-link-fallback": "passing",
-        "jira-rejected-feedback": "evaluating"
+        "jira-rejected-feedback": "passing"
       },
-      "lastUpdated": "2026-11-14T17:32:18.927Z",
+      "lastUpdated": "2026-11-17T10:00:47.548Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"

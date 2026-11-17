@@ -40,12 +40,14 @@ is one row of such a preview.
 | 2026-11-14 | STORY-007, STORY-008 | New STORY-007 (KAN-134, UC-23 Import History): AC-007.1–AC-007.10; new STORY-008 (KAN-135, UC-24 Ticket Detail): AC-008.1–AC-008.10; decisions D22–D32; Import History and Ticket Detail leave Out of Scope, their excluded parts are listed there; Interface Contracts gain `GET /imports/history` and the extended `GET /tickets/{ticketId}` | KAN-134, KAN-135; user decisions 2026-11-14 |
 | 2026-11-15 | STORY-009 | New STORY-009 (KAN-136, UC-25 unpublish / re-publish): AC-009.1–AC-009.10, decisions D33–D37; unpublish / re-publish leaves Out of Scope | KAN-136; user decisions 2026-11-15 |
 | 2026-11-15 | STORY-010 | New STORY-010 (KAN-137): AC-010.1–AC-010.7, decisions D38–D43; "Required from other modules" names `ticket_decision` | KAN-137: two decision tables and the unused Solution tables of changeset 001 are left from before the ticket model was one; user decisions 2026-11-15 (planned as STORY-007 / D17–D22 in PR #246, renumbered after KAN-134–KAN-136 took those numbers) |
+| 2026-11-16 | STORY-001 | KAN-345: D2 and AC-001.12 reworded, new AC-001.14 — a pull takes the Workspace's Jira service account from `workspace` (`JiraServiceAccount.current()`: site URL, cloud id, scoped token; KAN-344) for every pull, instead of the environment (`JIRA_SITE_URL`, `JIRA_CLOUD_ID`, `JIRA_API_TOKEN` removed); Out of Scope and Required from other modules follow | BUG-308: on staging the env was empty, so every pull answered MSG50 although the Admin had entered the service account; user decision 16/11 (one account per Workspace, KAN-344 part 1) |
+| 2026-11-17 | STORY-001 | KAN-349: D2 notes that the account behind `JiraServiceAccount` is now the T-Solve Jira App's app token; no acceptance criterion changes | RESEARCH-005, user decision 17/11 |
 
 ## Decisions taken while planning (2026-11-07, with the user)
 | # | Question | Decision |
 |---|----------|----------|
 | D1 | Scope of this plan | Only UC-20 (KAN-45). UC-19, UC-22–25 come later through Change Mode. |
-| D2 | How T-Solve reads Jira | The Workspace Jira service account (KAN-45 update of 01/11, DB tables doc 31/10), not a per-Project token (SRS GBR-14 is outdated). The import calls a `JiraIssueSource` interface. The credential is a scoped API token (the only kind a service account has), sent as a Bearer token to the Atlassian API gateway `https://api.atlassian.com/ex/jira/{cloudId}`; no email is used. Until `workspace` stores the service account, the implementation reads the Jira site URL (for the issue links), the site's cloud id and the API token from the environment (`JIRA_SITE_URL`, `JIRA_CLOUD_ID`, `JIRA_API_TOKEN`). Classic unscoped tokens with basic auth are not supported (user decision 2026-11-07, RESEARCH-003). |
+| D2 | How T-Solve reads Jira | The Workspace Jira service account (KAN-45 update of 01/11, DB tables doc 31/10), not a per-Project token (SRS GBR-14 is outdated). The import calls a `JiraIssueSource` interface. The credential is a scoped API token (the only kind a service account has), sent as a Bearer token to the Atlassian API gateway `https://api.atlassian.com/ex/jira/{cloudId}`; no email is used. The account is the Workspace's, read from `workspace` for each pull (`JiraServiceAccount.current()`: the site URL for the issue links, the site's cloud id and the token — since KAN-349 the T-Solve Jira App's app token, no customer service account; KAN-344, KAN-345); nothing comes from the environment. Classic unscoped tokens with basic auth are not supported (user decision 2026-11-07, RESEARCH-003). |
 | D3 | Drafts | Included. A Draft is an Import Preview marked as a Draft; the daily cleanup skips Drafts. |
 | D4 | Writer of an imported ticket | The Jira assignee's display name at pull time; empty when the issue is unassigned (no Jira ↔ T-Solve account linking yet). |
 | D5 | Comments shown in the popup | Every comment of the issue at pull time, as plain text with author and date. The "mapped resolution comments field" of `project-integration` is not used yet. |
@@ -123,7 +125,8 @@ is one row of such a preview.
   - AC-001.9: IF the caller does not have the Project Manager role, THEN THE system SHALL reject the pull with HTTP 403 (MSG08).
   - AC-001.10: WHEN a pull creates a preview, THE system SHALL delete the caller's previous unconfirmed preview that is not a Draft, if any.
   - AC-001.11: IF a Jira call answers HTTP 429, or HTTP 503 with a `Retry-After` header, and `Retry-After` is at most 5 seconds, THEN THE system SHALL wait that many seconds and send the same call again, at most 2 times per call; a missing `Retry-After` on a 429 counts as 1 second, and a `Retry-After` above 5 seconds ends the retries at once.
-  - AC-001.12: WHEN the system calls Jira for a pull, THE system SHALL send the configured API token as `Authorization: Bearer` to `https://api.atlassian.com/ex/jira/{cloudId}` with the configured cloud id, and SHALL build each row's link to the issue as the configured Jira site URL + `/browse/{key}`.
+  - AC-001.12: WHEN the system calls Jira for a pull, THE system SHALL take the bound Workspace's service account from `JiraServiceAccount.current()` at the start of that pull, send its token as `Authorization: Bearer` to `https://api.atlassian.com/ex/jira/{cloudId}` with its cloud id, and build each row's link to the issue as its site URL + `/browse/{key}`.
+  - AC-001.14: IF `JiraServiceAccount.current()` returns no account (the Workspace is not set up, has no cloud id yet, or its token cannot be decrypted), THEN THE system SHALL make no Jira call and answer as in AC-001.7 for a connection that is not configured: MSG50, no preview, one Failed Import Batch of source Jira with 0 published.
   - AC-001.13: IF reading Jira for one pull — every page, comment call and retry together — takes more than 60 seconds, THEN THE system SHALL stop reading and answer as in AC-001.7: MSG50 with an error message that contains no credential, no preview, and one Import Batch of source Jira with status Failed and 0 published.
 
 ### STORY-002: Write Solutions on the Import Preview
@@ -265,7 +268,7 @@ The events of these changes are AC-005.4 and AC-005.5. That an Unpublished ticke
 - Ticket Detail: the Feedback summary and Give feedback; counting dashboard views; the Send
   back button (UC-30; the Unpublish and Re-publish buttons are STORY-009); access by an Employee, Admin or Knowledge
   Manager through a Chatbot citation (D32); a source link for tickets imported before D30 (no backfill).
-- Storing the Jira service account in the database and the UC-10 screen — `workspace`. Until then the connection comes from the environment (D2).
+- Storing the Jira service account in the database and the UC-10 screen — `workspace` (KAN-344); this module only reads it (D2).
 - The Jira field mapping and "resolution comments field" of a Project — `project-integration` (D5).
 - Linking a Jira assignee to a T-Solve user (D4).
 - Evidence and attachments of Jira issues.
@@ -320,7 +323,7 @@ Rejections of the new endpoints: MSG01, MSG39 → 400 · MSG04 on pull → 404 �
 ### Required from other modules
 - `project` (existing code, owned by `project-integration` later): the Project's Jira project key, through `ProjectService`.
 - `import-ticket-list` (PR #110, `vn.tsolve.ticket`): `ProjectAccess`, the `ticket`, `ticket_decision` (STORY-010; `ticket_import_decision` before it), `import_batch`, `import_preview` and `import_preview_row` tables, the preview endpoints and screens, and `TicketsPublishedEvent`, extended by this module.
-- `workspace` (later): the stored Jira service account behind `JiraIssueSource` (D2).
+- `workspace` (KAN-344): `tracker.service.JiraServiceAccount.current()` → `tracker.dto.JiraAccount(siteUrl, cloudId, apiToken)`, the bound Workspace's account, read by `JiraIssueSource` for each pull (D2).
 - `identity` (KAN-118): `ScopeAccessService.canAccessDepartment(accountId, departmentId)` for Ticket Detail (D28).
 - `ticket-review`: the Ticket Detail endpoint, its controller, service, DTO and web components, extended here (D29).
 - `project-integration`: the `project` and `project_membership` tables (Department of a Project, its Project Managers).

@@ -19,11 +19,4 @@ export interface WorkspaceSetupRequest {
    * @maxLength 200
    */
   jiraSiteUrl: string;
-  /**
-   * @minLength 1
-   * @maxLength 100
-   */
-  serviceAccountEmail: string;
-  /** @minLength 1 */
-  serviceAccountToken: string;
 }

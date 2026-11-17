@@ -1,6 +1,5 @@
 package vn.tsolve.workspace.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -26,28 +25,25 @@ public class WorkspaceInfo {
     @Column(name = "jira_site_address", length = 255, updatable = false)
     private String jiraSiteAddress;
 
-    @Column(name = "service_account_email", length = 254)
-    private String serviceAccountEmail;
-
-    @Column(name = "service_account_api_token", columnDefinition = "text")
-    private String serviceAccountApiToken;
+    @Column(name = "jira_cloud_id", length = 36)
+    private String jiraCloudId;
 
     @Column(name = "token_expiry_date")
     private LocalDate tokenExpiryDate;
 
     protected WorkspaceInfo() {}
 
-    public WorkspaceInfo(
-            UUID id,
-            String companyName,
-            String jiraSiteAddress,
-            String serviceAccountEmail,
-            String serviceAccountApiToken) {
+    // KAN-349: no Jira credential is stored; changeset 043 cleared the old service account columns.
+    public WorkspaceInfo(UUID id, String companyName, String jiraSiteAddress, String jiraCloudId) {
         this.id = id;
         this.companyName = companyName;
         this.jiraSiteAddress = jiraSiteAddress;
-        this.serviceAccountEmail = serviceAccountEmail;
-        this.serviceAccountApiToken = serviceAccountApiToken;
+        this.jiraCloudId = jiraCloudId;
+    }
+
+    /** Settings (UC-11): only the company name changes; the site and its cloud id stay (GBR-24). */
+    public void rename(String companyName) {
+        this.companyName = companyName;
     }
 
     public UUID getId() {
@@ -66,13 +62,8 @@ public class WorkspaceInfo {
         return jiraSiteAddress;
     }
 
-    public String getServiceAccountEmail() {
-        return serviceAccountEmail;
-    }
-
-    @JsonIgnore
-    public String getServiceAccountApiToken() {
-        return serviceAccountApiToken;
+    public String getJiraCloudId() {
+        return jiraCloudId;
     }
 
     public LocalDate getTokenExpiryDate() {

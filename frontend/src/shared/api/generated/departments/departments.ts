@@ -24,6 +24,7 @@ import type {
 
 import type {
   CreateDepartmentRequest,
+  DepartmentDetail,
   DepartmentRef,
   ProblemResponse,
   UpdateDepartmentRequest,
@@ -165,8 +166,8 @@ export const getGetDepartmentUrl = (departmentId: string) => {
 export const getDepartment = async (
   departmentId: string,
   options?: Parameters<typeof http>[1],
-): Promise<DepartmentRef> => {
-  return http<DepartmentRef>(getGetDepartmentUrl(departmentId), {
+): Promise<DepartmentDetail> => {
+  return http<DepartmentDetail>(getGetDepartmentUrl(departmentId), {
     ...options,
     method: 'GET',
   });
@@ -288,13 +289,13 @@ export const getUpdateDepartmentUrl = (departmentId: string) => {
 };
 
 /**
- * @summary Rename a Department and its Space
+ * @summary Rename a Department and its Space, and set its default Project
  */
 export const updateDepartment = async (
   departmentId: string,
   updateDepartmentRequest: UpdateDepartmentRequest,
   options?: Parameters<typeof http>[1],
-): Promise<DepartmentRef> => {
+): Promise<DepartmentDetail> => {
   const getHeaders = (
     h?: NonNullable<RequestInit['headers']>,
   ): Record<string, string | readonly string[]> => {
@@ -314,7 +315,7 @@ export const updateDepartment = async (
     }
     return headers;
   };
-  return http<DepartmentRef>(getUpdateDepartmentUrl(departmentId), {
+  return http<DepartmentDetail>(getUpdateDepartmentUrl(departmentId), {
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
@@ -371,7 +372,7 @@ export type UpdateDepartmentMutationVariables = {
 };
 
 /**
- * @summary Rename a Department and its Space
+ * @summary Rename a Department and its Space, and set its default Project
  */
 export const useUpdateDepartment = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
   options?: {

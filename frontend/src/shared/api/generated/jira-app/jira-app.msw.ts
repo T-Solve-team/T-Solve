@@ -15,6 +15,7 @@ import { ChatbotAnswerOutcome, SolutionFormOrigin, TicketStatus } from '../model
 import type {
   ChatbotAnswer,
   ChatbotQuestion,
+  ChatbotRating,
   IssueCreatedPayload,
   IssuePanel,
   JiraAskerEligibility,
@@ -56,7 +57,14 @@ export const getGetJiraReviewFeedbackResponseMock = (
 
 export const getGetJiraAskerEligibilityResponseMock = (
   overrideResponse: Partial<Extract<JiraAskerEligibility, object>> = {},
-): JiraAskerEligibility => ({ linked: faker.datatype.boolean(), ...overrideResponse });
+): JiraAskerEligibility => ({
+  status: faker.helpers.arrayElement([
+    'CONNECTED',
+    'SITE_NOT_CONNECTED',
+    'PROJECT_NOT_CONNECTED',
+  ] as const),
+  ...overrideResponse,
+});
 
 export const getAskJiraAppQuestionResponseWikiDocumentCitationMock = (
   overrideResponse: Partial<WikiDocumentCitation> = {},
@@ -218,6 +226,23 @@ export const getReceiveIssueCreatedMockHandler = (
   );
 };
 
+export const getReceiveJiraAppTokenMockHandler = (
+  overrideResponse?: void | ((info: Parameters<HttpResponseResolver>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    '*/api/v1/jira-app/app-token',
+    async (info: Parameters<HttpResponseResolver>[0]) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
 export const getGetJiraAskerEligibilityMockHandler = (
   overrideResponse?:
     | JiraAskerEligibility
@@ -261,6 +286,27 @@ export const getAskJiraAppQuestionMockHandler = (
           : getAskJiraAppQuestionResponseMock(),
         { status: 200 },
       );
+    },
+    options,
+  );
+};
+
+export const getRateJiraAppAnswerMockHandler = (
+  overrideResponse?:
+    | void
+    | ((
+        info: Parameters<HttpResponseResolver<{ answerId: string }, ChatbotRating>>[0],
+      ) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put<{ answerId: string }, ChatbotRating>(
+    '*/api/v1/jira-app/questions/:answerId/rating',
+    async (info: Parameters<HttpResponseResolver<{ answerId: string }, ChatbotRating>>[0]) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
     },
     options,
   );
@@ -389,8 +435,10 @@ export const getGetIssuePanelMockHandler = (
 export const getJiraAppMock = () => [
   getGetJiraReviewFeedbackMockHandler(),
   getReceiveIssueCreatedMockHandler(),
+  getReceiveJiraAppTokenMockHandler(),
   getGetJiraAskerEligibilityMockHandler(),
   getAskJiraAppQuestionMockHandler(),
+  getRateJiraAppAnswerMockHandler(),
   getOpenSolutionFormMockHandler(),
   getSubmitSolutionMockHandler(),
   getSaveSolutionDraftMockHandler(),

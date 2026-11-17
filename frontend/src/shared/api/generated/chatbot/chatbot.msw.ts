@@ -14,6 +14,10 @@ import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'ms
 import { ChatbotAnswerOutcome } from '../model';
 import type {
   ChatbotAnswer,
+  ChatbotIssueDraft,
+  ChatbotIssueDraftRequest,
+  ChatbotIssueRequest,
+  ChatbotJiraIssue,
   ChatbotQuestion,
   ChatbotRating,
   TicketSolutionCitation,
@@ -78,6 +82,37 @@ export const getListUnavailableCitedDocumentsResponseMock = (
   ).map(() => faker.string.uuid()),
   ...overrideResponse,
 });
+
+export const getDraftChatbotIssueResponseMock = (
+  overrideResponse: Partial<Extract<ChatbotIssueDraft, object>> = {},
+): ChatbotIssueDraft => ({
+  summary: faker.string.alpha({ length: { min: 10, max: 255 } }),
+  description: faker.string.alpha({ length: { min: 10, max: 10000 } }),
+  departmentId: faker.helpers.arrayElement([faker.number.int(), null]),
+  departments: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      departmentId: faker.number.int(),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getCreateChatbotIssueResponseMock = (
+  overrideResponse: Partial<Extract<ChatbotJiraIssue, object>> = {},
+): ChatbotJiraIssue =>
+  faker.helpers.arrayElement([
+    {
+      issueKey: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      issueUrl: faker.internet.url(),
+      ...overrideResponse,
+    },
+    {
+      issueKey: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      issueUrl: faker.internet.url(),
+      ...overrideResponse,
+    },
+  ]);
 
 export const getAskChatbotMockHandler = (
   overrideResponse?:
@@ -166,9 +201,63 @@ export const getRemoveChatbotAnswerRatingMockHandler = (
     options,
   );
 };
+
+export const getDraftChatbotIssueMockHandler = (
+  overrideResponse?:
+    | ChatbotIssueDraft
+    | ((
+        info: Parameters<HttpResponseResolver<{ answerId: string }, ChatbotIssueDraftRequest>>[0],
+      ) => Promise<ChatbotIssueDraft> | ChatbotIssueDraft),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<{ answerId: string }, ChatbotIssueDraftRequest>(
+    '*/api/v1/chatbot/answers/:answerId/issue-draft',
+    async (
+      info: Parameters<HttpResponseResolver<{ answerId: string }, ChatbotIssueDraftRequest>>[0],
+    ) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDraftChatbotIssueResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateChatbotIssueMockHandler = (
+  overrideResponse?:
+    | ChatbotJiraIssue
+    | ((
+        info: Parameters<HttpResponseResolver<{ answerId: string }, ChatbotIssueRequest>>[0],
+      ) => Promise<ChatbotJiraIssue> | ChatbotJiraIssue),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<{ answerId: string }, ChatbotIssueRequest>(
+    '*/api/v1/chatbot/answers/:answerId/jira-issue',
+    async (
+      info: Parameters<HttpResponseResolver<{ answerId: string }, ChatbotIssueRequest>>[0],
+    ) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateChatbotIssueResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
 export const getChatbotMock = () => [
   getAskChatbotMockHandler(),
   getListUnavailableCitedDocumentsMockHandler(),
   getRateChatbotAnswerMockHandler(),
   getRemoveChatbotAnswerRatingMockHandler(),
+  getDraftChatbotIssueMockHandler(),
+  getCreateChatbotIssueMockHandler(),
 ];

@@ -524,3 +524,20 @@ database (risk review): the drop cannot be undone.
   mapping starts with `/api/solutions`)
 **Dependencies:** Task 29 (same test class and changelog order)
 **Estimated size:** small
+
+---
+
+## Task 31: The pull reads the Workspace's Jira service account (KAN-345)
+
+**Story:** STORY-001
+**Feature:** jira-import-workspace-account
+**Description:** `JiraRestIssueSource` takes `JiraServiceAccount` (tracker port, implemented by workspace) instead of the
+three `JIRA_*` values; each `resolvedIssues` call reads `current()` once, refuses an empty account with MSG50 before any
+call (AC-001.14), and sends the token as Bearer to `https://api.atlassian.com/ex/jira/{cloudId}` with the account's site
+URL for the issue links (AC-001.12). Retries, budget and mapping stay (AC-001.7, AC-001.11, AC-001.13). Remove the env
+variables from `.env.example` and `infra/staging.env.example`. BUG-308 row → Fixed.
+**Files:**
+- Modify: `backend/src/main/java/vn/tsolve/ticket/client/JiraRestIssueSource.java`, `.env.example`, `infra/staging.env.example`, `docs/bug-log.md`
+- Test: `backend/src/test/java/vn/tsolve/ticket/client/JiraRestIssueSourceTest.java` (AC-001.12, AC-001.14, BUG-308)
+**Dependencies:** workspace Task 10 (KAN-344, merged)
+**Estimated size:** small

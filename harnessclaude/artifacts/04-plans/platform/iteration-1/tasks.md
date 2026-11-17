@@ -53,7 +53,8 @@ superuser nor `BYPASSRLS`), AC-001.33 (Jobs database, its user connects only to 
 - `docker-compose.yml`: `db` (pgvector:pg16, `max_connections = 300`, init mounted), `redis` (pinned, `appendonly yes`,
   `requirepass`, `noeviction`, no published port, health check), `garage` (pinned, single node, volumes, no published
   port) and the one-shot `garage-init` (`infra/scripts/garage-init.sh`: layout, private bucket `FILE_STORAGE_BUCKET`, one
-  access key limited to that bucket; exits non-zero on failure). Removes `FILE_STORAGE_ROOT`, `TSOLVE_DATABASES`,
+  access key limited to that bucket; exits non-zero on failure). `infra/garage/garage.toml` sets no `root_domain` in
+  `[s3_api]`, so Garage reads the Workspace hosts as path-style (RESEARCH-005, Task 17). Removes `FILE_STORAGE_ROOT`, `TSOLVE_DATABASES`,
   `DB_NAME`, `DB_USER`, `DB_PASSWORD` from the files.
 - `.env.example` lists the new variable names with no value; `infra/README.md` (new) has the start command and the
   variable table of this task.
@@ -419,7 +420,9 @@ AC-009.11 (local routing).
 **Description:** `docker-compose.yml`: add `backend`, `worker` (same image, `SPRING_PROFILES_ACTIVE=worker`, depends on
 Redis and `garage-init`), `web`, `ollama` + one-shot `ollama-pull` (`bge-m3`, `OLLAMA_CHAT_MODEL`), `caddy`; health
 checks; every credential from `.env`. `infra/caddy/Caddyfile.local`: `*.localhost`, `admin.localhost`, `login.localhost`,
-`api.localhost` with the routing of the criteria. `application-worker.yml` (Liquibase off). `TenantStartupMigrator` (web
+`api.localhost` with the routing of the criteria, served on port 80 over HTTP only: site addresses written with the
+scheme (`http://*.localhost`, …) or the global option `auto_https off`, because a bare `*.localhost` turns on automatic
+HTTPS and redirects :80 to :443 (308), which breaks the signed URLs of Task 17 (`http://{site}.localhost`, no port). `application-worker.yml` (Liquibase off). `TenantStartupMigrator` (web
 process only: runs `TenantMigrator.applyAll()` after the Registry changelog; stops naming the failing Workspace and
 leaves the others as they are, AC-008.9). `.env.example` complete; `infra/README.md` lists variables and the start command.
 **Edge rows:** #43 (a missing required variable → the backend refuses to start and names it), #44 (start-up migration
@@ -604,16 +607,28 @@ Edge #36).
 (`http://acme.localhost/<bucket>/…`), on staging too; see a 405 for any other method and a download, not a rendered page,
 for a stored HTML file.
 **Covers:** AC-009.2 (the `/<bucket>/*` route on a Workspace site), AC-007.12 and AC-007.15 (through Caddy).
-**Design:** Signed URL host and routing (R11, R12); Infrastructure — Edge limits.
-**Description:** The Caddy route (GET/HEAD of `/<bucket>/*` to `garage:3900` with the original `Host`, other methods 405,
-`nosniff`, signature parameters out of the access log) added to `Caddyfile.local` and `Caddyfile`.
-**Edge rows:** #40 (signature not in the Caddy access log), #41 (HTML/SVG downloaded, not rendered).
-**Tests (about 5 checks):** `infra/tests/caddy-routing.test.sh` additions: signed GET 200 with `nosniff` and a download type,
-HEAD allowed, PUT/POST/DELETE 405, an altered signature refused, Edge #40 and #41.
+**Design:** Signed URL host and routing (R11, R12); Infrastructure — Edge limits. Research: RESEARCH-005 (with a draft
+of the route).
+**Description:** The Caddy route (GET/HEAD of `/{$FILE_STORAGE_BUCKET}/*` to `garage:3900` with the original `Host`, no
+path rewrite, other methods 405 with `Allow: GET, HEAD`, `nosniff` by `header_down`) added to `Caddyfile.local` and
+`Caddyfile`, before the web-app route. The `(common)` log switches to `format filter` (`wrap json`) deleting
+`X-Amz-Signature` and `X-Amz-Credential` from `request>uri`. `FILE_STORAGE_BUCKET` is passed, required, to the `caddy`
+service of `docker-compose.yml` and `infra/compose.staging.yml`.
+**Edge rows:** #39 (through Caddy), #40 (signature not in the Caddy access log), #41 (HTML/SVG downloaded, not rendered).
+**Tests (about 6 checks):** `infra/tests/caddy-routing.test.sh` additions. The object is put and the URL presigned with the
+`amazon/aws-cli` image on the compose network (put on `http://garage:3900`, presign for `http://acme.localhost`, region
+`garage`). `aws s3 presign` has no path-style flag, so the test mounts an AWS config file (`AWS_CONFIG_FILE`) with
+`[default]`, `s3 =`, `  addressing_style = path`; without it the URL may be virtual-hosted (`<bucket>.acme.localhost`)
+and the GET fails for a reason unrelated to the route. Checks: signed GET 200 with `nosniff`,
+`application/octet-stream` and the same bytes (an HTML file, Edge #41); HEAD with that URL is passed through, not
+served: not 405, refused by Garage with 400 or 403 (only `GetObject` is presigned and the signature covers the method;
+design R11); PUT/POST/DELETE 405; an altered signature and an unsigned request refused with 400 or 403 and no content
+(Edge #39, D16); no `X-Amz-Signature=` in `docker logs caddy` nor in `docker logs garage` (Edge #40).
 **Files:**
-- Modify: `infra/caddy/Caddyfile.local`, `infra/caddy/Caddyfile`
+- Modify: `infra/caddy/Caddyfile.local`, `infra/caddy/Caddyfile`, `docker-compose.yml`, `infra/compose.staging.yml`
 - Test: `infra/tests/caddy-routing.test.sh`
-**Dependencies:** Tasks 11 (local Caddy), 14 (staging Caddy), 16
+**Dependencies:** Tasks 1 (Garage locally, no `root_domain`), 11 (local Caddy on port 80), 13 (Garage on staging), 14
+(staging Caddy, `caddy-routing.test.sh`), 16
 **Estimated size:** small
 **Done when:** the signed-URL download works in a browser on a local Workspace site and `caddy-routing.test.sh` passes.
 

@@ -67,6 +67,14 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
             """, nativeQuery = true)
     Optional<Placement> findPlacement(@Param("projectId") UUID projectId);
 
+    /** Whether the account is PROJECT_MANAGER of the Project in project_membership, whatever its status (AC-008.2). */
+    @Query(value = """
+            select exists (select 1 from project_membership m
+                           where m.project_id = :projectId and m.user_id = :accountId
+                             and m.role_in_project = 'PROJECT_MANAGER')
+            """, nativeQuery = true)
+    boolean isProjectManager(@Param("projectId") UUID projectId, @Param("accountId") UUID accountId);
+
     /**
      * Creates the Solution Form ticket of a Jira issue in Pending review (jira-app AC-004.1). writer_id and
      * review_due_date are not writable through the entity, so the row is inserted here; the due date follows the

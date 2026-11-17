@@ -119,12 +119,13 @@ public class JiraImportServiceImpl implements JiraImportService {
             if (key == null) {
                 throw new JiraUnavailableException("not connected");
             }
-            Instant deadline = Instant.now(clock).plus(PULL_BUDGET);
+            JiraIssueSource.Pull pull =
+                    jira.pull(key, from, to, Instant.now(clock).plus(PULL_BUDGET));
             List<JiraIssue> kept = new ArrayList<>();
             String token = null;
             int pages = 0;
             do {
-                JiraIssuePage page = jira.resolvedIssues(key, from, to, token, deadline);
+                JiraIssuePage page = pull.page(token);
                 pages++;
                 Set<String> taken = tickets.findExistingTicketIds(
                         page.issues().stream().map(JiraIssue::key).toList());

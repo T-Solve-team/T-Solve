@@ -18,6 +18,7 @@ status: draft
 | 2026-11-09 | STORY-004, STORY-005 (new) | New STORY-004 Knowledge Dashboard figures API (KAN-150) and STORY-005 screen 9.1 (KAN-151); Requirements 6-7, Out of Scope, Interface Contracts (`getKnowledgeDashboard`, `KnowledgeDashboard`), Sources and Definition of Done follow; STORY-001..003 unchanged | User decisions 09/11: the five groups of SRS 9.1 from stored data without ticket views; one endpoint for all groups; knowledge gaps counted by the asker's Department; charts with antd and CSS, no new dependency. Planning call: the filter options come in the response because no Department or Project list API exists |
 | 2026-11-09 | STORY-004, STORY-005 | AC-004.7: an Admin's `projectId` outside the given `departmentId` answers 400 MSG06; AC-004.10: "given in the period" is the time of the latest rating (`ticket_feedback.updated_at`) and the 5 lowest leave out the 5 highest; new AC-005.11: the page says that Knowledge gaps ignore the chosen Project | Review of PR #178 (trhieudev1309) and the user's decisions 09/11: "400 MSG06", "Loại trùng", "updated_at", and a note on the page for Project-independent gaps |
 | 2026-11-12 | STORY-004 | AC-004.7: a Project Manager gets 403 MSG08 for an unknown id (own Department checked first); AC-004.6, AC-004.9: tickets whose Project does not exist are left out of every figure; Interface Contracts errors list the Admin cross-Department 400 MSG06 | Low items of the PR #178 re-review (trhieudev1309, 12/11) |
+| 2026-11-17 | STORY-004 | AC-004.11: a Chatbot question asked in Jira (chatbot STORY-012, no user) counts in the Department of its Project | KAN-294 (user, 17/11): Ask T-Solve needs no sign-in but its questions still show as knowledge gaps |
 
 ## Requirements
 
@@ -151,7 +152,7 @@ status: draft
   - AC-004.11: THE backend SHALL return as Knowledge gaps the 10 most frequent searches of the period with no result
     (query trimmed and grouped case-insensitively, every channel) and the number and the 10 most frequent questions
     of Knowledge Chatbot answers with outcome `NO_SOURCE` in the period; a Department scope counts by the asker's
-    Department (`search_log.department_id`, `app_user.department_id` for the Chatbot); `projectId` does not apply.
+    Department (`search_log.department_id`, `app_user.department_id` for the Chatbot and, for a question asked on the Jira App's Ask T-Solve page, which has no user, the Department of its `chatbot_answer.project_id`); `projectId` does not apply.
   - AC-004.12: THE backend SHALL return as Suggestion results the suggestions posted in Jira in the period (by
     `commented_at`) for Projects of the scope, how many of them the reporter answered YES, and the solved share
     (null when none).

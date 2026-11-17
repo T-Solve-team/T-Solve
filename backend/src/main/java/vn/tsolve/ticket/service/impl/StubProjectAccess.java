@@ -8,16 +8,19 @@ import java.util.Set;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
 import vn.tsolve.ticket.service.ProjectAccess;
 
 /**
- * Stand-in until the workspace module owns Projects; delete it when the real {@link ProjectAccess} lands.
+ * Test and local-demo stand-in: the bean only while {@code tsolve.stub.projects} is set; otherwise {@link
+ * MembershipProjectAccess} reads the database (BUG-300).
  *
- * <p>Fails closed: a user manages only the Projects listed for them in {@code tsolve.stub.projects} ({@code
- * alice:<uuid>,<uuid>;bob:<uuid>}), so an empty setting lets nobody import.
+ * <p>A user manages only the Projects listed for them in {@code tsolve.stub.projects} ({@code
+ * alice:<uuid>,<uuid>;bob:<uuid>}).
  */
 @Component
+@ConditionalOnExpression("!'${tsolve.stub.projects:}'.isBlank()")
 public class StubProjectAccess implements ProjectAccess {
 
     private final Map<String, Set<UUID>> managed = new HashMap<>();

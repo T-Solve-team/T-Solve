@@ -142,6 +142,7 @@ class WikiBrowseIT extends WikiReadTestSupport {
         assertThat(detail.fileName()).isEqualTo("guide.pdf");
         assertThat(detail.fileSize()).isEqualTo(42);
         assertThat(detail.canDelete()).isFalse();
+        assertThat(detail.inTrash()).isFalse();
         manager();
         assertThat(browse.getDocument(user, id).canDelete()).isTrue();
         jdbc.update("DELETE FROM user_role WHERE user_id = ?", user);

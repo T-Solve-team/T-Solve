@@ -23,7 +23,6 @@ import org.springframework.test.context.TestPropertySource;
 import vn.tsolve.identity.TwoTenantDatabases;
 import vn.tsolve.identity.signin.SignInTestFixtures;
 import vn.tsolve.identity.signin.port.TenantScope;
-import vn.tsolve.workspace.crypto.TokenCipher;
 import vn.tsolve.workspace.entity.WorkspaceInfo;
 
 @SpringBootTest
@@ -52,9 +51,6 @@ class WorkspaceInfoRepositoryIT {
     @Autowired
     private TenantScope scope;
 
-    @Autowired
-    private TokenCipher cipher;
-
     @BeforeEach
     @AfterEach
     void clean() {
@@ -63,14 +59,13 @@ class WorkspaceInfoRepositoryIT {
     }
 
     @Test
-    @DisplayName("AC-005.1 stores the bound Workspace id and setup fields with the encrypted token")
+    @DisplayName("AC-005.1 stores the bound Workspace id and setup fields with no Jira credential")
     void storesTheSetupFields() {
         UUID id = TwoTenantDatabases.ACME;
-        String encrypted = cipher.encrypt(id, "obviously-fake-jira-token");
         scope.runIn(
                 id,
                 () -> repository.saveAndFlush(new WorkspaceInfo(
-                        id, "Fake company", "https://fake.atlassian.net", "fake@example.test", encrypted)));
+                        id, "Fake company", "https://fake.atlassian.net", "1324a887-45db-1bf4-1e99-ef0ff456d421")));
 
         scope.runIn(id, () -> {
             assertThat(repository.findById(id)).hasValueSatisfying(workspace -> {
@@ -78,8 +73,7 @@ class WorkspaceInfoRepositoryIT {
                 assertThat(workspace.getCompanyName()).isEqualTo("Fake company");
                 assertThat(workspace.getSignInProvider()).isEqualTo("GOOGLE");
                 assertThat(workspace.getJiraSiteAddress()).isEqualTo("https://fake.atlassian.net");
-                assertThat(workspace.getServiceAccountEmail()).isEqualTo("fake@example.test");
-                assertThat(workspace.getServiceAccountApiToken()).isEqualTo(encrypted);
+                assertThat(workspace.getJiraCloudId()).isEqualTo("1324a887-45db-1bf4-1e99-ef0ff456d421");
                 assertThat(workspace.getTokenExpiryDate()).isNull();
             });
             return null;
@@ -130,10 +124,16 @@ class WorkspaceInfoRepositoryIT {
                          WHERE table_schema = 'public' AND table_name = 'workspace'
                         """, String.class))
                 .containsExactlyInAnyOrder(
-                        "workspace_id:uuid:NO:-", "company_name:character varying:NO:150",
-                        "sign_in_provider:character varying:NO:30", "jira_site_address:character varying:YES:255",
-                        "service_account_email:character varying:YES:254", "service_account_api_token:text:YES:-",
-                        "token_expiry_date:date:YES:-", "singleton:boolean:NO:-");
+                        "workspace_id:uuid:NO:-",
+                        "company_name:character varying:NO:150",
+                        "sign_in_provider:character varying:NO:30",
+                        "jira_site_address:character varying:YES:255",
+                        "service_account_email:character varying:YES:254",
+                        "service_account_api_token:text:YES:-",
+                        "token_expiry_date:date:YES:-",
+                        "singleton:boolean:NO:-",
+                        // KAN-344, changeset 042 (AC-005.1, AC-011.8)
+                        "jira_cloud_id:character varying:YES:36");
         assertThat(db.queryForObject(
                         "SELECT conname FROM pg_constraint WHERE conrelid = 'workspace'::regclass AND contype = 'p'",
                         String.class))

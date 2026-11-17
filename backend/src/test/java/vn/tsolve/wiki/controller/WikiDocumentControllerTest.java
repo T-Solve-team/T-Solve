@@ -121,14 +121,16 @@ class WikiDocumentControllerTest {
                         "<script>plain text</script>",
                         "guide.pdf",
                         42,
-                        true));
+                        true,
+                        false));
         mvc.perform(get("/api/v1/wiki/documents/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.documentId").value(id.toString()))
                 .andExpect(jsonPath("$.content").value("<script>plain text</script>"))
                 .andExpect(jsonPath("$.fileName").value("guide.pdf"))
                 .andExpect(jsonPath("$.fileSize").value(42))
-                .andExpect(jsonPath("$.canDelete").value(true));
+                .andExpect(jsonPath("$.canDelete").value(true))
+                .andExpect(jsonPath("$.inTrash").value(false));
     }
 
     @Test

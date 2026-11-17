@@ -25,6 +25,7 @@ import type {
 import type {
   CreateWikiFolderRequest,
   ExtractWikiUploadsBody,
+  GrantWikiPermissionsRequest,
   ListWikiDocumentsParams,
   ProblemDetail,
   ProblemResponse,
@@ -35,7 +36,11 @@ import type {
   WikiDocumentRef,
   WikiDocumentSummary,
   WikiFolder,
+  WikiPermissionCandidates,
+  WikiRestoreResult,
   WikiSpace,
+  WikiSpaceSettings,
+  WikiTrashItem,
   WikiUploadPreview,
 } from '../model';
 
@@ -60,6 +65,484 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
+export const getGetWikiSpaceSettingsUrl = (spaceId: string) => {
+  return `/api/v1/wiki/spaces/${spaceId}/settings`;
+};
+
+/**
+ * The computed own Department is locked; stored Departments and users are sorted by name.
+ * @summary Read a managed Space's header and View permissions.
+ */
+export const getWikiSpaceSettings = async (
+  spaceId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<WikiSpaceSettings> => {
+  return http<WikiSpaceSettings>(getGetWikiSpaceSettingsUrl(spaceId), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetWikiSpaceSettingsQueryKey = (spaceId: string) => {
+  return [`/api/v1/wiki/spaces/${spaceId}/settings`] as const;
+};
+
+export const getGetWikiSpaceSettingsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWikiSpaceSettings>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  spaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getWikiSpaceSettings>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetWikiSpaceSettingsQueryKey(spaceId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getWikiSpaceSettings>>> = ({ signal }) =>
+    getWikiSpaceSettings(spaceId, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: spaceId !== null && spaceId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getWikiSpaceSettings>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetWikiSpaceSettingsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWikiSpaceSettings>>
+>;
+export type GetWikiSpaceSettingsQueryError = ErrorType<ProblemResponse>;
+
+export function useGetWikiSpaceSettings<
+  TData = Awaited<ReturnType<typeof getWikiSpaceSettings>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  spaceId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getWikiSpaceSettings>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWikiSpaceSettings>>,
+          TError,
+          Awaited<ReturnType<typeof getWikiSpaceSettings>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetWikiSpaceSettings<
+  TData = Awaited<ReturnType<typeof getWikiSpaceSettings>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  spaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getWikiSpaceSettings>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWikiSpaceSettings>>,
+          TError,
+          Awaited<ReturnType<typeof getWikiSpaceSettings>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetWikiSpaceSettings<
+  TData = Awaited<ReturnType<typeof getWikiSpaceSettings>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  spaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getWikiSpaceSettings>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Read a managed Space's header and View permissions.
+ */
+
+export function useGetWikiSpaceSettings<
+  TData = Awaited<ReturnType<typeof getWikiSpaceSettings>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  spaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getWikiSpaceSettings>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetWikiSpaceSettingsQueryOptions(spaceId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListWikiPermissionCandidatesUrl = (spaceId: string) => {
+  return `/api/v1/wiki/spaces/${spaceId}/permission-candidates`;
+};
+
+/**
+ * Excludes the own Department; each list is sorted by name.
+ * @summary List Active Departments and users without a stored permission on a managed Space.
+ */
+export const listWikiPermissionCandidates = async (
+  spaceId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<WikiPermissionCandidates> => {
+  return http<WikiPermissionCandidates>(getListWikiPermissionCandidatesUrl(spaceId), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getListWikiPermissionCandidatesQueryKey = (spaceId: string) => {
+  return [`/api/v1/wiki/spaces/${spaceId}/permission-candidates`] as const;
+};
+
+export const getListWikiPermissionCandidatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listWikiPermissionCandidates>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  spaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listWikiPermissionCandidates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListWikiPermissionCandidatesQueryKey(spaceId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listWikiPermissionCandidates>>> = ({
+    signal,
+  }) => listWikiPermissionCandidates(spaceId, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: spaceId !== null && spaceId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof listWikiPermissionCandidates>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListWikiPermissionCandidatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listWikiPermissionCandidates>>
+>;
+export type ListWikiPermissionCandidatesQueryError = ErrorType<ProblemResponse>;
+
+export function useListWikiPermissionCandidates<
+  TData = Awaited<ReturnType<typeof listWikiPermissionCandidates>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  spaceId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listWikiPermissionCandidates>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listWikiPermissionCandidates>>,
+          TError,
+          Awaited<ReturnType<typeof listWikiPermissionCandidates>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListWikiPermissionCandidates<
+  TData = Awaited<ReturnType<typeof listWikiPermissionCandidates>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  spaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listWikiPermissionCandidates>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listWikiPermissionCandidates>>,
+          TError,
+          Awaited<ReturnType<typeof listWikiPermissionCandidates>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListWikiPermissionCandidates<
+  TData = Awaited<ReturnType<typeof listWikiPermissionCandidates>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  spaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listWikiPermissionCandidates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Active Departments and users without a stored permission on a managed Space.
+ */
+
+export function useListWikiPermissionCandidates<
+  TData = Awaited<ReturnType<typeof listWikiPermissionCandidates>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  spaceId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listWikiPermissionCandidates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListWikiPermissionCandidatesQueryOptions(spaceId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGrantWikiPermissionsUrl = (spaceId: string) => {
+  return `/api/v1/wiki/spaces/${spaceId}/permissions`;
+};
+
+/**
+ * Validate every id before storing anything. Skip already granted ids, including concurrent grants. Record one audit entry per newly stored permission. An empty selection is 400 MSG01 on grantees; an unknown or inactive grantee, or the own Department, is 404 MSG04.
+ * @summary Grant View on a managed Space to Departments and users.
+ */
+export const grantWikiPermissions = async (
+  spaceId: string,
+  grantWikiPermissionsRequest: GrantWikiPermissionsRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<void>(getGrantWikiPermissionsUrl(spaceId), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(grantWikiPermissionsRequest),
+  });
+};
+
+export const getGrantWikiPermissionsMutationKey = () => ['grantWikiPermissions'] as const;
+
+export const getGrantWikiPermissionsMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof grantWikiPermissions>>,
+    TError,
+    GrantWikiPermissionsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof grantWikiPermissions>>,
+  TError,
+  GrantWikiPermissionsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getGrantWikiPermissionsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof grantWikiPermissions>>,
+    GrantWikiPermissionsMutationVariables
+  > = (props) => {
+    const { spaceId, data } = props ?? {};
+
+    return grantWikiPermissions(spaceId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GrantWikiPermissionsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof grantWikiPermissions>>
+>;
+export type GrantWikiPermissionsMutationBody = GrantWikiPermissionsRequest;
+export type GrantWikiPermissionsMutationError = ErrorType<ProblemResponse>;
+export type GrantWikiPermissionsMutationVariables = {
+  spaceId: string;
+  data: GrantWikiPermissionsRequest;
+};
+
+/**
+ * @summary Grant View on a managed Space to Departments and users.
+ */
+export const useGrantWikiPermissions = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof grantWikiPermissions>>,
+      TError,
+      GrantWikiPermissionsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof grantWikiPermissions>>,
+  TError,
+  GrantWikiPermissionsMutationVariables,
+  TContext
+> => {
+  return useMutation(getGrantWikiPermissionsMutationOptions(options), queryClient);
+};
+export const getRevokeWikiPermissionUrl = (permissionId: string) => {
+  return `/api/v1/wiki/permissions/${permissionId}`;
+};
+
+/**
+ * Returns 404 MSG04 for an unknown permission or one outside the caller's managed Spaces. The computed own Department permission cannot be removed. Other sources of View remain effective.
+ * @summary Revoke a stored permission of a managed Space.
+ */
+export const revokeWikiPermission = async (
+  permissionId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getRevokeWikiPermissionUrl(permissionId), {
+    ...options,
+    method: 'DELETE',
+  });
+};
+
+export const getRevokeWikiPermissionMutationKey = () => ['revokeWikiPermission'] as const;
+
+export const getRevokeWikiPermissionMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revokeWikiPermission>>,
+    TError,
+    RevokeWikiPermissionMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof revokeWikiPermission>>,
+  TError,
+  RevokeWikiPermissionMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRevokeWikiPermissionMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof revokeWikiPermission>>,
+    RevokeWikiPermissionMutationVariables
+  > = (props) => {
+    const { permissionId } = props ?? {};
+
+    return revokeWikiPermission(permissionId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RevokeWikiPermissionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof revokeWikiPermission>>
+>;
+
+export type RevokeWikiPermissionMutationError = ErrorType<ProblemResponse>;
+export type RevokeWikiPermissionMutationVariables = { permissionId: string };
+
+/**
+ * @summary Revoke a stored permission of a managed Space.
+ */
+export const useRevokeWikiPermission = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof revokeWikiPermission>>,
+      TError,
+      RevokeWikiPermissionMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof revokeWikiPermission>>,
+  TError,
+  RevokeWikiPermissionMutationVariables,
+  TContext
+> => {
+  return useMutation(getRevokeWikiPermissionMutationOptions(options), queryClient);
+};
 export const getListWikiSpacesUrl = () => {
   return `/api/v1/wiki/spaces`;
 };
@@ -1361,11 +1844,99 @@ export function useSearchWikiDocuments<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getTrashWikiDocumentUrl = (documentId: string) => {
+  return `/api/v1/wiki/documents/${documentId}`;
+};
+
+/**
+ * @summary Move a Published document to its Space's trash.
+ */
+export const trashWikiDocument = async (
+  documentId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getTrashWikiDocumentUrl(documentId), {
+    ...options,
+    method: 'DELETE',
+  });
+};
+
+export const getTrashWikiDocumentMutationKey = () => ['trashWikiDocument'] as const;
+
+export const getTrashWikiDocumentMutationOptions = <
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof trashWikiDocument>>,
+    TError,
+    TrashWikiDocumentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof trashWikiDocument>>,
+  TError,
+  TrashWikiDocumentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getTrashWikiDocumentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof trashWikiDocument>>,
+    TrashWikiDocumentMutationVariables
+  > = (props) => {
+    const { documentId } = props ?? {};
+
+    return trashWikiDocument(documentId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type TrashWikiDocumentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof trashWikiDocument>>
+>;
+
+export type TrashWikiDocumentMutationError = ErrorType<ProblemResponse | ProblemDetail>;
+export type TrashWikiDocumentMutationVariables = { documentId: string };
+
+/**
+ * @summary Move a Published document to its Space's trash.
+ */
+export const useTrashWikiDocument = <
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof trashWikiDocument>>,
+      TError,
+      TrashWikiDocumentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof trashWikiDocument>>,
+  TError,
+  TrashWikiDocumentMutationVariables,
+  TContext
+> => {
+  return useMutation(getTrashWikiDocumentMutationOptions(options), queryClient);
+};
 export const getGetWikiDocumentUrl = (documentId: string) => {
   return `/api/v1/wiki/documents/${documentId}`;
 };
 
 /**
+ * The Space's Knowledge Manager may also read trashed documents, with canDelete false.
  * @summary Read a viewable Wiki document as extracted plain text.
  */
 export const getWikiDocument = async (
@@ -1488,3 +2059,308 @@ export function useGetWikiDocument<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getListWikiTrashUrl = (spaceId: string) => {
+  return `/api/v1/wiki/spaces/${spaceId}/trash`;
+};
+
+/**
+ * @summary List a managed Space's trashed documents, newest deletedAt first.
+ */
+export const listWikiTrash = async (
+  spaceId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<WikiTrashItem[]> => {
+  return http<WikiTrashItem[]>(getListWikiTrashUrl(spaceId), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getListWikiTrashQueryKey = (spaceId: string) => {
+  return [`/api/v1/wiki/spaces/${spaceId}/trash`] as const;
+};
+
+export const getListWikiTrashQueryOptions = <
+  TData = Awaited<ReturnType<typeof listWikiTrash>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  spaceId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listWikiTrash>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListWikiTrashQueryKey(spaceId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listWikiTrash>>> = ({ signal }) =>
+    listWikiTrash(spaceId, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: spaceId !== null && spaceId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof listWikiTrash>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListWikiTrashQueryResult = NonNullable<Awaited<ReturnType<typeof listWikiTrash>>>;
+export type ListWikiTrashQueryError = ErrorType<ProblemResponse | ProblemDetail>;
+
+export function useListWikiTrash<
+  TData = Awaited<ReturnType<typeof listWikiTrash>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  spaceId: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listWikiTrash>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listWikiTrash>>,
+          TError,
+          Awaited<ReturnType<typeof listWikiTrash>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListWikiTrash<
+  TData = Awaited<ReturnType<typeof listWikiTrash>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  spaceId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listWikiTrash>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listWikiTrash>>,
+          TError,
+          Awaited<ReturnType<typeof listWikiTrash>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListWikiTrash<
+  TData = Awaited<ReturnType<typeof listWikiTrash>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  spaceId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listWikiTrash>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List a managed Space's trashed documents, newest deletedAt first.
+ */
+
+export function useListWikiTrash<
+  TData = Awaited<ReturnType<typeof listWikiTrash>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  spaceId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listWikiTrash>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListWikiTrashQueryOptions(spaceId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getRestoreWikiDocumentUrl = (documentId: string) => {
+  return `/api/v1/wiki/documents/${documentId}/restore`;
+};
+
+/**
+ * A title conflict appends " (restored)", " (restored 2)" and so on, shortening the original title to keep at most 200 characters. Re-index after commit unless already INDEXED.
+ * @summary Restore a trashed document to Published in its original folder.
+ */
+export const restoreWikiDocument = async (
+  documentId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<WikiRestoreResult> => {
+  return http<WikiRestoreResult>(getRestoreWikiDocumentUrl(documentId), {
+    ...options,
+    method: 'POST',
+  });
+};
+
+export const getRestoreWikiDocumentMutationKey = () => ['restoreWikiDocument'] as const;
+
+export const getRestoreWikiDocumentMutationOptions = <
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof restoreWikiDocument>>,
+    TError,
+    RestoreWikiDocumentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof restoreWikiDocument>>,
+  TError,
+  RestoreWikiDocumentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRestoreWikiDocumentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof restoreWikiDocument>>,
+    RestoreWikiDocumentMutationVariables
+  > = (props) => {
+    const { documentId } = props ?? {};
+
+    return restoreWikiDocument(documentId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RestoreWikiDocumentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof restoreWikiDocument>>
+>;
+
+export type RestoreWikiDocumentMutationError = ErrorType<ProblemResponse | ProblemDetail>;
+export type RestoreWikiDocumentMutationVariables = { documentId: string };
+
+/**
+ * @summary Restore a trashed document to Published in its original folder.
+ */
+export const useRestoreWikiDocument = <
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof restoreWikiDocument>>,
+      TError,
+      RestoreWikiDocumentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof restoreWikiDocument>>,
+  TError,
+  RestoreWikiDocumentMutationVariables,
+  TContext
+> => {
+  return useMutation(getRestoreWikiDocumentMutationOptions(options), queryClient);
+};
+export const getDeleteWikiDocumentPermanentlyUrl = (documentId: string) => {
+  return `/api/v1/wiki/documents/${documentId}/permanent`;
+};
+
+/**
+ * @summary Permanently delete a trashed document and its passages.
+ */
+export const deleteWikiDocumentPermanently = async (
+  documentId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDeleteWikiDocumentPermanentlyUrl(documentId), {
+    ...options,
+    method: 'DELETE',
+  });
+};
+
+export const getDeleteWikiDocumentPermanentlyMutationKey = () =>
+  ['deleteWikiDocumentPermanently'] as const;
+
+export const getDeleteWikiDocumentPermanentlyMutationOptions = <
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteWikiDocumentPermanently>>,
+    TError,
+    DeleteWikiDocumentPermanentlyMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteWikiDocumentPermanently>>,
+  TError,
+  DeleteWikiDocumentPermanentlyMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteWikiDocumentPermanentlyMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteWikiDocumentPermanently>>,
+    DeleteWikiDocumentPermanentlyMutationVariables
+  > = (props) => {
+    const { documentId } = props ?? {};
+
+    return deleteWikiDocumentPermanently(documentId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteWikiDocumentPermanentlyMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteWikiDocumentPermanently>>
+>;
+
+export type DeleteWikiDocumentPermanentlyMutationError = ErrorType<ProblemResponse | ProblemDetail>;
+export type DeleteWikiDocumentPermanentlyMutationVariables = { documentId: string };
+
+/**
+ * @summary Permanently delete a trashed document and its passages.
+ */
+export const useDeleteWikiDocumentPermanently = <
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteWikiDocumentPermanently>>,
+      TError,
+      DeleteWikiDocumentPermanentlyMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteWikiDocumentPermanently>>,
+  TError,
+  DeleteWikiDocumentPermanentlyMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteWikiDocumentPermanentlyMutationOptions(options), queryClient);
+};

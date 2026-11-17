@@ -571,3 +571,11 @@ Agreements (four or more personas):
 
 No STOP condition: no auth bypass or data exposure is added (one unscoped endpoint is removed), the change fits the
 architecture, the cost is small, and the assumptions were checked in the code.
+
+## Change 2026-11-16: the pull reads the Workspace's service account (KAN-345)
+
+| Decision | Chosen | Alternatives | Rationale |
+|---|---|---|---|
+| Credential source | `tracker.service.JiraServiceAccount.current()` once at the start of each pull (AC-001.12): site URL for the `/browse/{key}` links, cloud id and scoped token, Bearer through the gateway | `JIRA_SITE_URL`/`JIRA_CLOUD_ID`/`JIRA_API_TOKEN` (removed) | BUG-308; one account per Workspace, the same one tracker uses (KAN-344) |
+| No account | `JiraUnavailableException("The Jira connection is not configured")` before any call → MSG50 + Failed batch (AC-001.14), unchanged path of AC-001.7 | A new message | AC-001.7 already covers "not configured" |
+| Client per pull | `JiraRestIssueSource` builds the `RestClient` from the account in `resolvedIssues` and passes it with the site URL down to the issue and comment reads; the builder (timeouts, retries, `Sleeper`, `Clock`) is unchanged | Cache a client per Workspace | A pull is a few calls; nothing to invalidate when the Admin replaces the token |

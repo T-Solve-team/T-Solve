@@ -63,4 +63,8 @@
     <include file="changes/039-drop-legacy-solution-tables.sql" relativeToChangelogFile="true"/>
     <include file="changes/040-wiki-tables.sql" relativeToChangelogFile="true"/>
     <include file="changes/041-wiki-audit-folder-change.sql" relativeToChangelogFile="true"/>
+    <include file="changes/042-workspace-jira-cloud-id.sql" relativeToChangelogFile="true"/>
+    <include file="changes/043-workspace-clear-service-account.sql" relativeToChangelogFile="true"/>
+    <include file="changes/044-chatbot-answer-jira-issue.sql" relativeToChangelogFile="true"/>
+    <include file="changes/045-chatbot-answer-jira-app.sql" relativeToChangelogFile="true"/>
 </databaseChangeLog>
