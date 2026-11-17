@@ -363,9 +363,12 @@
         "chatbot-ask-for-project": "evaluating",
         "classify-outcome-schema": "evaluating",
         "classify-question": "passing",
-        "classify-question-ui": "passing"
+        "classify-question-ui": "passing",
+        "conversation-store": "pending",
+        "conversation-api": "pending",
+        "conversation-ui": "pending"
       },
-      "lastUpdated": "2026-11-17T11:52:04.103Z",
+      "lastUpdated": "2026-11-17T15:45:14.980Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"

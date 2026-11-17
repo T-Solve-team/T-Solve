@@ -2037,3 +2037,8 @@
 {"ts":"2026-11-17T14:24:33.730Z","type":"quick-closed","what":"Add PR #280 and KAN-357 to the BUG-322 row (KAN-357)","files":["docs/bug-log.md"]}
 {"ts":"2026-11-17T15:11:05.979Z","type":"spec-approved","module":"chatbot","specHash":"342300752ea59274bf0c24942e978b5538ca6083af777ea14539024d4eb62a30"}
 {"ts":"2026-11-17T15:40:42.156Z","type":"spec-approved","module":"chatbot","specHash":"dd32f6721cc04e3daa484635f18ad9e760e28a3b15fe06e8af96e65df4db22bb"}
+{"ts":"2026-11-17T15:44:22.269Z","type":"spec-approved","module":"chatbot","specHash":"35caef6bbe32397f78a8be8c897a0f63f9ed8c90296faef814d1ff19c415a8d0"}
+{"ts":"2026-11-17T15:45:14.379Z","type":"feature-status","module":"chatbot","feature":"conversation-store","from":null,"to":"pending"}
+{"ts":"2026-11-17T15:45:14.700Z","type":"feature-status","module":"chatbot","feature":"conversation-api","from":null,"to":"pending"}
+{"ts":"2026-11-17T15:45:14.982Z","type":"feature-status","module":"chatbot","feature":"conversation-ui","from":null,"to":"pending"}
+{"ts":"2026-11-17T16:19:02.091Z","type":"spec-approved","module":"chatbot","specHash":"cfd3e4d32fef7e8ecdcabcc0adb67d0e03be49dc42986938eb64af336a03d9a7"}
