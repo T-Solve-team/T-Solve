@@ -207,13 +207,13 @@
         "jira-integration-projects-table": "passing",
         "jira-integration-add-project": "passing"
       },
-      "lastUpdated": "2026-11-14T07:40:19.466Z",
+      "lastUpdated": "2026-11-17T15:18:09.203Z",
       "branch": "feat/KAN-128-project-integration-add-ticket-resolver",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "df750d443b8a988893ec5c35560ba3b86df9b221"
+        "default": "2cdb750e142857df28d5e567b6e25c66ea169fa9"
       }
     },
     "wiki": {
@@ -316,13 +316,13 @@
         "department-solution-retrieval": "passing",
         "membership-visible-scope": "evaluating"
       },
-      "lastUpdated": "2026-11-17T13:29:51.891Z",
+      "lastUpdated": "2026-11-17T15:18:08.326Z",
       "branch": "feat/search",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "b9b481f4a04ba740d6a3dfc649cbe5059b8b46bc"
+        "default": "2cdb750e142857df28d5e567b6e25c66ea169fa9"
       }
     },
     "triage": {

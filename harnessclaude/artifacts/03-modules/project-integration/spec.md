@@ -23,6 +23,7 @@ Covers UC-16 Add a Project only (KAN-127), including reconnecting a Removed Proj
 | 2026-11-12 | STORY-004, 005, 010 | Review of the Codex draft: AC-010.8 no longer puts access before Bean Validation (`@Valid` runs before `@PreAuthorize`); AC-010.3 names a valid body; AC-004.20 and AC-005.16 drop the non-string checks Jackson's scalar coercion does not make (D51, D54 revised) | Framework order and Jackson defaults; the criteria must be testable as written |
 | 2026-11-15 | STORY-004..010 | Merged `origin/main` into the KAN-127 branch: this module's KAN-127 stories STORY-001..007 are renumbered STORY-004..010 (AC-00n.m becomes AC-0(n+3).m) after the merged STORY-001..003 of KAN-128/KAN-129; changeset 029 renamed 036 (035 is reserved for PR #215). No criterion changes meaning | Two unmerged specs used the same ids; the unmerged PR renumbers after main |
 | 2026-11-15 | STORY-004..010 | KAN-127 design decisions D1..D57 (design.md, kan-127-decisions.md) renumbered D19..D75 (n + 18) after the D1..D18 of KAN-128/KAN-129; references in the KAN-127 spec, design, tasks, session logs, reviews, tracker docs and code comments follow. No criterion changes | Two unmerged designs used the same decision ids; the unmerged PR renumbers after main |
+| 2026-11-17 | STORY-008 | AC-008.2 reworded: the Projects table drops the "Project ID" column and starts with a "No." column (the row's position, from 1). New AC-008.11: the Jira project key of a Project whose Project Manager is the signed-in user is a link to 3.2 Project Detail; on other rows it is plain text, because 3.2 answers 403 to anyone else (AC-001.3) | KAN-360: the Project UUID is noise in the table, users open a Project from its key (user, 17/11) |
 
 ## Requirements
 
@@ -198,7 +199,7 @@ These are known limits of the current dependencies, not defects of this story.
 - As a Project Manager, I want to see my Department and its Projects on Jira Integration so that I can manage the add flow from one screen.
 - Acceptance:
   - AC-008.1: WHEN a Project Manager opens `/jira-integration`, THE web app SHALL load `GET /api/v1/projects` and show the returned Department name in a read-only field labelled "Department".
-  - AC-008.2: WHEN the list loads, THE web app SHALL show a Projects table with columns "Project ID", "Jira project key", "Project Manager", "Members" and "Status" using the returned order.
+  - AC-008.2: WHEN the list loads, THE web app SHALL show a Projects table with columns "No." (the row's position, from 1), "Jira project key", "Project Manager", "Members" and "Status" using the returned order.
   - AC-008.3: WHEN a row has a `projectManager`, THE web app SHALL show its `fullName` in the Project Manager column.
   - AC-008.4: IF a row has `projectManager: null`, THEN THE web app SHALL show MSG54 in that column.
   - AC-008.5: WHEN a row has status `ACTIVE` or `REMOVED`, THE web app SHALL show respectively "Active" or "Removed".
@@ -207,6 +208,7 @@ These are known limits of the current dependencies, not defects of this story.
   - AC-008.8: IF the loaded list is empty, THEN THE web app SHALL show MSG04 in place of the table.
   - AC-008.9: WHEN an Admin without the Project Manager role opens screen 3.1, THE web app SHALL keep the existing Jira Integration placeholder without sending a Projects request or showing the Add project button.
   - AC-008.10: IF a signed-in user has neither Admin nor Project Manager role, THEN THE web app SHALL show the route guard's MSG08 no-permission page without sending a Projects request.
+  - AC-008.11: WHEN a row's `projectManager.userId` is the signed-in user's id, THE web app SHALL show its Jira project key as a link to 3.2 Project Detail of that Project (`/jira-integration/projects/{projectId}`); IF it is not, THEN THE web app SHALL show the key as plain text.
 
 ### STORY-009: Add project popup (web app)
 - As a Project Manager, I want to test a key and save the initial settings in a popup so that I can add or reconnect a Project.

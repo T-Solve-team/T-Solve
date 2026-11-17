@@ -2035,6 +2035,10 @@
 {"ts":"2026-11-17T14:20:38.489Z","type":"quick-closed","what":"Add prompt=select_account to the Google identity providers in the staging Keycloak realm files, with a guard test (KAN-357)","files":["infra/keycloak/staging/realm-tsolve.json","infra/keycloak/staging/realm-tsolve-ops.json","backend/src/test/java/vn/tsolve/identity/keycloak/StagingRealmFilesTest.java"]}
 {"ts":"2026-11-17T14:24:21.075Z","type":"quick-opened","what":"Add PR #280 and KAN-357 to the BUG-322 row (KAN-357)","files":["docs/bug-log.md"]}
 {"ts":"2026-11-17T14:24:33.730Z","type":"quick-closed","what":"Add PR #280 and KAN-357 to the BUG-322 row (KAN-357)","files":["docs/bug-log.md"]}
+{"ts":"2026-11-17T14:57:43.676Z","type":"spec-approved","module":"search","specHash":"a728f2565506ddf147f332ad52505dc64ededf15d556a07cbc2e199b1a1a25aa"}
+{"ts":"2026-11-17T14:57:43.990Z","type":"spec-approved","module":"project-integration","specHash":"8d7eda80ec3d958f659e250b04288b3f8ae9b9d6c28b03e17377ab8713269b2b"}
+{"ts":"2026-11-17T15:18:08.366Z","type":"commit-recorded","module":"search","repo":"default","sha":"2cdb750e142857df28d5e567b6e25c66ea169fa9"}
+{"ts":"2026-11-17T15:18:09.205Z","type":"commit-recorded","module":"project-integration","repo":"default","sha":"2cdb750e142857df28d5e567b6e25c66ea169fa9"}
 {"ts":"2026-11-17T14:59:27.211Z","type":"quick-opened","what":"BUG-325: make the log appender of ProjectConnectionSecrecyTest thread-safe","files":["backend/src/test/java/vn/tsolve/project/controller/ProjectConnectionSecrecyTest.java"]}
 {"ts":"2026-11-17T15:01:33.859Z","type":"quick-closed","what":"BUG-325: make the log appender of ProjectConnectionSecrecyTest thread-safe","files":["backend/src/test/java/vn/tsolve/project/controller/ProjectConnectionSecrecyTest.java"]}
 {"ts":"2026-11-17T15:11:44.751Z","type":"spec-approved","module":"identity","specHash":"4a4f39ee63b493ec1683f4f44e2222953d866be12a0c3e81434fa2966b3a3928"}

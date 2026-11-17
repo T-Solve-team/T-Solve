@@ -10,7 +10,7 @@ import { useTicketList } from '../hooks/useTicketList';
 import styles from './TicketListPage.module.css';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const SORT_FIELDS = new Set(['sourceTicketId', 'title', 'project', 'reviewDueDate', 'updatedAt']);
+const SORT_FIELDS = new Set(['title', 'project', 'reviewDueDate', 'updatedAt']);
 const DEFAULT_SORT: TableSort = { field: 'updatedAt', order: 'desc' };
 
 /** A URL value that is one of `allowed`; anything else → undefined ("All"), so the API never gets an invalid value. */
