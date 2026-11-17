@@ -20,6 +20,7 @@ import vn.tsolve.worker.client.ReviewEmail.Decision;
 import vn.tsolve.worker.client.ReviewEmailRenderer;
 import vn.tsolve.worker.dto.OutboundEmail;
 import vn.tsolve.worker.exception.EmailOutboxUnavailableException;
+import vn.tsolve.worker.exception.InvalidOutboundEmailException;
 import vn.tsolve.worker.service.EmailOutboxService;
 import vn.tsolve.worker.service.OutboxWorkspace;
 import vn.tsolve.worker.service.WorkerTenantService;
@@ -95,6 +96,13 @@ public class ReviewNotificationEnqueuer {
                         // The Jobs database is down: every further queue call would wait for a connection on the
                         // request thread (BUG-164), so the outer handler logs the remainder once.
                         throw outage;
+                    } catch (InvalidOutboundEmailException invalid) {
+                        // Only reached with a Workspace bound (checked below), so it is the email itself (BUG-341).
+                        LOG.warn(
+                                "Could not queue {} of {} review emails (the email was rejected: recipient, subject"
+                                        + " or body)",
+                                1,
+                                event.decisionIds().size());
                     } catch (RuntimeException exception) {
                         // Exception messages and causes may contain private mail or database values.
                         LOG.warn(
@@ -106,6 +114,13 @@ public class ReviewNotificationEnqueuer {
                     processed.incrementAndGet();
                 }
             };
+            OutboxWorkspace web = requestTenants == null ? null : requestTenants.getIfAvailable();
+            if (context == null && web != null && web.current().isEmpty()) {
+                // The web outbox would refuse every email for the same reason; say it once (BUG-341).
+                int total = event.decisionIds().size();
+                LOG.warn("Could not queue {} of {} review emails (no Workspace to bind)", total, total);
+                return;
+            }
             if (context == null || context.currentWorkspaceId().isPresent()) {
                 enqueue.run();
             } else {
