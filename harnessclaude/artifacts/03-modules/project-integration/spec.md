@@ -24,6 +24,7 @@ Covers UC-16 Add a Project only (KAN-127), including reconnecting a Removed Proj
 | 2026-11-15 | STORY-004..010 | Merged `origin/main` into the KAN-127 branch: this module's KAN-127 stories STORY-001..007 are renumbered STORY-004..010 (AC-00n.m becomes AC-0(n+3).m) after the merged STORY-001..003 of KAN-128/KAN-129; changeset 029 renamed 036 (035 is reserved for PR #215). No criterion changes meaning | Two unmerged specs used the same ids; the unmerged PR renumbers after main |
 | 2026-11-15 | STORY-004..010 | KAN-127 design decisions D1..D57 (design.md, kan-127-decisions.md) renumbered D19..D75 (n + 18) after the D1..D18 of KAN-128/KAN-129; references in the KAN-127 spec, design, tasks, session logs, reviews, tracker docs and code comments follow. No criterion changes | Two unmerged designs used the same decision ids; the unmerged PR renumbers after main |
 | 2026-11-17 | STORY-008 | AC-008.2 reworded: the Projects table drops the "Project ID" column and starts with a "No." column (the row's position, from 1). New AC-008.11: the Jira project key of a Project whose Project Manager is the signed-in user is a link to 3.2 Project Detail; on other rows it is plain text, because 3.2 answers 403 to anyone else (AC-001.3) | KAN-360: the Project UUID is noise in the table, users open a Project from its key (user, 17/11) |
+| 2026-11-18 | STORY-011 (new), STORY-002 | New STORY-011 (KAN-367, AC-011.1 to AC-011.11): the Add member popup gets a "From Jira" tab that lists the people of a chosen role of the Jira project, read with the T-Solve Jira App's token; addable people (linked, Active Ticket Resolvers, not members) can be ticked, the others are greyed with a reason, group actors are named but not expanded. AC-002.10 now describes the "Search" tab. Out of Scope adds removing members who left the Jira role and expanding groups | RESEARCH-007; user decisions of 18/11: role chosen in the popup (not stored), greyed rows with a reason, two tabs, never remove automatically, groups not expanded |
 
 ## Requirements
 
@@ -96,7 +97,7 @@ These are known limits of the current dependencies, not defects of this story.
   - AC-002.7: IF any id in `userIds` is not an Active account with the `TICKET_RESOLVER` role, or is already a member of the Project, THEN THE backend SHALL answer 409, add nobody and record no audit entry.
   - AC-002.8: IF the Project is `REMOVED`, THEN THE backend SHALL answer 409 to `POST …/members`, add nobody and record no audit entry.
   - AC-002.9: WHILE the Project is `ACTIVE`, THE web app SHALL show the "Add member" button in the Members tab; WHILE it is `REMOVED`, THE web app SHALL not show it.
-  - AC-002.10: WHEN the Project Manager clicks "Add member", THE web app SHALL open the Add member popup with a search box (name or email) and the candidate list of AC-002.1, loaded at once with an empty `q` and refreshed 300 ms after the last keystroke, where one or more candidates can be selected.
+  - AC-002.10: WHEN the Project Manager clicks "Add member", THE web app SHALL open the Add member popup whose "Search" tab (STORY-011) has a search box (name or email) and the candidate list of AC-002.1, loaded at once with an empty `q` and refreshed 300 ms after the last keystroke, where one or more candidates can be selected.
   - AC-002.11: IF the candidate list is empty, THEN THE web app SHALL show MSG04 in the popup.
   - AC-002.12: WHILE no candidate is selected or an add is in progress, THE web app SHALL disable the Add button of the popup.
   - AC-002.13: WHEN the Project Manager clicks Add and the backend answers 201, THE web app SHALL close the popup, show MSG05 and show the returned member list.
@@ -250,6 +251,22 @@ These are known limits of the current dependencies, not defects of this story.
   - AC-010.7: THE system SHALL derive the Workspace from `TenantScope` and the caller's own Department from `app_user.department_id` joined to `department`, without accepting either scope from request content.
   - AC-010.8: THE system SHALL check the bound Workspace and the caller's eligibility (AC-010.4) before the key format check, the link check and any Jira call, for all three endpoints.
 
+### STORY-011: Suggest members from the Jira project's roles
+- As a Project Manager, I want the Add member popup to list the people of my Jira project's team role so that I do not search again for people I already added in Jira (RESEARCH-007).
+- Terms: **role** = a project role of the Project's Jira project (team-managed: Administrator, Member, Viewer; company-managed: as the Jira admin defined them); **role person** = an actor of the role of type user (`atlassian-user-role-actor`); **group actor** = an actor of type group (`atlassian-group-role-actor`); **addable** = a role person whose Jira account is linked (identity AC-001.78) to an Active account with the `TICKET_RESOLVER` role that is not a member of the Project.
+- Acceptance:
+  - AC-011.1: WHEN the Project Manager requests `GET /api/v1/projects/{projectId}/jira-roles`, THE backend SHALL read the roles of the Project's Jira project with the Workspace's Jira App token (tracker `JiraServiceAccount`) and answer 200 with each role's id and name, sorted by name ignoring letter case, without the role `atlassian-addons-project-access`.
+  - AC-011.2: WHEN the Project Manager requests `GET /api/v1/projects/{projectId}/jira-roles/{roleId}/people`, THE backend SHALL read that role with the Workspace's Jira App token and answer 200 with every role person — Jira account id, Jira display name and a `status`: `ADDABLE` (with the account's user id, full name and email), `NOT_LINKED`, `NOT_TICKET_RESOLVER`, `NOT_ACTIVE` or `ALREADY_MEMBER` — sorted by Jira display name ignoring letter case, and the names of the role's group actors.
+  - AC-011.3: THE backend SHALL never read the members of a group actor and SHALL never add, change or remove a membership row while answering AC-011.1 or AC-011.2.
+  - AC-011.4: IF there is no Jira App token for the Workspace, or Jira answers an error, does not answer within 10 seconds, or the role is not one of the project's roles, THEN THE backend SHALL answer 503 with `code` `MSG06` to AC-011.1 and AC-011.2, log the Jira status code only, and change nothing.
+  - AC-011.5: THE endpoints of AC-011.1 and AC-011.2 SHALL be refused like every endpoint of this spec (AC-001.3: 403 for a caller who is not the Project Manager; AC-001.4: 404 for an unknown Project), before any Jira call.
+  - AC-011.6: WHEN the Add member popup opens, THE web app SHALL show two tabs, "From Jira" (selected) and "Search" (AC-002.10, unchanged), and SHALL keep the people ticked on either tab when the Project Manager switches tabs.
+  - AC-011.7: WHEN the "From Jira" tab opens, THE web app SHALL load the roles of AC-011.1 into a role selector, select `Member` when the project has it (otherwise the first role), and load that role's people (AC-011.2); WHEN the Project Manager selects another role, THE web app SHALL load its people.
+  - AC-011.8: THE "From Jira" tab SHALL list every role person by Jira display name: an `ADDABLE` person with the T-Solve full name and email and a checkbox; any other person greyed, without a checkbox, with the reason "Not linked to T-Solve", "Not a Ticket Resolver", "Account not active" or "Already a member" (web app labels — user, 2026-11-18).
+  - AC-011.9: WHERE the role has group actors, THE "From Jira" tab SHALL show `This role also contains {groups}; their members are not listed.` with the group names, comma-separated, in place of `{groups}` (a web app label — user, 2026-11-18).
+  - AC-011.10: IF the role has no role person, THEN THE "From Jira" tab SHALL show MSG04; IF loading the roles or the people fails, THEN THE tab SHALL show "Suggestions from Jira are not available for this Project." (a web app label — user, 2026-11-18) and THE "Search" tab SHALL keep working.
+  - AC-011.11: WHEN the Project Manager clicks Add, THE web app SHALL send every ticked person of both tabs in one `POST /api/v1/projects/{projectId}/members` (AC-002.4), with the result and errors of AC-002.13 and AC-002.14.
+
 ## Out of Scope
 
 KAN-128/129:
@@ -259,6 +276,8 @@ KAN-128/129:
 - Ticket visibility of members — already derived from `project_membership` by identity's scope check (KAN-118, GBR-02).
 - The Solution Form and who sees it — `jira-app` (UC-19).
 - Emailing or notifying the added people.
+- Removing a member because they left the Jira role, or adding anyone without the Project Manager's Add (STORY-011 only suggests; user, 2026-11-18).
+- Listing the members of a Jira group actor (STORY-011 names the group only).
 
 KAN-127:
 - UC-15 and UC-16 member management (add and remove Ticket Resolvers on 3.2): KAN-128/KAN-129, STORY-001..003 above.
@@ -281,11 +300,15 @@ KAN-127:
   - `GET /api/v1/projects/{projectId}/member-candidates?q=` → `MemberCandidateResponse[] { userId: UUID, fullName, email }`
   - `POST /api/v1/projects/{projectId}/members` body `AddProjectMembersRequest { userIds: UUID[] }` → 201 `ProjectMemberResponse[]`
   - `DELETE /api/v1/projects/{projectId}/members/{userId}` → 200 `ProjectMemberResponse[]`
+  - `GET /api/v1/projects/{projectId}/jira-roles` → `JiraProjectRoleResponse[] { id: number, name }` (STORY-011)
+  - `GET /api/v1/projects/{projectId}/jira-roles/{roleId}/people` → `JiraRolePeopleResponse { people: JiraRolePersonResponse[] { jiraAccountId, displayName, status: ADDABLE|NOT_LINKED|NOT_TICKET_RESOLVER|NOT_ACTIVE|ALREADY_MEMBER, userId?, fullName?, email? }, groups: string[] }`; 503 MSG06 (STORY-011)
 - `project_membership` is the source of truth for who may write Solutions for a Project: a person without a row for the Project is not a member. The Solution Form (`jira-app`, KAN-126) must refuse to show or accept a submission or resubmission from a non-member.
 - `AuditAction.PROJECT_MEMBER_CHANGE` (backend enum, DB check constraint, audit-log screen label "Project member change").
 
 ### Required from other modules — KAN-128/129 (STORY-001..003)
 - `identity`: `app_user` (status, full name, email), `user_role`, the signed-in caller id; `project_membership` table (017, 023). Not changed.
+- `identity`: `JiraAccountLinkLookup.linkedAccountIds` — Jira account ids → linked account ids, whatever the account's status (AC-001.78, STORY-011).
+- `tracker`: `JiraServiceAccount` — the Workspace's Jira App token and site (STORY-011).
 - `be-foundation`: `AuditService`.
 - `fe-foundation`: route `paths.projectDetail()` with role `PROJECT_MANAGER` (exists), shared UI, MSG texts.
 

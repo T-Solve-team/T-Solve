@@ -2076,3 +2076,8 @@
 {"ts":"2026-11-17T17:27:50.331Z","type":"feature-status","module":"jira-app","feature":"draft-only-when-done","from":"pending","to":"in-progress"}
 {"ts":"2026-11-17T17:28:50.594Z","type":"feature-status","module":"jira-app","feature":"draft-only-when-done","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-17T17:28:51.183Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"92e29e2c2bb5ff572805faab6b3c02727e2f61eb"}
+{"ts":"2026-11-17T18:49:09.417Z","type":"spec-approved","module":"project-integration","specHash":"4f8ac3bff95caa919fe0d5ebd0a786c549856b4439aff3081fc54483d12f07e2"}
+{"ts":"2026-11-17T18:49:09.699Z","type":"spec-approved","module":"identity","specHash":"f082fa4affd873a4b898a95500449e6ac78645ede76712613a4b927e663a349b"}
+{"ts":"2026-11-17T18:49:54.105Z","type":"feature-status","module":"project-integration","feature":"jira-role-suggestions-backend","from":null,"to":"pending"}
+{"ts":"2026-11-17T18:49:54.341Z","type":"feature-status","module":"project-integration","feature":"jira-role-suggestions-ui","from":null,"to":"pending"}
+{"ts":"2026-11-17T18:49:54.576Z","type":"feature-status","module":"identity","feature":"jira-linked-account-ids","from":null,"to":"pending"}

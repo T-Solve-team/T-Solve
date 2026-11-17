@@ -489,3 +489,33 @@ Open questions for the spec owner: none requiring an answer in this run; new pla
 ## KAN-127: Risk Review — 2026-11-12 — CAUTION
 
 Planning review, not implementation/security approval. Basic-auth credential versus real scoped service-account tokens: retain the existing boundary and mapping, expose no token input; KAN-119/KAN-125 must supply gateway Bearer before real scoped-token use. GBR-04 remains incomplete end to end because the Jira App still checks the Done category; a later reader of stored status ids is required. Reconnect membership rewrite deletes the previous PM row, so Task 8 must prove resolver preservation, caller promotion, locking and rollback. No DB review_range check is intentional: enforce all new API writes, preserve legacy review fallback fixtures, and keep direct-SQL writers visible to their owners. Shared browser CSRF and production Workspace binding are separate prerequisites; backend IT and MSW are the evidence for this slice.
+
+## KAN-367: Suggest members from Jira project roles (STORY-011, Change Mode 18/11)
+RESEARCH-007. User decisions of 18/11: the role is chosen in the popup and not stored; people who cannot be added are
+greyed with a reason; two tabs ("From Jira" first, "Search" unchanged); nothing is added or removed without the
+Project Manager's Add; group actors are named, not expanded.
+
+- **Jira reads (tracker).** `TicketTrackerClient` gains `projectRoles(account, projectKey)` →
+  `List<TrackerRole(id, name)>` (`GET /rest/api/3/project/{key}/role`, ids parsed from the role URLs) and
+  `roleActors(account, projectKey, roleId)` → `TrackerRoleActors(users: [accountId, displayName], groups: [name])`
+  (`GET /rest/api/3/project/{key}/role/{id}`; `atlassian-user-role-actor` → users, `atlassian-group-role-actor` →
+  groups, anything else ignored). `TrackerProjectService` exposes `projectRoles(projectKey)` and
+  `roleActors(projectKey, roleId)` over `JiraServiceAccount.current()` (the app token, KAN-349). Both throw
+  `JiraUnavailableException` / `JiraRejectedException` as the other client calls do (10 s timeouts of `JiraClient`).
+  Scope `read:jira-work` is already granted; the app user has Administer Projects on DP and SAM1 (RESEARCH-007).
+- **Service (project).** `ProjectMemberService.jiraRoles(projectId)` and `jiraRolePeople(projectId, roleId)`. Order:
+  `requireManagedProject` (404/403, AC-011.5) in a read transaction, then the Jira call **outside** any transaction
+  (AGENTS.md §4), then the classification in a second read transaction. `atlassian-addons-project-access` is
+  dropped from the roles (AC-011.1); an unknown `roleId` is a Jira 404 → 503 MSG06 (AC-011.4) through
+  `ProjectTrackerUnavailableException`.
+- **Classification.** identity `JiraAccountLinkLookup.linkedAccountIds(Set<String>)` → `Map<accountId, userId>`
+  (AC-001.78, any status). `ProjectMemberRepository.memberStates(projectId, userIds)` reads, per user id, full name,
+  email, `status`, has `TICKET_RESOLVER`, is a member. Status order: not linked → `NOT_LINKED`; member →
+  `ALREADY_MEMBER`; not Active → `NOT_ACTIVE`; no Ticket Resolver role → `NOT_TICKET_RESOLVER`; else `ADDABLE`
+  (with user id, full name, email). People sorted by Jira display name ignoring case (AC-011.2).
+- **Web.** `AddMemberModal` gets antd `Tabs`: "From Jira" (new `JiraRolePeople` component: role `Select`, list with
+  checkboxes or greyed rows with the reason labels, the groups note, MSG04 / not-available text) and "Search" (the
+  current body). One selection set (user ids) lives in the modal and survives tab switches; Add posts it once
+  (AC-011.11). MSW handlers for both endpoints.
+- **Decided in planning (builder check):** the role list keeps Jira's role names as they are; the people endpoint
+  does not page (role actors are not paged by Jira); `displayName` falls back to the account id when Jira gives none.

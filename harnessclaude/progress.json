@@ -144,9 +144,10 @@
         "my-solutions-summary-backend": "pending",
         "jira-account-link-lookup": "evaluating",
         "multi-km-per-space-backend": "passing",
-        "multi-km-per-space-frontend": "passing"
+        "multi-km-per-space-frontend": "passing",
+        "jira-linked-account-ids": "pending"
       },
-      "lastUpdated": "2026-11-17T16:24:25.974Z",
+      "lastUpdated": "2026-11-17T18:49:54.574Z",
       "branch": "feat/identity",
       "repos": [
         "default"
@@ -205,9 +206,11 @@
         "project-reconnect": "passing",
         "project-list": "passing",
         "jira-integration-projects-table": "passing",
-        "jira-integration-add-project": "passing"
+        "jira-integration-add-project": "passing",
+        "jira-role-suggestions-backend": "pending",
+        "jira-role-suggestions-ui": "pending"
       },
-      "lastUpdated": "2026-11-17T15:18:09.203Z",
+      "lastUpdated": "2026-11-17T18:49:54.340Z",
       "branch": "feat/KAN-128-project-integration-add-ticket-resolver",
       "repos": [
         "default"

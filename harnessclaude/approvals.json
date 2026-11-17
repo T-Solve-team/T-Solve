@@ -343,8 +343,8 @@
     }
   },
   "identity": {
-    "specHash": "42367864a4a764298bf2d188b1ddbcd3e33e607448f43bf21a05c473859e888a",
-    "approvedAt": "2026-11-17T15:12:42.216Z",
+    "specHash": "f082fa4affd873a4b898a95500449e6ac78645ede76712613a4b927e663a349b",
+    "approvedAt": "2026-11-17T18:49:09.697Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a browser opens  on a Workspace site whose Workspace passes AC-001.48, THE backend SHALL save an authorization request for the Workspace that the platform resolved from the host (AC-001.53) and answer 302 to the authorization endpoint of the Keycloak realm  ( + ;  in production), without a signed-in user.",
@@ -407,6 +407,7 @@
       "AC-001.75": "WHEN a signed-in person of a Workspace sends  for a link request made for that Workspace, THE backend SHALL answer 200 with  (the Jira site's name, not the Workspace's) taken from the stored link request, SHALL leave the request in Redis (the GET does not consume it) and SHALL record nothing.",
       "AC-001.76": "WHEN a request carries a valid Workspace session, THE backend SHALL bind the Workspace of that session (the Workspace id the session holds, after the host check of AC-001.20 has passed) through  for the rest of that request and SHALL remove the binding when the request ends, also when the endpoint throws, so the endpoint reads only that Workspace's database. A request with no valid Workspace session (anonymous, an Operator session, or the hosts  and ) SHALL get no binding, and no default Workspace is ever bound. IF a signed-in request reaches code that needs the Workspace and none is bound, THEN THE backend SHALL answer 500 with  , never another Workspace's data (decision of KAN-298:  makes the binding; AC-004.16 states the same 500 for the user list).",
       "AC-001.77": "WHEN another module asks  for the Account linked to a ticket tracker account, THE backend SHALL answer, in the Workspace bound by , the Account of that ticket tracker account's  row when the Account is Active, and nothing when there is no row or the Account is not Active.",
+      "AC-001.78": "WHEN another module asks  for a set of ticket tracker account ids, THE backend SHALL answer, in the Workspace bound by , the account id that each linked one is linked to, whatever the account's status, and nothing for the ids that are not linked.",
       "AC-002.1": "WHEN a signed-in user sends  with a valid CSRF token, on a Workspace site or on , THE backend SHALL end the Redis session, expire the cookie  (, with  and  and no ) and answer 200 with , the Keycloak end-session URL of the realm that signed the person in (, or  on ) carrying the kept  and  set to  on the same site (K10, Q7).",
       "AC-002.2": "WHEN a session has been ended by logout, THE backend SHALL answer every later request that carries its cookie with 401 and  .",
       "AC-002.3": "WHEN a Workspace session ends, THE backend SHALL publish exactly one  event with the Account id, the Workspace id, the session id and the reason, after the session is gone. The reason SHALL be  (AC-002.1),  (AC-001.23) or  (AC-001.27). The reason is also  when the Account no longer exists. The reason is also  when a new sign-in in the same browser ends a session that is still inside the limits of AC-001.23 (AC-001.18).",
@@ -1668,8 +1669,8 @@
     }
   },
   "project-integration": {
-    "specHash": "8d7eda80ec3d958f659e250b04288b3f8ae9b9d6c28b03e17377ab8713269b2b",
-    "approvedAt": "2026-11-17T14:57:43.987Z",
+    "specHash": "4f8ac3bff95caa919fe0d5ebd0a786c549856b4439aff3081fc54483d12f07e2",
+    "approvedAt": "2026-11-17T18:49:09.415Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the Project Manager of a Project requests , THE backend SHALL answer 200 with the Project id, Jira project key, Department name, the Project Manager's full name and the status ( or ).",
@@ -1688,7 +1689,7 @@
       "AC-002.7": "IF any id in  is not an Active account with the  role, or is already a member of the Project, THEN THE backend SHALL answer 409, add nobody and record no audit entry.",
       "AC-002.8": "IF the Project is , THEN THE backend SHALL answer 409 to , add nobody and record no audit entry.",
       "AC-002.9": "WHILE the Project is , THE web app SHALL show the \"Add member\" button in the Members tab; WHILE it is , THE web app SHALL not show it.",
-      "AC-002.10": "WHEN the Project Manager clicks \"Add member\", THE web app SHALL open the Add member popup with a search box (name or email) and the candidate list of AC-002.1, loaded at once with an empty  and refreshed 300 ms after the last keystroke, where one or more candidates can be selected.",
+      "AC-002.10": "WHEN the Project Manager clicks \"Add member\", THE web app SHALL open the Add member popup whose \"Search\" tab (STORY-011) has a search box (name or email) and the candidate list of AC-002.1, loaded at once with an empty  and refreshed 300 ms after the last keystroke, where one or more candidates can be selected.",
       "AC-002.11": "IF the candidate list is empty, THEN THE web app SHALL show MSG04 in the popup.",
       "AC-002.12": "WHILE no candidate is selected or an add is in progress, THE web app SHALL disable the Add button of the popup.",
       "AC-002.13": "WHEN the Project Manager clicks Add and the backend answers 201, THE web app SHALL close the popup, show MSG05 and show the returned member list.",
@@ -1808,7 +1809,18 @@
       "AC-010.5": "IF no Workspace is bound for an authenticated Project Manager, THEN THE system SHALL answer 500 MSG06 with params  and no field error, without a write or Jira call.",
       "AC-010.6": "WHILE any of the three endpoints runs in a bound Workspace, THE system SHALL read and write Project, Department, membership and audit data only in that Workspace's database, allowing the same Jira key in a different Workspace database.",
       "AC-010.7": "THE system SHALL derive the Workspace from  and the caller's own Department from  joined to , without accepting either scope from request content.",
-      "AC-010.8": "THE system SHALL check the bound Workspace and the caller's eligibility (AC-010.4) before the key format check, the link check and any Jira call, for all three endpoints."
+      "AC-010.8": "THE system SHALL check the bound Workspace and the caller's eligibility (AC-010.4) before the key format check, the link check and any Jira call, for all three endpoints.",
+      "AC-011.1": "WHEN the Project Manager requests , THE backend SHALL read the roles of the Project's Jira project with the Workspace's Jira App token (tracker ) and answer 200 with each role's id and name, sorted by name ignoring letter case, without the role .",
+      "AC-011.2": "WHEN the Project Manager requests , THE backend SHALL read that role with the Workspace's Jira App token and answer 200 with every role person — Jira account id, Jira display name and a :  (with the account's user id, full name and email), , ,  or  — sorted by Jira display name ignoring letter case, and the names of the role's group actors.",
+      "AC-011.3": "THE backend SHALL never read the members of a group actor and SHALL never add, change or remove a membership row while answering AC-011.1 or AC-011.2.",
+      "AC-011.4": "IF there is no Jira App token for the Workspace, or Jira answers an error, does not answer within 10 seconds, or the role is not one of the project's roles, THEN THE backend SHALL answer 503 with   to AC-011.1 and AC-011.2, log the Jira status code only, and change nothing.",
+      "AC-011.5": "THE endpoints of AC-011.1 and AC-011.2 SHALL be refused like every endpoint of this spec (AC-001.3: 403 for a caller who is not the Project Manager; AC-001.4: 404 for an unknown Project), before any Jira call.",
+      "AC-011.6": "WHEN the Add member popup opens, THE web app SHALL show two tabs, \"From Jira\" (selected) and \"Search\" (AC-002.10, unchanged), and SHALL keep the people ticked on either tab when the Project Manager switches tabs.",
+      "AC-011.7": "WHEN the \"From Jira\" tab opens, THE web app SHALL load the roles of AC-011.1 into a role selector, select  when the project has it (otherwise the first role), and load that role's people (AC-011.2); WHEN the Project Manager selects another role, THE web app SHALL load its people.",
+      "AC-011.8": "THE \"From Jira\" tab SHALL list every role person by Jira display name: an  person with the T-Solve full name and email and a checkbox; any other person greyed, without a checkbox, with the reason \"Not linked to T-Solve\", \"Not a Ticket Resolver\", \"Account not active\" or \"Already a member\" (web app labels — user, 2026-11-18).",
+      "AC-011.9": "WHERE the role has group actors, THE \"From Jira\" tab SHALL show  with the group names, comma-separated, in place of  (a web app label — user, 2026-11-18).",
+      "AC-011.10": "IF the role has no role person, THEN THE \"From Jira\" tab SHALL show MSG04; IF loading the roles or the people fails, THEN THE tab SHALL show \"Suggestions from Jira are not available for this Project.\" (a web app label — user, 2026-11-18) and THE \"Search\" tab SHALL keep working.",
+      "AC-011.11": "WHEN the Project Manager clicks Add, THE web app SHALL send every ticked person of both tabs in one  (AC-002.4), with the result and errors of AC-002.13 and AC-002.14."
     }
   }
 }
