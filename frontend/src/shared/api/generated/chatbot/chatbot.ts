@@ -24,11 +24,10 @@ import type {
 
 import type {
   ChatbotAnswer,
+  ChatbotAsk,
   ChatbotIssueDraft,
-  ChatbotIssueDraftRequest,
   ChatbotIssueRequest,
   ChatbotJiraIssue,
-  ChatbotQuestion,
   ChatbotRating,
   ListUnavailableCitedDocumentsParams,
   ProblemResponse,
@@ -61,11 +60,11 @@ export const getAskChatbotUrl = () => {
 };
 
 /**
- * Sources are the Solutions of all Published tickets and the Wiki documents the user can view (GBR-31), checked on every question. No source → outcome NO_SOURCE (the web app shows MSG109). The AI module unavailable → 503 with code MSG06.
+ * Sources are the Solutions of all Published tickets and the Wiki documents the user can view (GBR-31), checked on every question. No source → outcome NO_SOURCE (the web app shows MSG109). The AI module unavailable → 503 with code MSG06. The earlier turns come from the conversation `chatSessionId` (the last 10); without one a new conversation is started and its id returned (KAN-183). An unknown `chatSessionId` → 404 code MSG04.
  * @summary Answers a question from the knowledge the user may see, with numbered citations (GBR-36).
  */
 export const askChatbot = async (
-  chatbotQuestion: ChatbotQuestion,
+  chatbotAsk: ChatbotAsk,
   options?: Parameters<typeof http>[1],
 ): Promise<ChatbotAnswer> => {
   const getHeaders = (
@@ -91,7 +90,7 @@ export const askChatbot = async (
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(chatbotQuestion),
+    body: JSON.stringify(chatbotAsk),
   });
 };
 
@@ -134,9 +133,9 @@ export const getAskChatbotMutationOptions = <
 };
 
 export type AskChatbotMutationResult = NonNullable<Awaited<ReturnType<typeof askChatbot>>>;
-export type AskChatbotMutationBody = ChatbotQuestion;
+export type AskChatbotMutationBody = ChatbotAsk;
 export type AskChatbotMutationError = ErrorType<ProblemResponse>;
-export type AskChatbotMutationVariables = { data: ChatbotQuestion };
+export type AskChatbotMutationVariables = { data: ChatbotAsk };
 
 /**
  * @summary Answers a question from the knowledge the user may see, with numbered citations (GBR-36).
@@ -515,38 +514,16 @@ export const getDraftChatbotIssueUrl = (answerId: string) => {
 };
 
 /**
- * For an ANSWERED or NO_SOURCE answer of the user. Offers only the Departments with a default Project. When the AI fails the draft is empty and the user fills it. Nothing is stored and nothing reaches Jira. A user with no linked Jira account (UC-59) gets 409 code MSG146 instead of the form.
+ * For an ANSWERED or NO_SOURCE answer of the user. Offers only the Departments with a default Project. When the AI fails the draft is empty and the user fills it. Nothing is stored and nothing reaches Jira. A user with no linked Jira account (UC-59) gets 409 code MSG146 instead of the form. The AI reads the turns before the answer in its saved conversation (KAN-183); the request has no body.
  * @summary The Jira issue form of an own answer, prefilled by the AI from the conversation (UC-58, MSG144).
  */
 export const draftChatbotIssue = async (
   answerId: string,
-  chatbotIssueDraftRequest: ChatbotIssueDraftRequest,
   options?: Parameters<typeof http>[1],
 ): Promise<ChatbotIssueDraft> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit['headers']>,
-  ): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(
-          h as Iterable<Iterable<string>>,
-          (entry) => Array.from(entry) as [string, string],
-        ),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
   return http<ChatbotIssueDraft>(getDraftChatbotIssueUrl(answerId), {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(chatbotIssueDraftRequest),
   });
 };
 
@@ -580,9 +557,9 @@ export const getDraftChatbotIssueMutationOptions = <
     Awaited<ReturnType<typeof draftChatbotIssue>>,
     DraftChatbotIssueMutationVariables
   > = (props) => {
-    const { answerId, data } = props ?? {};
+    const { answerId } = props ?? {};
 
-    return draftChatbotIssue(answerId, data, requestOptions);
+    return draftChatbotIssue(answerId, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -591,12 +568,9 @@ export const getDraftChatbotIssueMutationOptions = <
 export type DraftChatbotIssueMutationResult = NonNullable<
   Awaited<ReturnType<typeof draftChatbotIssue>>
 >;
-export type DraftChatbotIssueMutationBody = ChatbotIssueDraftRequest;
+
 export type DraftChatbotIssueMutationError = ErrorType<ProblemResponse>;
-export type DraftChatbotIssueMutationVariables = {
-  answerId: string;
-  data: ChatbotIssueDraftRequest;
-};
+export type DraftChatbotIssueMutationVariables = { answerId: string };
 
 /**
  * @summary The Jira issue form of an own answer, prefilled by the AI from the conversation (UC-58, MSG144).

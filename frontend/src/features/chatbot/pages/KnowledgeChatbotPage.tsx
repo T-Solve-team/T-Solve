@@ -10,7 +10,6 @@ import { QuestionBox, type QuestionFormValues } from '../components/QuestionBox'
 import { useAskQuestion } from '../hooks/useAskQuestion';
 import { useConversations } from '../hooks/useConversations';
 import { useRateAnswer } from '../hooks/useRateAnswer';
-import { toHistory } from '../model';
 import styles from './KnowledgeChatbotPage.module.css';
 
 /** The route is behind the sign-in guard, so the session has a user whenever this renders (nothing shows otherwise). */
@@ -33,7 +32,8 @@ function KnowledgeChatbot({ userId }: { userId: string }) {
     isAsking.current = true;
     const conversationId = openId ?? crypto.randomUUID();
     ask.mutate(
-      { data: { question, history: toHistory(turns) } },
+      // The backend reads the earlier turns from the open conversation (KAN-183); none starts a new one.
+      { data: { question, chatSessionId: turns.at(-1)?.answer.chatSessionId } },
       {
         onSuccess: (answer) => {
           addTurn(conversationId, { question, answer });

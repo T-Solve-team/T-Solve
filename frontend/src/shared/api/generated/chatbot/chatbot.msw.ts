@@ -14,11 +14,10 @@ import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'ms
 import { ChatbotAnswerOutcome } from '../model';
 import type {
   ChatbotAnswer,
+  ChatbotAsk,
   ChatbotIssueDraft,
-  ChatbotIssueDraftRequest,
   ChatbotIssueRequest,
   ChatbotJiraIssue,
-  ChatbotQuestion,
   ChatbotRating,
   TicketSolutionCitation,
   UnavailableDocuments,
@@ -70,6 +69,7 @@ export const getAskChatbotResponseMock = (
         { ...getAskChatbotResponseTicketSolutionCitationMock() },
       ]),
   ),
+  chatSessionId: faker.helpers.arrayElement([faker.string.uuid(), undefined]),
   ...overrideResponse,
 });
 
@@ -118,13 +118,13 @@ export const getAskChatbotMockHandler = (
   overrideResponse?:
     | ChatbotAnswer
     | ((
-        info: Parameters<HttpResponseResolver<PathParams, ChatbotQuestion>>[0],
+        info: Parameters<HttpResponseResolver<PathParams, ChatbotAsk>>[0],
       ) => Promise<ChatbotAnswer> | ChatbotAnswer),
   options?: RequestHandlerOptions,
 ) => {
-  return http.post<PathParams, ChatbotQuestion>(
+  return http.post<PathParams, ChatbotAsk>(
     '*/api/v1/chatbot/answers',
-    async (info: Parameters<HttpResponseResolver<PathParams, ChatbotQuestion>>[0]) => {
+    async (info: Parameters<HttpResponseResolver<PathParams, ChatbotAsk>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -206,15 +206,13 @@ export const getDraftChatbotIssueMockHandler = (
   overrideResponse?:
     | ChatbotIssueDraft
     | ((
-        info: Parameters<HttpResponseResolver<{ answerId: string }, ChatbotIssueDraftRequest>>[0],
+        info: Parameters<HttpResponseResolver<{ answerId: string }>>[0],
       ) => Promise<ChatbotIssueDraft> | ChatbotIssueDraft),
   options?: RequestHandlerOptions,
 ) => {
-  return http.post<{ answerId: string }, ChatbotIssueDraftRequest>(
+  return http.post<{ answerId: string }>(
     '*/api/v1/chatbot/answers/:answerId/issue-draft',
-    async (
-      info: Parameters<HttpResponseResolver<{ answerId: string }, ChatbotIssueDraftRequest>>[0],
-    ) => {
+    async (info: Parameters<HttpResponseResolver<{ answerId: string }>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'

@@ -139,6 +139,7 @@ export const getAskJiraAppQuestionResponseMock = (
         { ...getAskJiraAppQuestionResponseTicketSolutionCitationMock() },
       ]),
   ),
+  chatSessionId: faker.helpers.arrayElement([faker.string.uuid(), undefined]),
   ...overrideResponse,
 });
 

@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse, type HttpHandler } from 'msw';
-import type { ChatbotAnswer, ChatbotQuestion, UnavailableDocuments } from '@/shared/api';
+import type { ChatbotAnswer, ChatbotAsk, UnavailableDocuments } from '@/shared/api';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
 import { QUESTION_MAX_LENGTH } from '../model';
 import { classifyMockQuestion, findMockAnswer, UNAVAILABLE_DOCUMENT_IDS } from './data';
@@ -11,7 +11,9 @@ import { classifyMockQuestion, findMockAnswer, UNAVAILABLE_DOCUMENT_IDS } from '
 export const handlers: HttpHandler[] = [
   http.post('*/api/v1/chatbot/answers', async ({ request }) => {
     await delay(MOCK_DELAY_MS);
-    const { question } = (await request.json()) as ChatbotQuestion;
+    const { question, chatSessionId: asked } = (await request.json()) as ChatbotAsk;
+    // ponytail: echoes any id; the in-memory conversations of AC-004.8 come with Task 18 (KAN-183).
+    const chatSessionId = asked ?? crypto.randomUUID();
     if (question.trim() === '') {
       return problem(400, 'MSG01', {
         fieldErrors: [{ field: 'question', code: 'MSG01', params: { field_name: 'Question' } }],
@@ -35,6 +37,7 @@ export const handlers: HttpHandler[] = [
         outcome,
         text: '',
         citations: [],
+        chatSessionId,
       });
     }
     const match = findMockAnswer(question);
@@ -43,6 +46,7 @@ export const handlers: HttpHandler[] = [
       outcome: match ? 'ANSWERED' : 'NO_SOURCE',
       text: match?.text ?? '',
       citations: match?.citations ?? [],
+      chatSessionId,
     });
   }),
 

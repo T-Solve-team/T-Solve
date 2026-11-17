@@ -17,4 +17,6 @@ export interface ChatbotAnswer {
   text: string;
   /** In number order; empty unless ANSWERED. */
   citations: ChatbotCitation[];
+  /** The conversation of the answer; set on every askChatbot answer, absent for the Jira App. */
+  chatSessionId?: string;
 }

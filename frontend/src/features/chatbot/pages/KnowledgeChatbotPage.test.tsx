@@ -7,7 +7,7 @@ import { setDevUser } from '@/shared/auth';
 import {
   getListUnavailableCitedDocumentsQueryKey,
   type ChatbotAnswer,
-  type ChatbotQuestion,
+  type ChatbotAsk,
 } from '@/shared/api';
 import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
@@ -34,11 +34,11 @@ async function openChatbot(options: RenderOptions = { role: 'EMPLOYEE' }) {
 }
 
 /** Records the body of every question the page sends, still answered by the feature's mock. */
-function recordQuestions(): ChatbotQuestion[] {
-  const sent: ChatbotQuestion[] = [];
+function recordQuestions(): ChatbotAsk[] {
+  const sent: ChatbotAsk[] = [];
   server.events.on('request:start', async ({ request }) => {
     if (request.method === 'POST' && request.url.endsWith('/api/v1/chatbot/answers')) {
-      sent.push((await request.clone().json()) as ChatbotQuestion);
+      sent.push((await request.clone().json()) as ChatbotAsk);
     }
   });
   return sent;
@@ -152,7 +152,7 @@ describe('KnowledgeChatbotPage', () => {
     await user.click(screen.getByRole('button', { name: 'Send' }));
 
     await waitFor(() => expect(sent).toHaveLength(1));
-    expect(sent[0]).toEqual({ question: VPN_QUESTION, history: [] });
+    expect(sent[0]).toEqual({ question: VPN_QUESTION });
   });
 
   it('AC-001.4 shows MSG01 and sends nothing when the question is only white space', async () => {
@@ -233,7 +233,7 @@ describe('KnowledgeChatbotPage', () => {
     expect(screen.getByRole('button', { name: /Send/ })).toBeEnabled();
   });
 
-  it('AC-001.6 sends the earlier turns of the conversation with a follow-up question', async () => {
+  it('AC-001.6 sends the conversation of the first answer with a follow-up question', async () => {
     const sent = recordQuestions();
     const { user, box } = await openChatbot();
 
@@ -243,9 +243,8 @@ describe('KnowledgeChatbotPage', () => {
 
     await waitFor(() => expect(sent).toHaveLength(2));
     expect(sent[1]?.question).toBe('And on a Mac?');
-    expect(sent[1]?.history).toHaveLength(1);
-    expect(sent[1]?.history[0]?.question).toBe(VPN_QUESTION);
-    expect(sent[1]?.history[0]?.answer).toMatch(/^Install GlobalProtect/);
+    expect(sent[0]?.chatSessionId).toBeUndefined();
+    expect(sent[1]?.chatSessionId).toMatch(/^[0-9a-f-]{36}$/);
   });
 
   it('AC-001.7 shows the answer text with its numbered markers and empties the question box', async () => {
@@ -576,7 +575,11 @@ describe('KnowledgeChatbotPage', () => {
       http.post('*/api/v1/chatbot/answers', () =>
         problem(400, 'MSG02', {
           fieldErrors: [
-            { field: 'history', code: 'MSG02', params: { field_name: 'History', max_length: 10 } },
+            {
+              field: 'chatSessionId',
+              code: 'MSG02',
+              params: { field_name: 'Chat', max_length: 10 },
+            },
           ],
         }),
       ),
@@ -738,28 +741,17 @@ describe('KnowledgeChatbotPage session conversations', () => {
     expect(within(thread()).queryByText(LEAVE_QUESTION)).not.toBeInTheDocument();
   });
 
-  it('AC-002.5 adds a follow-up to the open conversation and sends its earlier turns', async () => {
+  it('AC-002.5 adds a follow-up to the open conversation and sends its id', async () => {
     const sent = recordQuestions();
     const { user, box } = await openChatbot();
     await ask(user, box, VPN_QUESTION);
 
     await ask(user, box, 'And on a Mac?');
 
-    expect(sent[1]?.history.map((turn) => turn.question)).toEqual([VPN_QUESTION]);
+    expect(sent[1]?.chatSessionId).toBeDefined();
     expect(listTitles()).toEqual([VPN_QUESTION]);
     expect(within(thread()).getByText('And on a Mac?')).toBeInTheDocument();
   });
-
-  it('AC-002.5 sends only the last 10 turns, oldest first, after 12 turns (edge 18)', async () => {
-    const sent = recordQuestions();
-    const { user, box } = await openChatbot();
-    for (let n = 1; n <= 12; n++) await ask(user, box, `Question ${n}`);
-
-    await ask(user, box, 'Question 13');
-
-    const questions = sent[12]?.history.map((turn) => turn.question);
-    expect(questions).toEqual(Array.from({ length: 10 }, (_, i) => `Question ${i + 3}`));
-  }, 60_000);
 
   it('AC-002.6 opens an empty conversation at the top, and keeps one when it is already empty', async () => {
     const { user, box } = await openChatbot();

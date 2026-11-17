@@ -6,12 +6,13 @@
  *
  * OpenAPI spec version: 0.1.0-stub
  */
-import type { ChatbotTurn } from './chatbotTurn';
 
-export interface ChatbotIssueDraftRequest {
+export interface ChatbotAsk {
   /**
-   * The turns of the conversation before this answer, oldest first, as for askChatbot.
-   * @maxItems 10
+   * @minLength 1
+   * @maxLength 1000
    */
-  history: ChatbotTurn[];
+  question: string;
+  /** The open conversation; absent to start a new one. */
+  chatSessionId?: string;
 }

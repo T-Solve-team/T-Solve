@@ -15,7 +15,7 @@ const DOC_9003 = '00000000-0000-4000-8000-000000009003';
 const DOC_UNKNOWN = '00000000-0000-4000-8000-000000000042';
 
 function ask(question: string): Promise<ChatbotAnswer> {
-  return askChatbot({ question, history: [] });
+  return askChatbot({ question });
 }
 
 async function askError(question: string) {

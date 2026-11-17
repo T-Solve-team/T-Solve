@@ -30,12 +30,15 @@ import vn.tsolve.ai.client.LlmClient;
 import vn.tsolve.ai.exception.AiUnavailableException;
 import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse;
 import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse.Outcome;
+import vn.tsolve.chatbot.answer.dto.ChatbotAskRequest;
 import vn.tsolve.chatbot.answer.dto.ChatbotCitation;
 import vn.tsolve.chatbot.answer.dto.ChatbotQuestionRequest;
+import vn.tsolve.chatbot.answer.dto.ChatbotTurnRequest;
 import vn.tsolve.chatbot.answer.dto.TicketSolutionCitation;
 import vn.tsolve.chatbot.answer.entity.ChatbotAnswer;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
 import vn.tsolve.chatbot.answer.service.ChatbotAnswerService;
+import vn.tsolve.chatbot.conversation.service.ChatConversationService;
 import vn.tsolve.chatbot.exception.ChatbotProjectNotActiveException;
 import vn.tsolve.chatbot.rating.entity.ChatbotRating;
 import vn.tsolve.chatbot.rating.exception.ChatbotAnswerNotFoundException;
@@ -54,6 +57,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
     private final SolutionRetrieval solutions;
     private final WikiSources wiki;
     private final ChatbotAnswerRepository answers;
+    private final ChatConversationService conversations;
     private final TransactionTemplate transaction;
     private final Executor executor;
     private final double minSimilarity;
@@ -70,6 +74,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
             SolutionRetrieval solutions,
             WikiSources wiki,
             ChatbotAnswerRepository answers,
+            ChatConversationService conversations,
             PlatformTransactionManager transactionManager,
             ObjectMapper json,
             @Qualifier("applicationTaskExecutor") Executor executor,
@@ -85,6 +90,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
                 solutions,
                 wiki,
                 answers,
+                conversations,
                 transactionManager,
                 json,
                 executor,
@@ -101,6 +107,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
             SolutionRetrieval solutions,
             WikiSources wiki,
             ChatbotAnswerRepository answers,
+            ChatConversationService conversations,
             PlatformTransactionManager transactionManager,
             ObjectMapper json,
             Executor executor,
@@ -113,6 +120,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
                 solutions,
                 wiki,
                 answers,
+                conversations,
                 transactionManager,
                 json,
                 executor,
@@ -129,6 +137,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
             SolutionRetrieval solutions,
             WikiSources wiki,
             ChatbotAnswerRepository answers,
+            ChatConversationService conversations,
             PlatformTransactionManager transactionManager,
             ObjectMapper json,
             Executor executor,
@@ -150,6 +159,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         this.solutions = solutions;
         this.wiki = wiki;
         this.answers = answers;
+        this.conversations = conversations;
         this.transaction = new TransactionTemplate(transactionManager);
         this.executor = executor;
         this.minSimilarity = minSimilarity;
@@ -161,16 +171,29 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
     }
 
     @Override
-    public ChatbotAnswerResponse ask(TSolveUser user, ChatbotQuestionRequest request) {
+    public ChatbotAnswerResponse ask(TSolveUser user, ChatbotAskRequest request) {
+        // AC-013.4: an unknown conversation is refused on the request thread, before any AI call.
+        List<ChatbotTurnRequest> history =
+                request.chatSessionId() == null ? List.of() : conversations.history(user.id(), request.chatSessionId());
+        UUID chatSessionId = request.chatSessionId() == null ? null : UUID.fromString(request.chatSessionId());
         return answer(
-                request,
+                new ChatbotQuestionRequest(request.question(), history),
                 (vector, candidates) -> {
                     solutions.nearest(vector, minSimilarity, sourceLimit).stream()
                             .map(ChatbotSource::of)
                             .forEach(candidates::add);
                     return wiki.nearest(user, vector, minSimilarity, sourceLimit);
                 },
-                (question, outcome, text) -> new ChatbotAnswer(user.id(), question, outcome, text));
+                (question, outcome, text) -> new ChatbotAnswer(user.id(), question, outcome, text),
+                // AC-013.1, AC-013.3: the turn is stored in the transaction of its chatbot_answer row.
+                (saved, citations) -> conversations.record(
+                        user.id(),
+                        chatSessionId,
+                        saved.getId(),
+                        saved.getQuestion(),
+                        saved.getOutcome(),
+                        saved.getAnswerText(),
+                        citations));
     }
 
     @Override
@@ -191,7 +214,9 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
                             ? wiki.nearest(reader.get(), vector, minSimilarity, sourceLimit)
                             : wiki.nearestCompanyWide(vector, minSimilarity, sourceLimit);
                 },
-                (question, outcome, text) -> ChatbotAnswer.forProject(projectId, question, outcome, text));
+                (question, outcome, text) -> ChatbotAnswer.forProject(projectId, question, outcome, text),
+                // AC-013.12: a Jira App question has no conversation.
+                (saved, citations) -> null);
     }
 
     @Override
@@ -214,11 +239,16 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         ChatbotAnswer of(String question, String outcome, String text);
     }
 
-    private ChatbotAnswerResponse answer(ChatbotQuestionRequest request, Sources sources, Row row) {
+    /** Stores the turn of a saved answer in the same transaction and returns its conversation id, or null. */
+    private interface Turn {
+        UUID record(ChatbotAnswer saved, List<ChatbotCitation> citations);
+    }
+
+    private ChatbotAnswerResponse answer(ChatbotQuestionRequest request, Sources sources, Row row, Turn turn) {
         long deadline = System.nanoTime() + timeoutNanos;
         String question = request.question().trim();
         if (QuestionClassifier.isGreeting(question)) {
-            return save(row.of(question, Outcome.GREETING.name(), ""), Outcome.GREETING, List.of(), deadline);
+            return save(turn, row.of(question, Outcome.GREETING.name(), ""), Outcome.GREETING, List.of(), deadline);
         }
         var classification =
                 classifier.parse(classify(ClassifierPrompt.messages(question, request.history()), deadline));
@@ -231,7 +261,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
                     case QUESTION -> null;
                 };
         if (refused != null) {
-            return save(row.of(question, refused.name(), ""), refused, List.of(), deadline);
+            return save(turn, row.of(question, refused.name(), ""), refused, List.of(), deadline);
         }
         // BUG-331: a first question is embedded as asked, so a lossy rewrite cannot drop an error code from it.
         // The private rewrite only resolves a follow-up against the history; without one the old fallback stays.
@@ -263,30 +293,35 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         remaining(deadline);
 
         if (kept.isEmpty()) {
-            return save(row.of(question, Outcome.NO_SOURCE.name(), ""), Outcome.NO_SOURCE, List.of(), deadline);
+            return save(turn, row.of(question, Outcome.NO_SOURCE.name(), ""), Outcome.NO_SOURCE, List.of(), deadline);
         }
         var messages = AnswerPrompt.messages(question, request.history(), kept);
         String text = callAi(() -> llm.chat(messages, null), deadline);
         remaining(deadline);
         var cited = Citations.of(text, kept);
         if (cited.citations().isEmpty()) {
-            return save(row.of(question, Outcome.NO_SOURCE.name(), ""), Outcome.NO_SOURCE, List.of(), deadline);
+            return save(turn, row.of(question, Outcome.NO_SOURCE.name(), ""), Outcome.NO_SOURCE, List.of(), deadline);
         }
         return save(
-                row.of(question, Outcome.ANSWERED.name(), cited.text()), Outcome.ANSWERED, cited.citations(), deadline);
+                turn,
+                row.of(question, Outcome.ANSWERED.name(), cited.text()),
+                Outcome.ANSWERED,
+                cited.citations(),
+                deadline);
     }
 
     private ChatbotAnswerResponse save(
-            ChatbotAnswer answer, Outcome outcome, List<ChatbotCitation> citations, long deadline) {
+            Turn turn, ChatbotAnswer answer, Outcome outcome, List<ChatbotCitation> citations, long deadline) {
         return transaction.execute(status -> {
             remaining(deadline);
             ChatbotAnswer saved = answers.save(answer);
             remaining(deadline);
             // Flush before checking the deadline so a slow insert can still be rolled back.
             answers.flush();
-            // This check covers the insert and flush; COMMIT itself is not bounded by the ask deadline.
+            UUID chatSessionId = turn.record(saved, citations);
+            // This check covers the inserts and flushes; COMMIT itself is not bounded by the ask deadline.
             remaining(deadline);
-            return new ChatbotAnswerResponse(saved.getId(), outcome, answer.getAnswerText(), citations);
+            return new ChatbotAnswerResponse(saved.getId(), outcome, answer.getAnswerText(), citations, chatSessionId);
         });
     }
 

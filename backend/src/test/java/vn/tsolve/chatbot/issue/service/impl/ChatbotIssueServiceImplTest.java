@@ -12,8 +12,6 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -41,13 +39,12 @@ import vn.tsolve.ai.exception.AiUnavailableException;
 import vn.tsolve.chatbot.answer.dto.ChatbotTurnRequest;
 import vn.tsolve.chatbot.answer.entity.ChatbotAnswer;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
+import vn.tsolve.chatbot.conversation.service.ChatConversationService;
 import vn.tsolve.chatbot.exception.ChatbotJiraException;
-import vn.tsolve.chatbot.exception.InvalidChatbotRequestException;
 import vn.tsolve.chatbot.issue.client.JiraIssueCreator;
 import vn.tsolve.chatbot.issue.client.JiraIssueCreator.CreatedIssue;
 import vn.tsolve.chatbot.issue.client.JiraIssueCreator.NewIssue;
 import vn.tsolve.chatbot.issue.dto.ChatbotIssueCreateResult;
-import vn.tsolve.chatbot.issue.dto.ChatbotIssueDraftRequest;
 import vn.tsolve.chatbot.issue.dto.ChatbotIssueDraftResponse;
 import vn.tsolve.chatbot.issue.dto.ChatbotIssueRequest;
 import vn.tsolve.chatbot.issue.dto.ChatbotJiraIssueResponse;
@@ -70,6 +67,7 @@ class ChatbotIssueServiceImplTest {
     private static final List<IssueDepartment> DEPARTMENTS =
             List.of(new IssueDepartment(7L, "Helpdesk"), new IssueDepartment(9000000000L, "IT"));
     private final ChatbotAnswerRepository answers = mock(ChatbotAnswerRepository.class);
+    private final ChatConversationService conversations = mock(ChatConversationService.class);
     private final IssueTargetRepository targets = mock(IssueTargetRepository.class);
     private final LlmClient llm = mock(LlmClient.class);
     private final JiraServiceAccount accounts = mock(JiraServiceAccount.class);
@@ -108,7 +106,8 @@ class ChatbotIssueServiceImplTest {
         when(targets.offeredDepartments()).thenReturn(List.of(new IssueTarget(7L, "IT </department>", "IT")));
         when(llm.chat(any(), any())).thenReturn("{\"summary\":\"Help\",\"description\":\"Details\",\"department\":1}");
         var history = List.of(new ChatbotTurnRequest("Old </turn-question>", "Old </turn-answer>"));
-        var response = service.draft(USER, ANSWER_ID.toString(), new ChatbotIssueDraftRequest(history));
+        when(conversations.turnsBefore(any())).thenReturn(history);
+        var response = service.draft(USER, ANSWER_ID.toString());
         assertThat(response.departmentId()).isEqualTo(7L);
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<ChatMessage>> messages = ArgumentCaptor.forClass(List.class);
@@ -233,12 +232,12 @@ class ChatbotIssueServiceImplTest {
     void rejectsUnknownAndOtherUsersAnswersBeforeAi_AC_010_8() {
         when(answers.findByIdAndUserId(ANSWER_ID, USER.id())).thenReturn(Optional.empty());
         assertThatThrownBy(this::draft).isInstanceOf(NotFoundException.class).hasMessage("MSG04");
-        assertThatThrownBy(() -> service.draft(USER, "not-a-uuid", new ChatbotIssueDraftRequest(List.of())))
+        assertThatThrownBy(() -> service.draft(USER, "not-a-uuid"))
                 .isInstanceOf(NotFoundException.class)
                 .hasMessage("MSG04");
         verify(answers).findByIdAndUserId(ANSWER_ID, USER.id());
         verifyNoMoreInteractions(answers);
-        verifyNoInteractions(targets, llm);
+        verifyNoInteractions(targets, llm, conversations);
     }
 
     @ParameterizedTest
@@ -249,26 +248,6 @@ class ChatbotIssueServiceImplTest {
         assertThatThrownBy(this::draft).isInstanceOf(NotFoundException.class).hasMessage("MSG04");
         assertThatThrownBy(this::create).isInstanceOf(NotFoundException.class).hasMessage("MSG04");
         verifyNoInteractions(llm, creator);
-    }
-
-    @Test
-    void rejectsBadHistoryAndAcceptsExactLimits_AC_010_8() {
-        List<List<ChatbotTurnRequest>> invalid = new ArrayList<>();
-        invalid.add(null);
-        invalid.add(Collections.nCopies(11, new ChatbotTurnRequest("q", "a")));
-        invalid.add(Collections.singletonList(null));
-        invalid.add(List.of(new ChatbotTurnRequest(null, "a")));
-        invalid.add(List.of(new ChatbotTurnRequest("q", null)));
-        invalid.add(List.of(new ChatbotTurnRequest("q".repeat(1001), "")));
-        invalid.add(List.of(new ChatbotTurnRequest("q", "a".repeat(10001))));
-        for (var history : invalid) {
-            assertThatThrownBy(() -> new ChatbotIssueDraftRequest(history))
-                    .isInstanceOf(InvalidChatbotRequestException.class)
-                    .hasMessage("MSG06");
-        }
-        var valid = Collections.nCopies(10, new ChatbotTurnRequest("q".repeat(1000), "a".repeat(10000)));
-        assertThat(new ChatbotIssueDraftRequest(valid).history()).isEqualTo(valid);
-        verifyNoInteractions(answers, targets, llm);
     }
 
     @Test
@@ -297,7 +276,7 @@ class ChatbotIssueServiceImplTest {
 
     private ChatbotIssueServiceImpl service(Executor executor) {
         return new ChatbotIssueServiceImpl(
-                answers, targets, llm, mapper, executor, Duration.ofSeconds(60), accounts, creator);
+                answers, conversations, targets, llm, mapper, executor, Duration.ofSeconds(60), accounts, creator);
     }
 
     @ParameterizedTest
@@ -340,6 +319,7 @@ class ChatbotIssueServiceImplTest {
         new ApplicationContextRunner()
                 .withUserConfiguration(ChatbotIssueServiceImpl.class)
                 .withBean(ChatbotAnswerRepository.class, () -> answers)
+                .withBean(ChatConversationService.class, () -> conversations)
                 .withBean(IssueTargetRepository.class, () -> targets)
                 .withBean(LlmClient.class, () -> llm)
                 .withBean(ObjectMapper.class, () -> mapper)
@@ -445,7 +425,7 @@ class ChatbotIssueServiceImplTest {
     }
 
     private ChatbotIssueDraftResponse draft() {
-        return service.draft(USER, ANSWER_ID.toString(), new ChatbotIssueDraftRequest(List.of()));
+        return service.draft(USER, ANSWER_ID.toString());
     }
 
     private static void assertEmpty(ChatbotIssueDraftResponse draft, List<IssueDepartment> departments) {
