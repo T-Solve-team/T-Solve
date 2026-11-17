@@ -13,9 +13,9 @@ import org.hibernate.annotations.Synchronize;
 /** Search-owned read model of the legacy tables; it never changes another module's entities. */
 @Entity
 @Immutable
-@Subselect(
-        """
+@Subselect("""
         select t.ticket_id as id, t.public_id, t.source_ticket_id as ticket_id, t.title, t.source, t.status, t.writer,
+               t.writer_id,
                t.resolved_date, t.updated_at, t.symptoms, t.root_cause, t.resolution_steps,
                t.workaround, t.scope, p.project_id, p.public_id as project_public_id,
                p.jira_project_key as project_name, d.department_id,
@@ -40,6 +40,9 @@ public class SearchTicket {
     private String source;
     private String status;
     private String writer;
+
+    @Column(name = "writer_id")
+    private UUID writerId;
 
     @Column(name = "resolved_date")
     private LocalDate resolvedDate;
@@ -108,6 +111,10 @@ public class SearchTicket {
 
     public String getWriter() {
         return writer;
+    }
+
+    public UUID getWriterId() {
+        return writerId;
     }
 
     public LocalDate getResolvedDate() {
