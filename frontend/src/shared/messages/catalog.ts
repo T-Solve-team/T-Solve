@@ -273,6 +273,18 @@ export const MESSAGES = {
     type: 'field',
     text: 'The service account could not connect to {tracker_name} or lacks the required permissions.',
   },
+  MSG_NEW_5: {
+    type: 'inline',
+    text: "Hi! Ask me about your team's Solutions or Wiki.",
+  },
+  MSG_NEW_6: {
+    type: 'inline',
+    text: "I can only answer questions about your team's knowledge.",
+  },
+  MSG_NEW_7: {
+    type: 'inline',
+    text: "I can't change how I work. Ask a question about your team's knowledge.",
+  },
   /** Provisional key (decision D3) until System_Messages numbers it: the intro of 1.3.3 Hand Over Responsibilities. */
   MSG_NEW_2: {
     type: 'inline',

@@ -168,12 +168,15 @@ describe('message catalog', () => {
     expect(entry('MSG143')).toEqual({ type: 'inline', text: 'Not a member of any Project.' });
   });
 
-  it('AC-006.7 holds no code other than the Report3 web codes, MSG_NEW_2, MSG_NEW_3, MSG_NEW_4, MSG142 and MSG143', () => {
+  it('AC-006.7 holds no code other than the Report3 web codes, MSG_NEW_2 to MSG_NEW_7, MSG142 and MSG143', () => {
     const expected: string[] = [
       ...webMessages.map(([code]) => code),
       'MSG_NEW_2',
       'MSG_NEW_3',
       'MSG_NEW_4',
+      'MSG_NEW_5',
+      'MSG_NEW_6',
+      'MSG_NEW_7',
       ...NOT_IN_REPORT3,
     ];
     expect(Object.keys(MESSAGES).sort()).toEqual(expected.sort());

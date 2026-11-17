@@ -24,7 +24,11 @@ function isAnswer(value: unknown): value is ChatbotAnswer {
     answer !== null &&
     typeof answer.answerId === 'string' &&
     typeof answer.text === 'string' &&
-    (answer.outcome === 'ANSWERED' || answer.outcome === 'NO_SOURCE') &&
+    (answer.outcome === 'ANSWERED' ||
+      answer.outcome === 'NO_SOURCE' ||
+      answer.outcome === 'GREETING' ||
+      answer.outcome === 'OFF_TOPIC' ||
+      answer.outcome === 'INJECTION') &&
     Array.isArray(answer.citations) &&
     answer.citations.every(isCitation)
   );
