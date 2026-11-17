@@ -148,6 +148,41 @@ class WikiIndexIT extends WikiReadTestSupport {
     }
 
     @Test
+    void readsWhatTheProjectsDepartmentMayRead_AC_001_12() {
+        long other = department("Finance");
+        long otherSpace = space(other, "Finance Wiki");
+        long sharedSpace = space(other, "Shared with Support");
+        jdbc.update(
+                "INSERT INTO space_permission(space_id, department_id, granted_by, granted_at) VALUES (?, ?, ?, now())",
+                sharedSpace,
+                department,
+                user);
+        UUID project = UUID.randomUUID();
+        jdbc.update(
+                "INSERT INTO project(public_id, department_id, jira_project_key, status) VALUES (?, ?, 'DP', 'ACTIVE')",
+                project,
+                department);
+        UUID own = document(space, null, "Own", "DEPARTMENT", "INDEXED", "own");
+        UUID companyWide = document(otherSpace, null, "Everyone", "COMPANY_WIDE", "INDEXED", "everyone");
+        UUID shared = document(sharedSpace, null, "Shared", "DEPARTMENT", "INDEXED", "shared");
+        UUID foreign = document(otherSpace, null, "Finance only", "DEPARTMENT", "INDEXED", "finance");
+        for (UUID id : List.of(own, companyWide, shared, foreign)) {
+            chunk(id, 0, 1, 0);
+        }
+        var access = context.getBean(AccessRepository.class);
+        String vector = java.util.Arrays.toString(vector(1, 0));
+        var read = new TransactionTemplate(context.getBean(PlatformTransactionManager.class));
+        read.setReadOnly(true);
+        read.executeWithoutResult(status -> {
+            assertThat(access.nearestInProjectDepartment(project, vector, 0.55, 10))
+                    .extracting(AccessRepository.PassageRow::getDocumentId)
+                    .containsExactlyInAnyOrder(own, companyWide, shared);
+            assertThat(access.nearestInProjectDepartment(UUID.randomUUID(), vector, 0.55, 10))
+                    .isEmpty();
+        });
+    }
+
+    @Test
     void insertFailureRollsBackDeletionAndAllNewChunks_AC_004_14() {
         UUID id = document(space, null, "Guide", "COMPANY_WIDE", "PENDING", "a".repeat(1001));
         chunk(id, 0, 1, 0);

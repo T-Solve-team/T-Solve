@@ -28,6 +28,16 @@ public class WikiSourcesImpl implements WikiSources {
     }
 
     @Override
+    public List<WikiPassage> nearestInProjectDepartment(
+            UUID projectId, float[] queryVector, double minSimilarity, int limit) {
+        return repository
+                .nearestInProjectDepartment(projectId, Arrays.toString(queryVector), minSimilarity, limit)
+                .stream()
+                .map(row -> new WikiPassage(row.getDocumentId(), row.getTitle(), row.getText(), row.getSimilarity()))
+                .toList();
+    }
+
+    @Override
     public Set<UUID> unavailable(TSolveUser user, Set<UUID> wikiDocumentIds) {
         if (wikiDocumentIds.isEmpty()) {
             return Set.of();
