@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,8 @@ import vn.tsolve.tracker.dto.JiraAccount;
 import vn.tsolve.tracker.dto.TrackerCreateField;
 import vn.tsolve.tracker.dto.TrackerProjectLookup;
 import vn.tsolve.tracker.dto.TrackerProjectLookup.Outcome;
+import vn.tsolve.tracker.dto.TrackerRole;
+import vn.tsolve.tracker.dto.TrackerRoleActors;
 import vn.tsolve.tracker.dto.TrackerStatus;
 import vn.tsolve.tracker.exception.JiraRejectedException;
 import vn.tsolve.tracker.exception.JiraUnavailableException;
@@ -115,6 +118,43 @@ public class TrackerProjectServiceImpl implements TrackerProjectService {
             return logged(
                     projectKey, ChatbotProjectCheck.UNAVAILABLE, e.getClass().getSimpleName());
         }
+    }
+
+    @Override
+    public Optional<List<TrackerRole>> projectRoles(String projectKey) {
+        return readRoles(projectKey, "roles", account -> jira.projectRoles(account, projectKey));
+    }
+
+    @Override
+    public Optional<TrackerRoleActors> roleActors(String projectKey, long roleId) {
+        return readRoles(projectKey, "role " + roleId, account -> jira.roleActors(account, projectKey, roleId));
+    }
+
+    // A role read never throws: no token, a refusal or no answer is "not available"; only the status code is logged.
+    private <T> Optional<T> readRoles(String projectKey, String what, Function<JiraAccount, T> read) {
+        try {
+            Optional<JiraAccount> account = serviceAccount.current();
+            if (account.isEmpty()) {
+                log.warn("Jira {} of {}: not available (no app token)", what, projectKey);
+                return Optional.empty();
+            }
+            return Optional.of(read.apply(account.get()));
+        } catch (JiraRejectedException e) {
+            log.warn("Jira {} of {}: not available (Jira answered {})", what, projectKey, e.getStatus());
+        } catch (JiraUnavailableException e) {
+            log.warn(
+                    "Jira {} of {}: not available ({})",
+                    what,
+                    projectKey,
+                    e.getStatus() == 0 ? "no answer" : "Jira answered " + e.getStatus());
+        } catch (RuntimeException e) {
+            log.warn(
+                    "Jira {} of {}: not available ({})",
+                    what,
+                    projectKey,
+                    e.getClass().getSimpleName());
+        }
+        return Optional.empty();
     }
 
     private static ChatbotProjectCheck logged(String projectKey, ChatbotProjectCheck outcome, String reason) {

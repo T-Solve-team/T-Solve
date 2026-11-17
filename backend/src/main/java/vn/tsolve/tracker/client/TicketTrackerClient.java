@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 import vn.tsolve.tracker.dto.JiraAccount;
 import vn.tsolve.tracker.dto.TrackerCreateField;
+import vn.tsolve.tracker.dto.TrackerRole;
+import vn.tsolve.tracker.dto.TrackerRoleActors;
 import vn.tsolve.tracker.dto.TrackerStatus;
 
 /**
@@ -29,6 +31,12 @@ public interface TicketTrackerClient {
 
     /** True when the account has every one of these project permissions in the project. */
     boolean hasProjectPermissions(JiraAccount account, String projectKey, List<String> permissions);
+
+    /** The project's roles in the tracker's order (project-integration STORY-011). */
+    List<TrackerRole> projectRoles(JiraAccount account, String projectKey);
+
+    /** The user and group actors of one project role (project-integration STORY-011). */
+    TrackerRoleActors roleActors(JiraAccount account, String projectKey, long roleId);
 
     /**
      * The create-screen fields of the project's first non-sub-task issue type with this name (ignoring case), or
