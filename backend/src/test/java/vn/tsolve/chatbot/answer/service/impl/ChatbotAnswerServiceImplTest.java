@@ -409,7 +409,7 @@ class ChatbotAnswerServiceImplTest {
                 .thenReturn(List.of(new RetrievedTicketSolution(
                         UUID.randomUUID(), "vpn drops", "cause", "steps", " ", "scope", 0.9)));
         UUID document = UUID.randomUUID();
-        when(wiki.nearestInProjectDepartment(project, vector, 0.7, 5))
+        when(wiki.nearestCompanyWide(vector, 0.7, 5))
                 .thenReturn(List.of(new WikiPassage(document, "VPN guide", "Reconnect", 0.8)));
         when(llm.chat(any(), isNull())).thenReturn("Restart the client [1] and read [2]");
 

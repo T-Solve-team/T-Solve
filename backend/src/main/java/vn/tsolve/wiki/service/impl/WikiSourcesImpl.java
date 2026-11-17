@@ -28,11 +28,8 @@ public class WikiSourcesImpl implements WikiSources {
     }
 
     @Override
-    public List<WikiPassage> nearestInProjectDepartment(
-            UUID projectId, float[] queryVector, double minSimilarity, int limit) {
-        return repository
-                .nearestInProjectDepartment(projectId, Arrays.toString(queryVector), minSimilarity, limit)
-                .stream()
+    public List<WikiPassage> nearestCompanyWide(float[] queryVector, double minSimilarity, int limit) {
+        return repository.nearestCompanyWide(Arrays.toString(queryVector), minSimilarity, limit).stream()
                 .map(row -> new WikiPassage(row.getDocumentId(), row.getTitle(), row.getText(), row.getSimilarity()))
                 .toList();
     }

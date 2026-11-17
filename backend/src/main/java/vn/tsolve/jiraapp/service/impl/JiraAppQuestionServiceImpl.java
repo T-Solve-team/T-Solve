@@ -166,9 +166,13 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
     }
 
     // The Active Project of the FIT's Jira project, read in the site's Workspace; none without a project.
+    // A FIT without a Jira user (anonymous access to the Jira project) gets no Project either (AC-010.11).
     private Optional<UUID> project(UUID workspace, JiraAppPrincipal caller) {
         String key = caller.projectKey();
-        if (key == null || key.isBlank()) {
+        if (key == null
+                || key.isBlank()
+                || caller.accountId() == null
+                || caller.accountId().isBlank()) {
             return Optional.empty();
         }
         return tenantScope.runIn(workspace, () -> projects.findActivePublicIdByJiraProjectKey(key));

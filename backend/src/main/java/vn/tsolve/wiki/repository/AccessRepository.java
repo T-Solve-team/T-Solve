@@ -60,19 +60,6 @@ public interface AccessRepository extends Repository<WikiDocument, UUID> {
     List<PassageRow> nearestCompanyWide(
             @Param("vector") String vector, @Param("minSimilarity") double minSimilarity, @Param("limit") int limit);
 
-    // AC-001.12: what a member of the Project's Department may read; an unknown Project matches nothing.
-    @Query(
-            value = AccessSql.BEST_PASSAGES
-                    + AccessSql.PUBLISHED_DOCUMENT
-                    + AccessSql.PROJECT_DEPARTMENT_DOCUMENT
-                    + AccessSql.RANK_PASSAGES,
-            nativeQuery = true)
-    List<PassageRow> nearestInProjectDepartment(
-            @Param("projectId") UUID projectId,
-            @Param("vector") String vector,
-            @Param("minSimilarity") double minSimilarity,
-            @Param("limit") int limit);
-
     @Query(
             value = "SELECT s.public_id AS \"spaceId\", s.name FROM space s WHERE " + AccessSql.MANAGES_SPACE
                     + " ORDER BY s.name, s.public_id",
@@ -134,16 +121,6 @@ public interface AccessRepository extends Repository<WikiDocument, UUID> {
                 AND EXISTS (SELECT 1 FROM app_user viewer WHERE viewer.id = :userId AND viewer.status = 'ACTIVE')
                 AND (w.visibility = 'COMPANY_WIDE' OR (
                 """ + VIEWABLE_SPACE + "))";
-
-        // Company-wide, or a Space of the Project's Department, or a Space shared with that Department.
-        public static final String PROJECT_DEPARTMENT_DOCUMENT = """
-                AND EXISTS (SELECT 1 FROM project pr WHERE pr.public_id = :projectId)
-                AND (w.visibility = 'COMPANY_WIDE'
-                     OR s.department_id = (SELECT pr.department_id FROM project pr WHERE pr.public_id = :projectId)
-                     OR EXISTS (SELECT 1 FROM space_permission p WHERE p.space_id = s.space_id
-                                AND p.department_id = (SELECT pr.department_id FROM project pr
-                                                       WHERE pr.public_id = :projectId)))
-                """;
 
         public static final String MANAGES_SPACE = ACTIVE_SPACE + """
                 AND EXISTS (SELECT 1 FROM space_manager sm

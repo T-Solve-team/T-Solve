@@ -148,39 +148,21 @@ class WikiIndexIT extends WikiReadTestSupport {
     }
 
     @Test
-    void readsWhatTheProjectsDepartmentMayRead_AC_001_12() {
+    void readsOnlyCompanyWideDocumentsForAJiraQuestion_AC_001_12() {
         long other = department("Finance");
         long otherSpace = space(other, "Finance Wiki");
-        // One Space per Department (space_department_id_key, BUG-319): the shared Space belongs to a third one.
-        long sharedSpace = space(department("Legal"), "Shared with Support");
-        jdbc.update(
-                "INSERT INTO space_permission(space_id, department_id, granted_by, granted_at) VALUES (?, ?, ?, now())",
-                sharedSpace,
-                department,
-                user);
-        UUID project = UUID.randomUUID();
-        jdbc.update(
-                "INSERT INTO project(public_id, department_id, jira_project_key, status) VALUES (?, ?, 'DP', 'ACTIVE')",
-                project,
-                department);
-        UUID own = document(space, null, "Own", "DEPARTMENT", "INDEXED", "own");
+        UUID departmentOnly = document(space, null, "Support only", "DEPARTMENT", "INDEXED", "own");
         UUID companyWide = document(otherSpace, null, "Everyone", "COMPANY_WIDE", "INDEXED", "everyone");
-        UUID shared = document(sharedSpace, null, "Shared", "DEPARTMENT", "INDEXED", "shared");
         UUID foreign = document(otherSpace, null, "Finance only", "DEPARTMENT", "INDEXED", "finance");
-        for (UUID id : List.of(own, companyWide, shared, foreign)) {
+        for (UUID id : List.of(departmentOnly, companyWide, foreign)) {
             chunk(id, 0, 1, 0);
         }
-        var access = context.getBean(AccessRepository.class);
-        String vector = java.util.Arrays.toString(vector(1, 0));
+        var sources = new vn.tsolve.wiki.service.impl.WikiSourcesImpl(context.getBean(AccessRepository.class));
         var read = new TransactionTemplate(context.getBean(PlatformTransactionManager.class));
         read.setReadOnly(true);
-        read.executeWithoutResult(status -> {
-            assertThat(access.nearestInProjectDepartment(project, vector, 0.55, 10))
-                    .extracting(AccessRepository.PassageRow::getDocumentId)
-                    .containsExactlyInAnyOrder(own, companyWide, shared);
-            assertThat(access.nearestInProjectDepartment(UUID.randomUUID(), vector, 0.55, 10))
-                    .isEmpty();
-        });
+        read.executeWithoutResult(status -> assertThat(sources.nearestCompanyWide(vector(1, 0), 0.55, 10))
+                .extracting(vn.tsolve.chatbot.source.service.WikiSources.WikiPassage::wikiDocumentId)
+                .containsExactly(companyWide));
     }
 
     @Test

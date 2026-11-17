@@ -187,6 +187,21 @@ class JiraAppQuestionServiceImplTest {
     }
 
     @Test
+    void refusesAFitWithoutAJiraUserWithoutCallingTheAi_AC_010_11_AC_010_14() {
+        JiraAppPrincipal anonymous = new JiraAppPrincipal("cloud-1", null, null, "DP");
+        JiraAppPrincipal blank = new JiraAppPrincipal("cloud-1", " ", null, "DP");
+        var service = service(Duration.ofSeconds(5));
+
+        assertThatThrownBy(() -> service.ask(anonymous, new JiraAppQuestionRequest("q", List.of())))
+                .isInstanceOf(JiraIssueAccessDeniedException.class);
+        assertThatThrownBy(
+                        () -> service.rate(blank, UUID.randomUUID(), new JiraAppRatingRequest(ChatbotRating.HELPFUL)))
+                .isInstanceOf(JiraIssueAccessDeniedException.class);
+        assertThat(service.eligibility(anonymous).status()).isEqualTo(Status.PROJECT_NOT_CONNECTED);
+        verifyNoInteractions(projects, answers);
+    }
+
+    @Test
     void answersMsg06WhenTheAiIsUnavailable_AC_010_8() {
         when(answers.askForProject(any(), any())).thenThrow(new AiUnavailableException());
 

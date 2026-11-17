@@ -173,7 +173,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
                     solutions.nearestInProjectDepartment(projectId, vector, minSimilarity, sourceLimit).stream()
                             .map(ChatbotSource::of)
                             .forEach(candidates::add);
-                    return wiki.nearestInProjectDepartment(projectId, vector, minSimilarity, sourceLimit);
+                    return wiki.nearestCompanyWide(vector, minSimilarity, sourceLimit);
                 },
                 (question, outcome, text) -> ChatbotAnswer.forProject(projectId, question, outcome, text));
     }
