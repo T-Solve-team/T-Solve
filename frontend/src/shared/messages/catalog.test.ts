@@ -1,4 +1,5 @@
 import { MESSAGES, type MsgCode } from './catalog';
+import { msg } from './msg';
 import report3Raw from './report3-messages.json?raw';
 
 type Report3Message = { type: string; context: string; text: string };
@@ -168,13 +169,25 @@ describe('message catalog', () => {
     expect(entry('MSG143')).toEqual({ type: 'inline', text: 'Not a member of any Project.' });
   });
 
-  it('AC-006.7 holds no code other than the Report3 web codes, MSG_NEW_2, MSG_NEW_3, MSG_NEW_4, MSG142 and MSG143', () => {
+  it('AC-013.10 holds MSG157 as a field message with the Messages-file text (K121-D41)', () => {
+    expect(entry('MSG157')).toEqual({
+      type: 'field',
+      text: '{project_name} cannot receive Chatbot issues: it has no issue type Task or requires other fields. Choose another Project.',
+    });
+    expect(msg('MSG157', { project_name: 'SUP' })).toBe(
+      'SUP cannot receive Chatbot issues: it has no issue type Task or requires other fields. Choose another Project.',
+    );
+  });
+
+  it('AC-006.7 holds no code other than the Report3 web codes, MSG_NEW_2, MSG_NEW_3, MSG_NEW_4, MSG142, MSG143 and MSG157', () => {
     const expected: string[] = [
       ...webMessages.map(([code]) => code),
       'MSG_NEW_2',
       'MSG_NEW_3',
       'MSG_NEW_4',
       ...NOT_IN_REPORT3,
+      // K121-D41: numbered in the Messages file, not yet in report3-messages.json.
+      'MSG157',
     ];
     expect(Object.keys(MESSAGES).sort()).toEqual(expected.sort());
     expectTypeOf<'MSG20'>().not.toMatchTypeOf<MsgCode>();

@@ -61,6 +61,18 @@ Chosen, alternatives and rationale for D4 to D22 are in the master's Key Decisio
 | K121-D16 Form | Inline on 2.3 | `FormModal` | "Name *" is a field of 2.3 |
 | K121-D18 MSW | Seed copies of IT and HR | Own list only | 2.3 opens from 2.2 in mock mode |
 
+## KAN-121: default Project (STORY-012, STORY-013)
+
+Change Mode of 17/11, branch `feat/KAN-121-workspace-default-project` (K121-D26). The master's section "KAN-121: default Project" holds the API, the service flow, the SQL, the Jira calls and the web app; build from it. Tasks 12 (`default-project-api`) and 13 (`default-project-screen`) in `tasks.md`. Decisions K121-D26 to K121-D42 (`kan-121-decisions.md`).
+
+In short:
+
+- `PUT /api/v1/departments/{departmentId}` takes `{ name, defaultProjectId? }` (uuid or null; absent = null) and, like `GET`, answers `DepartmentDetail { departmentId, name, defaultProject, projects }`.
+- `DepartmentServiceImpl.update` reads the Department without a lock, and only when the default Project changes to a Project: checks it is an Active Project of this Department (else 400 MSG04 on `defaultProjectId`), then calls `TrackerProjectService.checkChatbotProject(key)` outside any transaction (`NOT_READY` → MSG157 `{project_name}`, `DENIED`/`UNAVAILABLE` → MSG156 `{tracker_name: "Jira"}`). A `TransactionTemplate` then locks the Department (`FOR UPDATE OF d`) and the Project (`FOR SHARE`), writes the name, the Space and `default_project_id` as needed, and records one `DEPARTMENT_CHANGE` entry.
+- Tracker: `ChatbotProjectCheck`, `TrackerCreateField`, `TicketTrackerClient.hasProjectPermissions` (`/rest/api/3/mypermissions?projectKey=…&permissions=CREATE_ISSUES,MODIFY_REPORTER`) and `createFields` (`/rest/api/3/issue/createmeta/{key}/issuetypes`, then `.../issuetypes/{id}`), timeouts 5 s / 10 s per call.
+- No changeset (latest stays `042-workspace-jira-cloud-id.sql`).
+- 2.3: "Default Project" in view mode (key or "None"); in edit mode an optional `Select` ("None" + Active Projects), disabled while saving, errors under it; MSG157 joins the catalog; MSW seeds `OPS` and `SUP` on IT.
+
 ## File Structure
 
 See the master's File Structure and the exact lists in `tasks.md`.
@@ -144,5 +156,47 @@ Dimensions analyzed: User types, Input extremes, Timing, Scale, State transition
 | 68 | STORY-004 | Integration | Browser mock mode after a rename | Low | 2.3 shows the new name; the 2.2 table does not (Interim limit 6) | none |
 
 Rows 35 to 68 (KAN-121): Business logic and Scale skipped (no amounts, and one row at a time); Environment covers the deep link only.
+
+| # | Story | Dimension | Scenario | Severity | Expected behavior | Test task |
+|---|-------|-----------|----------|----------|-------------------|-----------|
+| 69 | STORY-012 | Authorization | Non-Admin PUT with a `defaultProjectId` | Critical | 403 MSG08, no Jira call, no change (AC-003.18, AC-012.14) | Task 12 |
+| 70 | STORY-012 | Authorization | No signed-in user | High | 401 MSG07, no Jira call (AC-003.19, AC-012.14) | Task 12 |
+| 71 | STORY-012 | State transitions | No Workspace bound | High | 500 MSG06, no Jira call (AC-003.21, AC-012.14) | Task 12 |
+| 72 | STORY-012 | Input extremes | Name blank or 51 characters together with a new `defaultProjectId` | High | 400 MSG01 or MSG02, no Jira call (AC-012.14) | Task 12 |
+| 73 | STORY-012 | Input extremes | `defaultProjectId` is a random UUID | High | 400 MSG04 on `defaultProjectId`, no Jira call (AC-012.5) | Task 12 |
+| 74 | STORY-012 | Input extremes | `defaultProjectId` is `"abc"` | Medium | 400 from the unreadable-body handler, nothing written | Task 12 |
+| 75 | STORY-012 | Data integrity | Id of a Removed Project of this Department | High | 400 MSG04, no Jira call (AC-012.5) | Task 12 |
+| 76 | STORY-012 | Data integrity | Id of another Department's Active Project | Critical | 400 MSG04, no Jira call (AC-012.5) | Task 12 |
+| 77 | STORY-012 | State transitions | Stored default Project is Removed | High | GET answers `defaultProject` null; a PUT with null makes no Jira call and no change (AC-012.3, AC-012.10) | Task 12 |
+| 78 | STORY-012 | State transitions | Same default Project sent again, name unchanged | High | 200, no Jira call, no write, no audit (AC-003.14, AC-012.10) | Task 12 |
+| 79 | STORY-012 | State transitions | Same default Project, new name | High | Rename only, no Jira call; audit holds `name` only (AC-012.10, AC-003.5) | Task 12 |
+| 80 | STORY-012 | State transitions | Clear (null or absent) while one is set | High | Stored none, no Jira call, audited with `after.defaultProject` null (AC-012.6, AC-012.11) | Task 12 |
+| 81 | STORY-012 | State transitions | Only the default Project changes | High | Name and Space unchanged; audit has no `spaceId` (AC-012.11, AC-012.12) | Task 12 |
+| 82 | STORY-012 | Integration | Jira grants both permissions, Task present, only allowed fields required | High | 200, stored (AC-012.4, AC-012.7) | Task 12 |
+| 83 | STORY-012 | Integration | Required field with a default value (e.g. priority) | Medium | Passes (AC-012.7 c) | Task 12 |
+| 84 | STORY-012 | Integration | `MODIFY_REPORTER` missing | High | 400 MSG156 (AC-012.8) | Task 12 |
+| 85 | STORY-012 | Integration | No service account (Workspace not set up, no cloud id, undecryptable token) | High | 400 MSG156, no Jira call (AC-012.8) | Task 12 |
+| 86 | STORY-012 | Error cascades | Jira 401, 403 or 404 on any of the three calls | High | 400 MSG156 (AC-012.8, K121-D35) | Task 12 |
+| 87 | STORY-012 | Error cascades | Jira times out, 429 or 5xx | High | 400 MSG156, nothing written, no transaction held during the wait (AC-012.8, Non-Functional 2) | Task 12 |
+| 88 | STORY-012 | Integration | No Task type, or only a sub-task named Task | High | 400 MSG157 with `project_name` = key (AC-012.9) | Task 12 |
+| 89 | STORY-012 | Integration | Task named `task` (other case) | Medium | Accepted (AC-012.7 b) | Task 12 |
+| 90 | STORY-012 | Integration | A custom field required with no default | High | 400 MSG157 (AC-012.9) | Task 12 |
+| 91 | STORY-012 | Scale | Over 200 issue types or fields | Low | Paged by `startAt`/`total` | Task 12 |
+| 92 | STORY-012 | Timing | Project Removed between the Jira check and the transaction | High | 400 MSG04, nothing written (AC-012.13) | Task 12 |
+| 93 | STORY-012 | Timing | Two saves set two different Projects at once | High | Both 200, last applied kept, second `before.defaultProject` = first `after.defaultProject` (AC-012.16) | Task 12 |
+| 94 | STORY-012 | Timing | Requested Project became the default by a concurrent save after the pre-read showed another | Low | Stored without a second Jira check (Decided in planning) | none |
+| 95 | STORY-012 | Error cascades | New name taken (MSG43) after a passing Jira check | High | 409 MSG43, old name and default Project kept, no audit (AC-012.15) | Task 12 |
+| 96 | STORY-012 | Error cascades | Audit write fails | Critical | Old name and default Project kept, 500 MSG06 (AC-012.15, AC-003.17) | Task 12 |
+| 97 | STORY-012 | Compliance | Token or Jira body in a response, log line or audit entry | Critical | Never (AC-012.17) | Task 12 |
+| 98 | STORY-012 | User types | Same Project key in another Workspace | Medium | Only the bound tenant's `project` rows are read (AC-003.20) | none |
+| 99 | STORY-013 | State transitions | View with and without a default Project | High | Key or "None" (AC-013.1) | Task 13 |
+| 100 | STORY-013 | Scale | Department with no Active Project | High | Select offers only "None" (AC-013.3) | Task 13 |
+| 101 | STORY-013 | Input extremes | Choose "None" | High | PUT sends `defaultProjectId` null (AC-013.5) | Task 13 |
+| 102 | STORY-013 | Error cascades | MSG156, MSG157 or MSG04 on `defaultProjectId` | High | Message under the select with params, form and values kept (AC-013.7) | Task 13 |
+| 103 | STORY-013 | Timing | Save clicked twice, or select changed during a save | High | One PUT; select disabled (AC-004.8, AC-013.9) | Task 13 |
+| 104 | STORY-013 | State transitions | Cancel after changing the select, then Edit | High | Stored value shown again (AC-013.8) | Task 13 |
+| 105 | STORY-013 | Integration | Browser mock mode | Low | IT offers `OPS` and `SUP`; MSG156/MSG157 only through test overrides | none |
+
+Rows 69 to 105 (KAN-121 default Project): Environment skipped (antd `Select` carries the label, keyboard and focus behaviour); Business logic covered by the Jira rule rows 82 to 90.
 
 Open questions for the spec owner: none.

@@ -12,11 +12,18 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withUnauthorizedRequest;
 
+import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -31,6 +38,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import vn.tsolve.tracker.dto.JiraAccount;
+import vn.tsolve.tracker.dto.TrackerCreateField;
 import vn.tsolve.tracker.dto.TrackerProjectLookup;
 import vn.tsolve.tracker.dto.TrackerProjectLookup.Outcome;
 import vn.tsolve.tracker.dto.TrackerStatus;
@@ -549,5 +557,236 @@ class JiraClientTest {
                 {"type": "doc", "version": 1, "content": [
                   {"type": "paragraph", "content": [{"type": "text", "text": "%s"}]}]}
                 """.formatted(text);
+    }
+
+    // --- KAN-121: the Chatbot project check (workspace STORY-012) ---
+
+    private static final List<String> CHATBOT_PERMISSIONS = List.of("CREATE_ISSUES", "MODIFY_REPORTER");
+    private static final String PERMISSIONS =
+            GATEWAY + "/rest/api/3/mypermissions?projectKey=OPS&permissions=CREATE_ISSUES,MODIFY_REPORTER";
+
+    private static String issueTypes(int startAt) {
+        return GATEWAY + "/rest/api/3/issue/createmeta/OPS/issuetypes?startAt=" + startAt + "&maxResults=200";
+    }
+
+    private static String createFields(String issueTypeId, int startAt) {
+        return GATEWAY + "/rest/api/3/issue/createmeta/OPS/issuetypes/" + issueTypeId + "?startAt=" + startAt
+                + "&maxResults=200";
+    }
+
+    private static String permissions(boolean create, boolean modifyReporter) {
+        return """
+                {"permissions": {"CREATE_ISSUES": {"havePermission": %s}, "MODIFY_REPORTER": {"havePermission": %s}}}
+                """.formatted(create, modifyReporter);
+    }
+
+    @Test
+    void checksBothChatbotPermissionsInTheProjectWithBearer_AC_012_7() {
+        jira.expect(requestTo(PERMISSIONS))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(header("Authorization", BEARER))
+                .andRespond(withSuccess(permissions(true, true), MediaType.APPLICATION_JSON));
+        assertThat(client.hasProjectPermissions(ACCOUNT, "OPS", CHATBOT_PERMISSIONS))
+                .isTrue();
+        jira.verify();
+
+        for (String answer : List.of(
+                permissions(true, false),
+                permissions(false, true),
+                "{\"permissions\": {\"CREATE_ISSUES\": {\"havePermission\": true}}}")) {
+            jira.reset();
+            jira.expect(requestTo(PERMISSIONS)).andRespond(withSuccess(answer, MediaType.APPLICATION_JSON));
+            assertThat(client.hasProjectPermissions(ACCOUNT, "OPS", CHATBOT_PERMISSIONS))
+                    .isFalse();
+            jira.verify();
+        }
+    }
+
+    @Test
+    void findsTaskIgnoringCaseSkippingASubTaskAndReadsItsFields_AC_012_7() {
+        jira.expect(requestTo(issueTypes(0)))
+                .andExpect(header("Authorization", BEARER))
+                .andRespond(withSuccess("""
+                        {"startAt": 0, "maxResults": 200, "total": 3, "issueTypes": [
+                          {"id": "1", "name": "Bug", "subtask": false},
+                          {"id": "2", "name": "Task", "subtask": true},
+                          {"id": "3", "name": "tAsK", "subtask": false}]}
+                        """, MediaType.APPLICATION_JSON));
+        jira.expect(requestTo(createFields("3", 0)))
+                .andExpect(header("Authorization", BEARER))
+                .andRespond(withSuccess("""
+                        {"startAt": 0, "maxResults": 200, "total": 2, "fields": [
+                          {"fieldId": "summary", "required": true, "hasDefaultValue": false},
+                          {"fieldId": "customfield_10010", "required": true, "hasDefaultValue": true}]}
+                        """, MediaType.APPLICATION_JSON));
+
+        assertThat(client.createFields(ACCOUNT, "OPS", "Task"))
+                .contains(List.of(
+                        new TrackerCreateField("summary", true, false),
+                        new TrackerCreateField("customfield_10010", true, true)));
+        jira.verify();
+    }
+
+    @Test
+    void readsTheOlderValuesShape_AC_012_7() {
+        jira.expect(requestTo(issueTypes(0)))
+                .andRespond(withSuccess(
+                        "{\"total\": 1, \"values\": [{\"id\": \"10001\", \"name\": \"Task\", \"subtask\": false}]}",
+                        MediaType.APPLICATION_JSON));
+        jira.expect(requestTo(createFields("10001", 0)))
+                .andRespond(withSuccess(
+                        "{\"total\": 1, \"values\": [{\"fieldId\": \"labels\", \"required\": false,"
+                                + " \"hasDefaultValue\": false}]}",
+                        MediaType.APPLICATION_JSON));
+
+        assertThat(client.createFields(ACCOUNT, "OPS", "Task"))
+                .contains(List.of(new TrackerCreateField("labels", false, false)));
+        jira.verify();
+    }
+
+    private static String page(int total, String name, List<String> items) {
+        return "{\"total\": " + total + ", \"" + name + "\": [" + String.join(",", items) + "]}";
+    }
+
+    @Test
+    void pagesPastTwoHundredIssueTypesAndFields_AC_012_7() {
+        List<String> otherTypes = IntStream.range(0, 200)
+                .mapToObj(i -> "{\"id\": \"" + i + "\", \"name\": \"Type " + i + "\", \"subtask\": false}")
+                .toList();
+        List<String> manyFields = IntStream.range(0, 200)
+                .mapToObj(i -> "{\"fieldId\": \"f" + i + "\", \"required\": false, \"hasDefaultValue\": false}")
+                .toList();
+        jira.expect(requestTo(issueTypes(0)))
+                .andRespond(withSuccess(page(201, "issueTypes", otherTypes), MediaType.APPLICATION_JSON));
+        jira.expect(requestTo(issueTypes(200)))
+                .andRespond(withSuccess(
+                        page(201, "issueTypes", List.of("{\"id\": \"999\", \"name\": \"Task\", \"subtask\": false}")),
+                        MediaType.APPLICATION_JSON));
+        jira.expect(requestTo(createFields("999", 0)))
+                .andRespond(withSuccess(page(201, "fields", manyFields), MediaType.APPLICATION_JSON));
+        jira.expect(requestTo(createFields("999", 200)))
+                .andRespond(withSuccess(
+                        page(
+                                201,
+                                "fields",
+                                List.of("{\"fieldId\": \"last\", \"required\": true, \"hasDefaultValue\": false}")),
+                        MediaType.APPLICATION_JSON));
+
+        Optional<List<TrackerCreateField>> fields = client.createFields(ACCOUNT, "OPS", "Task");
+
+        assertThat(fields).hasValueSatisfying(list -> {
+            assertThat(list).hasSize(201);
+            assertThat(list.get(200)).isEqualTo(new TrackerCreateField("last", true, false));
+        });
+        jira.verify();
+    }
+
+    @Test
+    void isEmptyWithoutANonSubTaskTask_AC_012_7() {
+        jira.expect(requestTo(issueTypes(0)))
+                .andRespond(withSuccess(
+                        page(
+                                2,
+                                "issueTypes",
+                                List.of(
+                                        "{\"id\": \"1\", \"name\": \"Bug\", \"subtask\": false}",
+                                        "{\"id\": \"2\", \"name\": \"Task\", \"subtask\": true}")),
+                        MediaType.APPLICATION_JSON));
+        assertThat(client.createFields(ACCOUNT, "OPS", "Task")).isEmpty();
+        jira.verify();
+
+        jira.reset();
+        jira.expect(requestTo(issueTypes(0)))
+                .andRespond(withSuccess(page(0, "issueTypes", List.of()), MediaType.APPLICATION_JSON));
+        assertThat(client.createFields(ACCOUNT, "OPS", "Task")).isEmpty();
+        jira.verify();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"401, true", "403, true", "404, true", "401, false", "403, false", "404, false"})
+    void rejectsClientErrorsOfTheCheckWithoutTheBody_AC_012_8_AC_012_17(int status, boolean permissionsRead) {
+        jira.expect(requestTo(permissionsRead ? PERMISSIONS : issueTypes(0)))
+                .andRespond(withStatus(HttpStatus.valueOf(status)).body("JIRA-BODY-SECRET secret-token"));
+
+        assertThatThrownBy(() -> {
+                    if (permissionsRead) {
+                        client.hasProjectPermissions(ACCOUNT, "OPS", CHATBOT_PERMISSIONS);
+                    } else {
+                        client.createFields(ACCOUNT, "OPS", "Task");
+                    }
+                })
+                .isInstanceOfSatisfying(JiraRejectedException.class, failure -> assertThat(failure.getStatus())
+                        .isEqualTo(status))
+                .hasMessageNotContaining("JIRA-BODY-SECRET")
+                .hasMessageNotContaining("secret-token")
+                .hasNoCause();
+        jira.verify();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"429, true", "500, true", "429, false", "503, false"})
+    void reportsRateLimitsAndServerErrorsOfTheCheckAsUnavailable_AC_012_8_AC_012_17(
+            int status, boolean permissionsRead) {
+        jira.expect(requestTo(permissionsRead ? PERMISSIONS : issueTypes(0)))
+                .andRespond(withStatus(HttpStatus.valueOf(status)).body("JIRA-BODY-SECRET secret-token"));
+
+        assertThatThrownBy(() -> {
+                    if (permissionsRead) {
+                        client.hasProjectPermissions(ACCOUNT, "OPS", CHATBOT_PERMISSIONS);
+                    } else {
+                        client.createFields(ACCOUNT, "OPS", "Task");
+                    }
+                })
+                .isInstanceOfSatisfying(JiraUnavailableException.class, failure -> assertThat(failure.getStatus())
+                        .isEqualTo(status))
+                .hasMessageNotContaining("JIRA-BODY-SECRET")
+                .hasMessageNotContaining("secret-token")
+                .hasNoCause();
+        jira.verify();
+    }
+
+    @Test
+    void reportsAReadTimeoutOfTheCheckAsUnavailable_AC_012_8_AC_012_17() throws IOException {
+        CountDownLatch release = new CountDownLatch(1);
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        ExecutorService pool = Executors.newCachedThreadPool();
+        server.setExecutor(pool);
+        server.createContext("/", exchange -> {
+            try {
+                release.await(10, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            exchange.sendResponseHeaders(200, -1);
+            exchange.close();
+        });
+        server.start();
+        try {
+            JiraClient timed = new JiraClient(
+                    Duration.ofSeconds(2),
+                    Duration.ofMillis(200),
+                    "http://127.0.0.1:" + server.getAddress().getPort() + "/ex/jira/");
+
+            assertThatThrownBy(() -> timed.hasProjectPermissions(ACCOUNT, "OPS", CHATBOT_PERMISSIONS))
+                    .isInstanceOfSatisfying(JiraUnavailableException.class, failure -> assertThat(failure.getStatus())
+                            .isZero())
+                    .hasNoCause();
+        } finally {
+            release.countDown();
+            server.stop(0);
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    void reportsAnUnreadableCheckAnswerAsUnavailable_AC_012_8() {
+        jira.expect(requestTo(issueTypes(0))).andRespond(withSuccess("{\"total\": 1}", MediaType.APPLICATION_JSON));
+        assertThatThrownBy(() -> client.createFields(ACCOUNT, "OPS", "Task"))
+                .isInstanceOf(JiraUnavailableException.class);
+
+        jira.reset();
+        jira.expect(requestTo(PERMISSIONS)).andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+        assertThatThrownBy(() -> client.hasProjectPermissions(ACCOUNT, "OPS", CHATBOT_PERMISSIONS))
+                .isInstanceOf(JiraUnavailableException.class);
     }
 }

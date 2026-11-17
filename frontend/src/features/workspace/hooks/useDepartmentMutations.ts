@@ -20,7 +20,7 @@ export function useAddDepartment() {
   });
 }
 
-export function useRenameDepartment() {
+export function useSaveDepartment() {
   const client = useQueryClient();
   return useUpdateDepartment({
     mutation: {

@@ -10,4 +10,11 @@
 export interface WorkspaceInfo {
   companyName: string;
   jiraSiteUrl: string;
+  /** True while the T-Solve Jira App's token is held for the Workspace (KAN-349). */
+  jiraAppConnected: boolean;
+  /**
+   * When the Jira App's token arrived; null while not connected.
+   * @nullable
+   */
+  jiraAppTokenReceivedAt: string | null;
 }

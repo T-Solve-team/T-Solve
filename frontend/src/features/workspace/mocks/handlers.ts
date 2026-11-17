@@ -1,5 +1,10 @@
 import { delay, http, HttpResponse, type HttpHandler } from 'msw';
-import type { DepartmentRef, WorkspaceInfo } from '@/shared/api';
+import type {
+  DepartmentDetail,
+  DepartmentProjectOption,
+  DepartmentRef,
+  WorkspaceInfo,
+} from '@/shared/api';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
 import { getDevUser } from '@/shared/auth';
 import type { MsgCode, MsgParams } from '@/shared/messages';
@@ -37,11 +42,6 @@ function validate(input: Record<string, unknown>, isSetup: boolean) {
   }
   if (
     isSetup &&
-    (typeof input.serviceAccountToken !== 'string' || !input.serviceAccountToken.trim())
-  )
-    return fieldError('serviceAccountToken', 'MSG01', { field_name: 'Service account API token' });
-  if (
-    isSetup &&
     (typeof input.jiraSiteUrl !== 'string' ||
       !/^https:\/\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.atlassian\.net\/?$/i.test(
         input.jiraSiteUrl.trim(),
@@ -51,12 +51,43 @@ function validate(input: Record<string, unknown>, isSetup: boolean) {
   return undefined;
 }
 
+type MockDepartment = DepartmentRef & {
+  defaultProjectId: string | null;
+  projects: DepartmentProjectOption[];
+};
+
 // Copies of the users mock's IT and HR (users/mocks/data.ts), so 2.3 opens from 2.2 in mock mode (K121-D18).
-const seed = (): DepartmentRef[] => [
-  { departmentId: '00000000-0000-4000-8000-0000000000d1', name: 'IT' },
-  { departmentId: '00000000-0000-4000-8000-0000000000d2', name: 'HR' },
+// IT has two Active Projects to choose from; HR has none.
+const seed = (): MockDepartment[] => [
+  {
+    departmentId: '00000000-0000-4000-8000-0000000000d1',
+    name: 'IT',
+    defaultProjectId: null,
+    projects: [
+      { projectId: '00000000-0000-4000-8000-0000000000e1', jiraProjectKey: 'OPS' },
+      { projectId: '00000000-0000-4000-8000-0000000000e2', jiraProjectKey: 'SUP' },
+    ],
+  },
+  {
+    departmentId: '00000000-0000-4000-8000-0000000000d2',
+    name: 'HR',
+    defaultProjectId: null,
+    projects: [],
+  },
 ];
-let departments: DepartmentRef[] = seed();
+let departments: MockDepartment[] = seed();
+
+const detail = ({
+  departmentId,
+  name,
+  defaultProjectId,
+  projects,
+}: MockDepartment): DepartmentDetail => ({
+  departmentId,
+  name,
+  defaultProject: projects.find((p) => p.projectId === defaultProjectId) ?? null,
+  projects,
+});
 
 function departmentNameError(code: MsgCode, params?: MsgParams, status = 400) {
   return problem(status, code, { params, fieldErrors: [{ field: 'name', code, params }] });
@@ -90,12 +121,15 @@ export const handlers: HttpHandler[] = [
     if (invalid) return invalid;
     if (workspace)
       return HttpResponse.json({ status: 409, code: 'WORKSPACE_ALREADY_SET_UP' }, { status: 409 });
-    // Narrow the JSON boundary before constructing the generated response type. Never retain the token.
+    // Narrow the JSON boundary before constructing the generated response type.
     if (typeof input.companyName !== 'string' || typeof input.jiraSiteUrl !== 'string')
       return problem(400);
     workspace = {
       companyName: input.companyName.trim(),
       jiraSiteUrl: input.jiraSiteUrl.trim().toLowerCase().replace(/\/$/, ''),
+      // The Jira App sends its token after it is installed (KAN-349); a new Workspace starts not connected.
+      jiraAppConnected: false,
+      jiraAppTokenReceivedAt: null,
     };
     return HttpResponse.json<WorkspaceInfo>(workspace, { status: 201 });
   }),
@@ -128,23 +162,29 @@ export const handlers: HttpHandler[] = [
       departmentId: crypto.randomUUID(),
       name: String(name).trim(),
     };
-    departments.push(department);
+    departments.push({ ...department, defaultProjectId: null, projects: [] });
     return HttpResponse.json<DepartmentRef>(department, { status: 201 });
   }),
   http.get('*/api/v1/departments/:departmentId', async ({ params }) => {
     await delay(MOCK_DELAY_MS);
     const found = departments.find((d) => d.departmentId === params.departmentId);
-    return found ? HttpResponse.json<DepartmentRef>(found) : problem(404, 'MSG04');
+    return found ? HttpResponse.json<DepartmentDetail>(detail(found)) : problem(404, 'MSG04');
   }),
   http.put('*/api/v1/departments/:departmentId', async ({ params, request }) => {
     await delay(MOCK_DELAY_MS);
     const found = departments.find((d) => d.departmentId === params.departmentId);
     if (!found) return problem(404, 'MSG04');
-    const name = nameOf(await request.json().catch(() => null));
+    const input: unknown = await request.json().catch(() => null);
+    const name = nameOf(input);
     const invalid = checkName(name, found.departmentId);
     if (invalid) return invalid;
+    // Absent or null clears the default Project (K121-D29); MSG156 and MSG157 are driven in tests with server.use.
+    const projectId = isRecord(input) ? (input.defaultProjectId ?? null) : null;
+    if (projectId !== null && !found.projects.some((p) => p.projectId === projectId))
+      return fieldError('defaultProjectId', 'MSG04');
     found.name = String(name).trim();
-    return HttpResponse.json<DepartmentRef>(found);
+    found.defaultProjectId = typeof projectId === 'string' ? projectId : null;
+    return HttpResponse.json<DepartmentDetail>(detail(found));
   }),
 ];
 

@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import vn.tsolve.identity.TwoTenantDatabases;
+import vn.tsolve.tracker.dto.ChatbotProjectCheck;
 import vn.tsolve.tracker.dto.TrackerProjectLookup;
 import vn.tsolve.tracker.dto.TrackerProjectLookup.Outcome;
 import vn.tsolve.tracker.service.TrackerProjectService;
@@ -86,6 +87,11 @@ public class ProjectApiITConfiguration {
             requested.add(key);
             hook.run();
             return stubs.getOrDefault(key, TrackerProjectLookup.failed(Outcome.NOT_FOUND));
+        }
+
+        @Override
+        public ChatbotProjectCheck checkChatbotProject(String projectKey) {
+            throw new AssertionError("Project ITs never check a Chatbot project");
         }
     }
 }

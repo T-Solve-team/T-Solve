@@ -11,12 +11,13 @@ import { renderApp } from '@/test/render';
 const INFO: WorkspaceInfo = {
   companyName: 'Example Company',
   jiraSiteUrl: 'https://company.atlassian.net',
+  jiraAppConnected: true,
+  jiraAppTokenReceivedAt: '2026-11-17T03:00:00Z',
 };
 const LABELS = {
   companyName: 'Company name',
-  serviceAccountToken: 'Service account API token',
 } as const;
-const HINT = 'Leave empty to keep the current token.';
+const INSTALL_HINT = 'Install the T-Solve Jira App on this Jira site.';
 
 async function findSave() {
   return screen.findByRole('button', { name: 'Save' }, { timeout: 5000 });
@@ -64,57 +65,46 @@ describe('WorkspaceSettingsPage company information', () => {
     expect(getCalls).toBe(1);
   });
 
-  it('AC-010.2 starts the masked token field empty with the keep hint and never shows a stored token', async () => {
+  it('AC-010.2 shows no service account field', async () => {
+    renderApp(paths.workspaceSettings, { role: 'ADMIN' });
+    await findSave();
+    expect(screen.queryByLabelText('Service account API token')).not.toBeInTheDocument();
+    expect(screen.queryByText('Leave empty to keep the current token.')).not.toBeInTheDocument();
+  });
+
+  it('AC-010.10 shows the Jira App as connected with the time of its last update', async () => {
+    renderApp(paths.workspaceSettings, { role: 'ADMIN' });
+    await findSave();
+    expect(screen.getByText(/^Connected — last update /)).toBeInTheDocument();
+    expect(screen.queryByText(INSTALL_HINT)).not.toBeInTheDocument();
+  });
+
+  it('AC-010.10 shows the Jira App as not connected with the install hint', async () => {
     server.use(
       http.get('*/api/v1/workspace', () =>
-        HttpResponse.json({ ...INFO, serviceAccountToken: 'stored-secret-token' }),
+        HttpResponse.json({ ...INFO, jiraAppConnected: false, jiraAppTokenReceivedAt: null }),
       ),
     );
     renderApp(paths.workspaceSettings, { role: 'ADMIN' });
     await findSave();
-    const token = screen.getByLabelText(LABELS.serviceAccountToken);
-    expect(token).toHaveAttribute('type', 'password');
-    expect(token).toHaveValue('');
-    expect(token).not.toBeRequired();
-    expect(screen.getByText(HINT)).toBeInTheDocument();
-    expect(screen.queryByDisplayValue('stored-secret-token')).not.toBeInTheDocument();
-    expect(screen.queryByText('stored-secret-token')).not.toBeInTheDocument();
+    expect(screen.getByText('Not connected')).toBeInTheDocument();
+    expect(screen.getByText(INSTALL_HINT)).toBeInTheDocument();
   });
 
-  it('AC-010.3 sends the edited values and a typed token, shows MSG05 and refreshes the Workspace', async () => {
+  it('AC-010.3 sends only the company name, shows MSG05 and refreshes the Workspace', async () => {
     const user = userEvent.setup();
     renderApp(paths.workspaceSettings, { role: 'ADMIN' });
     await findSave();
     await replace(user, LABELS.companyName, 'New Company');
-    await replace(user, LABELS.serviceAccountToken, 'new-fake-token');
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
-    expect(putBodies).toEqual([
-      {
-        companyName: 'New Company',
-        serviceAccountToken: 'new-fake-token',
-      },
-    ]);
+    expect(putBodies).toEqual([{ companyName: 'New Company' }]);
     await waitFor(() => expect(getCalls).toBe(2));
-    await waitFor(() => expect(screen.getByLabelText(LABELS.serviceAccountToken)).toHaveValue(''));
-  });
-
-  it('AC-010.3 omits serviceAccountToken from the PUT body when the token field is empty (edge 19)', async () => {
-    const user = userEvent.setup();
-    renderApp(paths.workspaceSettings, { role: 'ADMIN' });
-    await findSave();
-    await replace(user, LABELS.companyName, 'New Company');
-    await user.click(screen.getByRole('button', { name: 'Save' }));
-    expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
-    expect(putBodies).toHaveLength(1);
-    expect(putBodies[0]).toEqual({ companyName: 'New Company' });
-    expect(putBodies[0]).not.toHaveProperty('serviceAccountToken');
   });
 
   it.each([
     ['MSG01', 'companyName', { field_name: LABELS.companyName }],
     ['MSG02', 'companyName', { field_name: LABELS.companyName, max_length: 100 }],
-    ['MSG156', 'serviceAccountToken', { tracker_name: 'Jira' }],
   ] as const)(
     'AC-010.4 displays server %s under %s and keeps the values entered',
     async (code, field, params) => {
@@ -130,7 +120,6 @@ describe('WorkspaceSettingsPage company information', () => {
       renderApp(paths.workspaceSettings, { role: 'ADMIN' });
       await findSave();
       await replace(user, LABELS.companyName, 'Typed Company');
-      await replace(user, LABELS.serviceAccountToken, 'typed-fake-token');
       await user.click(screen.getByRole('button', { name: 'Save' }));
       const message = msg(code, params);
       await waitFor(() =>
@@ -139,7 +128,6 @@ describe('WorkspaceSettingsPage company information', () => {
         ),
       );
       expect(screen.getByLabelText(LABELS.companyName)).toHaveValue('Typed Company');
-      expect(screen.getByLabelText(LABELS.serviceAccountToken)).toHaveValue('typed-fake-token');
       expect(screen.queryByText(msg('MSG05'))).not.toBeInTheDocument();
       expect(screen.queryByText(msg('MSG06'))).not.toBeInTheDocument();
     },
@@ -150,10 +138,8 @@ describe('WorkspaceSettingsPage company information', () => {
     renderApp(paths.workspaceSettings, { role: 'ADMIN' });
     await findSave();
     await replace(user, LABELS.companyName, 'Changed Company');
-    await replace(user, LABELS.serviceAccountToken, 'changed-fake-token');
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(screen.getByLabelText(LABELS.companyName)).toHaveValue(INFO.companyName);
-    expect(screen.getByLabelText(LABELS.serviceAccountToken)).toHaveValue('');
     expect(putBodies).toHaveLength(0);
   });
 

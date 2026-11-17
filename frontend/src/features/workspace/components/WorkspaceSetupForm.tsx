@@ -45,14 +45,6 @@ export function WorkspaceSetupForm() {
         >
           <Input placeholder="https://company.atlassian.net" count={{ show: true, max: 200 }} />
         </FormField>
-        <FormField<WorkspaceSetupRequest>
-          name="serviceAccountToken"
-          label="Service account API token"
-          extra="The scoped API token of an Atlassian service account."
-          rules={[rules.required('Service account API token')]}
-        >
-          <Input.Password autoComplete="new-password" />
-        </FormField>
         <Flex justify="end">
           <Button
             aria-label="Save"
