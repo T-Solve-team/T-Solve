@@ -215,7 +215,10 @@ class UserRoleUpdateIT {
     }
 
     @Test
-    void rejectsOccupiedSpaceWithoutWriting_AC_007_14_AC_007_20() throws Exception {
+    void rejectsFourthManagerWithoutWriting_AC_007_14_AC_007_20() throws Exception {
+        addManager(SPACE, RECIPIENT);
+        account(TwoTenantDatabases.tenantA(), BETA_USER, "Third", DEPARTMENT, "KNOWLEDGE_MANAGER");
+        addManager(SPACE, BETA_USER);
         List<List<Map<String, Object>>> before = snapshot();
         perform(SECOND, update(List.of("KNOWLEDGE_MANAGER"), null, List.of(SPACE)))
                 .andExpect(status().isConflict())
@@ -403,7 +406,10 @@ class UserRoleUpdateIT {
     }
 
     @Test
-    void concurrentClaimsForOneSpaceYieldOneConflict_AC_007_14() throws Exception {
+    void concurrentClaimsForLastPlaceYieldOneConflict_AC_007_14() throws Exception {
+        account(TwoTenantDatabases.tenantA(), BETA_USER, "Third", DEPARTMENT, "KNOWLEDGE_MANAGER");
+        addManager(FREE_SPACE, TARGET);
+        addManager(FREE_SPACE, BETA_USER);
         ObjectNode first = update(List.of("PROJECT_MANAGER", "KNOWLEDGE_MANAGER"), DEPARTMENT, List.of(FREE_SPACE));
         ObjectNode second =
                 update(List.of("PROJECT_MANAGER", "KNOWLEDGE_MANAGER"), OTHER_DEPARTMENT, List.of(FREE_SPACE));
@@ -427,7 +433,7 @@ class UserRoleUpdateIT {
                                 "SELECT count(*) FROM space_manager WHERE space_id = (SELECT space_id FROM space WHERE public_id = ?)",
                                 Integer.class,
                                 FREE_SPACE))
-                .isEqualTo(1);
+                .isEqualTo(3);
     }
 
     @Test
@@ -518,7 +524,7 @@ class UserRoleUpdateIT {
                 db.queryForList("SELECT * FROM app_user ORDER BY id"),
                 db.queryForList("SELECT * FROM user_role ORDER BY id"),
                 db.queryForList("SELECT * FROM project_membership ORDER BY user_id, project_id"),
-                db.queryForList("SELECT * FROM space_manager ORDER BY space_id"));
+                db.queryForList("SELECT * FROM space_manager ORDER BY space_id, user_id"));
     }
 
     private int auditCount() {
@@ -600,5 +606,91 @@ class UserRoleUpdateIT {
                     manager,
                     id);
         }
+    }
+
+    private void addManager(UUID space, UUID user) {
+        TwoTenantDatabases.tenantA()
+                .update(
+                        "INSERT INTO space_manager(space_id,user_id,assigned_at) SELECT space_id,?,now() FROM space WHERE public_id = ?",
+                        user,
+                        space);
+    }
+
+    @Test
+    void addsCoManagerAndKeepsAlreadyManagedFullSpace_AC_007_14() throws Exception {
+        perform(RECIPIENT, update(List.of("PROJECT_MANAGER", "KNOWLEDGE_MANAGER"), DEPARTMENT, List.of(SPACE)))
+                .andExpect(status().isOk());
+        perform(SECOND, update(List.of("PROJECT_MANAGER", "KNOWLEDGE_MANAGER"), OTHER_DEPARTMENT, List.of(SPACE)))
+                .andExpect(status().isOk());
+        perform(
+                        TARGET,
+                        update(
+                                List.of("PROJECT_MANAGER", "TICKET_RESOLVER", "KNOWLEDGE_MANAGER"),
+                                DEPARTMENT,
+                                List.of(SPACE)))
+                .andExpect(status().isOk());
+        assertThat(TwoTenantDatabases.tenantA()
+                        .queryForObject(
+                                "SELECT count(*) FROM space_manager WHERE space_id = (SELECT space_id FROM space WHERE public_id = ?)",
+                                Integer.class,
+                                SPACE))
+                .isEqualTo(3);
+    }
+
+    @Test
+    void handoverOptionsOnlyListSoleActiveManagerSpaces_AC_007_9() throws Exception {
+        addManager(SPACE, RECIPIENT);
+        addManager(FREE_SPACE, TARGET);
+        scope.runIn(TwoTenantDatabases.ACME, () -> {
+            try {
+                mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(
+                                "/api/v1/users/{id}/handover-options", TARGET))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.spaces.length()").value(1))
+                        .andExpect(jsonPath("$.spaces[0].space.spaceId").value(FREE_SPACE.toString()));
+            } catch (Exception error) {
+                throw new AssertionError(error);
+            }
+            return null;
+        });
+    }
+
+    @Test
+    void removesOnlyOutgoingCoManagerRowWithoutHandover_AC_007_16_AC_007_19() throws Exception {
+        addManager(SPACE, RECIPIENT);
+        perform(TARGET, update(List.of("PROJECT_MANAGER", "TICKET_RESOLVER"), DEPARTMENT, List.of()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.managedSpaces").isEmpty());
+        assertThat(TwoTenantDatabases.tenantA()
+                        .queryForList(
+                                "SELECT user_id FROM space_manager WHERE space_id = (SELECT space_id FROM space WHERE public_id = ?)",
+                                UUID.class,
+                                SPACE))
+                .containsExactly(RECIPIENT);
+    }
+
+    @Test
+    void deactivatedCoManagerDoesNotPreventHandover_AC_007_16() throws Exception {
+        addManager(SPACE, RECIPIENT);
+        TwoTenantDatabases.tenantA()
+                .update("INSERT INTO user_role(user_id,role,assigned_at) VALUES (?,'KNOWLEDGE_MANAGER',now())", SECOND);
+        TwoTenantDatabases.tenantA().update("UPDATE app_user SET status = 'DEACTIVATED' WHERE id = ?", RECIPIENT);
+        var before = snapshot();
+        perform(TARGET, update(List.of("PROJECT_MANAGER", "TICKET_RESOLVER"), DEPARTMENT, List.of()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MSG01"));
+        assertThat(snapshot()).isEqualTo(before);
+    }
+
+    @Test
+    void formerKnowledgeManagerDoesNotPreventHandover_AC_007_16() throws Exception {
+        addManager(SPACE, RECIPIENT);
+        TwoTenantDatabases.tenantA()
+                .update("INSERT INTO user_role(user_id,role,assigned_at) VALUES (?,'KNOWLEDGE_MANAGER',now())", SECOND);
+        TwoTenantDatabases.tenantA()
+                .update("DELETE FROM user_role WHERE user_id = ? AND role = 'KNOWLEDGE_MANAGER'", RECIPIENT);
+        perform(TARGET, update(List.of("PROJECT_MANAGER", "TICKET_RESOLVER"), DEPARTMENT, List.of()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MSG01"));
     }
 }

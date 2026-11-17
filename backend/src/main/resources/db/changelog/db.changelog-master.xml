@@ -67,4 +67,5 @@
     <include file="changes/043-workspace-clear-service-account.sql" relativeToChangelogFile="true"/>
     <include file="changes/044-chatbot-answer-jira-issue.sql" relativeToChangelogFile="true"/>
     <include file="changes/045-chatbot-answer-jira-app.sql" relativeToChangelogFile="true"/>
+    <include file="changes/046-identity-space-manager-many.sql" relativeToChangelogFile="true"/>
 </databaseChangeLog>
