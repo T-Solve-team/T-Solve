@@ -217,6 +217,13 @@ JobRunr recurring "jira-app-draft-reminder"  0 8 * * *  Asia/Ho_Chi_Minh   (Draf
 Decided in planning: "last saved" is `solution_draft.updated_at`; dates format `yyyy-MM-dd` in Asia/Ho_Chi_Minh; the
 singular subject is used for exactly one open Draft (builder check).
 
+Change 2026-11-18 (AC-011.3, HTML body): `DraftReminderMessage` also renders `mail/draft-reminder.html`, a copy of
+the frame of `ticket-review`'s `mail/review-notification.html` (KAN-333) — header, badge "Draft reminder", heading,
+greeting with the Account's full name, one card with a table of the open Drafts (issue key linked to Jira, last saved
+date), closing line, footer. Its own template and renderer in `jiraapp`, not `worker/client/ReviewEmailRenderer`:
+backend AGENTS §1 forbids using another module's `client/`. Values are HTML-escaped and filled in one pass, as
+`ReviewEmailRenderer` does. The outbox sends the HTML with the plain-text body as its alternative.
+
 ## Change — 2026-11-14: Resubmit after Changes requested (Tasks 13, 14; KAN-130)
 - Spec: STORY-012 (AC-012.1 to AC-012.7). Decisions of 14/11: due date reset as for a new submission; the form is filled
   from the writer's Draft, else the ticket's Solution; Close keeps a Draft; success shows MSG66; the panel button
