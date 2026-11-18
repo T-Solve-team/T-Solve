@@ -555,15 +555,16 @@
         "suggestion-uuid-keys": "evaluating",
         "suggestion-comment": "passing",
         "jira-project-read": "passing",
-        "jira-gateway-bearer": "evaluating"
+        "jira-gateway-bearer": "evaluating",
+        "suggestion-web-jobs": "evaluating"
       },
-      "lastUpdated": "2026-11-16T14:29:52.260Z",
+      "lastUpdated": "2026-11-18T05:13:46.348Z",
       "branch": "feat/tracker",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "1ac3c6051b2742a4e4a4326b437cd4eccc7a95ae"
+        "default": "92c551d28cb61c60a32d50b5dfef93c5a19b8117"
       }
     },
     "ticket-review": {

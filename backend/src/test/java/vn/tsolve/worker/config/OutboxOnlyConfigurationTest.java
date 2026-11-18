@@ -82,6 +82,17 @@ class OutboxOnlyConfigurationTest {
     }
 
     @Test
+    void readsTheStagingEnvVariableWithoutTheWorkerMockProfile_BUG_341() {
+        // Staging sets only TSOLVE_MOCK_ACTIVE_WORKSPACES; its property mapping lives in application-worker-mock.yml,
+        // which the backend (no profile) never loads.
+        staging.withPropertyValues(ENABLED, JOBS, "TSOLVE_MOCK_ACTIVE_WORKSPACES=" + A)
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context.getBean(OutboxWorkspace.class).current()).contains(A);
+                });
+    }
+
+    @Test
     void neverGuessesBetweenSeveralMockWorkspaces_BUG_340() {
         staging.withPropertyValues(ENABLED, JOBS, "tsolve.worker.mock.active-workspaces=" + A + ", " + B)
                 .run(context -> assertThat(

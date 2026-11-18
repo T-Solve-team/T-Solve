@@ -476,3 +476,33 @@ Edge Cases & Risks for this extension (continue after previous row 57): applicab
 | 65 | STORY-013 | Compliance | Successful/error Jira body or exception contains secret markers | Critical | Logs only key/status/outcome; DTOs and exceptions contain no service-account credential/body; zero persistence (AC-013.12, AC-013.13) | Task 19 |
 
 Risk Review: **CAUTION** for the retained Basic-auth/scoped-token mismatch; this story is testable with a compatible test credential and mocks, and does not claim real scoped-token support. Project owns MSG48/503 mapping and transaction boundaries; tracker never calls back into Project on this read path. This extension is a dependency on the same KAN-127 issue branch, one feature/commit approved by the user before starting the next task.
+
+### Change 2026-11-18: queue the suggestion job for the worker from the web process (KAN-370, BUG-342)
+
+Staging runs the web process with `tsolve.worker.enabled=false` and the worker in its own container. The in-process
+queue (AC-011.9) ran the job on its own thread with no Workspace bound, so `WorkspaceJiraServiceAccount.current()`
+threw and MSG80 was never posted. The Jira App webhook (FIT bearer, stateless chain) binds no Workspace either.
+
+- New flag `tsolve.worker.web-jobs-enabled` (`TSOLVE_WORKER_WEB_JOBS_ENABLED`, default false). Chosen over reusing
+  `outbox-enabled` (its name says email) and over turning on `tsolve.worker.enabled` in the web process (needs a
+  platform adapter or worker-mock, switches the Wiki path, BUG-339/340).
+- `worker/service/WebJobQueue` — `UUID enqueue(String handlerType, UUID recordId)`.
+- `worker/config/WebJobsConfiguration` — on when `web-jobs-enabled` is true and `enabled` is not. One bean, a
+  `WebJobQueue` that writes `TenantJobRequest(workspaceId, type, recordId)` with a `JobRunrRuntime(props, none, false)`
+  (enqueue only, no `BackgroundJobServer`). The runtime is created on the first enqueue, not at start: the web start
+  never waits on the Jobs database (as `OutboxOnlyConfiguration`, `initializationFailTimeout(-1)`), and a failed
+  start is retried on the next job. No `JobRunrRuntime`, `TenantJobService`, `WorkerTenantService` or `TenantContext`
+  bean is created, so Wiki and `WorkspaceJiraServiceAccount` keep their web paths.
+- The Workspace is `OutboxWorkspace` (request TenantContext, else the single Active Workspace of
+  `TSOLVE_MOCK_ACTIVE_WORKSPACES`, never a guess). That bean exists only with `outbox-enabled`; web jobs require it and
+  the start fails with a message naming both flags otherwise. Staging sets both.
+- `tracker/service/impl/WebSuggestionJobQueue` — same condition; enqueues `SuggestionJobHandler.TYPE`, never throws,
+  logs only the issue key and the error type (AC-011.11).
+- `InProcessSuggestionJobQueue` — only while both `enabled` and `web-jobs-enabled` are off (AC-011.9).
+- The worker container is unchanged: `SuggestionJobHandler` runs the job in `runInTenant`, with JobRunr retries
+  (AC-011.6, AC-012.7).
+- `infra/compose.staging.yml` backend: `TSOLVE_WORKER_WEB_JOBS_ENABLED: "true"`; `.env.example` documents the flag.
+
+Edge cases: 66 — several or no mock Workspaces → no job, WARN (AC-011.11). 67 — Jobs database down at the first job →
+no job, WARN, the next job retries the start; the web start is unaffected (AC-011.11). 68 — web-jobs on without
+outbox → start fails, naming both flags. Decisions: `iteration-1/kan-370-decisions.md`.
