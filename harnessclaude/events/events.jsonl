@@ -2177,3 +2177,4 @@
 {"ts":"2026-11-18T10:19:05.780Z","type":"feature-status","module":"wiki","feature":"wiki-home-explorer","from":null,"to":"pending"}
 {"ts":"2026-11-18T10:51:46.183Z","type":"feature-status","module":"wiki","feature":"wiki-home-explorer","from":"pending","to":"in-progress"}
 {"ts":"2026-11-18T10:52:02.926Z","type":"feature-status","module":"wiki","feature":"wiki-home-explorer","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-18T10:24:11.805Z","type":"spec-approved","module":"chatbot","specHash":"ddff8da5c8e3e1f0d097065b9cee98f0d94614440dc80baf75aeedaa0d844b10"}

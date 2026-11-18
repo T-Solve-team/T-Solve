@@ -233,8 +233,8 @@
     }
   },
   "chatbot": {
-    "specHash": "dd32f6721cc04e3daa484635f18ad9e760e28a3b15fe06e8af96e65df4db22bb",
-    "approvedAt": "2026-11-17T15:40:42.152Z",
+    "specHash": "ddff8da5c8e3e1f0d097065b9cee98f0d94614440dc80baf75aeedaa0d844b10",
+    "approvedAt": "2026-11-18T10:24:11.801Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",
@@ -295,6 +295,7 @@
       "AC-006.5": "WHEN a signed-in user asks which cited documents are unavailable, THE backend SHALL answer",
       "AC-006.6": "IF  is invalid, THEN THE backend SHALL answer 400 with code MSG06 and no field error",
       "AC-006.7": "WHILE no module implements , THE stand-in  SHALL return no passage and SHALL",
+      "AC-006.8": "WHEN the text holds a group marker of two or more numbers 1..99 separated by commas, each comma",
       "AC-007.1": "WHEN the classifier gives no usable query (AC-009.6) and  is not empty, THE backend SHALL use",
       "AC-007.2": "THE backend SHALL send the turns of  to the chat model, oldest first, as earlier user and",
       "AC-007.3": "IF  is missing, holds more than 10 turns, or a turn is too long, THEN THE backend SHALL answer",
