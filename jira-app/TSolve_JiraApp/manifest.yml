@@ -35,6 +35,13 @@ modules:
         - avi:jira:created:issue
       filter:
         ignoreSelf: true
+    # KAN-371 (AC-005.6): a move into Done anywhere, the board included, gives the assignee a Draft.
+    - key: tsolve-issue-updated-trigger
+      endpoint: tsolve-issue-updated-endpoint
+      events:
+        - avi:jira:updated:issue
+      filter:
+        ignoreSelf: true
     # STORY-013: the backend calls Jira as this app, with the system token Forge sends on these calls.
     - key: tsolve-app-token-lifecycle-trigger
       endpoint: tsolve-app-token-endpoint
@@ -51,6 +58,10 @@ modules:
       remote: tsolve-backend
       route:
         path: /api/v1/jira-app/events/issue-created
+    - key: tsolve-issue-updated-endpoint
+      remote: tsolve-backend
+      route:
+        path: /api/v1/jira-app/events/issue-updated
     - key: tsolve-app-token-endpoint
       remote: tsolve-backend
       route:
