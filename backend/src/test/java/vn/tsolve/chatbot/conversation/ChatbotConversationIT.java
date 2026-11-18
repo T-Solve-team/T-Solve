@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.data.domain.PageRequest;
 import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse.Outcome;
 import vn.tsolve.chatbot.conversation.exception.ChatbotConversationNotFoundException;
 import vn.tsolve.chatbot.rating.entity.ChatbotRating;
@@ -31,8 +32,33 @@ class ChatbotConversationIT extends ConversationDatabaseITSupport {
         UUID newer = session(owner, "Newer", START.plusSeconds(100), START.plusSeconds(100));
         session(other, "Other", START.plusSeconds(200), START.plusSeconds(200));
         run(service -> {
-            assertThat(service.list(owner)).extracting("chatSessionId").containsExactly(newer, older);
-            assertThat(service.list(owner)).extracting("title").containsExactly("Newer", "Older");
+            var page = service.list(owner, PageRequest.of(0, 20));
+            assertThat(page.getContent()).extracting("chatSessionId").containsExactly(newer, older);
+            assertThat(page.getContent()).extracting("title").containsExactly("Newer", "Older");
+            assertThat(page.getTotalElements()).isEqualTo(2);
+        });
+    }
+
+    @Test
+    void pagesOwnRowsTiesByIdAndEmptyPastTheEnd_AC_013_5() {
+        var tied = new ArrayList<UUID>();
+        for (int i = 0; i < 3; i++) tied.add(session(owner, "Tie " + i, START, START));
+        UUID newest = session(owner, "Newest", START.plusSeconds(10), START.plusSeconds(10));
+        session(other, "Other", START.plusSeconds(20), START.plusSeconds(20));
+        var expected = new ArrayList<UUID>(tied);
+        // PostgreSQL orders uuid bytewise, which is the order of the hex text (UUID.compareTo is signed).
+        expected.sort(java.util.Comparator.comparing(UUID::toString).reversed());
+        expected.addFirst(newest);
+        run(service -> {
+            var first = service.list(owner, PageRequest.of(0, 3));
+            var second = service.list(owner, PageRequest.of(1, 3));
+            assertThat(first.getContent())
+                    .extracting("chatSessionId")
+                    .containsExactlyElementsOf(expected.subList(0, 3));
+            assertThat(second.getContent()).extracting("chatSessionId").containsExactly(expected.get(3));
+            assertThat(first.getTotalElements()).isEqualTo(4);
+            assertThat(first.getTotalPages()).isEqualTo(2);
+            assertThat(service.list(owner, PageRequest.of(5, 3)).getContent()).isEmpty();
         });
     }
 
@@ -152,7 +178,7 @@ class ChatbotConversationIT extends ConversationDatabaseITSupport {
                         + "\",\"title\":\"PRIVATE_CITATION_183\"}]");
         jdbc.update("UPDATE chat_message SET question = 'PRIVATE_QUESTION_183', answer_text = 'PRIVATE_ANSWER_183'");
         run(service -> {
-            service.list(owner);
+            service.list(owner, PageRequest.of(0, 20));
             service.get(owner, id.toString());
             service.delete(owner, id.toString());
         });

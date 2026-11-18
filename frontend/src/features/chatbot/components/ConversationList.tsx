@@ -13,6 +13,7 @@ type ConversationListProps = {
   disabled: boolean;
   list: ReturnType<typeof useConversations>['list'];
   remove: ReturnType<typeof useConversations>['remove'];
+  onLoadMore: () => void;
   onOpen: (id: string) => void;
   onNew: () => void;
 };
@@ -26,6 +27,7 @@ export function ConversationList({
   disabled,
   list,
   remove,
+  onLoadMore,
   onOpen,
   onNew,
 }: ConversationListProps) {
@@ -41,7 +43,7 @@ export function ConversationList({
           <Spin />
         </div>
       )}
-      {list.isError && (
+      {list.isError && !list.isFetchNextPageError && (
         <Flex vertical gap="small">
           <Alert type="error" title={msg('MSG06')} />
           <Button disabled={isDisabled} onClick={() => void list.refetch()}>
@@ -64,7 +66,7 @@ export function ConversationList({
             </Button>
           </li>
         )}
-        {!list.isError &&
+        {(!list.isError || list.isFetchNextPageError) &&
           conversations.map((conversation) => (
             <li key={conversation.chatSessionId}>
               <Flex align="center">
@@ -90,6 +92,11 @@ export function ConversationList({
             </li>
           ))}
       </ul>
+      {list.hasNextPage && (
+        <Button loading={list.isFetchingNextPage} disabled={isDisabled} onClick={onLoadMore}>
+          Load more
+        </Button>
+      )}
       <ConfirmDialog
         isOpen={deleting !== null}
         code="MSG103"

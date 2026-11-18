@@ -67,11 +67,17 @@ function answerWith(answer: Partial<ChatbotAnswer>, wait?: Promise<void>) {
     }),
     http.get(`*/api/v1/chatbot/conversations/${id}`, () => HttpResponse.json(conversation)),
     http.get('*/api/v1/chatbot/conversations', () =>
-      HttpResponse.json(
-        conversation.turns.length
+      HttpResponse.json({
+        content: conversation.turns.length
           ? [{ chatSessionId: id, title: conversation.title, startedAt: conversation.startedAt }]
           : [],
-      ),
+        page: {
+          size: 20,
+          number: 0,
+          totalElements: conversation.turns.length ? 1 : 0,
+          totalPages: conversation.turns.length ? 1 : 0,
+        },
+      }),
     ),
   );
 }

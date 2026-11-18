@@ -100,7 +100,7 @@ describe('KnowledgeChatbotPage saved conversations', () => {
     const view = await openChatbot();
     await ask(view, VPN);
     expect(titles()).toEqual([VPN]);
-    const saved = (await listChatbotConversations())[0];
+    const saved = (await listChatbotConversations()).content[0];
     expect(saved?.chatSessionId).toMatch(UUID);
     expect(
       await within(await screen.findByRole('region', { name: 'Conversation' })).findByText(VPN),
@@ -264,9 +264,9 @@ describe('KnowledgeChatbotPage saved conversations', () => {
     await screen.findByRole('button', { name: VPN }, { timeout: 5000 });
     await view.user.click(deleteButton(VPN));
     expect(await screen.findByRole('dialog')).toHaveTextContent(msg('MSG103', { title: VPN }));
-    expect(await listChatbotConversations()).toHaveLength(1);
+    expect((await listChatbotConversations()).content).toHaveLength(1);
     await view.user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(await listChatbotConversations()).toHaveLength(1);
+    expect((await listChatbotConversations()).content).toHaveLength(1);
     expect(titles()).toEqual(['New conversation', VPN]);
   });
 
@@ -344,5 +344,85 @@ describe('KnowledgeChatbotPage saved conversations', () => {
       ),
     ).toBeInTheDocument();
     release();
+  });
+
+  describe('paging', () => {
+    const loadMore = () => screen.queryByRole('button', { name: /Load more/ });
+    async function seed(count: number) {
+      for (let i = 0; i < count; i++)
+        await askChatbot({ question: `Q${String(i).padStart(2, '0')}` });
+    }
+
+    it('AC-002.3 shows the 20 newest conversations and AC-002.16 appends the next page on Load more', async () => {
+      await seed(21);
+      const view = await openChatbot();
+      await screen.findByRole('button', { name: 'Q20' }, { timeout: 5000 });
+      expect(titles()).toHaveLength(21);
+      expect(screen.queryByRole('button', { name: 'Q00' })).not.toBeInTheDocument();
+      await view.user.click(loadMore() as HTMLElement);
+      await screen.findByRole('button', { name: 'Q00' }, { timeout: 5000 });
+      expect(titles()).toEqual([
+        'New conversation',
+        ...Array.from({ length: 21 }, (_, i) => `Q${String(20 - i).padStart(2, '0')}`),
+      ]);
+      expect(loadMore()).not.toBeInTheDocument();
+    });
+
+    it('AC-002.16 hides Load more when every conversation fits one page', async () => {
+      await seed(2);
+      await openChatbot();
+      await screen.findByRole('button', { name: 'Q01' }, { timeout: 5000 });
+      expect(loadMore()).not.toBeInTheDocument();
+    });
+
+    it('AC-002.16 shows Load more as loading while the next page is fetched', async () => {
+      await seed(21);
+      const view = await openChatbot();
+      await screen.findByRole('button', { name: 'Q20' }, { timeout: 5000 });
+      const release = hold('get', '*/api/v1/chatbot/conversations');
+      await view.user.click(loadMore() as HTMLElement);
+      await waitFor(() => expect(loadMore()).toHaveClass('ant-btn-loading'), { timeout: 5000 });
+      release();
+      await screen.findByRole('button', { name: 'Q00' }, { timeout: 5000 });
+    });
+
+    it('AC-002.16 shows MSG06 and keeps the button and the rows when the next page fails', async () => {
+      await seed(21);
+      const view = await openChatbot();
+      await screen.findByRole('button', { name: 'Q20' }, { timeout: 5000 });
+      server.use(http.get('*/api/v1/chatbot/conversations', () => problem(500)));
+      await view.user.click(loadMore() as HTMLElement);
+      expect(await screen.findByText(msg('MSG06'))).toBeInTheDocument();
+      expect(loadMore()).toBeEnabled();
+      expect(titles()).toHaveLength(21);
+      expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    });
+
+    it('AC-002.16 reloads the loaded pages after an ask, so nothing is shown twice (P1)', async () => {
+      await seed(21);
+      const view = await openChatbot();
+      await screen.findByRole('button', { name: 'Q20' }, { timeout: 5000 });
+      await view.user.click(loadMore() as HTMLElement);
+      await screen.findByRole('button', { name: 'Q00' }, { timeout: 5000 });
+      await ask(view, VPN);
+      await waitFor(() => expect(titles()).toHaveLength(22), { timeout: 5000 });
+      expect(titles().slice(0, 2)).toEqual([VPN, 'Q20']);
+      expect(new Set(titles()).size).toBe(22);
+      expect(titles().at(-1)).toBe('Q00');
+    });
+
+    it('AC-002.16 reloads the loaded pages after a delete, so no row is skipped (P2)', async () => {
+      await seed(21);
+      const view = await openChatbot();
+      await screen.findByRole('button', { name: 'Q20' }, { timeout: 5000 });
+      await view.user.click(loadMore() as HTMLElement);
+      await screen.findByRole('button', { name: 'Q00' }, { timeout: 5000 });
+      await view.user.click(deleteButton('Q20'));
+      await view.user.click(screen.getByRole('button', { name: 'OK' }));
+      await waitFor(() => expect(titles()).toHaveLength(21), { timeout: 5000 });
+      expect(titles()[1]).toBe('Q19');
+      expect(titles().at(-1)).toBe('Q00');
+      expect(new Set(titles()).size).toBe(21);
+    });
   });
 });

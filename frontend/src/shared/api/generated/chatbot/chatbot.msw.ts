@@ -16,7 +16,7 @@ import type {
   ChatbotAnswer,
   ChatbotAsk,
   ChatbotConversation,
-  ChatbotConversationSummary,
+  ChatbotConversationSummaryPage,
   ChatbotIssueDraft,
   ChatbotIssueRequest,
   ChatbotJiraIssue,
@@ -26,12 +26,24 @@ import type {
   WikiDocumentCitation,
 } from '../model';
 
-export const getListChatbotConversationsResponseMock = (): ChatbotConversationSummary[] =>
-  Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
-    chatSessionId: faker.string.uuid(),
-    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-    startedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
-  }));
+export const getListChatbotConversationsResponseMock = (
+  overrideResponse: Partial<Extract<ChatbotConversationSummaryPage, object>> = {},
+): ChatbotConversationSummaryPage => ({
+  content: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      chatSessionId: faker.string.uuid(),
+      title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      startedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+    }),
+  ),
+  page: {
+    size: faker.number.int(),
+    number: faker.number.int(),
+    totalElements: faker.number.int(),
+    totalPages: faker.number.int(),
+  },
+  ...overrideResponse,
+});
 
 export const getGetChatbotConversationResponseWikiDocumentCitationMock = (
   overrideResponse: Partial<WikiDocumentCitation> = {},
@@ -186,10 +198,10 @@ export const getCreateChatbotIssueResponseMock = (
 
 export const getListChatbotConversationsMockHandler = (
   overrideResponse?:
-    | ChatbotConversationSummary[]
+    | ChatbotConversationSummaryPage
     | ((
         info: Parameters<HttpResponseResolver>[0],
-      ) => Promise<ChatbotConversationSummary[]> | ChatbotConversationSummary[]),
+      ) => Promise<ChatbotConversationSummaryPage> | ChatbotConversationSummaryPage),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(

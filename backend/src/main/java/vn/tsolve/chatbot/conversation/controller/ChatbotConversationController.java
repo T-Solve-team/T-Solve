@@ -3,7 +3,10 @@ package vn.tsolve.chatbot.conversation.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.util.List;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,6 +24,9 @@ import vn.tsolve.common.security.TSolveUser;
 @RequestMapping("/api/v1/chatbot/conversations")
 @Tag(name = "chatbot")
 public class ChatbotConversationController {
+    private static final int DEFAULT_SIZE = 20;
+    private static final int MAX_SIZE = 100;
+
     private final ChatbotConversationService conversations;
 
     public ChatbotConversationController(ChatbotConversationService conversations) {
@@ -31,9 +37,11 @@ public class ChatbotConversationController {
     @PreAuthorize("isAuthenticated()")
     @Operation(operationId = "listChatbotConversations", summary = "List your saved conversations")
     @ApiResponse(responseCode = "401", description = "MSG07")
-    public ResponseEntity<List<ChatbotConversationSummaryResponse>> listChatbotConversations(
-            @AuthenticationPrincipal TSolveUser user) {
-        return ResponseEntity.ok(conversations.list(user));
+    public ResponseEntity<PagedModel<ChatbotConversationSummaryResponse>> listChatbotConversations(
+            @AuthenticationPrincipal TSolveUser user, @PageableDefault(size = DEFAULT_SIZE) Pageable page) {
+        // AC-013.5: a size above 100 is read as 100 and a client sort is dropped (the order is fixed in the query).
+        var fixed = PageRequest.of(page.getPageNumber(), Math.min(page.getPageSize(), MAX_SIZE));
+        return ResponseEntity.ok(new PagedModel<>(conversations.list(user, fixed)));
     }
 
     @GetMapping("/{chatSessionId}")

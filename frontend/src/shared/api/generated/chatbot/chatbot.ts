@@ -26,11 +26,12 @@ import type {
   ChatbotAnswer,
   ChatbotAsk,
   ChatbotConversation,
-  ChatbotConversationSummary,
+  ChatbotConversationSummaryPage,
   ChatbotIssueDraft,
   ChatbotIssueRequest,
   ChatbotJiraIssue,
   ChatbotRating,
+  ListChatbotConversationsParams,
   ListUnavailableCitedDocumentsParams,
   ProblemResponse,
   UnavailableDocuments,
@@ -57,42 +58,59 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
-export const getListChatbotConversationsUrl = () => {
-  return `/api/v1/chatbot/conversations`;
+export const getListChatbotConversationsUrl = (params?: ListChatbotConversationsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/chatbot/conversations?${stringifiedParams}`
+    : `/api/v1/chatbot/conversations`;
 };
 
 /**
+ * One page of the caller's own conversations (default size 20; a size above 100 is read as 100).
  * @summary List your saved conversations, newest startedAt first.
  */
 export const listChatbotConversations = async (
+  params?: ListChatbotConversationsParams,
   options?: Parameters<typeof http>[1],
-): Promise<ChatbotConversationSummary[]> => {
-  return http<ChatbotConversationSummary[]>(getListChatbotConversationsUrl(), {
+): Promise<ChatbotConversationSummaryPage> => {
+  return http<ChatbotConversationSummaryPage>(getListChatbotConversationsUrl(params), {
     ...options,
     method: 'GET',
   });
 };
 
-export const getListChatbotConversationsQueryKey = () => {
-  return [`/api/v1/chatbot/conversations`] as const;
+export const getListChatbotConversationsQueryKey = (params?: ListChatbotConversationsParams) => {
+  return [`/api/v1/chatbot/conversations`, ...(params ? [params] : [])] as const;
 };
 
 export const getListChatbotConversationsQueryOptions = <
   TData = Awaited<ReturnType<typeof listChatbotConversations>>,
   TError = ErrorType<ProblemResponse>,
->(options?: {
-  query?: Partial<
-    UseQueryOptions<Awaited<ReturnType<typeof listChatbotConversations>>, TError, TData>
-  >;
-  request?: SecondParameter<typeof http>;
-}) => {
+>(
+  params?: ListChatbotConversationsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listChatbotConversations>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getListChatbotConversationsQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getListChatbotConversationsQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listChatbotConversations>>> = ({
     signal,
-  }) => listChatbotConversations({ signal, ...requestOptions });
+  }) => listChatbotConversations(params, { signal, ...requestOptions });
 
   const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
 
@@ -112,6 +130,7 @@ export function useListChatbotConversations<
   TData = Awaited<ReturnType<typeof listChatbotConversations>>,
   TError = ErrorType<ProblemResponse>,
 >(
+  params: undefined | ListChatbotConversationsParams,
   options: {
     query: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listChatbotConversations>>, TError, TData>
@@ -132,6 +151,7 @@ export function useListChatbotConversations<
   TData = Awaited<ReturnType<typeof listChatbotConversations>>,
   TError = ErrorType<ProblemResponse>,
 >(
+  params?: ListChatbotConversationsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listChatbotConversations>>, TError, TData>
@@ -152,6 +172,7 @@ export function useListChatbotConversations<
   TData = Awaited<ReturnType<typeof listChatbotConversations>>,
   TError = ErrorType<ProblemResponse>,
 >(
+  params?: ListChatbotConversationsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listChatbotConversations>>, TError, TData>
@@ -168,6 +189,7 @@ export function useListChatbotConversations<
   TData = Awaited<ReturnType<typeof listChatbotConversations>>,
   TError = ErrorType<ProblemResponse>,
 >(
+  params?: ListChatbotConversationsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listChatbotConversations>>, TError, TData>
@@ -176,7 +198,7 @@ export function useListChatbotConversations<
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getListChatbotConversationsQueryOptions(options);
+  const queryOptions = getListChatbotConversationsQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

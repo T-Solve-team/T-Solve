@@ -5,6 +5,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
@@ -15,7 +17,7 @@ import vn.tsolve.chatbot.conversation.entity.ChatSession;
 public interface ChatSessionRepository extends JpaRepository<ChatSession, UUID> {
     Optional<ChatSession> findByIdAndUserId(UUID id, UUID userId);
 
-    List<ChatSession> findByUserIdOrderByStartedAtDesc(UUID userId);
+    Page<ChatSession> findByUserIdOrderByStartedAtDescIdDesc(UUID userId, Pageable page);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM ChatSession s WHERE s.id = :id AND s.userId = :userId")

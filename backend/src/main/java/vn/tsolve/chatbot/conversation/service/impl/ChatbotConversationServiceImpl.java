@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,11 +53,10 @@ public class ChatbotConversationServiceImpl implements ChatbotConversationServic
 
     @Override
     @Transactional(readOnly = true)
-    public List<ChatbotConversationSummaryResponse> list(TSolveUser user) {
-        return sessions.findByUserIdOrderByStartedAtDesc(user.id()).stream()
+    public Page<ChatbotConversationSummaryResponse> list(TSolveUser user, Pageable page) {
+        return sessions.findByUserIdOrderByStartedAtDescIdDesc(user.id(), page)
                 .map(session -> new ChatbotConversationSummaryResponse(
-                        session.getId(), session.getTitle(), session.getStartedAt()))
-                .toList();
+                        session.getId(), session.getTitle(), session.getStartedAt()));
     }
 
     @Override

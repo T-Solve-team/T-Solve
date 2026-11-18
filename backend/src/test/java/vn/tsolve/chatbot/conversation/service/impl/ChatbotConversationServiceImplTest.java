@@ -17,6 +17,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse.Outcome;
 import vn.tsolve.chatbot.answer.dto.WikiDocumentCitation;
 import vn.tsolve.chatbot.answer.entity.ChatbotAnswer;
@@ -45,11 +47,15 @@ class ChatbotConversationServiceImplTest {
     void listsOwnConversationsNewestFirst_AC_013_5() {
         var newer = session(id, "Newer", Instant.parse("2026-11-18T00:00:00Z"));
         var older = session(UUID.randomUUID(), "Older", Instant.parse("2026-11-17T00:00:00Z"));
-        when(sessions.findByUserIdOrderByStartedAtDesc(user.id())).thenReturn(List.of(newer, older));
+        var request = PageRequest.of(1, 2);
+        when(sessions.findByUserIdOrderByStartedAtDescIdDesc(user.id(), request))
+                .thenReturn(new PageImpl<>(List.of(newer, older), request, 5));
 
-        assertThat(service.list(user)).extracting("chatSessionId").containsExactly(id, older.getId());
-        assertThat(service.list(user).getFirst().title()).isEqualTo("Newer");
-        assertThat(service.list(user).getFirst().startedAt()).isEqualTo(newer.getStartedAt());
+        var page = service.list(user, request);
+        assertThat(page.getContent()).extracting("chatSessionId").containsExactly(id, older.getId());
+        assertThat(page.getContent().getFirst().title()).isEqualTo("Newer");
+        assertThat(page.getContent().getFirst().startedAt()).isEqualTo(newer.getStartedAt());
+        assertThat(page.getTotalElements()).isEqualTo(5);
         verifyNoInteractions(messages, answers, audit);
     }
 

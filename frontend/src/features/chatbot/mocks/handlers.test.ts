@@ -37,7 +37,7 @@ describe('chatbot mock handlers', () => {
     const answer = await ask('VPN');
     const id = answer.chatSessionId ?? '';
     setDevUser('pm');
-    expect(await listChatbotConversations()).toEqual([]);
+    expect((await listChatbotConversations()).content).toEqual([]);
     await expect(getChatbotConversation(id)).rejects.toMatchObject({ status: 404, code: 'MSG04' });
     await expect(askChatbot({ question: 'VPN', chatSessionId: id })).rejects.toMatchObject({
       status: 404,
@@ -45,11 +45,11 @@ describe('chatbot mock handlers', () => {
     await expect(deleteChatbotConversation(id)).rejects.toMatchObject({ status: 404 });
     setDevUser(null);
     setDevUser('employee');
-    expect((await listChatbotConversations())[0]?.chatSessionId).toBe(id);
+    expect((await listChatbotConversations()).content[0]?.chatSessionId).toBe(id);
   });
 
   it('AC-004.8 starts, lists and continues a conversation with ordered turns', async () => {
-    expect(await listChatbotConversations()).toEqual([]);
+    expect((await listChatbotConversations()).content).toEqual([]);
     const first = await ask(' VPN ');
     expect(first.chatSessionId).toMatch(UUID);
     const id = first.chatSessionId ?? '';
@@ -60,19 +60,36 @@ describe('chatbot mock handlers', () => {
     expect(conversation.turns.map((turn) => turn.question)).toEqual(['VPN', 'And on Mac?']);
     expect(conversation.turns.map((turn) => turn.rating)).toEqual([null, null]);
     expect(conversation.turns[0]?.answer).not.toHaveProperty('chatSessionId');
-    expect(await listChatbotConversations()).toEqual([
-      { chatSessionId: id, title: 'VPN', startedAt: conversation.startedAt },
-    ]);
+    expect(await listChatbotConversations()).toEqual({
+      content: [{ chatSessionId: id, title: 'VPN', startedAt: conversation.startedAt }],
+      page: { size: 20, number: 0, totalElements: 1, totalPages: 1 },
+    });
   });
 
   it('AC-004.8 lists newest started conversations first, even after continuing an older one', async () => {
     const first = await ask('VPN');
     const second = await ask('leave');
     await askChatbot({ question: 'Again?', chatSessionId: first.chatSessionId });
-    expect((await listChatbotConversations()).map((c) => c.chatSessionId)).toEqual([
+    expect((await listChatbotConversations()).content.map((c) => c.chatSessionId)).toEqual([
       second.chatSessionId,
       first.chatSessionId,
     ]);
+  });
+
+  it('AC-004.8 pages the list as AC-013.5: default 20, size capped at 100, empty past the end', async () => {
+    for (let i = 0; i < 23; i++) await ask(`question ${i}`);
+    const first = await listChatbotConversations();
+    expect(first.content).toHaveLength(20);
+    expect(first.page).toEqual({ size: 20, number: 0, totalElements: 23, totalPages: 2 });
+    const second = await listChatbotConversations({ page: 1 });
+    expect(second.content).toHaveLength(3);
+    expect(second.content.at(-1)?.title).toBe('question 0');
+    expect(second.page).toEqual({ size: 20, number: 1, totalElements: 23, totalPages: 2 });
+    expect((await listChatbotConversations({ page: 5 })).content).toEqual([]);
+    expect((await listChatbotConversations({ size: 500 })).page).toMatchObject({
+      size: 100,
+      totalPages: 1,
+    });
   });
 
   it('AC-004.8 keeps a saved, replaced and removed rating on its turn', async () => {
@@ -90,7 +107,7 @@ describe('chatbot mock handlers', () => {
     const answer = await ask('VPN');
     const id = answer.chatSessionId ?? '';
     await expect(deleteChatbotConversation(id)).resolves.toBeUndefined();
-    expect(await listChatbotConversations()).toEqual([]);
+    expect((await listChatbotConversations()).content).toEqual([]);
     for (const request of [
       () => askChatbot({ question: 'VPN', chatSessionId: id }),
       () => getChatbotConversation(id),
@@ -108,13 +125,13 @@ describe('chatbot mock handlers', () => {
         (await getChatbotConversation(answer.chatSessionId ?? '')).turns[0]?.answer.outcome,
       ).toBe(answer.outcome);
       resetMockData();
-      expect(await listChatbotConversations()).toEqual([]);
+      expect((await listChatbotConversations()).content).toEqual([]);
     },
   );
 
   it('AC-004.8 creates no conversation for a failed ask', async () => {
     await askError(' ');
-    expect(await listChatbotConversations()).toEqual([]);
+    expect((await listChatbotConversations()).content).toEqual([]);
   });
 
   it.each([

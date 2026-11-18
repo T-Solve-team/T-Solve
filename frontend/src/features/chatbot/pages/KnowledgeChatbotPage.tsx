@@ -20,7 +20,7 @@ export function KnowledgeChatbotPage() {
 
 function KnowledgeChatbot() {
   const [form] = Form.useForm<QuestionFormValues>();
-  const { conversations, openId, turns, open, startNew, list, conversation, remove } =
+  const { conversations, openId, turns, open, startNew, list, conversation, remove, loadMore } =
     useConversations();
   const ask = useAskQuestion();
   const rating = useRateAnswer();
@@ -63,6 +63,7 @@ function KnowledgeChatbot() {
         disabled={ask.isPending}
         list={list}
         remove={remove}
+        onLoadMore={() => void loadMore()}
         onOpen={open}
         onNew={startNew}
       />

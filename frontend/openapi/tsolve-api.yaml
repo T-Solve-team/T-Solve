@@ -2680,15 +2680,17 @@ paths:
       tags: [chatbot]
       operationId: listChatbotConversations
       summary: List your saved conversations, newest startedAt first.
+      description: One page of the caller's own conversations (default size 20; a size above 100 is read as 100).
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
       responses:
         '200':
-          description: Exactly the signed-in user's conversations.
+          description: That page of exactly the signed-in user's conversations; a page past the end has no rows.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ChatbotConversationSummary'
+                $ref: '#/components/schemas/ChatbotConversationSummaryPage'
         '401':
           $ref: '#/components/responses/Problem'
   /api/v1/chatbot/conversations/{chatSessionId}:
@@ -5128,6 +5130,16 @@ components:
         startedAt:
           type: string
           format: date-time
+    ChatbotConversationSummaryPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatbotConversationSummary'
+        page:
+          $ref: '#/components/schemas/PageMetadata'
     ChatbotConversation:
       type: object
       required: [chatSessionId, title, startedAt, turns]

@@ -1,19 +1,29 @@
 import { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getGetChatbotConversationQueryKey,
   getListChatbotConversationsQueryKey,
   useDeleteChatbotConversation,
   useGetChatbotConversation,
-  useListChatbotConversations,
+  listChatbotConversations,
 } from '@/shared/api';
 import { showMessage } from '@/shared/messages';
+
+const PAGE_SIZE = 20;
 
 /** Server conversations stay in the query cache; null selects the unsaved empty conversation. */
 export function useConversations() {
   const client = useQueryClient();
   const [openId, setOpenId] = useState<string | null>(null);
-  const list = useListChatbotConversations();
+  // AC-002.16: pages append; an ask or a delete invalidates this key's prefix, so every loaded page is refetched.
+  const list = useInfiniteQuery({
+    queryKey: getListChatbotConversationsQueryKey({ size: PAGE_SIZE }),
+    queryFn: ({ pageParam, signal }) =>
+      listChatbotConversations({ page: pageParam, size: PAGE_SIZE }, { signal }),
+    initialPageParam: 0,
+    getNextPageParam: ({ page }) =>
+      page.number + 1 < page.totalPages ? page.number + 1 : undefined,
+  });
   const conversation = useGetChatbotConversation(openId ?? '', {
     query: { enabled: openId !== null, staleTime: 0 },
   });
@@ -36,7 +46,11 @@ export function useConversations() {
     conversation,
     remove,
     openId,
-    conversations: list.data ?? [],
+    conversations: list.data?.pages.flatMap((page) => page.content) ?? [],
+    loadMore: async () => {
+      if (!(await list.fetchNextPage()).isFetchNextPageError) return;
+      showMessage('MSG06');
+    },
     turns:
       conversation.data?.turns.map((turn) => ({ ...turn, rating: turn.rating ?? undefined })) ?? [],
     open: setOpenId,

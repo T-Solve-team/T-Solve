@@ -49,11 +49,17 @@ function answerWith(answer: Partial<ChatbotAnswer>, wait?: Promise<void>) {
     }),
     http.get(`*/api/v1/chatbot/conversations/${id}`, () => HttpResponse.json(conversation)),
     http.get('*/api/v1/chatbot/conversations', () =>
-      HttpResponse.json(
-        conversation.turns.length
+      HttpResponse.json({
+        content: conversation.turns.length
           ? [{ chatSessionId: id, title: conversation.title, startedAt: conversation.startedAt }]
           : [],
-      ),
+        page: {
+          size: 20,
+          number: 0,
+          totalElements: conversation.turns.length ? 1 : 0,
+          totalPages: conversation.turns.length ? 1 : 0,
+        },
+      }),
     ),
   );
 }
@@ -236,7 +242,7 @@ describe('KnowledgeChatbotPage ratings', () => {
     const { user, box } = await openChatbot();
     await ask(user, box, VPN_QUESTION);
     const { listChatbotConversations } = await import('@/shared/api');
-    const id = (await listChatbotConversations())[0]?.chatSessionId ?? '';
+    const id = (await listChatbotConversations()).content[0]?.chatSessionId ?? '';
     const answerId = (await getChatbotConversation(id)).turns[0]?.answer.answerId ?? '';
     await rateChatbotAnswer(answerId, { rating: 'NOT_HELPFUL' });
     await user.click(newConversationButton());
@@ -297,7 +303,9 @@ describe('KnowledgeChatbotPage ratings', () => {
       const conversations = await import('@/shared/api').then((api) =>
         api.listChatbotConversations(),
       );
-      const conversation = await getChatbotConversation(conversations[0]?.chatSessionId ?? '');
+      const conversation = await getChatbotConversation(
+        conversations.content[0]?.chatSessionId ?? '',
+      );
       expect(conversation.turns[0]?.rating).toBe('HELPFUL');
     });
     const { user } = await openChatbot();

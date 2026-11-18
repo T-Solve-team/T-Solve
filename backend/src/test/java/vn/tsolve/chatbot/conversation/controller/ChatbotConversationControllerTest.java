@@ -1,5 +1,6 @@
 package vn.tsolve.chatbot.conversation.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -17,15 +18,21 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.web.servlet.MockMvc;
 import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse;
 import vn.tsolve.chatbot.conversation.dto.ChatbotConversationResponse;
+import vn.tsolve.chatbot.conversation.dto.ChatbotConversationSummaryResponse;
 import vn.tsolve.chatbot.conversation.dto.ChatbotConversationTurnResponse;
 import vn.tsolve.chatbot.conversation.exception.ChatbotConversationNotFoundException;
 import vn.tsolve.chatbot.conversation.service.ChatbotConversationService;
@@ -47,10 +54,32 @@ class ChatbotConversationControllerTest {
 
     @Test
     @WithTSolveUser(roles = {})
-    void listsOwnConversationsWithoutAssignedRoles_AC_013_5_AC_013_10() throws Exception {
+    void listsOwnConversationsPagedWithDefaultsWithoutAssignedRoles_AC_013_5_AC_013_10() throws Exception {
+        var summary = new ChatbotConversationSummaryResponse(
+                UUID.randomUUID(), "Title", Instant.parse("2026-11-18T00:00:00Z"));
+        when(conversations.list(any(), any())).thenReturn(new PageImpl<>(List.of(summary), PageRequest.of(0, 20), 41));
         mvc.perform(get("/api/v1/chatbot/conversations"))
                 .andExpect(status().isOk())
-                .andExpect(content().json("[]"));
+                .andExpect(jsonPath("$.content[0].title").value("Title"))
+                .andExpect(jsonPath("$.page.size").value(20))
+                .andExpect(jsonPath("$.page.number").value(0))
+                .andExpect(jsonPath("$.page.totalElements").value(41))
+                .andExpect(jsonPath("$.page.totalPages").value(3));
+        var page = ArgumentCaptor.forClass(Pageable.class);
+        verify(conversations).list(any(), page.capture());
+        assertThat(page.getValue()).isEqualTo(PageRequest.of(0, 20));
+    }
+
+    @Test
+    @WithTSolveUser(roles = {})
+    void readsSizeAbove100As100AndIgnoresClientSort_AC_013_5() throws Exception {
+        when(conversations.list(any(), any())).thenReturn(Page.empty());
+        mvc.perform(get("/api/v1/chatbot/conversations?page=2&size=500&sort=title,asc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isEmpty());
+        var page = ArgumentCaptor.forClass(Pageable.class);
+        verify(conversations).list(any(), page.capture());
+        assertThat(page.getValue()).isEqualTo(PageRequest.of(2, 100));
     }
 
     @Test

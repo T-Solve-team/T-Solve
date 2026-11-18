@@ -3,7 +3,7 @@ import type {
   ChatbotAnswer,
   ChatbotAsk,
   ChatbotConversation,
-  ChatbotConversationSummary,
+  ChatbotConversationSummaryPage,
   ChatbotRating,
   UnavailableDocuments,
 } from '@/shared/api';
@@ -69,14 +69,25 @@ export const handlers: HttpHandler[] = [
     return HttpResponse.json<ChatbotAnswer>({ ...answer, chatSessionId });
   }),
 
-  http.get('*/api/v1/chatbot/conversations', async () => {
+  http.get('*/api/v1/chatbot/conversations', async ({ request }) => {
     const conversations = userConversations();
     await delay(MOCK_DELAY_MS);
+    const query = new URL(request.url).searchParams;
+    const number = Math.max(0, Number(query.get('page') ?? 0) || 0);
+    const size = Math.min(100, Math.max(1, Number(query.get('size') ?? 20) || 20));
     const summaries = [...conversations.values()]
       .reverse()
       .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
       .map(({ chatSessionId, title, startedAt }) => ({ chatSessionId, title, startedAt }));
-    return HttpResponse.json<ChatbotConversationSummary[]>(summaries);
+    return HttpResponse.json<ChatbotConversationSummaryPage>({
+      content: summaries.slice(number * size, (number + 1) * size),
+      page: {
+        size,
+        number,
+        totalElements: summaries.length,
+        totalPages: Math.ceil(summaries.length / size),
+      },
+    });
   }),
 
   http.get('*/api/v1/chatbot/conversations/:chatSessionId', async ({ params }) => {
