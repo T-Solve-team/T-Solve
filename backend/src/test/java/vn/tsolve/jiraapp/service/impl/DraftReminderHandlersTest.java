@@ -179,7 +179,8 @@ class DraftReminderHandlersTest {
         assertThat(queued.getValue().recipient()).isEqualTo(EMAIL);
         assertThat(queued.getValue().subject()).isEqualTo("You have 1 unsubmitted Solution draft in T-Solve");
         assertThat(queued.getValue().bodyText()).contains("SAM1-16", "https://acme.atlassian.net/browse/SAM1-16");
-        assertThat(queued.getValue().bodyHtml()).isNull();
+        assertThat(queued.getValue().bodyHtml())
+                .contains("Hi Ngo Bao,", "href=\"https://acme.atlassian.net/browse/SAM1-16\"");
     }
 
     @Test

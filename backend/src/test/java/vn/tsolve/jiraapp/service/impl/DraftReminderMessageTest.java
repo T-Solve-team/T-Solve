@@ -17,14 +17,15 @@ class DraftReminderMessageTest {
 
     @Test
     void usesTheSingularSubjectForOneOpenDraft_AC_011_3() {
-        DraftReminderMessage message = DraftReminderMessage.of(List.of(NEWER), "https://acme.atlassian.net");
+        DraftReminderMessage message = DraftReminderMessage.of(List.of(NEWER), "https://acme.atlassian.net", "Ngo Bao");
 
         assertThat(message.subject()).isEqualTo("You have 1 unsubmitted Solution draft in T-Solve");
     }
 
     @Test
     void listsEveryOpenDraftWithItsVietnamDateAndJiraLink_AC_011_3() {
-        DraftReminderMessage message = DraftReminderMessage.of(List.of(NEWER, OLDER), "https://acme.atlassian.net/");
+        DraftReminderMessage message =
+                DraftReminderMessage.of(List.of(NEWER, OLDER), "https://acme.atlassian.net/", "Ngo Bao");
 
         assertThat(message.subject()).isEqualTo("You have 2 unsubmitted Solution drafts in T-Solve");
         assertThat(message.body()).isEqualTo("""
@@ -37,10 +38,49 @@ class DraftReminderMessageTest {
 
     @Test
     void leavesOutTheLinkWithoutAJiraSiteUrl_AC_011_3() {
-        DraftReminderMessage message = DraftReminderMessage.of(List.of(OLDER), " ");
+        DraftReminderMessage message = DraftReminderMessage.of(List.of(OLDER), " ", "Ngo Bao");
 
         assertThat(message.body())
                 .startsWith("- SAM1-9, last saved 2026-11-10\n")
                 .doesNotContain("http");
+        assertThat(message.html()).contains(">SAM1-9</td>").doesNotContain("href=");
+    }
+
+    @Test
+    void rendersTheHtmlBodyInTheReviewEmailLayout_AC_011_3() {
+        DraftReminderMessage message =
+                DraftReminderMessage.of(List.of(NEWER, OLDER), "https://acme.atlassian.net", "Ngo Bao");
+
+        assertThat(message.html())
+                .startsWith("<!doctype html>")
+                .contains(
+                        "Draft reminder",
+                        "<h1",
+                        "You have 2 unsubmitted Solution drafts in T-Solve",
+                        "Hi Ngo Bao,",
+                        "href=\"https://acme.atlassian.net/browse/SAM1-16\"",
+                        "2026-11-14",
+                        "Open the issue in Jira and use Continue draft in the T-Solve panel to submit it.",
+                        "You got this email because you have unsubmitted Solution drafts on T-Solve.",
+                        "This is an automated message")
+                .doesNotContain("{{");
+        // Newest saved first, as in the plain-text body.
+        assertThat(message.html().indexOf("SAM1-16")).isLessThan(message.html().indexOf("SAM1-9"));
+    }
+
+    @Test
+    void greetsWithoutANameWhenTheFullNameIsBlank_AC_011_3() {
+        DraftReminderMessage message = DraftReminderMessage.of(List.of(NEWER), "", " ");
+
+        assertThat(message.html()).contains("Hi there,");
+    }
+
+    @Test
+    void escapesTheNameAndKeepsTemplateSyntaxLiteral_AC_011_3() {
+        DraftReminderMessage message = DraftReminderMessage.of(List.of(NEWER), "", "<b>Bao</b> {{rows}}");
+
+        assertThat(message.html())
+                .contains("Hi &lt;b&gt;Bao&lt;/b&gt; {{rows}},")
+                .doesNotContain("<b>Bao</b>");
     }
 }

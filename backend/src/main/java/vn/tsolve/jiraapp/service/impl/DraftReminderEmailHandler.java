@@ -105,10 +105,11 @@ public class DraftReminderEmailHandler implements JobRequestHandler<DraftReminde
         if (open.isEmpty()) {
             return Optional.empty();
         }
-        DraftReminderMessage message = DraftReminderMessage.of(open, jiraSiteUrl);
-        // Plain text only for now (AC-011.3): the outbox sends a text-only email when the HTML body is null.
+        DraftReminderMessage message =
+                DraftReminderMessage.of(open, jiraSiteUrl, account.get().fullName());
         return Optional.of(new Mail(
-                new OutboundEmail(account.get().email(), message.subject(), message.body(), null), open.size()));
+                new OutboundEmail(account.get().email(), message.subject(), message.body(), message.html()),
+                open.size()));
     }
 
     private record Mail(OutboundEmail email, int drafts) {}
