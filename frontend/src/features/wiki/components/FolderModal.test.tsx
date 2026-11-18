@@ -46,8 +46,19 @@ async function clickFolderAction(
   name: string,
   action: string,
 ) {
-  await user.click(screen.getByRole('button', { name: `Actions for ${name}` }));
-  await user.click(await screen.findByRole('menuitem', { name: action }));
+  // A save refetches the tree, which can re-render the "⋯" menu between the two clicks; retry until a popup opens.
+  await waitFor(
+    async () => {
+      if (!screen.queryByRole('dialog')) {
+        await user.click(screen.getByRole('button', { name: `Actions for ${name}` }));
+        const items = await screen.findAllByRole('menuitem', { name: action });
+        const item = items.at(-1);
+        if (item) await user.click(item);
+      }
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    },
+    { timeout: 5000 },
+  );
 }
 
 async function openFolder(action = 'New folder', name = 'Guides') {
