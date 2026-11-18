@@ -306,12 +306,14 @@ describe('FolderModal', () => {
 
   it('AC-003.15 persists create, rename and move through the feature mocks and AC-003.16 deletes the refreshed folder (BUG-264, BUG-316)', async () => {
     server.resetHandlers();
-    const { user, dialog, name } = await openFolder();
+    const { user, dialog, name, queryClient } = await openFolder();
     await user.click(name);
     await user.paste('Operations');
     await user.click(within(dialog).getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     async function openAction(label: string, action: string) {
+      // The "⋯" menu takes two clicks: let the refreshed tree settle so the menu is not unmounted in between.
+      await waitFor(() => expect(queryClient.isFetching()).toBe(0));
       const tree = screen.getByRole('tree', { name: 'Folders' });
       await within(tree).findByText(label);
       await clickFolderAction(user, label, action);

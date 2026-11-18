@@ -61,7 +61,7 @@ export function WikiPreview({ documentId, isListPending }: WikiPreviewProps) {
         </Button>
         <Button
           block
-          icon={<DownloadOutlined />}
+          icon={<DownloadOutlined aria-hidden />}
           href={wikiDocumentFileUrl(data.documentId)}
           download={data.fileName}
         >

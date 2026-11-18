@@ -297,10 +297,10 @@ describe('WikiHomePage', () => {
     expect(search().get('space')).toBe(IT);
     expect(search().get('q')).toBe('VPN');
     await waitFor(() => expect(queryClient.isFetching()).toBe(0));
-    await user.click(screen.getByRole('link', { name: 'Clear search' }));
-    expect(await screen.findByRole('link', { name: /^Root guide/ })).toBeInTheDocument();
-    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
     expect(requestedFolders).toEqual([HR, null]);
+    await user.click(screen.getByRole('link', { name: 'Clear search' }));
+    expect(await screen.findByRole('link', { name: 'Root guide' })).toBeInTheDocument();
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
     expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
     await act(() => router.navigate(`${paths.wikiHome}?space=${IT}&q=previous`));
     await act(() => router.navigate(`${paths.wikiHome}?space=${IT}&folder=${HR}&q=VPN`));

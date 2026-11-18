@@ -131,7 +131,7 @@ export function WikiHomePage() {
               </Tooltip>
               <Button
                 type="primary"
-                icon={<UploadOutlined />}
+                icon={<UploadOutlined aria-hidden />}
                 onClick={() =>
                   void navigate({ pathname: paths.wikiUpload, search: uploadParams.toString() })
                 }
@@ -171,16 +171,23 @@ export function WikiHomePage() {
                   <Link
                     to={withParams({ doc: row.documentId })}
                     className={styles.row}
+                    // The title alone names the link, like every document link in the app; the rest describes it.
+                    aria-labelledby={`wiki-row-${row.documentId}`}
+                    aria-describedby={`wiki-row-sub-${row.documentId} wiki-row-end-${row.documentId}`}
                     aria-current={row.documentId === home.previewId ? 'true' : undefined}
                   >
                     <span className={styles.fileIcon} aria-hidden>
                       <FileTextOutlined />
                     </span>
                     <span className={styles.rowMain}>
-                      <span className={styles.rowTitle} title={row.title}>
+                      <span
+                        id={`wiki-row-${row.documentId}`}
+                        className={styles.rowTitle}
+                        title={row.title}
+                      >
                         {row.title}
                       </span>
-                      <span className={styles.rowSub}>
+                      <span id={`wiki-row-sub-${row.documentId}`} className={styles.rowSub}>
                         <span>
                           {row.spaceId === space?.spaceId
                             ? (row.folderName ?? 'Top level')
@@ -189,7 +196,7 @@ export function WikiHomePage() {
                         <span>{row.owner}</span>
                       </span>
                     </span>
-                    <span className={styles.rowEnd}>
+                    <span id={`wiki-row-end-${row.documentId}`} className={styles.rowEnd}>
                       <span>
                         {row.visibility === 'COMPANY_WIDE' ? 'Company-wide' : 'Department'}
                       </span>
