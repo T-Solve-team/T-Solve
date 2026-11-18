@@ -410,16 +410,16 @@
         "draft-only-when-done": "evaluating",
         "ask-job-backend": "passing",
         "ask-job-forge": "passing",
-        "rewrite-job-backend": "in-progress",
-        "rewrite-job-forge": "pending"
+        "rewrite-job-backend": "passing",
+        "rewrite-job-forge": "passing"
       },
-      "lastUpdated": "2026-11-17T20:31:17.183Z",
+      "lastUpdated": "2026-11-18T03:03:57.935Z",
       "branch": "feat/KAN-337-jira-app-reject-reason",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "b0ed26a3d96e63148ef02128a47530f1d3fa7dac"
+        "default": "305535947b3bc1991c844a198337d3f89f76858f"
       }
     },
     "dashboard-audit": {
