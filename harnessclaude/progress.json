@@ -365,16 +365,16 @@
         "classify-question": "passing",
         "classify-question-ui": "passing",
         "conversation-store": "passing",
-        "conversation-api": "pending",
+        "conversation-api": "evaluating",
         "conversation-ui": "pending"
       },
-      "lastUpdated": "2026-11-18T04:48:27.004Z",
+      "lastUpdated": "2026-11-18T07:10:57.060Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "1808272d1f57f45b3df37eb2cf0192b4fd0aea4b"
+        "default": "1ef4d425eb8b1d75f10041005d21ba4a4f061821"
       }
     },
     "jira-app": {
