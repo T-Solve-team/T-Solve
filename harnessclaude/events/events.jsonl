@@ -2096,3 +2096,6 @@
 {"ts":"2026-11-18T06:18:07.805Z","type":"spec-approved","module":"jira-app","specHash":"699e1afdbcfb1cbb580615c7e780569fbf00e9457e08569423c9c6ac11d1b834"}
 {"ts":"2026-11-18T06:24:19.066Z","type":"spec-approved","module":"jira-app","specHash":"7f62a6dc931a084f3013501872829a79658b512ca13f2ede8e94b4ec951fba9a"}
 {"ts":"2026-11-18T06:25:54.136Z","type":"spec-approved","module":"ticket-review","specHash":"e69cb9f06e5c370a11a27c036624518563dc89c049948212d64403a9538b7cce"}
+{"ts":"2026-11-18T06:34:45.159Z","type":"spec-approved","module":"jira-app","specHash":"56f6e0827271e66b1360d178ea0e44474e1c042077caeb4bd6a9ab03c652b4da"}
+{"ts":"2026-11-18T06:35:02.764Z","type":"spec-approved","module":"ticket-review","specHash":"b2b9ac9981ee4f8f9d337cc24b27177a773bf4efad5a2c3ee0da64879bb2b38d"}
+{"ts":"2026-11-18T06:35:15.179Z","type":"quick-opened","what":"Read the import preview cleanup run time and time zone from env","files":["backend/src/main/java/vn/tsolve/ticket/service/impl/PreviewCleanupJob.java","backend/src/test/java/vn/tsolve/ticket/service/impl/PreviewCleanupJobTest.java"]}
