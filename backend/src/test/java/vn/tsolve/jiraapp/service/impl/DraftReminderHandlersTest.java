@@ -87,7 +87,7 @@ class DraftReminderHandlersTest {
         assertThat(DraftReminderRegistration.CRON).isEqualTo("0 8 * * *");
         assertThat(DraftReminderRegistration.ZONE.getId()).isEqualTo("Asia/Ho_Chi_Minh");
 
-        new DraftReminderRegistration(runtime, "", "").register();
+        new DraftReminderRegistration(runtime, "").register();
 
         verify(scheduler)
                 .scheduleRecurrently(
@@ -99,25 +99,22 @@ class DraftReminderHandlersTest {
 
     @Test
     void takesTheRunTimeFromTheEnvironment_AC_011_1() {
-        new DraftReminderRegistration(runtime, " 30 17 * * 1-5 ", " Asia/Bangkok ").register();
+        new DraftReminderRegistration(runtime, " 30 17 * * 1-5 ").register();
 
         verify(scheduler)
                 .scheduleRecurrently(
                         eq("jira-app-draft-reminder"),
                         eq("30 17 * * 1-5"),
-                        eq(java.time.ZoneId.of("Asia/Bangkok")),
+                        eq(DraftReminderRegistration.ZONE),
                         any(DraftReminderDispatchRequest.class));
         assertThat(DraftReminderRegistration.cron(null)).isEqualTo("0 8 * * *");
     }
 
     @Test
     void refusesToStartWithAnInvalidCronNamingTheVariable_AC_011_1() {
-        assertThatThrownBy(() -> new DraftReminderRegistration(runtime, "8am", ""))
+        assertThatThrownBy(() -> new DraftReminderRegistration(runtime, "8am"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("JIRA_APP_DRAFT_REMINDER_CRON");
-        assertThatThrownBy(() -> new DraftReminderRegistration(runtime, "", "Hanoi"))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("TSOLVE_JOB_TIME_ZONE");
     }
 
     @Test

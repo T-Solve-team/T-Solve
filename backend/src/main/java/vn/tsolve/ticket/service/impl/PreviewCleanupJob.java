@@ -16,8 +16,8 @@ import vn.tsolve.ticket.repository.ImportPreviewRepository;
 
 /**
  * Deletes Import Previews nobody confirmed within 24 hours (spec STORY-006, design D9). The run time
- * (`IMPORT_PREVIEW_CLEANUP_CRON`, default 01:00) and its time zone (`TSOLVE_JOB_TIME_ZONE`, shared by every scheduled
- * job, default Asia/Ho_Chi_Minh) come from the environment, so a deployment moves them without a code change.
+ * (`IMPORT_PREVIEW_CLEANUP_CRON`, default 01:00 Vietnam time) comes from the environment, so a deployment moves it
+ * without a code change.
  */
 @Component
 public class PreviewCleanupJob implements SchedulingConfigurer {
@@ -26,7 +26,6 @@ public class PreviewCleanupJob implements SchedulingConfigurer {
     static final String CRON = "0 1 * * *";
     static final String CRON_VARIABLE = "IMPORT_PREVIEW_CLEANUP_CRON";
     static final ZoneId ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
-    static final String ZONE_VARIABLE = "TSOLVE_JOB_TIME_ZONE";
 
     private static final Logger log = LoggerFactory.getLogger(PreviewCleanupJob.class);
 
@@ -36,13 +35,10 @@ public class PreviewCleanupJob implements SchedulingConfigurer {
     private final CronTrigger trigger;
 
     public PreviewCleanupJob(
-            ImportPreviewRepository previews,
-            Clock clock,
-            @Value("${" + CRON_VARIABLE + ":}") String cron,
-            @Value("${" + ZONE_VARIABLE + ":}") String zone) {
+            ImportPreviewRepository previews, Clock clock, @Value("${" + CRON_VARIABLE + ":}") String cron) {
         this.previews = previews;
         this.clock = clock;
-        this.trigger = new CronTrigger(springCron(cron), zone(zone));
+        this.trigger = new CronTrigger(springCron(cron), ZONE);
     }
 
     @Override
@@ -80,17 +76,5 @@ public class PreviewCleanupJob implements SchedulingConfigurer {
             throw new IllegalStateException(CRON_VARIABLE + " is not a valid cron expression: " + value, invalid);
         }
         return spring;
-    }
-
-    static ZoneId zone(String configured) {
-        if (configured == null || configured.isBlank()) {
-            return ZONE;
-        }
-        try {
-            return ZoneId.of(configured.strip());
-        } catch (RuntimeException invalid) {
-            throw new IllegalStateException(
-                    ZONE_VARIABLE + " is not a valid time zone: " + configured.strip(), invalid);
-        }
     }
 }

@@ -30,7 +30,7 @@ public class DraftReminderDispatchHandler implements JobRequestHandler<DraftRemi
 
     @Override
     public void run(DraftReminderDispatchRequest request) {
-        LocalDate day = LocalDate.now(clock.withZone(DraftReminderMessage.ZONE));
+        LocalDate day = LocalDate.now(clock.withZone(DraftReminderRegistration.ZONE));
         tenants.activeWorkspaceIds()
                 .forEach(workspace -> runtime.scheduler().enqueue(new DraftReminderWorkspaceRequest(workspace, day)));
     }
