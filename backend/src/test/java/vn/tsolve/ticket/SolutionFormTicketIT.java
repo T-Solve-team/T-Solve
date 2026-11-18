@@ -24,6 +24,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import vn.tsolve.identity.TwoTenantDatabases;
 import vn.tsolve.identity.signin.port.TenantScope;
+import vn.tsolve.ticket.dto.IssueStatusChange;
 import vn.tsolve.ticket.dto.OpenDraft;
 import vn.tsolve.ticket.dto.SolutionFormSubmission;
 import vn.tsolve.ticket.dto.SolutionSections;
@@ -85,6 +86,7 @@ class SolutionFormTicketIT {
     @BeforeEach
     void seed() {
         db.update("DELETE FROM solution_draft WHERE project_id = ?", PROJECT);
+        db.update("DELETE FROM jira_issue_done_state WHERE project_id = ?", PROJECT);
         db.update("DELETE FROM ticket WHERE project_id = ?", PROJECT);
         db.update("DELETE FROM app_user WHERE id IN (?,?)", WRITER, OTHER);
         db.update("DELETE FROM project WHERE public_id = ?", PROJECT);
@@ -182,6 +184,40 @@ class SolutionFormTicketIT {
                 .isEmpty();
         assertThat(db.queryForObject(
                         "SELECT count(*) FROM solution_draft WHERE project_id = ?", Integer.class, PROJECT))
+                .isEqualTo(1);
+    }
+
+    @Test
+    void recordsTheDoneStateAndCreatesTheDraftWithoutReplacingOne_AC_005_7_AC_005_8_AC_005_9() {
+        String issue = KEY + "-5";
+        SolutionSections closed = new SolutionSections("Typed before", "", "", "", "");
+        SolutionSections issueText = new SolutionSections("From the issue", "", "", "", "");
+
+        scope.runIn(TwoTenantDatabases.ACME, () -> {
+            drafts.save(WRITER, PROJECT, issue, closed);
+            drafts.recordIssueStatus(new IssueStatusChange(PROJECT, issue, true, WRITER, issueText));
+            drafts.recordIssueStatus(new IssueStatusChange(PROJECT, issue, true, OTHER, issueText));
+            return null;
+        });
+        assertThat(scope.runIn(TwoTenantDatabases.ACME, () -> drafts.find(WRITER, PROJECT, issue)))
+                .contains(closed);
+        assertThat(scope.runIn(TwoTenantDatabases.ACME, () -> drafts.find(OTHER, PROJECT, issue)))
+                .contains(issueText);
+        assertThat(scope.runIn(TwoTenantDatabases.ACME, () -> drafts.findIssueDone(PROJECT, issue)))
+                .contains(true);
+
+        scope.runIn(TwoTenantDatabases.ACME, () -> {
+            drafts.recordIssueStatus(new IssueStatusChange(PROJECT, issue, false, null, null));
+            return null;
+        });
+        assertThat(scope.runIn(TwoTenantDatabases.ACME, () -> drafts.findIssueDone(PROJECT, issue)))
+                .contains(false);
+        assertThat(scope.runIn(TwoTenantDatabases.ACME, () -> drafts.find(OTHER, PROJECT, issue)))
+                .contains(issueText);
+        assertThat(scope.runIn(TwoTenantDatabases.ACME, () -> drafts.findIssueDone(PROJECT, KEY + "-404")))
+                .isEmpty();
+        assertThat(db.queryForObject(
+                        "SELECT count(*) FROM jira_issue_done_state WHERE project_id = ?", Integer.class, PROJECT))
                 .isEqualTo(1);
     }
 

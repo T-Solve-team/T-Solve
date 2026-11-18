@@ -1,5 +1,6 @@
 package vn.tsolve.ticket.repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,6 +22,25 @@ public interface SolutionDraftRepository extends JpaRepository<SolutionDraft, UU
             """)
     int deleteDraft(
             @Param("creatorId") UUID creatorId, @Param("projectId") UUID projectId, @Param("issueKey") String issueKey);
+
+    /**
+     * Creates the Draft unless the creator already has one for the issue, which is never replaced (jira-app AC-005.8):
+     * a Close at the same moment wins.
+     *
+     * @return 1 when created, 0 when a Draft was already there
+     */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = """
+                    insert into solution_draft (creator_id, project_id, jira_issue_key, content, created_at, updated_at)
+                    values (:creatorId, :projectId, :issueKey, cast(:content as jsonb), :now, :now)
+                    on conflict (creator_id, project_id, jira_issue_key) do nothing
+                    """, nativeQuery = true)
+    int insertIfAbsent(
+            @Param("creatorId") UUID creatorId,
+            @Param("projectId") UUID projectId,
+            @Param("issueKey") String issueKey,
+            @Param("content") String content,
+            @Param("now") Instant now);
 
     /** Drafts whose issue has no ticket of any source, newest saved first (jira-app AC-011.2, AC-011.3). */
     @Query("""
