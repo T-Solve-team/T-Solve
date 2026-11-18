@@ -204,3 +204,28 @@ Not in scope: identity assignment and handover (identity Tasks 38–39).
 **PR / Jira:** same branch as identity Tasks 38–39; Jira KAN-362.
 **Estimated size:** small (5 modified files); about 5 tests
 **Verification:** Tests name AC-006.11; `sdd.ts trace wiki`; backend `mvn verify`; frontend verify; `generate:api` committed with no further diff.
+
+## Task 16: Wiki Home as a three-pane explorer (KAN-372)
+
+**Story:** STORY-002
+**Feature:** wiki-home-explorer
+**Decisions owned:** KAN-372 (Hải Anh, 18/11: 11.1 matches `plans/261118-1513-wiki-ui-redesign-preview/wiki-variant-b.html`; the preview fetches the document detail; a navigator selection clears the search)
+**Acceptance criteria:** AC-002.14 to AC-002.17, AC-002.21 to AC-002.25
+**Description:** Rebuild 11.1 as variant B: navigator (256px) | list pane | preview pane (360px) inside one card.
+Navigator: "Company-wide" entry (current when `?space=` names no viewable Space), "Spaces" label, each Space with
+its access level, the selected Space's FolderTree; folder actions Rename, Move and Delete in a "⋯" menu per folder so
+nothing overflows the column. List pane: toolbar on top (search box, then for the Knowledge Manager "New folder" and
+"Space Settings" as icon buttons with those accessible names, and "Upload documents"); title (entry name, or
+"Search results for “q”" with "Clear search"); document rows (title, Folder or Space name, Owner, Visibility tag,
+Updated) as links that set `?doc=`. Preview pane: `getWikiDocument(?doc= or first row)` — title, visibility, Space,
+Folder, Owner, Updated, File, Size, first 420 characters, "Open" (11.2) and Download (`wikiDocumentFileUrl`); MSG04
+when the list is empty; "This document is no longer available." on 404 MSG110. Loading and error states per pane.
+Below 1280px the preview pane moves under the list (Decided in planning: responsive fallback).
+`DocumentsTable` is no longer used by 11.1; keep it only if another screen imports it.
+Also: Delete folder popup disables Delete after a 409 MSG87 answer (AC-003.16 shows MSG87 with the counts).
+**Files:**
+- Modify: `frontend/src/features/wiki/pages/WikiHomePage.tsx`, `frontend/src/features/wiki/pages/WikiHomePage.module.css`, `frontend/src/features/wiki/hooks/useWikiHome.ts`, `frontend/src/features/wiki/components/FolderTree.tsx`, `frontend/src/features/wiki/components/CompanyWideView.tsx` (remove or replace), `frontend/src/features/wiki/components/DeleteFolderModal.tsx`
+- Test: `frontend/src/features/wiki/pages/WikiHomePage.test.tsx`
+**Tests:** AC-002.14 to AC-002.17, AC-002.21 to AC-002.25, each test name prefixed with its id.
+**Estimated size:** medium
+**Verification:** frontend `format:check`, `lint`, `typecheck`, `test`, `build` (CI); `sdd.ts trace wiki`.
