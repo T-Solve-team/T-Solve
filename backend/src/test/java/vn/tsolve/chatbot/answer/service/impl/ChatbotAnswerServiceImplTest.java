@@ -51,6 +51,7 @@ import vn.tsolve.ai.client.EmbeddingClient;
 import vn.tsolve.ai.client.LlmClient;
 import vn.tsolve.ai.exception.AiUnavailableException;
 import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse.Outcome;
+import vn.tsolve.chatbot.answer.dto.ChatbotCitation;
 import vn.tsolve.chatbot.answer.dto.ChatbotQuestionRequest;
 import vn.tsolve.chatbot.answer.dto.ChatbotTurnRequest;
 import vn.tsolve.chatbot.answer.dto.TicketSolutionCitation;
@@ -490,6 +491,23 @@ class ChatbotAnswerServiceImplTest {
         var cited = (TicketSolutionCitation) response.citations().getFirst();
         assertThat(cited.number()).isEqualTo(2);
         assertThat(cited.solution().symptoms()).isEqualTo("second");
+    }
+
+    @Test
+    void answersWithCitationsForGroupMarker_AC_006_8_BUG_348() {
+        when(embeddings.embed(any())).thenReturn(List.of(vector));
+        when(solutions.nearest(any(), anyDouble(), anyInt()))
+                .thenReturn(List.of(solution("first", 0.95), solution("second", 0.9)));
+        when(llm.chat(any(), isNull())).thenReturn("Map the drive again [1, 2].");
+
+        var response = service.ask(USER, question());
+
+        assertThat(response.outcome()).isEqualTo(Outcome.ANSWERED);
+        assertThat(response.text()).isEqualTo("Map the drive again [1][2].");
+        assertThat(response.citations()).extracting(ChatbotCitation::number).containsExactly(1, 2);
+        ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
+        verify(answers).save(saved.capture());
+        assertThat(saved.getValue().getAnswerText()).isEqualTo("Map the drive again [1][2].");
     }
 
     @Test

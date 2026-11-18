@@ -44,6 +44,15 @@ class AnswerPromptTest {
     }
 
     @Test
+    void asksForOneNumberPerMarker_AC_005_3_BUG_348() {
+        var source = ChatbotSource.of(new RetrievedSolution("symptoms", "cause", "steps", null, "scope", 0.9))
+                .numbered(1);
+        var messages = AnswerPrompt.messages("question", List.of(), List.of(source));
+
+        assertThat(messages.getFirst().content()).contains("one number per pair of brackets", "[1][2]", "never [1,2]");
+    }
+
+    @Test
     void sendsHistoryAsContextNeverAsSource_AC_007_2() {
         var source = ChatbotSource.of(new RetrievedSolution("symptoms", "cause", "steps", null, "scope", 0.9))
                 .numbered(1);
