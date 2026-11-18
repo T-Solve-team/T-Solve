@@ -1,5 +1,5 @@
 // "Ask T-Solve" — the Jira project page that asks the Knowledge Chatbot before an issue is created (STORY-010).
-import React, { useEffect, useReducer, useState } from 'react';
+import React, { useEffect, useReducer, useRef, useState } from 'react';
 import {
   Box,
   Button,
@@ -86,6 +86,10 @@ export function AskTsolvePage() {
   const [draft, setDraft] = useState('');
   const [boxVersion, setBoxVersion] = useState(0);
   const [fieldError, setFieldError] = useState(null);
+  const pendingQuestion = useRef(null);
+
+  // The conversation exists only while this page is open (AC-010.12). Cancel its job polling on unmount.
+  useEffect(() => () => pendingQuestion.current?.abort(), []);
 
   useEffect(() => {
     let active = true;
@@ -111,13 +115,22 @@ export function AskTsolvePage() {
     }
     const question = draft;
     const earlier = history(conversation);
+    pendingQuestion.current?.abort();
+    const controller = new AbortController();
+    pendingQuestion.current = controller;
     dispatch({ type: 'send', question });
     try {
-      const answer = await askQuestion(question, earlier);
+      const answer = await askQuestion(question, earlier, undefined, { signal: controller.signal });
+      if (controller.signal.aborted) {
+        return;
+      }
       dispatch({ type: 'answer', answer });
       setDraft('');
       setBoxVersion((version) => version + 1);
     } catch (failure) {
+      if (controller.signal.aborted || failure?.name === 'AbortError') {
+        return;
+      }
       const code = failure?.code ?? 'MSG06';
       if (code === 'MSG124') {
         setAccess('site');
@@ -128,6 +141,10 @@ export function AskTsolvePage() {
         setFieldError(code);
       }
       dispatch({ type: 'fail', code });
+    } finally {
+      if (pendingQuestion.current === controller) {
+        pendingQuestion.current = null;
+      }
     }
   };
 

@@ -412,15 +412,19 @@
         "account-link-endpoints": "evaluating",
         "account-settings-page": "evaluating",
         "account-page-global": "evaluating",
-        "draft-only-when-done": "evaluating"
+        "draft-only-when-done": "evaluating",
+        "ask-job-backend": "passing",
+        "ask-job-forge": "passing",
+        "rewrite-job-backend": "passing",
+        "rewrite-job-forge": "passing"
       },
-      "lastUpdated": "2026-11-17T17:28:51.182Z",
-      "branch": "feat/KAN-336-jira-app-draft-reminder",
+      "lastUpdated": "2026-11-18T03:03:57.935Z",
+      "branch": "feat/KAN-337-jira-app-reject-reason",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "92e29e2c2bb5ff572805faab6b3c02727e2f61eb"
+        "default": "305535947b3bc1991c844a198337d3f89f76858f"
       }
     },
     "dashboard-audit": {

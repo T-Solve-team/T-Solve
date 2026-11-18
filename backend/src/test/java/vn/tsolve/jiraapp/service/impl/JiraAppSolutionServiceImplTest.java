@@ -52,7 +52,8 @@ class JiraAppSolutionServiceImplTest {
     private final SolutionFormTicketService tickets = mock(SolutionFormTicketService.class);
     private final SolutionDraftService drafts = mock(SolutionDraftService.class);
     private final SolutionFormAi ai = mock(SolutionFormAi.class);
-    private final JiraAppSolutionServiceImpl service = new JiraAppSolutionServiceImpl(access, tickets, drafts, ai);
+    private final JiraAppSolutionServiceImpl service =
+            new JiraAppSolutionServiceImpl(access, tickets, drafts, ai, mock(RedisAskJobStore.class));
 
     @Test
     void opensWithTheUsersDraftFirst_AC_005_2() {
@@ -171,10 +172,9 @@ class JiraAppSolutionServiceImplTest {
             Function<TSolveUser, Object> work = call.getArgument(1);
             return work.apply(USER);
         });
-        SolutionSections rewritten = new SolutionSections("Drops.", "Old.", "Update.", "", "Laptops.");
-        given(ai.rewrite(SECTIONS)).willReturn(rewritten);
 
-        assertThat(service.rewrite(CALLER, SECTIONS)).isEqualTo(rewritten);
+        assertThat(service.startRewrite(CALLER, SECTIONS).jobId()).isNotNull();
+        verify(ai).startRewrite(eq(SECTIONS), any());
     }
 
     @Test

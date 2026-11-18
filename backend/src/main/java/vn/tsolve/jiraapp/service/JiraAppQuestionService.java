@@ -1,8 +1,9 @@
 package vn.tsolve.jiraapp.service;
 
 import java.util.UUID;
-import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse;
 import vn.tsolve.common.security.JiraAppPrincipal;
+import vn.tsolve.jiraapp.dto.JiraAppQuestionJob;
+import vn.tsolve.jiraapp.dto.JiraAppQuestionJobResult;
 import vn.tsolve.jiraapp.dto.JiraAppQuestionRequest;
 import vn.tsolve.jiraapp.dto.JiraAppRatingRequest;
 import vn.tsolve.jiraapp.dto.JiraAskerEligibility;
@@ -14,11 +15,14 @@ public interface JiraAppQuestionService {
     JiraAskerEligibility eligibility(JiraAppPrincipal caller);
 
     /**
-     * The Knowledge Chatbot's answer for the Project of the FIT's Jira project (AC-010.4). Throws
+     * Starts a Knowledge Chatbot job for the Project of the FIT's Jira project (AC-010.4). Throws
      * {@code JiraSiteNotConnectedException} (403 MSG124) or {@code JiraIssueAccessDeniedException} (403 MSG08) before
-     * any AI call (AC-010.11) and {@code AiUnavailableException} when the AI fails or misses the deadline (AC-010.8).
+     * any job (AC-010.11) and {@code AiUnavailableException} when the job pool is full (AC-010.18).
      */
-    ChatbotAnswerResponse ask(JiraAppPrincipal caller, JiraAppQuestionRequest request);
+    JiraAppQuestionJob start(JiraAppPrincipal caller, JiraAppQuestionRequest request);
+
+    /** Reads a job owned by the FIT's site, account and project; otherwise 404 MSG06 (AC-010.16). */
+    JiraAppQuestionJobResult result(JiraAppPrincipal caller, UUID jobId);
 
     /** Rates an answer asked in the FIT's project (AC-010.15); 404 MSG04 for any other answer. */
     void rate(JiraAppPrincipal caller, UUID answerId, JiraAppRatingRequest request);
