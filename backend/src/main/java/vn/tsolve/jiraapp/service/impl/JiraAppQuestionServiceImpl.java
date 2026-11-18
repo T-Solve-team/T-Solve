@@ -52,6 +52,7 @@ import vn.tsolve.project.service.ProjectService;
 @Service
 public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
 
+    private static final String ASK_PREFIX = "jira-app:ask:";
     private static final Logger log = LoggerFactory.getLogger(JiraAppQuestionServiceImpl.class);
 
     private final JiraWorkspaceLookup workspaces;
@@ -60,6 +61,7 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
     private final JiraAskerLookup askers;
     private final ChatbotAnswerService answers;
     private final Executor executor;
+    private final Executor completionExecutor;
     private final RedisAskJobStore jobs;
     private final Duration timeout;
     private final BiConsumer<CompletableFuture<ChatbotAnswerResponse>, Duration> deadline;
@@ -75,6 +77,7 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
             JiraAskerLookup askers,
             ChatbotAnswerService answers,
             RedisAskJobStore jobs,
+            JiraAppJobCompletions completions,
             @Value("${JIRA_APP_ASK_THREADS:8}") int threads,
             @Value("${JIRA_APP_ASK_TIMEOUT:60s}") String timeout) {
         this(
@@ -85,6 +88,7 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
                 answers,
                 jobs,
                 askPool(threads),
+                completions.executor(),
                 DurationStyle.detectAndParse(timeout));
     }
 
@@ -123,6 +127,7 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
             ChatbotAnswerService answers,
             RedisAskJobStore jobs,
             Executor executor,
+            Executor completionExecutor,
             Duration timeout) {
         this(
                 workspaces,
@@ -132,6 +137,7 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
                 answers,
                 jobs,
                 executor,
+                completionExecutor,
                 timeout,
                 (future, limit) -> future.orTimeout(limit.toNanos(), TimeUnit.NANOSECONDS));
     }
@@ -144,6 +150,7 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
             ChatbotAnswerService answers,
             RedisAskJobStore jobs,
             Executor executor,
+            Executor completionExecutor,
             Duration timeout,
             BiConsumer<CompletableFuture<ChatbotAnswerResponse>, Duration> deadline) {
         if (timeout.isNegative() || timeout.isZero()) {
@@ -155,6 +162,7 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
         this.askers = askers;
         this.answers = answers;
         this.executor = executor;
+        this.completionExecutor = completionExecutor;
         this.jobs = jobs;
         this.timeout = timeout;
         this.deadline = deadline;
@@ -179,14 +187,10 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
         Optional<TSolveUser> reader =
                 tenantScope.runIn(workspace, () -> askers.find(caller.cloudId(), caller.accountId()));
         UUID id = UUID.randomUUID();
-        Job job = new Job(
-                caller.cloudId(),
-                caller.accountId(),
-                caller.projectKey(),
-                JiraAppQuestionJobResult.Status.PENDING,
-                null);
+        Job<ChatbotAnswerResponse> job = new Job<>(
+                caller.cloudId(), caller.accountId(), caller.projectKey(), RedisAskJobStore.Status.PENDING, null);
         try {
-            jobs.create(id, job);
+            jobs.create(ASK_PREFIX, id, job);
         } catch (DataAccessException e) {
             logFailure(id, e);
             throw new AiUnavailableException();
@@ -204,11 +208,12 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
                         }
                         try {
                             jobs.update(
+                                    ASK_PREFIX,
                                     id,
                                     job.finish(
                                             error == null
-                                                    ? JiraAppQuestionJobResult.Status.DONE
-                                                    : JiraAppQuestionJobResult.Status.FAILED,
+                                                    ? RedisAskJobStore.Status.DONE
+                                                    : RedisAskJobStore.Status.FAILED,
                                             error == null ? answer : null));
                         } catch (RuntimeException e) {
                             logFailure(id, e);
@@ -217,7 +222,7 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
                     completionExecutor(id));
         } catch (RejectedExecutionException e) {
             try {
-                jobs.delete(id);
+                jobs.delete(ASK_PREFIX, id);
             } catch (RuntimeException cleanupError) {
                 log.warn(
                         "Jira App question job {}: error type {}",
@@ -232,28 +237,29 @@ public class JiraAppQuestionServiceImpl implements JiraAppQuestionService {
 
     @Override
     public JiraAppQuestionJobResult result(JiraAppPrincipal caller, UUID jobId) {
-        Optional<Job> stored;
+        Optional<Job<ChatbotAnswerResponse>> stored;
         try {
-            stored = jobs.find(jobId);
+            stored = jobs.find(ASK_PREFIX, jobId, ChatbotAnswerResponse.class);
         } catch (DataAccessException e) {
             logFailure(jobId, e);
             throw new AiUnavailableException();
         }
-        Job job = stored.filter(record -> caller != null
+        Job<ChatbotAnswerResponse> job = stored.filter(record -> caller != null
                         && Objects.equals(record.cloudId(), caller.cloudId())
                         && Objects.equals(record.accountId(), caller.accountId())
                         && Objects.equals(record.projectKey(), caller.projectKey()))
                 .orElseThrow(JiraAppQuestionJobNotFoundException::new);
         return new JiraAppQuestionJobResult(
-                job.status(), job.status() == JiraAppQuestionJobResult.Status.DONE ? job.answer() : null);
+                JiraAppQuestionJobResult.Status.valueOf(job.status().name()),
+                job.status() == RedisAskJobStore.Status.DONE ? job.payload() : null);
     }
 
     private Executor completionExecutor(UUID id) {
         return task -> {
             try {
-                executor.execute(task);
+                completionExecutor.execute(task);
             } catch (RejectedExecutionException e) {
-                // A saturated or stopped ask pool must not leave a completed job PENDING.
+                // A saturated or stopped completion pool must not leave a completed job PENDING.
                 logFailure(id, e);
                 task.run();
             }

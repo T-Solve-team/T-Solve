@@ -2163,6 +2163,7 @@ paths:
       tags: [jira-app]
       operationId: rewriteSolution
       summary: The AI rewrite of the five sections, for 4.2 AI Rewrite Preview (STORY-007).
+      description: Starts a background job without waiting for AI; poll getSolutionRewriteJob (60 s deadline).
       security:
         - forgeInvocationToken: []
       requestBody:
@@ -2172,12 +2173,12 @@ paths:
             schema:
               $ref: '#/components/schemas/SolutionSections'
       responses:
-        '200':
-          description: The rewritten sections.
+        '202':
+          description: Rewrite job accepted.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SolutionSections'
+                $ref: '#/components/schemas/SolutionRewriteJob'
         '400':
           $ref: '#/components/responses/Problem'
         '401':
@@ -2190,7 +2191,42 @@ paths:
                 $ref: '#/components/schemas/ProblemDetail'
         '503':
           description: >
-            MSG68 — the AI rewrite is unavailable or took too long; MSG06 — the Forge token could not be checked.
+            MSG68 — the AI pool is full or the job cannot be stored; MSG06 — the Forge token could not be checked.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/jira-app/solution-rewrites/{jobId}:
+    get:
+      tags: [jira-app]
+      operationId: getSolutionRewriteJob
+      summary: Read a rewrite job belonging to the FIT's Jira account and site.
+      security:
+        - forgeInvocationToken: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: PENDING, DONE with sections, or FAILED without sections.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolutionRewriteJobResult'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '404':
+          description: MSG68 — unknown, expired or another Jira account's or site's job.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: MSG68 — the job store is unavailable; MSG06 — the Forge token could not be checked.
           content:
             application/problem+json:
               schema:
@@ -4549,6 +4585,24 @@ components:
           description: Present only when status is DONE.
           allOf:
             - $ref: '#/components/schemas/ChatbotAnswer'
+    SolutionRewriteJob:
+      type: object
+      required: [jobId]
+      properties:
+        jobId:
+          type: string
+          format: uuid
+    SolutionRewriteJobResult:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [PENDING, DONE, FAILED]
+        sections:
+          description: Present only when status is DONE.
+          allOf:
+            - $ref: '#/components/schemas/SolutionSections'
     JiraAskerEligibility:
       type: object
       required: [status]

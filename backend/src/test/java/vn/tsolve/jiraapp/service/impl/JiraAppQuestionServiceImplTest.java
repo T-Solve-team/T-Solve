@@ -83,12 +83,18 @@ class JiraAppQuestionServiceImplTest {
     private final JiraAskerLookup askers = mock(JiraAskerLookup.class);
     private final ChatbotAnswerService answers = mock(ChatbotAnswerService.class);
     private final Queue<Runnable> queued = new ArrayDeque<>();
+    private final Queue<Runnable> completions = new ArrayDeque<>();
     private boolean rejectTasks;
+    private boolean rejectCompletions;
     private final Executor executor = task -> {
         if (rejectTasks) {
             throw new RejectedExecutionException("private executor error");
         }
         queued.add(task);
+    };
+    private final Executor completionExecutor = task -> {
+        if (rejectCompletions) throw new RejectedExecutionException("private completion error");
+        completions.add(task);
     };
     private final InMemoryAskJobStore jobs = new InMemoryAskJobStore();
     private final AtomicReference<CompletableFuture<ChatbotAnswerResponse>> pending = new AtomicReference<>();
@@ -139,7 +145,7 @@ class JiraAppQuestionServiceImplTest {
     }
 
     @Test
-    void schedulesTheCompletionOnTheAskPool_AC_010_4_AC_010_17() {
+    void schedulesTheCompletionApartFromTheAskPool_AC_010_4_AC_010_17() {
         when(answers.askForProject(any(), any(), any())).thenReturn(ANSWER);
         var service = service(Duration.ofSeconds(60));
         var job = service.start(CALLER, new JiraAppQuestionRequest("q", List.of()));
@@ -148,10 +154,27 @@ class JiraAppQuestionServiceImplTest {
 
         assertThat(pending.get()).isCompletedWithValue(ANSWER);
         assertThat(service.result(CALLER, job.jobId()).status()).isEqualTo(JiraAppQuestionJobResult.Status.PENDING);
-        assertThat(queued).hasSize(1);
-        queued.remove().run();
+        assertThat(queued).isEmpty();
+        assertThat(completions).hasSize(1);
+        completions.remove().run();
         assertThat(service.result(CALLER, job.jobId()))
                 .isEqualTo(new JiraAppQuestionJobResult(JiraAppQuestionJobResult.Status.DONE, ANSWER));
+    }
+
+    @Test
+    void completionDoesNotWaitForQueuedAskCalls_AC_010_4_AC_010_17() {
+        when(answers.askForProject(any(), any(), any())).thenReturn(ANSWER);
+        var service = service(Duration.ofSeconds(60));
+        var first = service.start(CALLER, new JiraAppQuestionRequest("first", List.of()));
+        var second = service.start(CALLER, new JiraAppQuestionRequest("second", List.of()));
+
+        queued.remove().run();
+        assertThat(queued).hasSize(1);
+        completions.remove().run();
+
+        assertThat(service.result(CALLER, first.jobId()).status()).isEqualTo(JiraAppQuestionJobResult.Status.DONE);
+        assertThat(service.result(CALLER, second.jobId()).status()).isEqualTo(JiraAppQuestionJobResult.Status.PENDING);
+        assertThat(queued).hasSize(1);
     }
 
     @Test
@@ -162,20 +185,21 @@ class JiraAppQuestionServiceImplTest {
         pending.get().completeExceptionally(new TimeoutException("private timeout"));
 
         assertThat(service.result(CALLER, job.jobId()).status()).isEqualTo(JiraAppQuestionJobResult.Status.PENDING);
-        assertThat(queued).hasSize(2);
+        assertThat(queued).hasSize(1);
+        assertThat(completions).hasSize(1);
+        completions.remove().run();
+        assertThat(service.result(CALLER, job.jobId()).status()).isEqualTo(JiraAppQuestionJobResult.Status.FAILED);
         queued.remove().run();
         verifyNoInteractions(answers);
-        queued.remove().run();
-        assertThat(service.result(CALLER, job.jobId()).status()).isEqualTo(JiraAppQuestionJobResult.Status.FAILED);
         assertOnlyLog(job.jobId(), "TimeoutException");
     }
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
-    void completesInlineWhenTheAskPoolRejectsTheCallback_AC_010_4_AC_010_17(boolean timeout) {
+    void completesInlineWhenTheCompletionPoolRejectsTheCallback_AC_010_4_AC_010_17(boolean timeout) {
         var service = service(Duration.ofSeconds(60));
         var job = service.start(CALLER, new JiraAppQuestionRequest("q", List.of()));
-        rejectTasks = true;
+        rejectCompletions = true;
 
         if (timeout) {
             pending.get().completeExceptionally(new TimeoutException("private timeout"));
@@ -230,6 +254,9 @@ class JiraAppQuestionServiceImplTest {
         while (!queued.isEmpty()) {
             queued.remove().run();
         }
+        while (!completions.isEmpty()) {
+            completions.remove().run();
+        }
     }
 
     @Test
@@ -261,7 +288,15 @@ class JiraAppQuestionServiceImplTest {
             throw new RejectedExecutionException();
         };
         var service = new JiraAppQuestionServiceImpl(
-                workspaces, tenantScope, projects, askers, answers, jobs, full, Duration.ofSeconds(60));
+                workspaces,
+                tenantScope,
+                projects,
+                askers,
+                answers,
+                jobs,
+                full,
+                completionExecutor,
+                Duration.ofSeconds(60));
 
         assertThatThrownBy(() -> service.start(CALLER, new JiraAppQuestionRequest("q", List.of())))
                 .isInstanceOfSatisfying(AiUnavailableException.class, e -> {
@@ -528,7 +563,7 @@ class JiraAppQuestionServiceImplTest {
     }
 
     private static class InMemoryAskJobStore extends RedisAskJobStore {
-        final Map<UUID, Job> records = new HashMap<>();
+        final Map<UUID, Job<?>> records = new HashMap<>();
         int created;
         boolean failUpdates;
         boolean failCreates;
@@ -540,7 +575,7 @@ class JiraAppQuestionServiceImplTest {
         }
 
         @Override
-        void create(UUID id, Job job) {
+        <T> void create(String prefix, UUID id, Job<T> job) {
             lastCreateId = id;
             if (failCreates) {
                 throw new RedisConnectionFailureException("private Redis error");
@@ -550,15 +585,15 @@ class JiraAppQuestionServiceImplTest {
         }
 
         @Override
-        Optional<Job> find(UUID id) {
+        <T> Optional<Job<T>> find(String prefix, UUID id, Class<T> payloadType) {
             if (failReads) {
                 throw new RedisConnectionFailureException("private Redis error");
             }
-            return Optional.ofNullable(records.get(id));
+            return Optional.ofNullable((Job<T>) records.get(id));
         }
 
         @Override
-        void update(UUID id, Job job) {
+        <T> void update(String prefix, UUID id, Job<T> job) {
             if (failUpdates) {
                 throw new IllegalStateException("private Redis error");
             }
@@ -566,14 +601,23 @@ class JiraAppQuestionServiceImplTest {
         }
 
         @Override
-        void delete(UUID id) {
+        void delete(String prefix, UUID id) {
             records.remove(id);
         }
     }
 
     private JiraAppQuestionServiceImpl service(Duration timeout) {
         return new JiraAppQuestionServiceImpl(
-                workspaces, tenantScope, projects, askers, answers, jobs, executor, timeout, (future, deadline) -> {
+                workspaces,
+                tenantScope,
+                projects,
+                askers,
+                answers,
+                jobs,
+                executor,
+                completionExecutor,
+                timeout,
+                (future, deadline) -> {
                     assertThat(deadline).isEqualTo(timeout);
                     pending.set(future);
                 });

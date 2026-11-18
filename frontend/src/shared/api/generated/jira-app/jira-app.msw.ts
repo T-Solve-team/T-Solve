@@ -26,6 +26,8 @@ import type {
   MessageRef,
   SolutionForm,
   SolutionFormRequest,
+  SolutionRewriteJob,
+  SolutionRewriteJobResult,
   SolutionSections,
   SubmitSolutionRequest,
   SubmittedTicket,
@@ -200,13 +202,25 @@ export const getSubmitSolutionResponseMock = (
 });
 
 export const getRewriteSolutionResponseMock = (
-  overrideResponse: Partial<Extract<SolutionSections, object>> = {},
-): SolutionSections => ({
-  symptoms: faker.string.alpha({ length: { min: 10, max: 20 } }),
-  rootCause: faker.string.alpha({ length: { min: 10, max: 20 } }),
-  resolutionSteps: faker.string.alpha({ length: { min: 10, max: 20 } }),
-  workaround: faker.string.alpha({ length: { min: 10, max: 20 } }),
-  scopeOfApplicability: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  overrideResponse: Partial<Extract<SolutionRewriteJob, object>> = {},
+): SolutionRewriteJob => ({ jobId: faker.string.uuid(), ...overrideResponse });
+
+export const getGetSolutionRewriteJobResponseMock = (
+  overrideResponse: Partial<Extract<SolutionRewriteJobResult, object>> = {},
+): SolutionRewriteJobResult => ({
+  status: faker.helpers.arrayElement(['PENDING', 'DONE', 'FAILED'] as const),
+  sections: faker.helpers.arrayElement([
+    {
+      ...{
+        symptoms: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        rootCause: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        resolutionSteps: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        workaround: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        scopeOfApplicability: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+    },
+    undefined,
+  ]),
   ...overrideResponse,
 });
 
@@ -502,10 +516,10 @@ export const getSaveSolutionDraftMockHandler = (
 
 export const getRewriteSolutionMockHandler = (
   overrideResponse?:
-    | SolutionSections
+    | SolutionRewriteJob
     | ((
         info: Parameters<HttpResponseResolver<PathParams, SolutionSections>>[0],
-      ) => Promise<SolutionSections> | SolutionSections),
+      ) => Promise<SolutionRewriteJob> | SolutionRewriteJob),
   options?: RequestHandlerOptions,
 ) => {
   return http.post<PathParams, SolutionSections>(
@@ -517,6 +531,30 @@ export const getRewriteSolutionMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getRewriteSolutionResponseMock(),
+        { status: 202 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetSolutionRewriteJobMockHandler = (
+  overrideResponse?:
+    | SolutionRewriteJobResult
+    | ((
+        info: Parameters<HttpResponseResolver<{ jobId: string }>>[0],
+      ) => Promise<SolutionRewriteJobResult> | SolutionRewriteJobResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get<{ jobId: string }>(
+    '*/api/v1/jira-app/solution-rewrites/:jobId',
+    async (info: Parameters<HttpResponseResolver<{ jobId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetSolutionRewriteJobResponseMock(),
         { status: 200 },
       );
     },
@@ -561,5 +599,6 @@ export const getJiraAppMock = () => [
   getSubmitSolutionMockHandler(),
   getSaveSolutionDraftMockHandler(),
   getRewriteSolutionMockHandler(),
+  getGetSolutionRewriteJobMockHandler(),
   getGetIssuePanelMockHandler(),
 ];

@@ -23,8 +23,8 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.types.Expiration;
 import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse;
 import vn.tsolve.chatbot.answer.dto.WikiDocumentCitation;
-import vn.tsolve.jiraapp.dto.JiraAppQuestionJobResult.Status;
 import vn.tsolve.jiraapp.service.impl.RedisAskJobStore.Job;
+import vn.tsolve.jiraapp.service.impl.RedisAskJobStore.Status;
 
 class RedisAskJobStoreTest {
     private final StringRedisTemplate redis = mock(StringRedisTemplate.class);
@@ -36,12 +36,53 @@ class RedisAskJobStoreTest {
     private final RedisAskJobStore store = new RedisAskJobStore(redis, mapper);
 
     @Test
+    void rewritePrefixPreservesTtlAndCannotRecreateExpiredJobs_AC_007_7() throws Exception {
+        when(redis.opsForValue()).thenReturn(values);
+        UUID id = UUID.randomUUID();
+        var pending = new Job<vn.tsolve.ticket.dto.SolutionSections>("cloud", "account", null, Status.PENDING, null);
+        store.create("jira-app:rewrite:", id, pending);
+        var initialJson = ArgumentCaptor.forClass(String.class);
+        var ttl = ArgumentCaptor.forClass(Duration.class);
+        verify(values).set(eq("jira-app:rewrite:" + id), initialJson.capture(), ttl.capture());
+        assertThat(ttl.getValue()).isPositive().isLessThanOrEqualTo(Duration.ofSeconds(300));
+        assertThat(mapper.readTree(initialJson.getValue()).path("accountId").asText())
+                .isEqualTo("account");
+        assertThat(mapper.readTree(initialJson.getValue()).path("cloudId").asText())
+                .isEqualTo("cloud");
+
+        RedisConnection connection = mock(RedisConnection.class);
+        RedisStringCommands strings = mock(RedisStringCommands.class);
+        when(connection.stringCommands()).thenReturn(strings);
+        doAnswer(call -> ((RedisCallback<?>) call.getArgument(0)).doInRedis(connection))
+                .when(redis)
+                .execute(any(RedisCallback.class));
+        var sections = new vn.tsolve.ticket.dto.SolutionSections("Symptoms", "Cause", "Steps", "", "Scope");
+        var done = pending.finish(Status.DONE, sections);
+        store.update("jira-app:rewrite:", id, done);
+        var json = ArgumentCaptor.forClass(byte[].class);
+        var expiry = ArgumentCaptor.forClass(Expiration.class);
+        verify(strings)
+                .set(
+                        eq(("jira-app:rewrite:" + id).getBytes(StandardCharsets.UTF_8)),
+                        json.capture(),
+                        expiry.capture(),
+                        eq(RedisStringCommands.SetOption.ifPresent()));
+        assertThat(expiry.getValue().isKeepTtl()).isTrue();
+        when(values.get("jira-app:rewrite:" + id)).thenReturn(new String(json.getValue(), StandardCharsets.UTF_8));
+        assertThat(store.find("jira-app:rewrite:", id, vn.tsolve.ticket.dto.SolutionSections.class))
+                .contains(done);
+        assertThat(store.find("jira-app:ask:", id, ChatbotAnswerResponse.class)).isEmpty();
+        store.delete("jira-app:rewrite:", id);
+        verify(redis).delete("jira-app:rewrite:" + id);
+    }
+
+    @Test
     void writesPendingOwnerAsJsonWithAtMost300Seconds_AC_010_17() throws Exception {
         when(redis.opsForValue()).thenReturn(values);
         UUID id = UUID.randomUUID();
-        Job pending = new Job("cloud", "account", "DP", Status.PENDING, null);
+        Job<ChatbotAnswerResponse> pending = new Job<>("cloud", "account", "DP", Status.PENDING, null);
 
-        store.create(id, pending);
+        store.create("jira-app:ask:", id, pending);
 
         var json = ArgumentCaptor.forClass(String.class);
         var ttl = ArgumentCaptor.forClass(Duration.class);
@@ -53,7 +94,7 @@ class RedisAskJobStoreTest {
         assertThat(tree.path("projectKey").asText()).isEqualTo("DP");
         assertThat(tree.path("status").asText()).isEqualTo("PENDING");
         when(values.get("jira-app:ask:" + id)).thenReturn(json.getValue());
-        assertThat(store.find(id)).contains(pending);
+        assertThat(store.find("jira-app:ask:", id, ChatbotAnswerResponse.class)).contains(pending);
     }
 
     @Test
@@ -73,9 +114,9 @@ class RedisAskJobStoreTest {
                 ChatbotAnswerResponse.Outcome.ANSWERED,
                 "Answer [1]",
                 List.of(new WikiDocumentCitation(1, UUID.randomUUID(), "Wiki title")));
-        Job done = new Job("cloud", "account", "DP", Status.DONE, answer);
+        Job<ChatbotAnswerResponse> done = new Job<>("cloud", "account", "DP", Status.DONE, answer);
 
-        store.update(id, done);
+        store.update("jira-app:ask:", id, done);
 
         var json = ArgumentCaptor.forClass(byte[].class);
         var expiry = ArgumentCaptor.forClass(Expiration.class);
@@ -86,18 +127,21 @@ class RedisAskJobStoreTest {
                         expiry.capture(),
                         eq(RedisStringCommands.SetOption.ifPresent()));
         assertThat(expiry.getValue().isKeepTtl()).isTrue();
-        assertThat(mapper.readValue(json.getValue(), Job.class)).isEqualTo(done);
+        assertThat(mapper.<Job<ChatbotAnswerResponse>>readValue(
+                        json.getValue(),
+                        mapper.getTypeFactory().constructParametricType(Job.class, ChatbotAnswerResponse.class)))
+                .isEqualTo(done);
         when(redis.opsForValue()).thenReturn(values);
         when(values.get("jira-app:ask:" + id)).thenReturn(new String(json.getValue(), StandardCharsets.UTF_8));
-        assertThat(store.find(id)).contains(done);
+        assertThat(store.find("jira-app:ask:", id, ChatbotAnswerResponse.class)).contains(done);
     }
 
     @Test
     void returnsEmptyForMissingOrExpiredAndDeletesRejectedJobs_AC_010_16_AC_010_18() {
         when(redis.opsForValue()).thenReturn(values);
         UUID id = UUID.randomUUID();
-        assertThat(store.find(id)).isEmpty();
-        store.delete(id);
+        assertThat(store.find("jira-app:ask:", id, ChatbotAnswerResponse.class)).isEmpty();
+        store.delete("jira-app:ask:", id);
         verify(redis).delete("jira-app:ask:" + id);
     }
 }

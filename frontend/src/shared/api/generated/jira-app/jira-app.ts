@@ -37,6 +37,8 @@ import type {
   ProblemResponse,
   SolutionForm,
   SolutionFormRequest,
+  SolutionRewriteJob,
+  SolutionRewriteJobResult,
   SolutionSections,
   SubmitSolutionRequest,
   SubmittedTicket,
@@ -1392,12 +1394,13 @@ export const getRewriteSolutionUrl = () => {
 };
 
 /**
+ * Starts a background job without waiting for AI; poll getSolutionRewriteJob (60 s deadline).
  * @summary The AI rewrite of the five sections, for 4.2 AI Rewrite Preview (STORY-007).
  */
 export const rewriteSolution = async (
   solutionSections: SolutionSections,
   options?: Parameters<typeof http>[1],
-): Promise<SolutionSections> => {
+): Promise<SolutionRewriteJob> => {
   const getHeaders = (
     h?: NonNullable<RequestInit['headers']>,
   ): Record<string, string | readonly string[]> => {
@@ -1417,7 +1420,7 @@ export const rewriteSolution = async (
     }
     return headers;
   };
-  return http<SolutionSections>(getRewriteSolutionUrl(), {
+  return http<SolutionRewriteJob>(getRewriteSolutionUrl(), {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
@@ -1495,6 +1498,146 @@ export const useRewriteSolution = <
 > => {
   return useMutation(getRewriteSolutionMutationOptions(options), queryClient);
 };
+export const getGetSolutionRewriteJobUrl = (jobId: string) => {
+  return `/api/v1/jira-app/solution-rewrites/${jobId}`;
+};
+
+/**
+ * @summary Read a rewrite job belonging to the FIT's Jira account and site.
+ */
+export const getSolutionRewriteJob = async (
+  jobId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<SolutionRewriteJobResult> => {
+  return http<SolutionRewriteJobResult>(getGetSolutionRewriteJobUrl(jobId), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetSolutionRewriteJobQueryKey = (jobId: string) => {
+  return [`/api/v1/jira-app/solution-rewrites/${jobId}`] as const;
+};
+
+export const getGetSolutionRewriteJobQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSolutionRewriteJob>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSolutionRewriteJob>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSolutionRewriteJobQueryKey(jobId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSolutionRewriteJob>>> = ({ signal }) =>
+    getSolutionRewriteJob(jobId, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: jobId !== null && jobId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getSolutionRewriteJob>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetSolutionRewriteJobQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSolutionRewriteJob>>
+>;
+export type GetSolutionRewriteJobQueryError = ErrorType<ProblemResponse | ProblemDetail>;
+
+export function useGetSolutionRewriteJob<
+  TData = Awaited<ReturnType<typeof getSolutionRewriteJob>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  jobId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSolutionRewriteJob>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSolutionRewriteJob>>,
+          TError,
+          Awaited<ReturnType<typeof getSolutionRewriteJob>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSolutionRewriteJob<
+  TData = Awaited<ReturnType<typeof getSolutionRewriteJob>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSolutionRewriteJob>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSolutionRewriteJob>>,
+          TError,
+          Awaited<ReturnType<typeof getSolutionRewriteJob>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSolutionRewriteJob<
+  TData = Awaited<ReturnType<typeof getSolutionRewriteJob>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSolutionRewriteJob>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Read a rewrite job belonging to the FIT's Jira account and site.
+ */
+
+export function useGetSolutionRewriteJob<
+  TData = Awaited<ReturnType<typeof getSolutionRewriteJob>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSolutionRewriteJob>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetSolutionRewriteJobQueryOptions(jobId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export const getGetIssuePanelUrl = (issueKey: string) => {
   return `/api/v1/jira-app/issues/${issueKey}/panel`;
 };

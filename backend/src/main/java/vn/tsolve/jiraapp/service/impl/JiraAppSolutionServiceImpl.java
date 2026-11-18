@@ -1,9 +1,17 @@
 package vn.tsolve.jiraapp.service.impl;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.RejectedExecutionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
+import vn.tsolve.ai.exception.AiRewriteUnavailableException;
 import vn.tsolve.common.security.JiraAppPrincipal;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.jiraapp.dto.IssuePanelResponse;
@@ -12,11 +20,16 @@ import vn.tsolve.jiraapp.dto.SolutionFormDraft;
 import vn.tsolve.jiraapp.dto.SolutionFormRequest;
 import vn.tsolve.jiraapp.dto.SolutionFormResponse;
 import vn.tsolve.jiraapp.dto.SolutionFormResponse.Origin;
+import vn.tsolve.jiraapp.dto.SolutionRewriteJob;
+import vn.tsolve.jiraapp.dto.SolutionRewriteJobResult;
 import vn.tsolve.jiraapp.dto.SubmitSolutionRequest;
 import vn.tsolve.jiraapp.dto.SubmittedTicketResponse;
+import vn.tsolve.jiraapp.exception.SolutionRewriteJobNotFoundException;
 import vn.tsolve.jiraapp.service.JiraAppSolutionService;
 import vn.tsolve.jiraapp.service.JiraIssueAccess;
 import vn.tsolve.jiraapp.service.SolutionFormAi;
+import vn.tsolve.jiraapp.service.impl.RedisAskJobStore.Job;
+import vn.tsolve.jiraapp.service.impl.RedisAskJobStore.Status;
 import vn.tsolve.ticket.dto.MessageRef;
 import vn.tsolve.ticket.dto.SolutionFormSubmission;
 import vn.tsolve.ticket.dto.SolutionSections;
@@ -30,19 +43,27 @@ import vn.tsolve.ticket.service.SolutionFormTicketService;
 @Service
 public class JiraAppSolutionServiceImpl implements JiraAppSolutionService {
 
+    private static final Logger log = LoggerFactory.getLogger(JiraAppSolutionServiceImpl.class);
+    private static final String REWRITE_PREFIX = "jira-app:rewrite:";
     private static final MessageRef AI_DRAFT_UNAVAILABLE = new MessageRef("MSG67", Map.of());
 
     private final JiraIssueAccess access;
     private final SolutionFormTicketService tickets;
     private final SolutionDraftService drafts;
     private final SolutionFormAi ai;
+    private final RedisAskJobStore jobs;
 
     public JiraAppSolutionServiceImpl(
-            JiraIssueAccess access, SolutionFormTicketService tickets, SolutionDraftService drafts, SolutionFormAi ai) {
+            JiraIssueAccess access,
+            SolutionFormTicketService tickets,
+            SolutionDraftService drafts,
+            SolutionFormAi ai,
+            RedisAskJobStore jobs) {
         this.access = access;
         this.tickets = tickets;
         this.drafts = drafts;
         this.ai = ai;
+        this.jobs = jobs;
     }
 
     @Override
@@ -113,8 +134,59 @@ public class JiraAppSolutionServiceImpl implements JiraAppSolutionService {
     }
 
     @Override
-    public SolutionSections rewrite(JiraAppPrincipal caller, SolutionSections sections) {
-        return access.asUser(caller, user -> ai.rewrite(sections));
+    public SolutionRewriteJob startRewrite(JiraAppPrincipal caller, SolutionSections sections) {
+        access.asUser(caller, user -> true);
+        UUID id = UUID.randomUUID();
+        Job<SolutionSections> job = new Job<>(caller.cloudId(), caller.accountId(), null, Status.PENDING, null);
+        try {
+            jobs.create(REWRITE_PREFIX, id, job);
+            ai.startRewrite(sections, (rewritten, error) -> {
+                if (error != null) logFailure(id, error);
+                try {
+                    jobs.update(
+                            REWRITE_PREFIX,
+                            id,
+                            job.finish(error == null ? Status.DONE : Status.FAILED, error == null ? rewritten : null));
+                } catch (RuntimeException e) {
+                    logFailure(id, e);
+                }
+            });
+        } catch (DataAccessException | RejectedExecutionException e) {
+            logFailure(id, e);
+            try {
+                jobs.delete(REWRITE_PREFIX, id);
+            } catch (RuntimeException cleanupError) {
+                logFailure(id, cleanupError);
+            }
+            throw new AiRewriteUnavailableException();
+        }
+        return new SolutionRewriteJob(id);
+    }
+
+    @Override
+    public SolutionRewriteJobResult rewriteResult(JiraAppPrincipal caller, UUID jobId) {
+        Optional<Job<SolutionSections>> stored;
+        try {
+            stored = jobs.find(REWRITE_PREFIX, jobId, SolutionSections.class);
+        } catch (DataAccessException e) {
+            logFailure(jobId, e);
+            throw new AiRewriteUnavailableException();
+        }
+        Job<SolutionSections> job = stored.filter(record -> caller != null
+                        && Objects.equals(record.cloudId(), caller.cloudId())
+                        && Objects.equals(record.accountId(), caller.accountId()))
+                .orElseThrow(SolutionRewriteJobNotFoundException::new);
+        return new SolutionRewriteJobResult(
+                SolutionRewriteJobResult.Status.valueOf(job.status().name()),
+                job.status() == Status.DONE ? job.payload() : null);
+    }
+
+    private static void logFailure(UUID id, Throwable error) {
+        while ((error instanceof CompletionException || error instanceof ExecutionException)
+                && error.getCause() != null) {
+            error = error.getCause();
+        }
+        log.warn("Jira App rewrite job {}: error type {}", id, error.getClass().getSimpleName());
     }
 
     @Override
