@@ -365,11 +365,11 @@
         "classify-question": "passing",
         "classify-question-ui": "passing",
         "conversation-store": "passing",
-        "conversation-api": "evaluating",
-        "conversation-ui": "evaluating",
-        "conversation-paging": "evaluating"
+        "conversation-api": "passing",
+        "conversation-ui": "passing",
+        "conversation-paging": "passing"
       },
-      "lastUpdated": "2026-11-18T09:47:55.005Z",
+      "lastUpdated": "2026-11-18T10:33:53.487Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"

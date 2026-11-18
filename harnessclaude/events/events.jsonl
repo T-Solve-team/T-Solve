@@ -2060,3 +2060,6 @@
 {"ts":"2026-11-18T09:05:17.677Z","type":"feature-status","module":"chatbot","feature":"conversation-paging","from":"pending","to":"in-progress"}
 {"ts":"2026-11-18T09:47:54.719Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"e77bdca21be69c8a5fc5170e4fa295c71eab3cde"}
 {"ts":"2026-11-18T09:47:55.007Z","type":"feature-status","module":"chatbot","feature":"conversation-paging","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-18T10:33:52.934Z","type":"feature-status","module":"chatbot","feature":"conversation-api","from":"evaluating","to":"passing"}
+{"ts":"2026-11-18T10:33:53.217Z","type":"feature-status","module":"chatbot","feature":"conversation-ui","from":"evaluating","to":"passing"}
+{"ts":"2026-11-18T10:33:53.489Z","type":"feature-status","module":"chatbot","feature":"conversation-paging","from":"evaluating","to":"passing"}
