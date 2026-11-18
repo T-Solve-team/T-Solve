@@ -2044,3 +2044,7 @@
 {"ts":"2026-11-17T16:19:02.091Z","type":"spec-approved","module":"chatbot","specHash":"cfd3e4d32fef7e8ecdcabcc0adb67d0e03be49dc42986938eb64af336a03d9a7"}
 {"ts":"2026-11-17T16:19:47.937Z","type":"feature-status","module":"chatbot","feature":"conversation-store","from":"pending","to":"in-progress"}
 {"ts":"2026-11-17T19:09:16.981Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"4967050af284e74c4c304f7eb91e2899e052b4e6"}
+{"ts":"2026-11-17T19:12:22.040Z","type":"feature-status","module":"chatbot","feature":"conversation-store","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T20:04:55.755Z","type":"feature-status","module":"chatbot","feature":"conversation-store","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-18T02:55:44.980Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"1808272d1f57f45b3df37eb2cf0192b4fd0aea4b"}
+{"ts":"2026-11-18T02:55:45.259Z","type":"feature-status","module":"chatbot","feature":"conversation-store","from":"fixing","to":"evaluating"}
