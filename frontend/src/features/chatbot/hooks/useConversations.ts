@@ -1,58 +1,45 @@
-import { useEffect, useState } from 'react';
-import type { ChatTurn, Conversation } from '../model';
-import { readConversations, writeConversations } from './chatbot-storage';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  getGetChatbotConversationQueryKey,
+  getListChatbotConversationsQueryKey,
+  useDeleteChatbotConversation,
+  useGetChatbotConversation,
+  useListChatbotConversations,
+} from '@/shared/api';
+import { showMessage } from '@/shared/messages';
 
-/**
- * The conversations of the session (spec STORY-002), kept in `sessionStorage` and in memory. Local state: it belongs
- * to this screen only (guideline 05 C8). The empty "New conversation" is `openId === null` and is never stored.
- */
-export function useConversations(userId: string) {
-  const [stored, setStored] = useState(() => readConversations(userId));
+/** Server conversations stay in the query cache; null selects the unsaved empty conversation. */
+export function useConversations() {
+  const client = useQueryClient();
   const [openId, setOpenId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (stored.length > 0) writeConversations(userId, stored);
-  }, [userId, stored]);
-
-  const conversations = [...stored].sort((a, b) => b.startedAt - a.startedAt);
-  const open = stored.find((conversation) => conversation.id === openId);
-
-  /** Adds a turn to its conversation, which is created with its first answer. */
-  function addTurn(conversationId: string, turn: ChatTurn) {
-    setStored((current) =>
-      current.some((c) => c.id === conversationId)
-        ? current.map((c) => (c.id === conversationId ? { ...c, turns: [...c.turns, turn] } : c))
-        : [
-            ...current,
-            { id: conversationId, startedAt: Date.now(), turns: [turn] } satisfies Conversation,
-          ],
-    );
-    setOpenId(conversationId);
-  }
-
-  /** Sets or, with `undefined`, removes the rating of one answer; a conversation or answer that is gone is ignored. */
-  function setRating(conversationId: string, answerId: string, rating: ChatTurn['rating']) {
-    setStored((current) =>
-      current.map((c) =>
-        c.id === conversationId
-          ? {
-              ...c,
-              turns: c.turns.map((turn) =>
-                turn.answer.answerId === answerId ? { ...turn, rating } : turn,
-              ),
-            }
-          : c,
-      ),
-    );
-  }
+  const list = useListChatbotConversations();
+  const conversation = useGetChatbotConversation(openId ?? '', {
+    query: { enabled: openId !== null, staleTime: 0 },
+  });
+  const remove = useDeleteChatbotConversation({
+    mutation: {
+      meta: { handlesOwnErrors: true },
+      onSuccess: async (_, { chatSessionId }) => {
+        if (openId === chatSessionId) setOpenId(null);
+        client.removeQueries({ queryKey: getGetChatbotConversationQueryKey(chatSessionId) });
+        await client.invalidateQueries({ queryKey: getListChatbotConversationsQueryKey() });
+      },
+      onError: (error) => {
+        if (error.status !== 401) showMessage('MSG06');
+      },
+    },
+  });
 
   return {
-    conversations,
+    list,
+    conversation,
+    remove,
     openId,
-    turns: open?.turns ?? [],
+    conversations: list.data ?? [],
+    turns:
+      conversation.data?.turns.map((turn) => ({ ...turn, rating: turn.rating ?? undefined })) ?? [],
     open: setOpenId,
     startNew: () => setOpenId(null),
-    addTurn,
-    setRating,
   };
 }

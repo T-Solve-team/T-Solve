@@ -25,7 +25,7 @@
   white-space: pre-wrap;
 }
 
-/* Figma 12.1 "Card · Conversations": the list on the left; the card ends after its last entry, a long title wraps. */
+/* Figma 12.1 "Card · Conversations": the list on the left; the card ends after its last entry, long titles use an ellipsis. */
 .list {
   align-self: start;
   max-height: 100%;
@@ -50,7 +50,13 @@
   height: auto;
   padding-block: var(--ant-padding-xs);
   text-align: left;
-  white-space: normal;
+  min-width: 0;
+}
+
+.title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .entry[aria-current='true'] {
