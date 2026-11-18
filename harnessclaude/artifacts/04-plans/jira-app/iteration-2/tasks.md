@@ -1,7 +1,7 @@
 ---
 module: jira-app
 date: 2026-11-11
-total_tasks: 12
+total_tasks: 27
 owner: Dev
 ---
 
@@ -396,4 +396,76 @@ title) (AC-014.1). `settingsPagePath` builds `/jira/apps/{appId}/{envId}` for th
 Draft is not touched (AC-008.11). Jira App only; the panel already reloads on `JIRA_ISSUE_CHANGED` (BUG-231).
 **Files:** Modify `jira-app/TSolve_JiraApp/src/frontend/panel/IssuePanel.jsx`; test `IssuePanel.test.jsx`.
 **Dependencies:** none
+**Estimated size:** small
+
+## Task 24: The form opens with the issue text, no AI draft (KAN-371)
+
+**Story:** STORY-002, STORY-005
+**Feature:** form-from-issue
+**Description:** `openForm` without a Draft returns `Origin.ISSUE` with the issue text (summary, blank line,
+description, cut to 10,000) and no message; no AI call (AC-002.1). The Draft still wins (AC-005.2). Move
+`fromIssue` into `IssueText` (Task 25 reuses it); remove `SolutionFormAi.draft`, `SolutionFormDraft`, `Origin.AI_DRAFT`
+and MSG67 from the response; keep `rewrite`. OpenAPI: drop `AI_DRAFT` from the origin enum and the MSG67 wording of
+the solution-form path and `message`; `npm run generate:api`. Forge: no behaviour change (a null `message` shows no
+notice) — remove MSG67 tests/fixtures that assumed an AI draft. Rewrite or delete the `*_AC_002_1` / `*_AC_002_2`
+tests; new tests name AC-002.1 and AC-005.2.
+**Files:** Modify `backend/src/main/java/vn/tsolve/jiraapp/service/impl/JiraAppSolutionServiceImpl.java`,
+`.../service/SolutionFormAi.java`, `.../service/impl/SolutionFormAiImpl.java`, `.../dto/SolutionFormResponse.java`;
+create `.../service/impl/IssueText.java`; delete `.../dto/SolutionFormDraft.java`; tests
+`JiraAppSolutionServiceImplTest`, `SolutionFormAiImplTest`, new `IssueTextTest`; `frontend/openapi/tsolve-api.yaml`
++ `frontend/src/shared/api/generated`; Forge `SolutionFormModal.test.jsx`, `BackgroundApp.test.jsx` if they use
+`AI_DRAFT`/MSG67.
+**Dependencies:** none
+**Estimated size:** small
+
+## Task 25: Record the Done state and create the Draft at Done (KAN-371)
+
+**Story:** STORY-005
+**Feature:** draft-at-done-backend
+**Description:** Changeset `048-jira-app-issue-done-state.sql` (`jira_issue_done_state`: `project_id` → project,
+`jira_issue_key`, `done`, `updated_at`, PK (project_id, jira_issue_key)) and its entity/repository in `ticket`;
+`SolutionDraftService.recordIssueDone` (upsert) and `createIfAbsent` (`ON CONFLICT DO NOTHING`). OpenAPI path
+`POST /api/v1/jira-app/events/issue-updated` (`IssueUpdatedPayload`, 202). `JiraAppIssueEventController`
+(`ROLE_JIRA_APP`) → `IssueUpdatedService`: Workspace from the FIT site, Project from the key, Done state, move
+detection (recorded state, else `JiraStatusClient` for the `from` status's category, a failed read = a move), owner =
+assignee else `atlassianId`, linked + member + no ticket, Draft = `IssueText` of the summary and the ADF description
+(a `jiraapp` ADF-to-text matching `watchDone.js#issueText`). Jira read outside the transaction; both writes in one.
+Tests: AC-005.6 (role, Workspace from the FIT not the payload), AC-005.7 (assignee, mover without assignee, content),
+AC-005.8 (each refusal leaves an existing Draft unchanged, automation without assignee), AC-005.9 (in/out of Done,
+Draft kept), AC-005.10 (unreadable event → 202 no change; write failure → 5xx, nothing stored); an IT for the
+migration and `createIfAbsent` against a concurrent Close.
+**Files:** Create `backend/src/main/resources/db/changelog/changes/048-jira-app-issue-done-state.sql` (+ master),
+`backend/src/main/java/vn/tsolve/ticket/entity/JiraIssueDoneState.java`,
+`.../ticket/repository/JiraIssueDoneStateRepository.java`, `.../jiraapp/controller/JiraAppIssueEventController.java`,
+`.../jiraapp/dto/IssueUpdatedPayload.java`, `.../jiraapp/service/IssueUpdatedService.java`,
+`.../jiraapp/service/impl/IssueUpdatedServiceImpl.java`, `.../jiraapp/service/impl/AdfText.java`,
+`.../jiraapp/client/JiraStatusClient.java`, `.../jiraapp/client/RestJiraStatusClient.java`; modify
+`.../ticket/service/SolutionDraftService.java`, `.../impl/SolutionDraftServiceImpl.java`,
+`.../ticket/repository/SolutionDraftRepository.java`; `frontend/openapi/tsolve-api.yaml` + generated; tests.
+**Dependencies:** Task 24 (`IssueText`)
+**Estimated size:** large
+
+## Task 26: Forge trigger on issue updates (KAN-371)
+
+**Story:** STORY-005
+**Feature:** issue-updated-trigger
+**Description:** Manifest `trigger` `tsolve-issue-updated-trigger` on `avi:jira:updated:issue` with
+`filter.ignoreSelf: true`, straight to remote endpoint `tsolve-issue-updated-endpoint` (route
+`/api/v1/jira-app/events/issue-updated`), as the issue-created trigger (AC-005.6). `manifest.test.js` checks it;
+`forge lint` passes. No new scope (`read:jira-work` covers the event). Dev-site check: drag a card to Done on the
+board → the assignee's panel shows MSG77 "Continue draft".
+**Files:** Modify `jira-app/TSolve_JiraApp/manifest.yml`, `jira-app/TSolve_JiraApp/src/manifest.test.js`.
+**Dependencies:** Task 25
+**Estimated size:** small
+
+## Task 27: Remind only while the issue is Done (KAN-371)
+
+**Story:** STORY-011
+**Feature:** draft-reminder-done-only
+**Description:** Both `findOpenDrafts` queries require a `jira_issue_done_state` row with `done = true` for the
+Draft's Project and issue (AC-011.2); a Draft of an issue moved out of Done or never recorded gets no email. Tests
+named AC-011.2: Done → reminded, moved out → not, never recorded → not, back in Done → reminded again.
+**Files:** Modify `backend/src/main/java/vn/tsolve/ticket/repository/SolutionDraftRepository.java`; tests of the
+reminder query/handlers (`DraftReminder*Test`, the open-Draft repository IT).
+**Dependencies:** Task 25 (the table)
 **Estimated size:** small

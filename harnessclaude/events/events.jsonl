@@ -2117,3 +2117,8 @@
 {"ts":"2026-11-18T06:47:27.645Z","type":"spec-approved","module":"jira-app","specHash":"7f62a6dc931a084f3013501872829a79658b512ca13f2ede8e94b4ec951fba9a"}
 {"ts":"2026-11-18T06:47:32.328Z","type":"spec-approved","module":"ticket-review","specHash":"e69cb9f06e5c370a11a27c036624518563dc89c049948212d64403a9538b7cce"}
 {"ts":"2026-11-18T06:47:55.411Z","type":"quick-opened","what":"Keep the import preview cleanup in Vietnam time; drop TSOLVE_JOB_TIME_ZONE","files":["backend/src/main/java/vn/tsolve/ticket/service/impl/PreviewCleanupJob.java","backend/src/test/java/vn/tsolve/ticket/service/impl/PreviewCleanupJobTest.java"]}
+{"ts":"2026-11-18T07:53:57.380Z","type":"spec-approved","module":"jira-app","specHash":"e7a9e78136d9c147caaa0ce708e27a00fda468c9137bbd13e5b18936a8b61eb3"}
+{"ts":"2026-11-18T07:56:23.527Z","type":"feature-status","module":"jira-app","feature":"form-from-issue","from":null,"to":"pending"}
+{"ts":"2026-11-18T07:56:23.770Z","type":"feature-status","module":"jira-app","feature":"draft-at-done-backend","from":null,"to":"pending"}
+{"ts":"2026-11-18T07:56:24.020Z","type":"feature-status","module":"jira-app","feature":"issue-updated-trigger","from":null,"to":"pending"}
+{"ts":"2026-11-18T07:56:24.274Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-done-only","from":null,"to":"pending"}

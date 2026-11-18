@@ -412,9 +412,13 @@
         "account-link-endpoints": "evaluating",
         "account-settings-page": "evaluating",
         "account-page-global": "evaluating",
-        "draft-only-when-done": "evaluating"
+        "draft-only-when-done": "evaluating",
+        "form-from-issue": "pending",
+        "draft-at-done-backend": "pending",
+        "issue-updated-trigger": "pending",
+        "draft-reminder-done-only": "pending"
       },
-      "lastUpdated": "2026-11-17T17:28:51.182Z",
+      "lastUpdated": "2026-11-18T07:56:24.273Z",
       "branch": "feat/KAN-336-jira-app-draft-reminder",
       "repos": [
         "default"

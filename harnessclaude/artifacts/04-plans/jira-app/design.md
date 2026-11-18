@@ -231,3 +231,8 @@ item, although the page worked by its URL. The page becomes the app's single `ji
 `tsolve-account-settings`, title "T-Solve account", same resource and resolver), shown under **Apps** in Jira's
 navigation; its URL is `/jira/apps/{appId}/{envId}`, which the panel's MSG62 link now opens. An app may register only
 one `jira:globalPage`.
+
+## Change 2026-11-18: no AI draft, a Draft at Done (KAN-371)
+The form opens with the issue text (no AI draft, no MSG67); a Forge trigger on `avi:jira:updated:issue` creates a
+Draft for the assignee (else the mover) when an issue moves into Done and records each issue's Done state, which the
+daily reminder now requires. Details and decisions: `iteration-2/design.md`, "Change — 2026-11-18".
