@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.AdditionalAnswers.delegatesTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.notNull;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -225,6 +226,20 @@ class ChatbotConversationStoreIT {
     }
 
     @Test
+    void refusesAConversationDeletedDuringTheAsk_AC_013_4_BUG_333() {
+        UUID session = session(owner, "Deleted");
+        var deleting = mock(ChatSessionRepository.class, delegatesTo(sessions));
+        doReturn(0).when(deleting).touch(any());
+        run(deleting, messages, service -> {
+            assertThatThrownBy(() -> service.ask(owner, new ChatbotAskRequest("hello", session.toString())))
+                    .isInstanceOf(ChatbotConversationNotFoundException.class)
+                    .hasMessage("MSG04");
+            assertThat(count("chatbot_answer")).isZero();
+            assertThat(count("chat_message")).isZero();
+        });
+    }
+
+    @Test
     void givesTheDraftOnlyTheTurnsBeforeItsAnswer_AC_010_3() {
         UUID session = session(owner, "Turn 0");
         Instant start = Instant.parse("2026-10-01T00:00:00Z");
@@ -247,6 +262,13 @@ class ChatbotConversationStoreIT {
     }
 
     private void run(ChatMessageRepository messageRepository, Consumer<ChatbotAnswerService> test) {
+        run(sessions, messageRepository, test);
+    }
+
+    private void run(
+            ChatSessionRepository sessionRepository,
+            ChatMessageRepository messageRepository,
+            Consumer<ChatbotAnswerService> test) {
         new ApplicationContextRunner()
                 .withUserConfiguration(ChatbotAnswerServiceImpl.class, ChatConversationServiceImpl.class)
                 .withBean(EmbeddingClient.class, () -> embeddings)
@@ -255,7 +277,7 @@ class ChatbotConversationStoreIT {
                 .withBean(SolutionRetrieval.class, () -> mock(SolutionRetrieval.class))
                 .withBean(WikiSources.class, () -> mock(WikiSources.class))
                 .withBean(ChatbotAnswerRepository.class, () -> answers)
-                .withBean(ChatSessionRepository.class, () -> sessions)
+                .withBean(ChatSessionRepository.class, () -> sessionRepository)
                 .withBean(ChatMessageRepository.class, () -> messageRepository)
                 .withBean(PlatformTransactionManager.class, () -> new JpaTransactionManager(factory.getObject()))
                 .withBean("applicationTaskExecutor", Executor.class, () -> Runnable::run)

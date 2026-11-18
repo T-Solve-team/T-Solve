@@ -858,6 +858,16 @@ class ChatbotAnswerServiceImplTest {
         return new RetrievedSolution(symptoms, "cause", "steps", null, "scope", similarity);
     }
 
+    @Test
+    void followUpAfterALongStoredAnswer_AC_013_2_BUG_332() {
+        var response =
+                service.ask(USER, inSession("question", List.of(new ChatbotTurnRequest("earlier", "a".repeat(10001)))));
+
+        assertThat(response.outcome()).isEqualTo(Outcome.NO_SOURCE);
+        assertThat(response.chatSessionId()).isEqualTo(SESSION);
+        verify(embeddings).embed(List.of("earlier\nquestion"));
+    }
+
     private static ChatbotQuestionRequest question() {
         return new ChatbotQuestionRequest("question", List.of());
     }

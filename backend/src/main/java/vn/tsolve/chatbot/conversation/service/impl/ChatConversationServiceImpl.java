@@ -60,7 +60,10 @@ public class ChatConversationServiceImpl implements ChatConversationService {
             sessionId = sessions.saveAndFlush(new ChatSession(userId, question)).getId();
         } else {
             sessionId = chatSessionId;
-            sessions.touch(sessionId);
+            // BUG-333: the conversation was deleted after the ownership check; the transaction rolls back the answer.
+            if (sessions.touch(sessionId) == 0) {
+                throw new ChatbotConversationNotFoundException();
+            }
         }
         messages.saveAndFlush(
                 new ChatMessage(sessionId, chatbotAnswerId, question, outcome, answerText, write(citations)));

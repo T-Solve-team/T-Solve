@@ -176,8 +176,10 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         List<ChatbotTurnRequest> history =
                 request.chatSessionId() == null ? List.of() : conversations.history(user.id(), request.chatSessionId());
         UUID chatSessionId = request.chatSessionId() == null ? null : UUID.fromString(request.chatSessionId());
+        // BUG-332: stored turns are not request input, so they skip the AC-007.3 length check.
         return answer(
-                new ChatbotQuestionRequest(request.question(), history),
+                request.question(),
+                history,
                 (vector, candidates) -> {
                     solutions.nearest(vector, minSimilarity, sourceLimit).stream()
                             .map(ChatbotSource::of)
@@ -204,7 +206,8 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
             throw new ChatbotProjectNotActiveException();
         }
         return answer(
-                request,
+                request.question(),
+                request.history(),
                 (vector, candidates) -> {
                     solutions.nearestInProjectDepartment(projectId, vector, minSimilarity, sourceLimit).stream()
                             .map(ChatbotSource::of)
@@ -244,14 +247,14 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         UUID record(ChatbotAnswer saved, List<ChatbotCitation> citations);
     }
 
-    private ChatbotAnswerResponse answer(ChatbotQuestionRequest request, Sources sources, Row row, Turn turn) {
+    private ChatbotAnswerResponse answer(
+            String asked, List<ChatbotTurnRequest> history, Sources sources, Row row, Turn turn) {
         long deadline = System.nanoTime() + timeoutNanos;
-        String question = request.question().trim();
+        String question = asked.trim();
         if (QuestionClassifier.isGreeting(question)) {
             return save(turn, row.of(question, Outcome.GREETING.name(), ""), Outcome.GREETING, List.of(), deadline);
         }
-        var classification =
-                classifier.parse(classify(ClassifierPrompt.messages(question, request.history()), deadline));
+        var classification = classifier.parse(classify(ClassifierPrompt.messages(question, history), deadline));
         remaining(deadline);
         Outcome refused =
                 switch (classification.category()) {
@@ -266,12 +269,12 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         // BUG-331: a first question is embedded as asked, so a lossy rewrite cannot drop an error code from it.
         // The private rewrite only resolves a follow-up against the history; without one the old fallback stays.
         String retrievalText;
-        if (request.history().isEmpty()) {
+        if (history.isEmpty()) {
             retrievalText = question;
         } else if (!classification.query().isEmpty()) {
             retrievalText = classification.query();
         } else {
-            retrievalText = request.history().getLast().question().trim() + "\n" + question;
+            retrievalText = history.getLast().question().trim() + "\n" + question;
         }
         float[] vector =
                 callAi(() -> embeddings.embed(List.of(retrievalText)), deadline).getFirst();
@@ -295,7 +298,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         if (kept.isEmpty()) {
             return save(turn, row.of(question, Outcome.NO_SOURCE.name(), ""), Outcome.NO_SOURCE, List.of(), deadline);
         }
-        var messages = AnswerPrompt.messages(question, request.history(), kept);
+        var messages = AnswerPrompt.messages(question, history, kept);
         String text = callAi(() -> llm.chat(messages, null), deadline);
         remaining(deadline);
         var cited = Citations.of(text, kept);
