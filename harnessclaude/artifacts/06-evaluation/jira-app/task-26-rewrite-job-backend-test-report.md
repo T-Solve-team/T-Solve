@@ -24,5 +24,9 @@ Date: 2026-11-18, main session. Command (in `backend/`): `mvn verify -Dtest='vn.
 - Unit (Surefire, fresh reports): 158 tests, 0 failures, 0 errors.
 - Integration (Failsafe): `RedisWiringIT`, 3 tests, 0 failures. It boots the full Spring context with Postgres and Redis, so it checks the new `@Component` and the changed constructors.
 - Spotless check: passed (it is part of `verify`).
-- Not run: the full `mvn verify` (all ~940 ITs). The machine had 0.3 GB of free RAM, and the earlier full run was stopped for low memory. The last full run before the fixes passed (3969 tests, 0 failures). CI runs the full suite on the PR.
+- Full `mvn verify` (all ITs) was not run at first: the machine had 0.3 GB of free RAM. It was run later, see below.
 - Traceability: `sdd.ts trace jira-app STORY-007` reports 8/8.
+
+## Full `mvn verify` after the fixes
+
+Date: 2026-11-18, main session, on commit 30553594. `mvn -B verify` in `backend/`: BUILD SUCCESS in 18:29 min. Unit tests: 3037 run, 0 failures, 0 errors. Integration tests: 940 run, 0 failures, 0 errors. `spotless:check` passed.
