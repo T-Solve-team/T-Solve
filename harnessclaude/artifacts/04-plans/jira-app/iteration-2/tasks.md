@@ -475,3 +475,17 @@ rewrite that takes 30–50 s shows the preview.
   `tsolveClient.test.js`), `form/SolutionFormModal.jsx`, `form/SolutionFormModal.test.jsx`
 **Dependencies:** Task 25, Task 26
 **Estimated size:** small
+
+## Task 28: Ask T-Solve texts for a greeting, an off-topic question and an injection
+
+**Story:** STORY-010
+**Feature:** ask-outcome-texts
+**Description:** AC-010.19 (BUG-347): a `GREETING`, `OFF_TOPIC` or `INJECTION` answer shows MSG_NEW_5, MSG_NEW_6 or
+MSG_NEW_7 (the web chatbot's wording) and neither "Solved" nor "Not solved, create ticket"; `NO_SOURCE` keeps MSG109 and
+both buttons. Tests `AC-010.19` for the three outcomes and the three texts; the BUG-328 test checks no button and no
+rating for a greeting. Dev-site check after `forge deploy`: ask "hi".
+**Files:**
+- Modify: `jira-app/TSolve_JiraApp/src/frontend/messages.js`, `messages.test.js`, `askTsolve/AskTsolvePage.jsx`,
+  `askTsolve/AskTsolvePage.test.jsx`, `docs/bug-log.md`
+**Dependencies:** Task 25
+**Estimated size:** small
