@@ -1,6 +1,7 @@
 package vn.tsolve.ticket.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -20,7 +21,7 @@ class PreviewCleanupJobTest {
     private static final Clock CLOCK = Clock.fixed(NOW, ZoneId.of("Asia/Ho_Chi_Minh"));
 
     private final ImportPreviewRepository previews = mock(ImportPreviewRepository.class);
-    private final PreviewCleanupJob job = new PreviewCleanupJob(previews, CLOCK);
+    private final PreviewCleanupJob job = new PreviewCleanupJob(previews, CLOCK, "", "");
 
     @Test
     void deletesEveryPreviewOlderThanTwentyFourHours_AC_006_1() {
@@ -54,5 +55,29 @@ class PreviewCleanupJobTest {
         assertThat(deleted).isEqualTo(2);
         verify(previews).deleteById(3L);
         verify(previews).deleteById(5L);
+    }
+
+    @Test
+    void runsDailyAtOneInVietnamByDefault_AC_006_1() {
+        assertThat(job.trigger().getExpression()).isEqualTo("0 0 1 * * *");
+        assertThat(PreviewCleanupJob.zone("")).isEqualTo(ZoneId.of("Asia/Ho_Chi_Minh"));
+    }
+
+    @Test
+    void takesTheRunTimeAndTimeZoneFromTheEnvironment_AC_006_1() {
+        PreviewCleanupJob configured = new PreviewCleanupJob(previews, CLOCK, " 30 2 * * * ", "UTC");
+
+        assertThat(configured.trigger().getExpression()).isEqualTo("0 30 2 * * *");
+        assertThat(PreviewCleanupJob.zone("UTC")).isEqualTo(ZoneId.of("UTC"));
+    }
+
+    @Test
+    void refusesToStartWithAnInvalidCronOrTimeZoneNamingTheVariable_AC_006_1() {
+        assertThatThrownBy(() -> new PreviewCleanupJob(previews, CLOCK, "1am", ""))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("IMPORT_PREVIEW_CLEANUP_CRON");
+        assertThatThrownBy(() -> new PreviewCleanupJob(previews, CLOCK, "", "Hanoi"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("TSOLVE_JOB_TIME_ZONE");
     }
 }

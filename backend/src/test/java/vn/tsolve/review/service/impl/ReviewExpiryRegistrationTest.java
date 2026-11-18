@@ -22,7 +22,7 @@ class ReviewExpiryRegistrationTest {
             var scheduler = new JobRequestScheduler(storage);
             var runtime = mock(JobRunrRuntime.class);
             when(runtime.scheduler()).thenReturn(scheduler);
-            var registration = new ReviewExpiryRegistration(runtime, "");
+            var registration = new ReviewExpiryRegistration(runtime, "", "");
             registration.register();
             registration.register();
             assertThat(storage.getRecurringJobs()).singleElement().satisfies(job -> {
@@ -39,10 +39,11 @@ class ReviewExpiryRegistrationTest {
             storage.setJobMapper(new JobMapper(new JacksonJsonMapper()));
             var runtime = mock(JobRunrRuntime.class);
             when(runtime.scheduler()).thenReturn(new JobRequestScheduler(storage));
-            new ReviewExpiryRegistration(runtime, " 30 1 * * * ").register();
-            assertThat(storage.getRecurringJobs())
-                    .singleElement()
-                    .satisfies(job -> assertThat(job.getScheduleExpression()).isEqualTo("30 1 * * *"));
+            new ReviewExpiryRegistration(runtime, " 30 1 * * * ", "UTC").register();
+            assertThat(storage.getRecurringJobs()).singleElement().satisfies(job -> {
+                assertThat(job.getScheduleExpression()).isEqualTo("30 1 * * *");
+                assertThat(job.getZoneId()).isEqualTo("UTC");
+            });
         }
     }
 
@@ -55,9 +56,12 @@ class ReviewExpiryRegistrationTest {
     @Test
     void refusesToStartWithAnInvalidCronNamingTheVariable_AC_014_1() {
         var runtime = mock(JobRunrRuntime.class);
-        assertThatThrownBy(() -> new ReviewExpiryRegistration(runtime, "every night"))
+        assertThatThrownBy(() -> new ReviewExpiryRegistration(runtime, "every night", ""))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("REVIEW_EXPIRY_CRON");
+        assertThatThrownBy(() -> new ReviewExpiryRegistration(runtime, "", "GMT+7 Hanoi"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("TSOLVE_JOB_TIME_ZONE");
     }
 
     @Test
