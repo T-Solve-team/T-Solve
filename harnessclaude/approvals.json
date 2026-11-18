@@ -1332,8 +1332,8 @@
     }
   },
   "jira-app": {
-    "specHash": "b8a910401ea43e6ec1df940adecc4774adea0ab0bc9546d12b99c656d1f9a428",
-    "approvedAt": "2026-11-18T07:54:52.139Z",
+    "specHash": "d80cf40d0b0647a3dcd2ebb73edaf9ea515bd5f7f6b893b3a49461c5dc7c1701",
+    "approvedAt": "2026-11-18T08:49:14.827Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the issue being viewed changes to a status of the Done status category, THE Jira App SHALL ask the server whether the form may open and open the form when it may.",
@@ -1388,6 +1388,7 @@
       "AC-010.16": "IF  names a job that does not exist, has expired, or was started from another Jira account, site or project than the FIT's, THEN THE server SHALL answer 404 MSG06 and show nothing of that job.",
       "AC-010.17": "THE server SHALL keep a job's question and answer for at most 5 minutes after the job starts, shared by every backend instance, and SHALL log no question or answer text of a job.",
       "AC-010.18": "IF the server already runs  jobs and as many more wait, THEN THE server SHALL answer  with 503 MSG06 at once and start no job (BUG-183).",
+      "AC-010.19": "WHEN the answer has outcome ,  or  (chatbot AC-009), THE page SHALL show MSG_NEW_5, MSG_NEW_6 or MSG_NEW_7 with the web chatbot's wording, and no sources and neither the \"Solved\" nor the \"Not solved, create ticket\" button (as the web chatbot, which neither rates nor drafts an issue from these answers).",
       "AC-012.1": "WHILE the issue's ticket is resubmittable, THE panel SHALL show MSG64 (AC-008.7) and a button \"Edit and resubmit\" (a Jira App label, not an SRS message — user, 2026-11-14).",
       "AC-012.2": "WHEN the user clicks \"Edit and resubmit\", THE server SHALL allow the form only while the ticket is resubmittable and SHALL fill it from the user's Draft for the issue when there is one, otherwise from the ticket's current Solution; THE Jira App SHALL show MSG64 with the Project Manager's name and comment above the five sections.",
       "AC-012.3": "IF the issue's ticket is not resubmittable — another status, another writer, another source, or the user is no longer a member of its Project — THEN THE panel SHALL not show \"Edit and resubmit\" and THE server SHALL not open the resubmission form.",
