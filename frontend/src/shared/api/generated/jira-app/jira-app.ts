@@ -921,7 +921,7 @@ export const getOpenSolutionFormUrl = (issueKey: string) => {
 };
 
 /**
- * @summary Whether the viewer may open 4.1 Solution Form for the issue and, if so, its content: the viewer's Draft, else the AI draft, else the issue text in Symptoms with MSG67 (STORY-001, 002, 005).
+ * @summary Whether the viewer may open 4.1 Solution Form for the issue and, if so, its content: the viewer's Draft, else the issue text in Symptoms — summary, a blank line, description — with no AI call (STORY-001, 002, 005).
 
  */
 export const openSolutionForm = async (
@@ -1002,7 +1002,7 @@ export type OpenSolutionFormMutationError = ErrorType<ProblemResponse | ProblemD
 export type OpenSolutionFormMutationVariables = { issueKey: string; data: SolutionFormRequest };
 
 /**
- * @summary Whether the viewer may open 4.1 Solution Form for the issue and, if so, its content: the viewer's Draft, else the AI draft, else the issue text in Symptoms with MSG67 (STORY-001, 002, 005).
+ * @summary Whether the viewer may open 4.1 Solution Form for the issue and, if so, its content: the viewer's Draft, else the issue text in Symptoms — summary, a blank line, description — with no AI call (STORY-001, 002, 005).
 
  */
 export const useOpenSolutionForm = <

@@ -18,7 +18,7 @@ jest.mock('../api/tsolveClient', () => {
 
 const FORM = {
   mayOpen: true,
-  origin: 'AI_DRAFT',
+  origin: 'ISSUE',
   sections: { symptoms: 'Drops', rootCause: 'Old', resolutionSteps: 'Update', workaround: '', scopeOfApplicability: 'All' },
   message: null,
 };

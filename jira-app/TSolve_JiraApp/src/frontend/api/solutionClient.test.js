@@ -25,11 +25,11 @@ describe('tsolveClient — Solution Form and Issue Panel', () => {
   });
 
   it('AC-002.1 sends the issue text to open the form', async () => {
-    invokeRemote.mockResolvedValue(answer(200, { mayOpen: true, origin: 'AI_DRAFT', sections: SECTIONS, message: null }));
+    invokeRemote.mockResolvedValue(answer(200, { mayOpen: true, origin: 'ISSUE', sections: SECTIONS, message: null }));
 
     const form = await openSolutionForm('ITSUP-12', { summary: 'VPN', description: 'After sleep' });
 
-    expect(form.origin).toBe('AI_DRAFT');
+    expect(form.origin).toBe('ISSUE');
     expect(invokeRemote).toHaveBeenCalledWith(
       expect.objectContaining({
         path: '/api/v1/jira-app/issues/ITSUP-12/solution-form',

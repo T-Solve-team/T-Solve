@@ -2,7 +2,6 @@ package vn.tsolve.jiraapp.service.impl;
 
 import jakarta.annotation.PreDestroy;
 import java.time.Duration;
-import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
@@ -20,11 +19,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.convert.DurationStyle;
 import org.springframework.stereotype.Service;
-import vn.tsolve.ai.dto.IssueContent;
-import vn.tsolve.ai.dto.SolutionDraft;
 import vn.tsolve.ai.exception.AiRewriteUnavailableException;
 import vn.tsolve.ai.service.SolutionAiService;
-import vn.tsolve.jiraapp.dto.SolutionFormDraft;
 import vn.tsolve.jiraapp.service.SolutionFormAi;
 import vn.tsolve.ticket.dto.SolutionSections;
 
@@ -32,9 +28,6 @@ import vn.tsolve.ticket.dto.SolutionSections;
 public class SolutionFormAiImpl implements SolutionFormAi {
 
     private static final Logger log = LoggerFactory.getLogger(SolutionFormAiImpl.class);
-
-    /** The five sections together may hold this many characters (AC-002.4). */
-    static final int MAX_SOLUTION_LENGTH = 10_000;
 
     /** {@code TSOLVE_STUB_AI}: empty = the `ai` module; these two serve demos without the AI server. */
     enum Mode {
@@ -87,25 +80,6 @@ public class SolutionFormAiImpl implements SolutionFormAi {
     }
 
     @Override
-    public SolutionFormDraft draft(String summary, String description) {
-        SolutionFormDraft fromIssue = new SolutionFormDraft(fromIssue(summary, description), false);
-        if (mode == Mode.UNAVAILABLE) {
-            return fromIssue;
-        }
-        if (mode == Mode.AVAILABLE) {
-            return new SolutionFormDraft(cannedDraft(summary), true);
-        }
-        try {
-            SolutionDraft draft = withinDeadline(() -> ai.draft(new IssueContent(summary, description, List.of())));
-            // The ai module falls back by itself; its fallback is not the one of AC-002.2, so ours is used instead.
-            return draft.isAiDraft() ? new SolutionFormDraft(toForm(draft.sections()), true) : fromIssue;
-        } catch (RuntimeException e) {
-            log.warn("Solution Form AI draft not used: error type {}", errorType(e));
-            return fromIssue;
-        }
-    }
-
-    @Override
     public SolutionSections rewrite(SolutionSections sections) {
         if (mode == Mode.UNAVAILABLE) {
             throw new AiRewriteUnavailableException();
@@ -138,34 +112,6 @@ public class SolutionFormAiImpl implements SolutionFormAi {
 
     private static String errorType(RuntimeException e) {
         return e instanceof AiCallFailed ? e.getMessage() : e.getClass().getSimpleName();
-    }
-
-    /** AC-002.2: the summary and description in Symptoms, the other sections empty, cut to the Solution limit. */
-    static SolutionSections fromIssue(String summary, String description) {
-        String text = join(summary, description);
-        if (text.codePointCount(0, text.length()) > MAX_SOLUTION_LENGTH) {
-            text = text.substring(0, text.offsetByCodePoints(0, MAX_SOLUTION_LENGTH));
-        }
-        return new SolutionSections(text, "", "", "", "");
-    }
-
-    private static String join(String summary, String description) {
-        String first = summary == null ? "" : summary.strip();
-        String second = description == null ? "" : description.strip();
-        if (first.isEmpty() || second.isEmpty()) {
-            return first + second;
-        }
-        return first + "\n\n" + second;
-    }
-
-    private static SolutionSections cannedDraft(String summary) {
-        String issue = summary == null || summary.isBlank() ? "The reported problem" : summary.strip();
-        return new SolutionSections(
-                issue + ".",
-                "Stand-in AI draft (TSOLVE_STUB_AI=available): write the real root cause.",
-                "1. Reproduce the problem.\n2. Apply the fix.\n3. Confirm with the reporter.",
-                "",
-                "The Project's users who report the same problem.");
     }
 
     private static SolutionSections cannedRewrite(SolutionSections sections) {

@@ -2050,7 +2050,7 @@ paths:
       operationId: openSolutionForm
       summary: >
         Whether the viewer may open 4.1 Solution Form for the issue and, if so, its content: the viewer's Draft,
-        else the AI draft, else the issue text in Symptoms with MSG67 (STORY-001, 002, 005).
+        else the issue text in Symptoms — summary, a blank line, description — with no AI call (STORY-001, 002, 005).
       security:
         - forgeInvocationToken: []
       requestBody:
@@ -4641,9 +4641,9 @@ components:
     SolutionFormOrigin:
       type: string
       description: >
-        Where the sections come from — the viewer's Draft, the AI draft, the issue text (MSG67), or the ticket's
-        current Solution (a resubmission without a Draft, AC-012.2).
-      enum: [DRAFT, AI_DRAFT, ISSUE, TICKET]
+        Where the sections come from — the viewer's Draft, the issue text (AC-002.1), or the ticket's current
+        Solution (a resubmission without a Draft, AC-012.2).
+      enum: [DRAFT, ISSUE, TICKET]
     SolutionForm:
       type: object
       required: [mayOpen, origin, sections, message]
@@ -4664,7 +4664,7 @@ components:
           anyOf:
             - $ref: '#/components/schemas/MessageRef'
             - type: 'null'
-          description: MSG67 when the AI draft is unavailable; otherwise null.
+          description: A message to show above the sections; null today (MSG67 went with the AI draft, KAN-371).
     SubmitSolutionRequest:
       type: object
       required: [summary, sections]

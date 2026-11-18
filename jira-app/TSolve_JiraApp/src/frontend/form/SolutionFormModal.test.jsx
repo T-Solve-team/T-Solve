@@ -36,18 +36,14 @@ const field = (label) => screen.getByLabelText(new RegExp(`^${label}`));
 const click = (name) => fireEvent.click(screen.getByRole('button', { name }));
 
 describe('SolutionFormModal', () => {
-  it('AC-002.1 shows the five sections filled with the AI draft', () => {
-    open({ mayOpen: true, origin: 'AI_DRAFT', sections: FULL, message: null });
+  it('AC-002.1 opens with the issue text in Symptoms, the other sections empty and no notice', () => {
+    const symptoms = 'VPN drops\n\nAfter sleep';
+    open({ mayOpen: true, origin: 'ISSUE', sections: { ...EMPTY_SECTIONS, symptoms }, message: null });
 
-    expect(field('Symptoms')).toHaveValue('Drops hourly');
-    expect(field('Scope of applicability')).toHaveValue('Windows laptops');
-    expect(field('Workaround')).toHaveValue('');
-  });
-
-  it('AC-002.2 shows MSG67 when the form opens with the issue text', () => {
-    open({ mayOpen: true, origin: 'ISSUE', sections: { ...EMPTY_SECTIONS, symptoms: 'VPN' }, message: { code: 'MSG67' } });
-
-    expect(screen.getByText(message('MSG67'))).toBeInTheDocument();
+    expect(field('Symptoms')).toHaveValue(symptoms);
+    expect(field('Root cause')).toHaveValue('');
+    expect(field('Scope of applicability')).toHaveValue('');
+    expect(screen.queryByText(message('MSG06'))).not.toBeInTheDocument();
   });
 
   it('AC-002.3 shows MSG01 under the first empty required section and sends nothing', () => {

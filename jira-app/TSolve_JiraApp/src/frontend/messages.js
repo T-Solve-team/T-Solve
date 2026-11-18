@@ -10,7 +10,6 @@ const MESSAGES = {
   MSG64: 'Changes requested by {manager_name}: "{comment}".',
   MSG65: 'Solution submitted – awaiting review.',
   MSG66: 'Solution submitted. It is now waiting for review.',
-  MSG67: 'AI draft is unavailable right now. Please write or edit the solution yourself.',
   MSG68: 'AI rewrite is unavailable right now. Your solution has not been changed.',
   MSG69:
     'Could not reach T-Solve after several attempts. The issue stays resolved in {tracker_name}, but the solution was not submitted.',

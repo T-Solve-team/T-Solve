@@ -8,19 +8,14 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import vn.tsolve.ai.dto.IssueContent;
-import vn.tsolve.ai.dto.SolutionDraft;
 import vn.tsolve.ai.exception.AiRewriteUnavailableException;
-import vn.tsolve.ai.exception.AiUnavailableException;
 import vn.tsolve.ai.service.SolutionAiService;
-import vn.tsolve.jiraapp.dto.SolutionFormDraft;
 import vn.tsolve.jiraapp.service.impl.SolutionFormAiImpl.Mode;
 import vn.tsolve.ticket.dto.SolutionSections;
 
@@ -35,60 +30,6 @@ class SolutionFormAiImplTest {
     @AfterEach
     void stopExecutor() {
         executor.shutdownNow();
-    }
-
-    @Test
-    void opensWithTheAiDraftOfTheIssue_AC_002_1() {
-        when(ai.draft(new IssueContent("VPN drops", "After sleep", List.of())))
-                .thenReturn(new SolutionDraft(AI_SECTIONS, true));
-
-        SolutionFormDraft draft = service(Mode.AI).draft("VPN drops", "After sleep");
-
-        assertThat(draft)
-                .isEqualTo(new SolutionFormDraft(
-                        new SolutionSections("Drops hourly", "Old client", "Update to 5.2", "", "Laptops"), true));
-    }
-
-    @Test
-    void fillsSymptomsFromTheIssueWhenTheAiFallsBack_AC_002_2() {
-        when(ai.draft(any())).thenReturn(new SolutionDraft(AI_SECTIONS, false));
-
-        SolutionFormDraft draft = service(Mode.AI).draft(" VPN drops ", "After sleep\n");
-
-        assertThat(draft.aiDraft()).isFalse();
-        assertThat(draft.sections()).isEqualTo(new SolutionSections("VPN drops\n\nAfter sleep", "", "", "", ""));
-    }
-
-    @Test
-    void fillsSymptomsFromTheIssueWhenTheAiFails_AC_002_2() {
-        when(ai.draft(any())).thenThrow(new AiUnavailableException());
-
-        SolutionFormDraft draft = service(Mode.AI).draft("VPN drops", "");
-
-        assertThat(draft).isEqualTo(new SolutionFormDraft(new SolutionSections("VPN drops", "", "", "", ""), false));
-    }
-
-    @Test
-    void fillsSymptomsFromTheIssueWhenTheAiMissesTheDeadline_AC_002_2() {
-        CountDownLatch release = new CountDownLatch(1);
-        when(ai.draft(any())).thenAnswer(call -> {
-            release.await(5, TimeUnit.SECONDS);
-            return new SolutionDraft(AI_SECTIONS, true);
-        });
-
-        long start = System.nanoTime();
-        SolutionFormDraft draft = service(Mode.AI, Duration.ofMillis(100)).draft("VPN drops", "After sleep");
-
-        assertThat(draft.aiDraft()).isFalse();
-        assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofSeconds(2));
-        release.countDown();
-    }
-
-    @Test
-    void cutsAnIssueLongerThanTheSolutionLimit_AC_002_2() {
-        SolutionSections sections = SolutionFormAiImpl.fromIssue("S", "😀".repeat(12_000));
-
-        assertThat(sections.length()).isEqualTo(SolutionFormAiImpl.MAX_SOLUTION_LENGTH);
     }
 
     @Test
@@ -130,7 +71,6 @@ class SolutionFormAiImplTest {
     void servesCannedAnswersWithoutTheAiServerWhenStubbedAvailable() {
         SolutionFormAiImpl stub = service(Mode.AVAILABLE);
 
-        assertThat(stub.draft("VPN drops", "").aiDraft()).isTrue();
         assertThat(stub.rewrite(new SolutionSections("drops", "old", "update", "", "laptops"))
                         .symptoms())
                 .isEqualTo("drops.");
@@ -138,10 +78,9 @@ class SolutionFormAiImplTest {
     }
 
     @Test
-    void behavesAsAnUnavailableAiWhenStubbedUnavailable_AC_002_2_AC_007_4() {
+    void behavesAsAnUnavailableAiWhenStubbedUnavailable_AC_007_4() {
         SolutionFormAiImpl stub = service(Mode.UNAVAILABLE);
 
-        assertThat(stub.draft("VPN drops", "").aiDraft()).isFalse();
         assertThatThrownBy(() -> stub.rewrite(new SolutionSections("a", "b", "c", "", "d")))
                 .isInstanceOf(AiRewriteUnavailableException.class);
         verifyNoInteractions(ai);
