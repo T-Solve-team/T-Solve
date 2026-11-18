@@ -547,7 +547,7 @@ reminder query/handlers (`DraftReminder*Test`, the open-Draft repository IT).
 **Dependencies:** Task 29 (the table)
 **Estimated size:** small
 
-## Task 28: Ask T-Solve texts for a greeting, an off-topic question and an injection
+## Task 32: Ask T-Solve texts for a greeting, an off-topic question and an injection
 
 **Story:** STORY-010
 **Feature:** ask-outcome-texts

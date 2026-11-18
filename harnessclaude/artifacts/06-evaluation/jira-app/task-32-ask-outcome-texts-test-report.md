@@ -1,4 +1,4 @@
-# Test Report: jira-app — Task 28: ask-outcome-texts
+# Test Report: jira-app — Task 32: ask-outcome-texts
 
 - Date: 2026-11-18
 - Reviewer: harnessclaude-reviewer

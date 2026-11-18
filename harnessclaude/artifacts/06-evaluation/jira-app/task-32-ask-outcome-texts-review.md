@@ -9,7 +9,7 @@ reviewer: harnessclaude-reviewer
 iteration: 2
 ---
 
-# Review: jira-app — Task 28: Ask T-Solve texts for a greeting, an off-topic question and an injection
+# Review: jira-app — Task 32: Ask T-Solve texts for a greeting, an off-topic question and an injection
 
 ## Summary
 AC-010.19 is met. `AskTsolvePage.jsx` now picks the text for each answer outcome from a lookup table that matches the
@@ -48,4 +48,4 @@ No blocking issues.
 - The dev-site check (`forge deploy`, then ask "hi") is outside what a reviewer can run. It is still pending and is not counted against the verdict.
 
 ## Test Report
-See `task-28-ask-outcome-texts-test-report.md`. `npx jest`: 15 suites and 266 tests, all passing. `npm run lint`: clean. Trace: 19/19.
+See `task-32-ask-outcome-texts-test-report.md`. `npx jest`: 15 suites and 266 tests, all passing. `npm run lint`: clean. Trace: 19/19.
