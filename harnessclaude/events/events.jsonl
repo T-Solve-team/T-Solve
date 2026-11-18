@@ -2094,3 +2094,5 @@
 {"ts":"2026-11-18T05:13:46.041Z","type":"commit-recorded","module":"tracker","repo":"default","sha":"92c551d28cb61c60a32d50b5dfef93c5a19b8117"}
 {"ts":"2026-11-18T05:13:46.351Z","type":"feature-status","module":"tracker","feature":"suggestion-web-jobs","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-18T06:18:07.805Z","type":"spec-approved","module":"jira-app","specHash":"699e1afdbcfb1cbb580615c7e780569fbf00e9457e08569423c9c6ac11d1b834"}
+{"ts":"2026-11-18T06:24:19.066Z","type":"spec-approved","module":"jira-app","specHash":"7f62a6dc931a084f3013501872829a79658b512ca13f2ede8e94b4ec951fba9a"}
+{"ts":"2026-11-18T06:25:54.136Z","type":"spec-approved","module":"ticket-review","specHash":"e69cb9f06e5c370a11a27c036624518563dc89c049948212d64403a9538b7cce"}
