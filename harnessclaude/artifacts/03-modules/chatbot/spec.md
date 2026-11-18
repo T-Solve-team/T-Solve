@@ -28,6 +28,7 @@ owner: BA
 | 2026-11-17 | STORY-009, STORY-001 | Message ids renamed MSG157–MSG159 → `MSG_NEW_5`–`MSG_NEW_7` (texts unchanged) in AC-001.15, Interface Contracts and Required from other modules | The catalog test of fe-foundation AC-006.7 rejects unknown codes, decision D3 gives unnumbered messages provisional keys, and the workspace spec already plans MSG157/MSG158 (user, 17/11) |
 | 2026-11-17 | STORY-009, STORY-012, Requirement 11 | Merge of main into KAN-243: the KAN-243 requirement is now Requirement 11 (Requirement 10 is KAN-241's); AC-012.1 answers a Jira App question as STORY-009 too, so `askForProject` classifies before its search; the outcome changeset is `046-chatbot-answer-outcomes` (043 to 045 are taken on main) | KAN-241 and KAN-294 merged into main on 17/11; user, 17/11: classify on both paths (one pipeline), the Jira App page keeps MSG109 for the new outcomes until a jira-app change |
 | 2026-11-17 | STORY-002, STORY-013 (new), STORY-001, STORY-003, STORY-007, STORY-010 | **Backend and frontend change (KAN-183).** The conversations move from `sessionStorage` to the Workspace database: new STORY-013 (tables `chat_session` and `chat_message`, list, open, delete, a 30-day retention job; the backend reads the earlier turns itself). STORY-002 renamed "Saved conversations": AC-002.2–AC-002.5, AC-002.7, AC-002.8 and AC-002.12 reworded, AC-002.11 removed, new AC-002.13–AC-002.15 (delete with MSG103, list errors). Reworded AC-001.6 (`chatSessionId` instead of `history`), AC-003.4 (rating from the server), AC-007.1–AC-007.3 (history from the conversation; the request `history` only for `askForProject`), AC-010.3 and AC-010.8 (draft takes no body). Requirements 5, 7 and 9 reworded. Out of Scope, Interface Contracts and Definition of Done follow. The Jira App path (STORY-012) is unchanged | User decisions of 17/11 (replace the 09/11 decision): keep a conversation 30 days after its last message, a daily job deletes older ones; separate `chat_session` and `chat_message` tables (every outcome, linked to its `chatbot_answer`); the backend reads the last 10 turns from the database, the web request sends `chatSessionId`; the user can delete a conversation (MSG103); when a conversation is deleted its unrated `ANSWERED`, `GREETING` and `OFF_TOPIC` answers are deleted too, rated, `NO_SOURCE` and `INJECTION` answers are kept (replaces the logout-event deletion) |
+| 2026-11-18 | STORY-002, STORY-013, STORY-004 | **Backend and frontend change (KAN-183).** The conversation list is paged: AC-013.5 answers one `PagedModel` page (`page` from 0, `size` default 20, above 100 read as 100); AC-002.3 shows the 20 newest; new AC-002.16 adds a Load more button that appends the next page and reloads the loaded pages after an ask or a delete; AC-004.8 pages the mock list too. Out of Scope no longer excludes paging; Interface Contracts follow | User, 18/11: show the 20 newest conversations, with a Load more button; standard team paging (`page`/`size`, `PagedModel`) |
 
 ## Requirements
 
@@ -137,8 +138,9 @@ owner: BA
     conversation" and selected in the list, ready for a first question.
   - AC-002.2: WHEN the first answer of a new conversation arrives, THE web app SHALL add the conversation of the
     answer's `chatSessionId` to the list, titled with its first question, and keep it open.
-  - AC-002.3: THE conversation list SHALL show the user's conversations from `listChatbotConversations` newest
-    first, by the time each was started, and highlight the open one.
+  - AC-002.3: THE conversation list SHALL show the first page of the user's conversations from
+    `listChatbotConversations` (`page` 0, `size` 20: the 20 newest), newest first by the time each was started, and
+    highlight the open one.
   - AC-002.4: WHEN the user opens a conversation in the list, THE web app SHALL load it with
     `getChatbotConversation` and show its questions and answers in order, each answer with its citations as in
     STORY-001 and its rating as in AC-003.4.
@@ -165,6 +167,12 @@ owner: BA
     a 401 instead signs the user out with MSG07 (fe-foundation), with no MSG06.
   - AC-002.15: WHILE an answer is pending, THE web app SHALL disable the Delete buttons with the list (as Send and
     New conversation), so an answer never lands in a deleted conversation.
+  - AC-002.16: WHILE the list shows fewer conversations than the page's `totalElements`, THE web app SHALL show a
+    Load more button under the list; WHEN the user clicks it, THE web app SHALL load the next page (`size` 20),
+    add its conversations at the end of the list and show the button as loading meanwhile; WHEN every
+    conversation is shown, THE web app SHALL hide the button; IF the next page cannot be loaded, THEN THE web app
+    SHALL show MSG06 as a toast and keep the button and the conversations already shown; WHEN an ask or a delete
+    succeeds, THE web app SHALL reload the pages it has loaded, so no conversation is shown twice or missed.
 
 ### STORY-003: Rate an answer
 - As an Employee, I want to say whether an answer helped me so that weak answers and missing knowledge can be
@@ -203,7 +211,8 @@ owner: BA
     `GREETING`, a question containing "weather" gives `OFF_TOPIC`, one containing "ignore previous instructions"
     gives `INJECTION`.
   - AC-004.8: THE mock SHALL keep conversations in memory as STORY-013 does: an ask with no `chatSessionId` starts
-    one and returns its id, an ask with one adds the turn, and the list, open and delete endpoints answer from them;
+    one and returns its id, an ask with one adds the turn, and the list (paged as AC-013.5), open and delete
+    endpoints answer from them;
     an unknown `chatSessionId` gives 404 MSG04; a saved or removed rating is kept on its turn; `resetMockData()`
     clears them (AC-004.5).
 
@@ -433,9 +442,10 @@ owner: BA
     (AC-005.7, AC-009.7) or a 400 stores neither and creates no conversation.
   - AC-013.4: IF `chatSessionId` is unknown, THEN THE backend SHALL answer 404 with MSG04, call no AI and store
     nothing (unknown: not a UUID, no such conversation, or one of another user).
-  - AC-013.5: WHEN a signed-in user calls `listChatbotConversations`, THE backend SHALL answer
-    `ChatbotConversationSummary[]` with exactly their own conversations (id, title, `startedAt`), newest
-    `started_at` first.
+  - AC-013.5: WHEN a signed-in user calls `listChatbotConversations`, THE backend SHALL read `page` (from 0, default
+    0) and `size` (default 20; a `size` above 100 read as 100) and answer 200 with a `ChatbotConversationSummaryPage`:
+    that page of exactly their own conversations (id, title, `startedAt`), newest `started_at` first (then by id),
+    and `size`, `number`, `totalElements` and `totalPages` of all of them; a page past the end has no rows.
   - AC-013.6: WHEN a user opens their own conversation (`getChatbotConversation`), THE backend SHALL answer `ChatbotConversation` with its id, title, `startedAt` and every turn oldest first, each with the
     question, the answer as `ChatbotAnswer` (its `answerId`, outcome, text and citations as stored) and the
     answer's current rating or null.
@@ -457,7 +467,7 @@ owner: BA
     the request's `history`.
 
 ## Out of Scope
-- Renaming a conversation, searching or paging the conversation list, sharing a conversation with another user,
+- Renaming a conversation, searching the conversation list, sharing a conversation with another user,
   and moving conversations kept in `sessionStorage` before KAN-183 to the server (they are dropped).
 - Running the retention job once per Workspace database: it runs in the database of the process like the other
   `@Scheduled` jobs (e.g. `PreviewCleanupJob`) until `worker` runs recurring jobs per Active Workspace
@@ -496,8 +506,8 @@ POST /api/v1/chatbot/answers            # operationId askChatbot
   404:      ProblemDetail MSG04            # unknown chatSessionId (AC-013.4)
   503:      ProblemDetail code MSG06       # AI module unavailable
 
-GET /api/v1/chatbot/conversations                   # operationId listChatbotConversations — STORY-013
-  200:      ChatbotConversationSummary[]            # own, newest startedAt first
+GET /api/v1/chatbot/conversations?page&size        # operationId listChatbotConversations — STORY-013
+  200:      ChatbotConversationSummaryPage          # own, newest startedAt first (AC-013.5)
   401:      ProblemDetail
 
 GET /api/v1/chatbot/conversations/{chatSessionId}   # operationId getChatbotConversation
@@ -534,6 +544,10 @@ ChatbotConversationSummary:
   chatSessionId: string (uuid)
   title:         string                    # the first question
   startedAt:     string (date-time)
+ChatbotConversationSummaryPage:            # Spring Data PagedModel
+  required: [content, page]
+  content: ChatbotConversationSummary[]
+  page:    PageMetadata                    # size, number, totalElements, totalPages (shared schema)
 ChatbotConversation:
   required: [chatSessionId, title, startedAt, turns]
   chatSessionId, title, startedAt          # as in ChatbotConversationSummary

@@ -657,4 +657,26 @@ Decided in planning (builder check, 17/11):
 | C5 | Job deletes a session being used at 02:00 | Low | Only sessions idle 30 days; an ask touches `last_message_at` | job IT |
 | C6 | Content in logs | High | Ids only (AC-013.10) | output-capture test |
 | C7 | Old `sessionStorage` conversations after deploy | Low | Ignored; list from server | — |
-| C8 | Conversation list grows | Low | Bounded by 30-day retention; index `(user_id, started_at DESC)` | — |
+| C8 | Conversation list grows | Low | Paged, 20 per page with Load more (change of 18/11); bounded by 30-day retention; index `(user_id, started_at DESC)` | `ChatbotConversationIT`, page test |
+
+## Paged conversation list (change of 2026-11-18, STORY-002, STORY-013, KAN-183)
+
+The list shows the 20 newest conversations and a Load more button (user, 18/11), with the team's standard paging.
+
+- Backend: `listChatbotConversations(Pageable)` with `@PageableDefault(size = 20)`, sort fixed to `started_at DESC,
+  chat_session_id DESC` (a client `sort` is ignored); a `size` above 100 is read as 100; returns
+  `PagedModel<ChatbotConversationSummaryResponse>` (backend/AGENTS.md section 5). Repository: `Page<ChatSession>
+  findByUserId(UUID, Pageable)` on the existing `(user_id, started_at DESC)` index.
+- Contract: `ChatbotConversationSummaryPage { content, page: PageMetadata }`, `page` and `size` query parameters.
+- Frontend: `useInfiniteQuery` over `listChatbotConversations` (`getNextPageParam`: next `number` while
+  `number + 1 < totalPages`); Load more calls `fetchNextPage`, `isFetchingNextPage` shows the button as loading, a
+  failed next page shows MSG06 as a toast. An ask or a delete invalidates the query, so TanStack refetches every
+  loaded page in order and an offset shift never duplicates or skips a row (AC-002.16).
+- Mock: the in-memory list answers the same page shape.
+
+| # | Edge case | Risk | Handling | Test |
+|---|-----------|------|----------|------|
+| P1 | New conversation while pages 0-1 are loaded | Medium | Invalidate refetches both pages | page test |
+| P2 | Delete on page 0 while page 1 is loaded | Medium | Same refetch; no row skipped | page test |
+| P3 | `size` 500 sent | Low | Read as 100 | controller test |
+| P4 | Two conversations with the same `started_at` | Low | Tie broken by id: stable pages | IT |

@@ -183,3 +183,33 @@ All three tasks are Jira KAN-243, so one branch `feat/KAN-243-chatbot-classify-q
 **Covers:** AC-001.6, AC-002.1 – AC-002.15, AC-003.4, AC-004.8
 **Dependencies:** Task 17 (generated client)
 **Estimated size:** large
+
+---
+
+## Task 19: Page the conversation list with Load more
+
+**Story:** STORY-013, STORY-002, STORY-004
+**Feature:** conversation-paging
+**Jira:** KAN-183 · same branch
+**Description:**
+- Contract first: `listChatbotConversations` takes `page` and `size` and answers `ChatbotConversationSummaryPage`
+  (`content` + shared `PageMetadata`); `npm run generate:api`.
+- Backend: `ChatbotConversationController.list` takes a `Pageable` (`@PageableDefault(size = 20)`, size above 100 read
+  as 100, sort fixed to `started_at DESC`, then id), the service returns `Page<ChatbotConversationSummaryResponse>`,
+  the controller `PagedModel` (AC-013.5).
+- Frontend: `useConversations` lists with `useInfiniteQuery`; `ConversationList` gets a Load more button (loading
+  while fetching, hidden when all are shown, MSG06 toast on failure); asks and deletes invalidate the query so the
+  loaded pages are refetched (AC-002.3, AC-002.16). Mock list pages as AC-013.5 (AC-004.8).
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**` (regenerated),
+  `backend/src/main/java/vn/tsolve/chatbot/conversation/controller/ChatbotConversationController.java`,
+  `.../conversation/service/ChatbotConversationService.java`, `.../service/impl/ChatbotConversationServiceImpl.java`,
+  `.../repository/ChatSessionRepository.java`, `frontend/src/features/chatbot/hooks/useConversations.ts`,
+  `.../components/ConversationList.tsx`, `.../mocks/handlers.ts`
+- Test: `ChatbotConversationControllerTest` (`AC_013_5`: defaults, size capped), `ChatbotConversationIT`
+  (`AC_013_5`: own rows only, order, ties, page past the end), `KnowledgeChatbotPage.conversations.test.tsx`
+  (`AC-002.3`, `AC-002.16`: Load more appends, hides at the end, MSG06 on failure, refetch after ask and delete),
+  `mocks/handlers.test.ts` (`AC-004.8`)
+**Covers:** AC-013.5, AC-002.3, AC-002.16, AC-004.8
+**Dependencies:** Task 17, Task 18
+**Estimated size:** small
