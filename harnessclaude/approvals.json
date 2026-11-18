@@ -992,8 +992,8 @@
     }
   },
   "ticket-review": {
-    "specHash": "3f421d9a0442923749a9a9bcb8dec1ede3da9f59556abc5afd02c28bd93c6b48",
-    "approvedAt": "2026-11-14T19:29:32.651Z",
+    "specHash": "e69cb9f06e5c370a11a27c036624518563dc89c049948212d64403a9538b7cce",
+    "approvedAt": "2026-11-18T06:47:32.326Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the Review Queue loads, THE frontend and mock API SHALL return only Pending review Solution Form tickets in the current Workspace's Projects managed by the signed-in Project Manager, ordered by earliest review due date by default.",
@@ -1086,12 +1086,12 @@
       "AC-013.7": "IF the caller is unauthenticated, lacks Project Manager or has no verified Workspace Account, THEN THE API SHALL refuse the Expired list, the Expired ticket ids and send-back with 401 or 403 and expose no ticket.",
       "AC-013.8": "WHEN Review History returns a stored SEND_BACK decision, THE API SHALL report it as SEND_BACK with null reason and null comment, with the same actor, author, ticket and Project fields as AC-011.2; WHEN the decision filter is SEND_BACK, THE API SHALL return those decisions.",
       "AC-013.9": "WHEN the production web application loads Expired Tickets or sends tickets back, THE frontend SHALL use the published getExpiredTickets, getExpiredTicketIds and sendBackTickets operations through the existing generated client, and the OpenAPI contract SHALL describe them as production operations.",
-      "AC-014.1": "WHEN a backend process starts with the worker integration enabled, THE backend SHALL register the JOB-02 recurring job under one fixed id with the schedule every day at 00:00 in the Asia/Ho_Chi_Minh time zone (UTC+7), so that several processes keep a single registration.",
+      "AC-014.1": "WHEN a backend process starts with the worker integration enabled, THE backend SHALL register the JOB-02 recurring job under one fixed id with the cron schedule read from the environment variable  in the Asia/Ho_Chi_Minh time zone (UTC+7) — every day at 00:00 () when the variable is unset or blank — so that several processes keep a single registration. IF the variable holds an invalid cron expression, THEN THE backend SHALL fail to start with an error naming the variable.",
       "AC-014.2": "WHEN JOB-02 runs, THE worker SHALL enqueue one expiry job, with attempt number 1, for each Workspace the worker tenant port lists as Active at that moment, and none for a Suspended or unknown Workspace (GBR-38).",
       "AC-014.3": "WHEN an expiry job runs for an Active Workspace, THE worker SHALL, inside runInTenant for that Workspace and in one transaction, set to EXPIRED every ticket in PENDING_REVIEW or CHANGES_REQUESTED whose review_due_date is before the current calendar date in Vietnam time and whose Project's Department is not deleted, and SHALL store for each ticket the expiry time in expired_at and its previous status in status_before_expiry.",
       "AC-014.4": "THE expiry job SHALL leave unchanged every ticket whose review_due_date is today or later or not set, every ticket in another status, every ticket of a deleted Department, and the Solution, Evidence, review_due_date and review decisions of the tickets it expires. WHEN the expiry job runs again on the same calendar date, THE worker SHALL change no ticket.",
       "AC-014.5": "WHEN the expiry transaction commits, THE expired tickets SHALL no longer appear in the Review Queue or its eligible ids, and THE worker SHALL log one line per Project with expired tickets, carrying only the Workspace UUID, the Project UUID and the count. IF no ticket is overdue, THEN THE worker SHALL end without changing any ticket.",
-      "AC-014.6": "IF the expiry transaction fails, THEN THE worker SHALL roll back every ticket change of that attempt, log the failure without ticket content, and schedule another expiry job for that Workspace 15 minutes later with the next attempt number. IF attempt 3 fails, THEN THE worker SHALL schedule no further attempt and the overdue tickets SHALL wait for the next 00:00 run.",
+      "AC-014.6": "IF the expiry transaction fails, THEN THE worker SHALL roll back every ticket change of that attempt, log the failure without ticket content, and schedule another expiry job for that Workspace 15 minutes later with the next attempt number. IF attempt 3 fails, THEN THE worker SHALL schedule no further attempt and the overdue tickets SHALL wait for the next scheduled run.",
       "AC-014.7": "IF the Workspace is Suspended or unknown when an expiry job runs, THEN THE worker SHALL change no ticket and schedule no further attempt (GBR-38).",
       "AC-014.8": "THE expiry job payload SHALL hold only the Workspace UUID and the attempt number, and JOB-02 SHALL record no review decision and no audit entry. THE tenant changelog SHALL add nullable ticket.expired_at as TIMESTAMPTZ and nullable ticket.status_before_expiry as VARCHAR(20) limited to PENDING_REVIEW and CHANGES_REQUESTED."
     }
@@ -1332,8 +1332,8 @@
     }
   },
   "jira-app": {
-    "specHash": "a7059846a83cd24899a78edb6211cba65c1e511b5147eec57108b0c3ca209015",
-    "approvedAt": "2026-11-17T20:20:56.158Z",
+    "specHash": "b8a910401ea43e6ec1df940adecc4774adea0ab0bc9546d12b99c656d1f9a428",
+    "approvedAt": "2026-11-18T07:54:52.139Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the issue being viewed changes to a status of the Done status category, THE Jira App SHALL ask the server whether the form may open and open the form when it may.",
@@ -1408,7 +1408,14 @@
       "AC-014.8": "WHILE MSG74 is shown, THE Jira App SHALL call  every 5 seconds and SHALL show the state of AC-014.4 as soon as the answer is  with a link time later than the click; WHEN 10 minutes have passed without that answer (the link request has expired), THE Jira App SHALL stop calling and show the state of the last answer again, with its button.",
       "AC-014.9": "IF the site belongs to no Workspace, THEN THE server SHALL answer  with 403 MSG124; IF the FIT has no Jira user (), THEN with 403 MSG08; IF Jira or the link request store cannot be reached, or Jira returns no display name, THEN with 503 MSG06; in every case THE server SHALL create no link request, and THE Jira App SHALL show that message, open no tab and keep the button.",
       "AC-014.10": "THE server SHALL take the site and the Jira account of a link request only from the verified FIT, never from the request body, a parameter or a header (identity AC-001.38, GBR-19).",
-      "AC-014.11": "THE server SHALL find the T-Solve user of every Jira App call — the panel, the Solution Form, the resubmission and the Ask T-Solve answer (AC-010.4) — only as the linked Account (identity AC-001.77): no link, or a link to an Account that is not Active, means not linked; THE server SHALL no longer read the  setting."
+      "AC-014.11": "THE server SHALL find the T-Solve user of every Jira App call — the panel, the Solution Form, the resubmission and the Ask T-Solve answer (AC-010.4) — only as the linked Account (identity AC-001.77): no link, or a link to an Account that is not Active, means not linked; THE server SHALL no longer read the  setting.",
+      "AC-011.1": "WHILE the worker runs with jobs enabled, THE server SHALL run the reminder job on the cron schedule read from the environment variable  in the Asia/Ho_Chi_Minh time zone — every day at 08:00 () when the variable is unset or blank — under its own recurring job id (not shared with any other job), once for each active Workspace. IF the variable holds an invalid cron expression, THEN THE server SHALL fail to start with an error naming the variable.",
+      "AC-011.2": "WHEN the reminder job runs for a Workspace, THE server SHALL send exactly one email to each writer of that Workspace and SHALL send no email to an Account without an open Draft, to an inactive Account or for a Draft whose issue's ticket exists.",
+      "AC-011.3": "THE email SHALL go to the writer's Account email, with the subject \"You have 1 unsubmitted Solution draft in T-Solve\" for one open Draft and \"You have N unsubmitted Solution drafts in T-Solve\" for N of them (N > 1), and both an HTML body and a plain-text body. The HTML body SHALL use the layout of 's review emails (KAN-333): the T-Solve header, the badge \"Draft reminder\", the subject as heading, a greeting \"Hi \" + the Account's full name + \",\" (\"Hi there,\" when the name is blank) and a card holding a table with one row per open Draft, newest saved first — the issue key, linked to the Jira site URL +  + the key when that URL is configured, and the date it was last saved (yyyy-MM-dd, Asia/Ho_Chi_Minh) — then the line \"Open the issue in Jira and use Continue draft in the T-Solve panel to submit it.\" and the footer \"You got this email because you have unsubmitted Solution drafts on T-Solve. This is an automated message — please do not reply.\"; every value from the database is HTML-escaped. The plain-text body SHALL carry the same rows, one line per open Draft (the issue key, the date and, when the Jira site URL is configured, the link), followed by the same closing line. The email SHALL contain no Solution text.",
+      "AC-011.4": "THE server SHALL hand each writer's email to the shared email outbox ( STORY-004), whose dispatcher sends it and retries a failed delivery (worker AC-004.4 to AC-004.10). IF queuing a writer's email fails, THEN THE server SHALL retry queuing that writer's email by itself, without queuing again for the other writers.",
+      "AC-011.5": "IF the reminder job runs again for a Workspace on the same day, THEN THE server SHALL not send a writer a second email that day.",
+      "AC-011.6": "THE reminder job SHALL queue the email whether or not an SMTP sender is configured; without one, the outbox keeps and expires the email by its own rules (worker AC-004.9, AC-004.10) and logs the missing sender itself.",
+      "AC-011.7": "THE reminder job SHALL log only ids, counts and error types — never an email address, an issue key list or Draft content."
     }
   },
   "workspace": {

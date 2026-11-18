@@ -24,6 +24,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import vn.tsolve.identity.TwoTenantDatabases;
 import vn.tsolve.identity.signin.port.TenantScope;
+import vn.tsolve.ticket.dto.OpenDraft;
 import vn.tsolve.ticket.dto.SolutionFormSubmission;
 import vn.tsolve.ticket.dto.SolutionSections;
 import vn.tsolve.ticket.dto.TicketReviewView.Project;
@@ -182,6 +183,41 @@ class SolutionFormTicketIT {
         assertThat(db.queryForObject(
                         "SELECT count(*) FROM solution_draft WHERE project_id = ?", Integer.class, PROJECT))
                 .isEqualTo(1);
+    }
+
+    @Test
+    void listsOpenDraftsNewestFirstAndLeavesOutIssuesWithATicket_AC_011_2_AC_011_3() {
+        String older = KEY + "-7";
+        String newer = KEY + "-8";
+        String submitted = KEY + "-9";
+        scope.runIn(TwoTenantDatabases.ACME, () -> {
+            drafts.save(WRITER, PROJECT, older, new SolutionSections("Older", "", "", "", ""));
+            drafts.save(OTHER, PROJECT, newer, new SolutionSections("Newer", "", "", "", ""));
+            drafts.save(WRITER, PROJECT, submitted, new SolutionSections("Kept", "", "", "", ""));
+            return null;
+        });
+        db.update("UPDATE solution_draft SET updated_at = now() - interval '2 days' WHERE jira_issue_key = ?", older);
+        // A ticket of any source for the issue closes its Draft ("the issue's ticket").
+        db.update(
+                "INSERT INTO ticket(source_ticket_id,project_id,source,status,title,writer,symptoms,root_cause,"
+                        + "resolution_steps,scope) VALUES (?,?,'CSV','PUBLISHED','Imported','Ngo Bao','s','r','f','a')",
+                submitted,
+                PROJECT);
+
+        // Tenant A is shared per JVM, so keep only this test's issues.
+        List<OpenDraft> all = scope.runIn(TwoTenantDatabases.ACME, () -> drafts.findOpenDrafts()).stream()
+                .filter(draft -> draft.issueKey().startsWith(KEY + "-"))
+                .toList();
+        List<OpenDraft> mine = scope.runIn(TwoTenantDatabases.ACME, () -> drafts.findOpenDrafts(WRITER));
+
+        assertThat(all).extracting(OpenDraft::issueKey).containsExactly(newer, older);
+        assertThat(all).extracting(OpenDraft::creatorId).containsExactly(OTHER, WRITER);
+        assertThat(mine).extracting(OpenDraft::issueKey).containsExactly(older);
+        assertThat(mine.get(0).updatedAt()).isNotNull();
+        assertThat(TwoTenantDatabases.tenantB()
+                        .queryForObject(
+                                "SELECT count(*) FROM solution_draft WHERE project_id = ?", Integer.class, PROJECT))
+                .isZero();
     }
 
     @Test
