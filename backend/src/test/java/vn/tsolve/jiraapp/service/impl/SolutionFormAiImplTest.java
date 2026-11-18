@@ -63,10 +63,8 @@ class SolutionFormAiImplTest {
         var service = new SolutionFormAiImpl(
                 ai,
                 Mode.AI,
-                Runnable::run,
                 work::add,
                 Runnable::run,
-                Duration.ofSeconds(18),
                 Duration.ofSeconds(60),
                 (future, limit) -> future.completeExceptionally(new TimeoutException()));
         CompletableFuture<SolutionSections> result = new CompletableFuture<>();
@@ -129,29 +127,16 @@ class SolutionFormAiImplTest {
     }
 
     @Test
-    void stopsBothAiPools_AC_002_2_AC_007_8() {
-        ExecutorService drafts = mock(ExecutorService.class);
+    void stopsTheRewritePool_AC_007_8() {
         ExecutorService rewrites = mock(ExecutorService.class);
         ExecutorService completions = mock(ExecutorService.class);
         var service = new SolutionFormAiImpl(
-                ai,
-                Mode.AI,
-                drafts,
-                rewrites,
-                completions,
-                Duration.ofSeconds(18),
-                Duration.ofSeconds(60),
-                (future, limit) -> {});
+                ai, Mode.AI, rewrites, completions, Duration.ofSeconds(60), (future, limit) -> {});
 
         service.stop();
 
-        verify(drafts).shutdownNow();
         verify(rewrites).shutdownNow();
         verifyNoInteractions(completions);
-    }
-
-    private SolutionFormAiImpl service(Mode mode) {
-        return service(mode, Duration.ofSeconds(5));
     }
 
     private static SolutionSections rewrite(SolutionFormAiImpl service, SolutionSections input) {
@@ -163,14 +148,12 @@ class SolutionFormAiImplTest {
         return result.join();
     }
 
-    private SolutionFormAiImpl service(Mode mode, Duration timeout) {
+    private SolutionFormAiImpl service(Mode mode) {
         return new SolutionFormAiImpl(
                 ai,
                 mode,
                 executor,
-                executor,
                 Runnable::run,
-                timeout,
                 Duration.ofSeconds(60),
                 (future, limit) -> future.orTimeout(limit.toNanos(), TimeUnit.NANOSECONDS));
     }

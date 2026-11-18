@@ -266,14 +266,7 @@ class SolutionRewriteJobTest {
 
     private JiraAppSolutionServiceImpl service(SolutionFormAiImpl.Mode mode) {
         formAi = new SolutionFormAiImpl(
-                ai,
-                mode,
-                Runnable::run,
-                executor,
-                completionExecutor,
-                Duration.ofSeconds(18),
-                Duration.ofSeconds(60),
-                (pending, limit) -> {
+                ai, mode, executor, completionExecutor, Duration.ofSeconds(60), (pending, limit) -> {
                     assertThat(limit).isEqualTo(Duration.ofSeconds(60));
                     future.set(pending);
                 });
