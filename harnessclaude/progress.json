@@ -419,13 +419,13 @@
         "rewrite-job-forge": "passing",
         "ask-outcome-texts": "passing"
       },
-      "lastUpdated": "2026-11-18T08:59:23.864Z",
+      "lastUpdated": "2026-11-18T09:05:35.529Z",
       "branch": "feat/KAN-337-jira-app-reject-reason",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "8dd140cf1a69231c73639a4d41a28a5c12427b6a"
+        "default": "89dd9005967af8d83f6ff323eec985b5f8578329"
       }
     },
     "dashboard-audit": {
