@@ -364,11 +364,11 @@
         "classify-outcome-schema": "evaluating",
         "classify-question": "passing",
         "classify-question-ui": "passing",
-        "conversation-store": "evaluating",
+        "conversation-store": "passing",
         "conversation-api": "pending",
         "conversation-ui": "pending"
       },
-      "lastUpdated": "2026-11-18T02:55:45.258Z",
+      "lastUpdated": "2026-11-18T04:48:27.004Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
