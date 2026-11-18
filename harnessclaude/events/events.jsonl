@@ -2140,4 +2140,22 @@
 {"ts":"2026-11-18T06:47:27.645Z","type":"spec-approved","module":"jira-app","specHash":"7f62a6dc931a084f3013501872829a79658b512ca13f2ede8e94b4ec951fba9a"}
 {"ts":"2026-11-18T06:47:32.328Z","type":"spec-approved","module":"ticket-review","specHash":"e69cb9f06e5c370a11a27c036624518563dc89c049948212d64403a9538b7cce"}
 {"ts":"2026-11-18T06:47:55.411Z","type":"quick-opened","what":"Keep the import preview cleanup in Vietnam time; drop TSOLVE_JOB_TIME_ZONE","files":["backend/src/main/java/vn/tsolve/ticket/service/impl/PreviewCleanupJob.java","backend/src/test/java/vn/tsolve/ticket/service/impl/PreviewCleanupJobTest.java"]}
+{"ts":"2026-11-18T07:53:57.380Z","type":"spec-approved","module":"jira-app","specHash":"e7a9e78136d9c147caaa0ce708e27a00fda468c9137bbd13e5b18936a8b61eb3"}
+{"ts":"2026-11-18T07:56:23.527Z","type":"feature-status","module":"jira-app","feature":"form-from-issue","from":null,"to":"pending"}
+{"ts":"2026-11-18T07:56:23.770Z","type":"feature-status","module":"jira-app","feature":"draft-at-done-backend","from":null,"to":"pending"}
+{"ts":"2026-11-18T07:56:24.020Z","type":"feature-status","module":"jira-app","feature":"issue-updated-trigger","from":null,"to":"pending"}
+{"ts":"2026-11-18T07:56:24.274Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-done-only","from":null,"to":"pending"}
+{"ts":"2026-11-18T07:57:12.943Z","type":"feature-status","module":"jira-app","feature":"form-from-issue","from":"pending","to":"in-progress"}
+{"ts":"2026-11-18T08:03:42.173Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"0897441d50ece692817817fa7d1fa8148b86d223"}
+{"ts":"2026-11-18T08:03:42.459Z","type":"feature-status","module":"jira-app","feature":"form-from-issue","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-18T08:12:52.264Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"1dbf74ac3495ac2b88158c07ef2cb32855a990a4"}
+{"ts":"2026-11-18T08:13:06.734Z","type":"feature-status","module":"jira-app","feature":"draft-at-done-backend","from":"pending","to":"in-progress"}
+{"ts":"2026-11-18T08:13:06.965Z","type":"feature-status","module":"jira-app","feature":"draft-at-done-backend","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-18T08:13:14.910Z","type":"feature-status","module":"jira-app","feature":"issue-updated-trigger","from":"pending","to":"in-progress"}
+{"ts":"2026-11-18T08:16:03.412Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"f0a4214f11661ab79ebb10ac9cd9812ae096326d"}
+{"ts":"2026-11-18T08:16:03.723Z","type":"feature-status","module":"jira-app","feature":"issue-updated-trigger","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-18T08:16:20.567Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-done-only","from":"pending","to":"in-progress"}
+{"ts":"2026-11-18T08:17:36.127Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"d0b2d1d60ba918b24cef62d076ad06263c690b8d"}
+{"ts":"2026-11-18T08:17:46.317Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-done-only","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-18T07:54:52.142Z","type":"spec-approved","module":"jira-app","specHash":"b8a910401ea43e6ec1df940adecc4774adea0ab0bc9546d12b99c656d1f9a428"}
+{"ts":"2026-11-18T08:54:06.641Z","type":"spec-approved","module":"jira-app","specHash":"1008ac99b3efb6ee52626e867fa856a21a0ac2d8578c320adb0181fff2fb915b"}

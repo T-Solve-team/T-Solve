@@ -17,6 +17,7 @@ import type {
   ChatbotRating,
   IssueCreatedPayload,
   IssuePanel,
+  IssueUpdatedPayload,
   JiraAccountLinkStart,
   JiraAccountLinkStatus,
   JiraAppQuestionJob,
@@ -277,6 +278,27 @@ export const getReceiveIssueCreatedMockHandler = (
   return http.post<PathParams, IssueCreatedPayload>(
     '*/api/v1/jira-app/events/issue-created',
     async (info: Parameters<HttpResponseResolver<PathParams, IssueCreatedPayload>>[0]) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 202 });
+    },
+    options,
+  );
+};
+
+export const getReceiveIssueUpdatedMockHandler = (
+  overrideResponse?:
+    | void
+    | ((
+        info: Parameters<HttpResponseResolver<PathParams, IssueUpdatedPayload>>[0],
+      ) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<PathParams, IssueUpdatedPayload>(
+    '*/api/v1/jira-app/events/issue-updated',
+    async (info: Parameters<HttpResponseResolver<PathParams, IssueUpdatedPayload>>[0]) => {
       if (typeof overrideResponse === 'function') {
         await overrideResponse(info);
       }
@@ -592,6 +614,7 @@ export const getGetIssuePanelMockHandler = (
 export const getJiraAppMock = () => [
   getGetJiraReviewFeedbackMockHandler(),
   getReceiveIssueCreatedMockHandler(),
+  getReceiveIssueUpdatedMockHandler(),
   getReceiveJiraAppTokenMockHandler(),
   getGetJiraAccountLinkMockHandler(),
   getStartJiraAccountLinkMockHandler(),

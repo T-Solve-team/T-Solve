@@ -1,6 +1,5 @@
 package vn.tsolve.jiraapp.service.impl;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.RejectedExecutionException;
@@ -13,7 +12,6 @@ import vn.tsolve.common.security.JiraAppPrincipal;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.jiraapp.dto.IssuePanelResponse;
 import vn.tsolve.jiraapp.dto.JiraIssueContext.Member;
-import vn.tsolve.jiraapp.dto.SolutionFormDraft;
 import vn.tsolve.jiraapp.dto.SolutionFormRequest;
 import vn.tsolve.jiraapp.dto.SolutionFormResponse;
 import vn.tsolve.jiraapp.dto.SolutionFormResponse.Origin;
@@ -26,7 +24,6 @@ import vn.tsolve.jiraapp.service.JiraAppSolutionService;
 import vn.tsolve.jiraapp.service.JiraIssueAccess;
 import vn.tsolve.jiraapp.service.SolutionFormAi;
 import vn.tsolve.jiraapp.service.impl.RedisAskJobStore.Job;
-import vn.tsolve.ticket.dto.MessageRef;
 import vn.tsolve.ticket.dto.SolutionFormSubmission;
 import vn.tsolve.ticket.dto.SolutionSections;
 import vn.tsolve.ticket.dto.SubmittedSolutionTicket;
@@ -41,7 +38,6 @@ public class JiraAppSolutionServiceImpl implements JiraAppSolutionService {
 
     private static final Logger log = LoggerFactory.getLogger(JiraAppSolutionServiceImpl.class);
     private static final String REWRITE_PREFIX = "jira-app:rewrite:";
-    private static final MessageRef AI_DRAFT_UNAVAILABLE = new MessageRef("MSG67", Map.of());
 
     private final JiraIssueAccess access;
     private final SolutionFormTicketService tickets;
@@ -76,10 +72,8 @@ public class JiraAppSolutionServiceImpl implements JiraAppSolutionService {
             if (draft.isPresent()) {
                 return new SolutionFormResponse(true, Origin.DRAFT, draft.get(), null);
             }
-            SolutionFormDraft aiDraft = ai.draft(request.summary(), request.description());
-            return aiDraft.aiDraft()
-                    ? new SolutionFormResponse(true, Origin.AI_DRAFT, aiDraft.sections(), null)
-                    : new SolutionFormResponse(true, Origin.ISSUE, aiDraft.sections(), AI_DRAFT_UNAVAILABLE);
+            return new SolutionFormResponse(
+                    true, Origin.ISSUE, IssueText.sections(request.summary(), request.description()), null);
         });
     }
 

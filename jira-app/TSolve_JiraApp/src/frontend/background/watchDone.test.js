@@ -29,7 +29,7 @@ describe('watchDone', () => {
     expect(movedIntoDone(previous, current)).toBe(opens);
   });
 
-  it('AC-002.2 reads the status category, summary and description text as the viewer', async () => {
+  it('AC-002.1 reads the status category, summary and description text as the viewer', async () => {
     const requestJira = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({

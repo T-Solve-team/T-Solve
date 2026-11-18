@@ -33,7 +33,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
-import vn.tsolve.ai.dto.SolutionDraft;
 import vn.tsolve.ai.exception.AiRewriteUnavailableException;
 import vn.tsolve.ai.service.SolutionAiService;
 import vn.tsolve.common.exception.NotFoundException;
@@ -186,27 +185,8 @@ class SolutionRewriteJobTest {
     }
 
     @Test
-    void fullRewritePoolDoesNotMakeTheDraftBusy_AC_002_2() {
+    void fullRewritePoolRefusesAnotherJob_AC_007_8() {
         rewriteCapacity = 2;
-        when(ai.draft(any()))
-                .thenReturn(new SolutionDraft(
-                        new vn.tsolve.ai.dto.SolutionSections("Rewritten", "Cause", "Steps", "", "Scope"), true));
-        var service = service(SolutionFormAiImpl.Mode.AI);
-        service.startRewrite(CALLER, INPUT);
-        service.startRewrite(CALLER, INPUT);
-
-        var draft = formAi.draft("summary", "description");
-        assertThat(draft.aiDraft()).isTrue();
-        assertThat(draft.sections()).isEqualTo(OUTPUT);
-        assertThat(queue).hasSize(2);
-    }
-
-    @Test
-    void fullRewritePoolRefusesAnotherJobWhileTheDraftPoolIsFree_AC_007_8() {
-        rewriteCapacity = 2;
-        when(ai.draft(any()))
-                .thenReturn(new SolutionDraft(
-                        new vn.tsolve.ai.dto.SolutionSections("Rewritten", "Cause", "Steps", "", "Scope"), true));
         var service = service(SolutionFormAiImpl.Mode.AI);
         service.startRewrite(CALLER, INPUT);
         service.startRewrite(CALLER, INPUT);
@@ -215,7 +195,6 @@ class SolutionRewriteJobTest {
         assertThat(jobs.records).hasSize(2);
         assertThat(queue).hasSize(2);
         verifyNoInteractions(ai);
-        assertThat(formAi.draft("summary", "description").aiDraft()).isTrue();
     }
 
     @Test
@@ -287,14 +266,7 @@ class SolutionRewriteJobTest {
 
     private JiraAppSolutionServiceImpl service(SolutionFormAiImpl.Mode mode) {
         formAi = new SolutionFormAiImpl(
-                ai,
-                mode,
-                Runnable::run,
-                executor,
-                completionExecutor,
-                Duration.ofSeconds(18),
-                Duration.ofSeconds(60),
-                (pending, limit) -> {
+                ai, mode, executor, completionExecutor, Duration.ofSeconds(60), (pending, limit) -> {
                     assertThat(limit).isEqualTo(Duration.ofSeconds(60));
                     future.set(pending);
                 });

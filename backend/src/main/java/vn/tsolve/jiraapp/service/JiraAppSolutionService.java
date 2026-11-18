@@ -14,7 +14,7 @@ import vn.tsolve.ticket.dto.SolutionSections;
 /** The Solution Form and the Issue Panel status of one Jira issue (jira-app STORY-001 to STORY-008). */
 public interface JiraAppSolutionService {
 
-    /** Whether the form may open, and its content: Draft, else AI draft, else the issue text with MSG67. */
+    /** Whether the form may open, and its content: Draft, else the issue text (AC-002.1, AC-005.2). */
     SolutionFormResponse openForm(JiraAppPrincipal caller, String issueKey, SolutionFormRequest request);
 
     /** Finish: creates the issue's Solution Form ticket for the Review Queue (AC-004.1). */

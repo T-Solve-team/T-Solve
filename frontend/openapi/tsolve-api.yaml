@@ -1876,6 +1876,30 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/events/issue-updated:
+    post:
+      tags: [jira-app]
+      operationId: receiveIssueUpdated
+      summary: >
+        Forge trigger avi:jira:updated:issue — records whether the issue is in Done and, on a move into Done, creates
+        the Solution Form Draft of the assignee or the mover (jira-app STORY-005, AC-005.6 to AC-005.10).
+      security:
+        - forgeInvocationToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueUpdatedPayload'
+      responses:
+        '202':
+          description: >
+            Accepted — also when the event has no status change, cannot be read, or the issue belongs to no T-Solve
+            Project (nothing changes then).
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
   /api/v1/jira-app/app-token:
     post:
       tags: [jira-app]
@@ -2087,7 +2111,7 @@ paths:
       operationId: openSolutionForm
       summary: >
         Whether the viewer may open 4.1 Solution Form for the issue and, if so, its content: the viewer's Draft,
-        else the AI draft, else the issue text in Symptoms with MSG67 (STORY-001, 002, 005).
+        else the issue text in Symptoms — summary, a blank line, description — with no AI call (STORY-001, 002, 005).
       security:
         - forgeInvocationToken: []
       requestBody:
@@ -3657,6 +3681,62 @@ components:
                   items:
                     type: string
                   description: The issue labels; `tsolve-chatbot` marks an issue created by the Chatbot (AC-011.8).
+    IssueUpdatedPayload:
+      type: object
+      description: >
+        The part of a Forge avi:jira:updated:issue event that T-Solve reads; every field may be missing (the server
+        then changes nothing) and other fields Forge sends are ignored. Nothing here is logged except the issue key.
+      properties:
+        atlassianId:
+          type: string
+          description: The Jira account that made the change; owns the Draft when the issue has no assignee.
+        issue:
+          type: object
+          properties:
+            key:
+              type: string
+              maxLength: 50
+              description: The Jira issue key, e.g. ITSUP-1031.
+            fields:
+              type: object
+              properties:
+                summary:
+                  type: string
+                description:
+                  type: [object, 'null']
+                  additionalProperties: true
+                  description: The description as Atlassian Document Format (ADF); absent or null when empty.
+                status:
+                  type: object
+                  properties:
+                    statusCategory:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                          description: The issue's status category after the change; `done` is the Done category.
+                assignee:
+                  type: [object, 'null']
+                  properties:
+                    accountId:
+                      type: string
+        changelog:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                    description: '`status` for a status change.'
+                  from:
+                    type: [string, 'null']
+                    description: The id of the status before the change.
+                  to:
+                    type: [string, 'null']
+                    description: The id of the status after the change.
     AuditAction:
       type: string
       enum:
@@ -4756,9 +4836,9 @@ components:
     SolutionFormOrigin:
       type: string
       description: >
-        Where the sections come from — the viewer's Draft, the AI draft, the issue text (MSG67), or the ticket's
-        current Solution (a resubmission without a Draft, AC-012.2).
-      enum: [DRAFT, AI_DRAFT, ISSUE, TICKET]
+        Where the sections come from — the viewer's Draft, the issue text (AC-002.1), or the ticket's current
+        Solution (a resubmission without a Draft, AC-012.2).
+      enum: [DRAFT, ISSUE, TICKET]
     SolutionForm:
       type: object
       required: [mayOpen, origin, sections, message]
@@ -4779,7 +4859,7 @@ components:
           anyOf:
             - $ref: '#/components/schemas/MessageRef'
             - type: 'null'
-          description: MSG67 when the AI draft is unavailable; otherwise null.
+          description: A message to show above the sections; null today (MSG67 went with the AI draft, KAN-371).
     SubmitSolutionRequest:
       type: object
       required: [summary, sections]

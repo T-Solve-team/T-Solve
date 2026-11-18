@@ -416,15 +416,19 @@
         "ask-job-backend": "passing",
         "ask-job-forge": "passing",
         "rewrite-job-backend": "passing",
-        "rewrite-job-forge": "passing"
+        "rewrite-job-forge": "passing",
+        "form-from-issue": "evaluating",
+        "draft-at-done-backend": "evaluating",
+        "issue-updated-trigger": "evaluating",
+        "draft-reminder-done-only": "evaluating"
       },
-      "lastUpdated": "2026-11-18T03:03:57.935Z",
-      "branch": "feat/KAN-337-jira-app-reject-reason",
+      "lastUpdated": "2026-11-18T08:17:46.315Z",
+      "branch": "feat/KAN-336-jira-app-draft-reminder",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "305535947b3bc1991c844a198337d3f89f76858f"
+        "default": "d0b2d1d60ba918b24cef62d076ad06263c690b8d"
       }
     },
     "dashboard-audit": {
