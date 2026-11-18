@@ -1,4 +1,4 @@
-# Task 25: draft-at-done-backend
+# Task 29: draft-at-done-backend
 
 **Module:** jira-app · **Assignee:** Claude (for the user) · **Status:** evaluating · **Iteration:** 2
 
@@ -26,4 +26,4 @@
 - Commit: default@1dbf74ac
 
 ### Next up
-Task 26 issue-updated-trigger
+Task 30 issue-updated-trigger

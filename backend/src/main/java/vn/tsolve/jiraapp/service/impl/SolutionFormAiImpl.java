@@ -3,15 +3,13 @@ package vn.tsolve.jiraapp.service.impl;
 import jakarta.annotation.PreDestroy;
 import java.time.Duration;
 import java.util.Locale;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,27 +47,54 @@ public class SolutionFormAiImpl implements SolutionFormAi {
     private final SolutionAiService ai;
     private final Mode mode;
     private final Executor executor;
+    private final Executor rewriteExecutor;
+    private final Executor completionExecutor;
     private final long timeoutNanos;
+    private final Duration rewriteTimeout;
+    private final BiConsumer<CompletableFuture<SolutionSections>, Duration> rewriteDeadline;
 
     // Its own pool, as for Jira App questions (BUG-183): an AI call that waits must not hold a thread the web app's
     // own AI calls need. Not a bean, so Spring Boot still creates its applicationTaskExecutor.
     @Autowired
     public SolutionFormAiImpl(
             SolutionAiService ai,
+            JiraAppJobCompletions completions,
             @Value("${TSOLVE_STUB_AI:}") String stub,
             @Value("${JIRA_APP_AI_THREADS:4}") int threads,
-            @Value("${JIRA_APP_AI_TIMEOUT:18s}") String timeout) {
-        this(ai, Mode.of(stub), pool(threads), DurationStyle.detectAndParse(timeout));
+            @Value("${JIRA_APP_REWRITE_THREADS:4}") int rewriteThreads,
+            @Value("${JIRA_APP_AI_TIMEOUT:18s}") String timeout,
+            @Value("${JIRA_APP_REWRITE_TIMEOUT:60s}") String rewriteTimeout) {
+        this(
+                ai,
+                Mode.of(stub),
+                JiraAppJobs.pool(threads, "JIRA_APP_AI_THREADS", "jira-app-ai-"),
+                JiraAppJobs.pool(rewriteThreads, "JIRA_APP_REWRITE_THREADS", "jira-app-rewrite-"),
+                completions.executor(),
+                DurationStyle.detectAndParse(timeout),
+                DurationStyle.detectAndParse(rewriteTimeout),
+                (future, limit) -> future.orTimeout(limit.toNanos(), TimeUnit.NANOSECONDS));
     }
 
-    SolutionFormAiImpl(SolutionAiService ai, Mode mode, Executor executor, Duration timeout) {
+    SolutionFormAiImpl(
+            SolutionAiService ai,
+            Mode mode,
+            Executor executor,
+            Executor rewriteExecutor,
+            Executor completionExecutor,
+            Duration timeout,
+            Duration rewriteTimeout,
+            BiConsumer<CompletableFuture<SolutionSections>, Duration> rewriteDeadline) {
         if (timeout.isNegative() || timeout.isZero()) {
             throw new IllegalArgumentException("JIRA_APP_AI_TIMEOUT must be positive");
         }
         this.ai = ai;
         this.mode = mode;
         this.executor = executor;
+        this.rewriteExecutor = rewriteExecutor;
+        this.completionExecutor = completionExecutor;
         this.timeoutNanos = timeout.toNanos();
+        this.rewriteTimeout = JiraAppJobs.jobTimeout(rewriteTimeout, "JIRA_APP_REWRITE_TIMEOUT");
+        this.rewriteDeadline = rewriteDeadline;
     }
 
     @PreDestroy
@@ -77,27 +102,28 @@ public class SolutionFormAiImpl implements SolutionFormAi {
         if (executor instanceof ExecutorService pool) {
             pool.shutdownNow();
         }
+        if (rewriteExecutor instanceof ExecutorService pool) {
+            pool.shutdownNow();
+        }
     }
 
     @Override
-    public SolutionSections rewrite(SolutionSections sections) {
-        if (mode == Mode.UNAVAILABLE) {
-            throw new AiRewriteUnavailableException();
-        }
-        if (mode == Mode.AVAILABLE) {
-            return cannedRewrite(sections);
-        }
-        try {
-            return toForm(withinDeadline(() -> ai.rewrite(toAi(sections))));
-        } catch (RuntimeException e) {
-            log.warn("Solution Form AI rewrite failed: error type {}", errorType(e));
-            throw new AiRewriteUnavailableException();
-        }
+    public void startRewrite(SolutionSections sections, BiConsumer<SolutionSections, Throwable> completion) {
+        var future = JiraAppJobs.supply(
+                () -> switch (mode) {
+                    case AVAILABLE -> cannedRewrite(sections);
+                    case UNAVAILABLE -> throw new AiRewriteUnavailableException();
+                    case AI -> toForm(ai.rewrite(toAi(sections)));
+                },
+                rewriteExecutor);
+        // Queue time counts; a timed-out rewrite is skipped if still queued, interrupted if running.
+        rewriteDeadline.accept(future, rewriteTimeout);
+        future.whenCompleteAsync(completion, completionExecutor);
     }
 
     private <T> T withinDeadline(Supplier<T> call) {
         try {
-            return CompletableFuture.supplyAsync(call, executor)
+            return JiraAppJobs.supply(call, executor)
                     .orTimeout(timeoutNanos, TimeUnit.NANOSECONDS)
                     .join();
         } catch (CompletionException e) {
@@ -145,25 +171,6 @@ public class SolutionFormAiImpl implements SolutionFormAi {
                 sections.resolutionSteps(),
                 sections.workaround(),
                 sections.scopeOfApplicability());
-    }
-
-    private static ThreadPoolExecutor pool(int threads) {
-        if (threads < 1) {
-            throw new IllegalArgumentException("JIRA_APP_AI_THREADS must be positive");
-        }
-        AtomicInteger number = new AtomicInteger();
-        return new ThreadPoolExecutor(
-                threads,
-                threads,
-                0,
-                TimeUnit.SECONDS,
-                new ArrayBlockingQueue<>(threads),
-                work -> {
-                    Thread thread = new Thread(work, "jira-app-ai-" + number.incrementAndGet());
-                    thread.setDaemon(true);
-                    return thread;
-                },
-                new ThreadPoolExecutor.AbortPolicy());
     }
 
     /** A failed AI call with only its error type: no message, cause or stack that could carry text. */

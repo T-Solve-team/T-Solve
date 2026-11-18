@@ -6,10 +6,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -20,6 +22,8 @@ import vn.tsolve.common.security.JiraAppPrincipal;
 import vn.tsolve.common.security.Roles;
 import vn.tsolve.jiraapp.dto.SolutionFormRequest;
 import vn.tsolve.jiraapp.dto.SolutionFormResponse;
+import vn.tsolve.jiraapp.dto.SolutionRewriteJob;
+import vn.tsolve.jiraapp.dto.SolutionRewriteJobResult;
 import vn.tsolve.jiraapp.dto.SubmitSolutionRequest;
 import vn.tsolve.jiraapp.dto.SubmittedTicketResponse;
 import vn.tsolve.jiraapp.service.JiraAppSolutionService;
@@ -85,8 +89,18 @@ public class JiraAppSolutionController {
     @ApiResponse(responseCode = "400", description = "Invalid body")
     @ApiResponse(responseCode = "403", description = "MSG62 or MSG08")
     @ApiResponse(responseCode = "503", description = "MSG68, or MSG06: the Forge token could not be checked")
-    public ResponseEntity<SolutionSections> rewriteSolution(
+    public ResponseEntity<SolutionRewriteJob> rewriteSolution(
             @AuthenticationPrincipal JiraAppPrincipal caller, @Valid @RequestBody SolutionSections sections) {
-        return ResponseEntity.ok(solutions.rewrite(caller, sections));
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(solutions.startRewrite(caller, sections));
+    }
+
+    @GetMapping("/solution-rewrites/{jobId}")
+    @PreAuthorize("hasRole('" + Roles.JIRA_APP + "')")
+    @Operation(operationId = "getSolutionRewriteJob", summary = "Read the viewer's rewrite job")
+    @ApiResponse(responseCode = "404", description = "MSG68: unknown, expired or another viewer's job")
+    @ApiResponse(responseCode = "503", description = "MSG68, or MSG06: the Forge token could not be checked")
+    public ResponseEntity<SolutionRewriteJobResult> getSolutionRewriteJob(
+            @AuthenticationPrincipal JiraAppPrincipal caller, @PathVariable UUID jobId) {
+        return ResponseEntity.ok(solutions.rewriteResult(caller, jobId));
     }
 }

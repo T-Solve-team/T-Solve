@@ -13,7 +13,6 @@ import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'ms
 
 import { ChatbotAnswerOutcome, SolutionFormOrigin, TicketStatus } from '../model';
 import type {
-  ChatbotAnswer,
   ChatbotQuestion,
   ChatbotRating,
   IssueCreatedPayload,
@@ -21,11 +20,15 @@ import type {
   IssueUpdatedPayload,
   JiraAccountLinkStart,
   JiraAccountLinkStatus,
+  JiraAppQuestionJob,
+  JiraAppQuestionJobResult,
   JiraAskerEligibility,
   JiraReviewFeedback,
   MessageRef,
   SolutionForm,
   SolutionFormRequest,
+  SolutionRewriteJob,
+  SolutionRewriteJobResult,
   SolutionSections,
   SubmitSolutionRequest,
   SubmittedTicket,
@@ -95,7 +98,11 @@ export const getGetJiraAskerEligibilityResponseMock = (
   ...overrideResponse,
 });
 
-export const getAskJiraAppQuestionResponseWikiDocumentCitationMock = (
+export const getAskJiraAppQuestionResponseMock = (
+  overrideResponse: Partial<Extract<JiraAppQuestionJob, object>> = {},
+): JiraAppQuestionJob => ({ jobId: faker.string.uuid(), ...overrideResponse });
+
+export const getGetJiraAppQuestionJobResponseWikiDocumentCitationMock = (
   overrideResponse: Partial<WikiDocumentCitation> = {},
 ): WikiDocumentCitation => ({
   ...{
@@ -107,7 +114,7 @@ export const getAskJiraAppQuestionResponseWikiDocumentCitationMock = (
   ...overrideResponse,
 });
 
-export const getAskJiraAppQuestionResponseTicketSolutionCitationMock = (
+export const getGetJiraAppQuestionJobResponseTicketSolutionCitationMock = (
   overrideResponse: Partial<TicketSolutionCitation> = {},
 ): TicketSolutionCitation => ({
   ...{
@@ -127,19 +134,33 @@ export const getAskJiraAppQuestionResponseTicketSolutionCitationMock = (
   ...overrideResponse,
 });
 
-export const getAskJiraAppQuestionResponseMock = (
-  overrideResponse: Partial<Extract<ChatbotAnswer, object>> = {},
-): ChatbotAnswer => ({
-  answerId: faker.string.uuid(),
-  outcome: faker.helpers.arrayElement(Object.values(ChatbotAnswerOutcome)),
-  text: faker.string.alpha({ length: { min: 10, max: 20 } }),
-  citations: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
-    () =>
-      faker.helpers.arrayElement([
-        { ...getAskJiraAppQuestionResponseWikiDocumentCitationMock() },
-        { ...getAskJiraAppQuestionResponseTicketSolutionCitationMock() },
-      ]),
-  ),
+export const getGetJiraAppQuestionJobResponseMock = (
+  overrideResponse: Partial<Extract<JiraAppQuestionJobResult, object>> = {},
+): JiraAppQuestionJobResult => ({
+  status: faker.helpers.arrayElement(['PENDING', 'DONE', 'FAILED'] as const),
+  answer: faker.helpers.arrayElement([
+    {
+      ...{
+        answerId: faker.string.uuid(),
+        outcome: faker.helpers.arrayElement(Object.values(ChatbotAnswerOutcome)),
+        text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        citations: Array.from(
+          { length: faker.number.int({ min: 1, max: 10 }) },
+          (_, i) => i + 1,
+        ).map(() =>
+          faker.helpers.arrayElement([
+            { ...getGetJiraAppQuestionJobResponseWikiDocumentCitationMock() },
+            { ...getGetJiraAppQuestionJobResponseTicketSolutionCitationMock() },
+          ]),
+        ),
+      },
+    },
+    undefined,
+  ]),
+  code: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
   ...overrideResponse,
 });
 
@@ -186,13 +207,25 @@ export const getSubmitSolutionResponseMock = (
 });
 
 export const getRewriteSolutionResponseMock = (
-  overrideResponse: Partial<Extract<SolutionSections, object>> = {},
-): SolutionSections => ({
-  symptoms: faker.string.alpha({ length: { min: 10, max: 20 } }),
-  rootCause: faker.string.alpha({ length: { min: 10, max: 20 } }),
-  resolutionSteps: faker.string.alpha({ length: { min: 10, max: 20 } }),
-  workaround: faker.string.alpha({ length: { min: 10, max: 20 } }),
-  scopeOfApplicability: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  overrideResponse: Partial<Extract<SolutionRewriteJob, object>> = {},
+): SolutionRewriteJob => ({ jobId: faker.string.uuid(), ...overrideResponse });
+
+export const getGetSolutionRewriteJobResponseMock = (
+  overrideResponse: Partial<Extract<SolutionRewriteJobResult, object>> = {},
+): SolutionRewriteJobResult => ({
+  status: faker.helpers.arrayElement(['PENDING', 'DONE', 'FAILED'] as const),
+  sections: faker.helpers.arrayElement([
+    {
+      ...{
+        symptoms: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        rootCause: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        resolutionSteps: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        workaround: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        scopeOfApplicability: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+    },
+    undefined,
+  ]),
   ...overrideResponse,
 });
 
@@ -367,10 +400,10 @@ export const getGetJiraAskerEligibilityMockHandler = (
 
 export const getAskJiraAppQuestionMockHandler = (
   overrideResponse?:
-    | ChatbotAnswer
+    | JiraAppQuestionJob
     | ((
         info: Parameters<HttpResponseResolver<PathParams, ChatbotQuestion>>[0],
-      ) => Promise<ChatbotAnswer> | ChatbotAnswer),
+      ) => Promise<JiraAppQuestionJob> | JiraAppQuestionJob),
   options?: RequestHandlerOptions,
 ) => {
   return http.post<PathParams, ChatbotQuestion>(
@@ -382,6 +415,30 @@ export const getAskJiraAppQuestionMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getAskJiraAppQuestionResponseMock(),
+        { status: 202 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetJiraAppQuestionJobMockHandler = (
+  overrideResponse?:
+    | JiraAppQuestionJobResult
+    | ((
+        info: Parameters<HttpResponseResolver<{ jobId: string }>>[0],
+      ) => Promise<JiraAppQuestionJobResult> | JiraAppQuestionJobResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get<{ jobId: string }>(
+    '*/api/v1/jira-app/questions/:jobId',
+    async (info: Parameters<HttpResponseResolver<{ jobId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetJiraAppQuestionJobResponseMock(),
         { status: 200 },
       );
     },
@@ -485,10 +542,10 @@ export const getSaveSolutionDraftMockHandler = (
 
 export const getRewriteSolutionMockHandler = (
   overrideResponse?:
-    | SolutionSections
+    | SolutionRewriteJob
     | ((
         info: Parameters<HttpResponseResolver<PathParams, SolutionSections>>[0],
-      ) => Promise<SolutionSections> | SolutionSections),
+      ) => Promise<SolutionRewriteJob> | SolutionRewriteJob),
   options?: RequestHandlerOptions,
 ) => {
   return http.post<PathParams, SolutionSections>(
@@ -500,6 +557,30 @@ export const getRewriteSolutionMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getRewriteSolutionResponseMock(),
+        { status: 202 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetSolutionRewriteJobMockHandler = (
+  overrideResponse?:
+    | SolutionRewriteJobResult
+    | ((
+        info: Parameters<HttpResponseResolver<{ jobId: string }>>[0],
+      ) => Promise<SolutionRewriteJobResult> | SolutionRewriteJobResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get<{ jobId: string }>(
+    '*/api/v1/jira-app/solution-rewrites/:jobId',
+    async (info: Parameters<HttpResponseResolver<{ jobId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetSolutionRewriteJobResponseMock(),
         { status: 200 },
       );
     },
@@ -539,10 +620,12 @@ export const getJiraAppMock = () => [
   getStartJiraAccountLinkMockHandler(),
   getGetJiraAskerEligibilityMockHandler(),
   getAskJiraAppQuestionMockHandler(),
+  getGetJiraAppQuestionJobMockHandler(),
   getRateJiraAppAnswerMockHandler(),
   getOpenSolutionFormMockHandler(),
   getSubmitSolutionMockHandler(),
   getSaveSolutionDraftMockHandler(),
   getRewriteSolutionMockHandler(),
+  getGetSolutionRewriteJobMockHandler(),
   getGetIssuePanelMockHandler(),
 ];

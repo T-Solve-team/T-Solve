@@ -1,4 +1,4 @@
-# Task 26: issue-updated-trigger
+# Task 30: issue-updated-trigger
 
 **Module:** jira-app · **Assignee:** Claude (for the user) · **Status:** evaluating · **Iteration:** 2
 
@@ -16,4 +16,4 @@
 - Commit: see `lastCommit` (feat(jira-app): send issue updates … KAN-371)
 
 ### Next up
-Task 27 draft-reminder-done-only
+Task 31 draft-reminder-done-only

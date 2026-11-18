@@ -1,4 +1,4 @@
-# Task 24: form-from-issue
+# Task 28: form-from-issue
 
 **Module:** jira-app · **Assignee:** Claude (for the user) · **Status:** evaluating · **Iteration:** 2
 
@@ -16,9 +16,9 @@
 - Checks: backend `JiraAppSolutionServiceImplTest`, `SolutionFormAiImplTest`, `IssueTextTest`, jira-app controller
   tests — 64 run, 0 failed; `mvn test-compile spotless:check` clean; Forge `npm test` 195 passed, `npm run lint`
   clean; frontend `format:check`, `typecheck` clean. Full `mvn verify` left to CI (team practice).
-- Trace (STORY-002, STORY-005): AC-002.1 to AC-002.5 and AC-005.1/2/4/5 covered; AC-005.6 to AC-005.10 are Task 25;
+- Trace (STORY-002, STORY-005): AC-002.1 to AC-002.5 and AC-005.1/2/4/5 covered; AC-005.6 to AC-005.10 are Task 29;
   AC-005.3 "ambiguous" with ticket-repository is pre-existing.
 - Commit: default@0897441d
 
 ### Next up
-Task 25 draft-at-done-backend
+Task 29 draft-at-done-backend

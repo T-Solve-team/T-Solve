@@ -1,4 +1,4 @@
-# Task 27: draft-reminder-done-only
+# Task 31: draft-reminder-done-only
 
 **Module:** jira-app · **Assignee:** Claude (for the user) · **Status:** evaluating · **Iteration:** 2
 

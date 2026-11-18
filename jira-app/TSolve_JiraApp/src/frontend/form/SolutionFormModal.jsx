@@ -1,6 +1,6 @@
 // 4.1 Solution Form and 4.2 AI Rewrite Preview (jira-app STORY-002, STORY-004, STORY-005, STORY-007, STORY-012), in one
 // UI Kit Modal. Closing it keeps a Draft and never submits (AC-005.1, AC-005.5, AC-012.6).
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Box,
   Button,
@@ -66,8 +66,12 @@ export function SolutionFormModal({ issueKey, summary, form, onDone, resubmit = 
   const [busy, setBusy] = useState(false);
   // Set at once, unlike `busy`, whose re-render reaches Forge later: Finish and Close never both run (BUG-237).
   const leaving = useRef(false);
+  const rewriteController = useRef(null);
   const [fieldError, setFieldError] = useState(null);
   const [notice, setNotice] = useState(form?.message ? { appearance: 'warning', code: form.message.code } : null);
+
+  // Forge cannot cancel an invokeRemote call, but the signal stops polling and makes any late result irrelevant.
+  useEffect(() => () => rewriteController.current?.abort(), []);
 
   const edit = (field, value) => {
     setSections((current) => ({ ...current, [field]: value }));
@@ -109,9 +113,11 @@ export function SolutionFormModal({ issueKey, summary, form, onDone, resubmit = 
   // Close and the dialog's own close control keep what was typed as the Draft (AC-005.1); on failure the form stays
   // open with its content (AC-005.4).
   const close = async () => {
-    if (busy || leaving.current) {
+    if (leaving.current || (busy && !rewriteController.current)) {
       return;
     }
+    rewriteController.current?.abort();
+    rewriteController.current = null;
     leaving.current = true;
     setBusy(true);
     try {
@@ -126,15 +132,26 @@ export function SolutionFormModal({ issueKey, summary, form, onDone, resubmit = 
   };
 
   const rewrite = async () => {
+    if (leaving.current) return;
+    rewriteController.current?.abort();
+    const controller = new AbortController();
+    rewriteController.current = controller;
     setBusy(true);
     try {
-      setRewritten(normalize(await rewriteSolution(sections)));
+      const result = await rewriteSolution(sections, { signal: controller.signal });
+      if (controller.signal.aborted) return;
+      setRewritten(normalize(result));
       setStep('rewrite');
       setNotice(null);
-    } catch {
+    } catch (failure) {
+      if (controller.signal.aborted || failure?.name === 'AbortError') return;
       setNotice({ appearance: 'error', code: 'MSG68' });
     } finally {
-      setBusy(false);
+      // An older rewrite must not clear a newer rewrite's spinner, or the draft-save state after Close.
+      if (!controller.signal.aborted) {
+        rewriteController.current = null;
+        setBusy(false);
+      }
     }
   };
 
@@ -194,7 +211,7 @@ export function SolutionFormModal({ issueKey, summary, form, onDone, resubmit = 
               <Button onClick={rewrite} isDisabled={busy}>
                 {LABELS.rewrite}
               </Button>
-              <Button onClick={close} isDisabled={busy}>
+              <Button onClick={close} isDisabled={busy && !rewriteController.current}>
                 {LABELS.close}
               </Button>
               <Button appearance="primary" onClick={finish} isDisabled={busy}>

@@ -252,7 +252,7 @@ backend AGENTS §1 forbids using another module's `client/`. Values are HTML-esc
 - Risk: a PM decision and a resubmission at the same time — the guarded UPDATE changes the row only while it is still
   `CHANGES_REQUESTED`, so one of them wins and the other gets 409.
 
-## Change — 2026-11-18: no AI draft, a Draft at Done, reminders only while Done (KAN-371, Tasks 24–27)
+## Change — 2026-11-18: no AI draft, a Draft at Done, reminders only while Done (KAN-371, Tasks 28–31)
 
 Branch `feat/KAN-371-jira-app-draft-at-done`, from `main` after KAN-336 (#296). Spec: AC-002.1, AC-005.2,
 AC-005.6 to AC-005.10, AC-011.2.
