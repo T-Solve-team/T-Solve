@@ -216,3 +216,31 @@ JobRunr recurring "jira-app-draft-reminder"  0 8 * * *  Asia/Ho_Chi_Minh   (Draf
 
 Decided in planning: "last saved" is `solution_draft.updated_at`; dates format `yyyy-MM-dd` in Asia/Ho_Chi_Minh; the
 singular subject is used for exactly one open Draft (builder check).
+
+## Change — 2026-11-14: Resubmit after Changes requested (Tasks 13, 14; KAN-130)
+- Spec: STORY-012 (AC-012.1 to AC-012.7). Decisions of 14/11: due date reset as for a new submission; the form is filled
+  from the writer's Draft, else the ticket's Solution; Close keeps a Draft; success shows MSG66; the panel button
+  "Edit and resubmit" and MSG64 above the sections. Task numbers 11 and 12 are used on the KAN-336 branch.
+- Chosen: the same ticket row is updated in place (status `CHANGES_REQUESTED` → `PENDING_REVIEW`, which
+  `TicketStatus` already allows). Alternative: a new ticket per resubmission — refused, the Ticket ID is unique and
+  `ticket-review` keeps one history per ticket.
+- `ticket`: `TicketRepository.findResubmittableSections(issueKey, writerId)` (source `SOLUTION_FORM`, writer, status
+  `CHANGES_REQUESTED`) and `resubmitSolutionFormTicket(...)` — one native `UPDATE … FROM project` guarded by the same
+  conditions plus an ACTIVE Project, setting the five sections, `status = 'PENDING_REVIEW'`, `review_due_date = today +
+  review_range` (3 when not set, as the insert does) and `updated_at = now()`, `RETURNING ticket_id`. The existing
+  trigger `record_review_queue_entry` sets the new `review_queue_entered_at` because the status changes. No schema
+  change. `SolutionFormTicketService` gains `findResubmittable(issueKey, writerId)` and `resubmit(submission)`; a
+  guard miss throws `TicketNotResubmittableException` (409 MSG06, as `Ticket.moveTo`), and the writer's Draft is
+  deleted in the same transaction. The UPDATE also sets `change_request_comment = null`, as `recordReviewFeedback` does.
+- Deliberate exception: `resubmitSolutionFormTicket` does not go through `TicketTransitions` / `Ticket.moveTo`. The
+  status guard, the ACTIVE Project check and the write are one atomic UPDATE, so a resubmit racing a PM decision or an
+  expiry cannot both win; the only move it makes (`CHANGES_REQUESTED` → `PENDING_REVIEW`) is one `TicketStatus` allows.
+- `jiraapp`: `SolutionFormRequest` and `SubmitSolutionRequest` gain an optional `resubmit` (default false), so the
+  background script's Done check never opens a resubmission (AC-001.5). `openForm` with `resubmit` opens only for a
+  member whose ticket is resubmittable — origin `DRAFT` or the new `TICKET`; `submit` with `resubmit` calls
+  `resubmit`; `panel` adds `mayResubmit`. Membership is required (AC-012.3: a removed member cannot resubmit, KAN-129).
+- Forge: the panel shows "Edit and resubmit" next to MSG64 when `mayResubmit`; `SolutionFormModal` gets `resubmit`
+  and `feedback` and shows MSG64 above the sections; the client sends `resubmit`. A retried resubmission that meets
+  409 MSG06 re-reads the panel and counts a `PENDING_REVIEW` status as submitted (an earlier try got through).
+- Risk: a PM decision and a resubmission at the same time — the guarded UPDATE changes the row only while it is still
+  `CHANGES_REQUESTED`, so one of them wins and the other gets 409.

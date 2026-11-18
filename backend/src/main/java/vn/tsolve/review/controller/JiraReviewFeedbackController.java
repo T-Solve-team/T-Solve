@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import vn.tsolve.common.security.JiraAppPrincipal;
 import vn.tsolve.common.security.Roles;
 import vn.tsolve.review.service.ReviewJiraAccess;
+import vn.tsolve.ticket.dto.TicketReviewView.Feedback;
 import vn.tsolve.ticket.service.TicketReviewReadService;
 
 @RestController
@@ -44,11 +45,18 @@ public class JiraReviewFeedbackController {
                 caller,
                 issueKey,
                 writer -> new FeedbackResponse(reads.jiraFeedback(writer.projectId(), writer.accountId(), issueKey)
-                        .flatMap(feedback -> access.accountName(feedback.reviewerId())
-                                .filter(name -> !name.isBlank())
-                                .map(name -> new Message(
-                                        "MSG64", Map.of("manager_name", name, "comment", feedback.comment()))))
+                        .flatMap(feedback -> message(access, feedback, "MSG64", "comment"))
+                        .or(() -> reads.jiraRejection(writer.projectId(), writer.accountId(), issueKey)
+                                // REJECTED is a Jira App text, not an SRS message (AC-009.13).
+                                .flatMap(rejection -> message(access, rejection, "REJECTED", "reason")))
                         .orElse(null)));
+    }
+
+    // No feedback when the reviewer has no name (BUG-135).
+    private static Optional<Message> message(ReviewJiraAccess access, Feedback feedback, String code, String textKey) {
+        return access.accountName(feedback.reviewerId())
+                .filter(name -> !name.isBlank())
+                .map(name -> new Message(code, Map.of("manager_name", name, textKey, feedback.comment())));
     }
 
     public record FeedbackResponse(Message feedback) {}

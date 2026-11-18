@@ -25,6 +25,7 @@ Master registry of all artifacts in this workspace.
 | REVIEW-IDENTITY-22 | review | identity | pass | artifacts/06-evaluation/identity/task-22-space-handover-review.md |
 | ITER-1 | iteration | — | planned | artifacts/07-iterations/iteration-1.md |
 | ITER-2 | iteration | — | planned | artifacts/07-iterations/iteration-2.md |
+| ITER-3 | iteration | — | planned | artifacts/07-iterations/iteration-3.md |
 | — | architecture | — | draft | artifacts/03-modules/architecture.md |
 | — | context-brief | — | draft | artifacts/02-discovery/context-brief.md |
 | — | module-map | — | draft | artifacts/03-modules/module-map.md |
@@ -88,6 +89,9 @@ Master registry of all artifacts in this workspace.
 | — | tasks | chatbot | draft | artifacts/04-plans/chatbot/iteration-1/tasks.md |
 | — | design | chatbot | draft | artifacts/04-plans/chatbot/iteration-2/design.md |
 | — | tasks | chatbot | draft | artifacts/04-plans/chatbot/iteration-2/tasks.md |
+| — | design | chatbot | draft | artifacts/04-plans/chatbot/iteration-3/design.md |
+| — | tasks | chatbot | draft | artifacts/04-plans/chatbot/iteration-3/tasks.md |
+| — | decisions | chatbot | draft | artifacts/04-plans/chatbot/iteration-3/decisions.md |
 | — | spec | platform | draft | artifacts/03-modules/platform/spec.md |
 | — | design | platform | draft | artifacts/04-plans/platform/design.md |
 | — | design | platform | draft | artifacts/04-plans/platform/iteration-1/design.md |
@@ -200,6 +204,7 @@ Master registry of all artifacts in this workspace.
 | — | test-report | dashboard-audit | pass | artifacts/06-evaluation/dashboard-audit/task-1-audit-log-test-report.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-16-viewable-spaces.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-17-21-my-solutions.md |
+| — | session-log | identity | passing | artifacts/05-implementation/identity/task-19-my-solutions-backend.md |
 | — | module | tracker | draft | artifacts/03-modules/tracker/module.md |
 | — | spec | tracker | draft | artifacts/03-modules/tracker/spec.md |
 | — | design | tracker | draft | artifacts/04-plans/tracker/design.md |
@@ -207,6 +212,8 @@ Master registry of all artifacts in this workspace.
 | — | tasks | tracker | draft | artifacts/04-plans/tracker/iteration-1/tasks.md |
 | RESEARCH-002 | research | tracker | in-progress | artifacts/01-research/RESEARCH-002-servicenow-and-zendesk-trackers.md |
 | RESEARCH-004 | research | jira-app | complete | artifacts/01-research/RESEARCH-004-ask-ai-before-creating-a-jira-issue.md |
+| RESEARCH-005 | research | platform | complete | artifacts/01-research/RESEARCH-005-signed-url-route-on-caddy.md |
+| RESEARCH-006 | research | chatbot | complete | artifacts/01-research/RESEARCH-006-chatbot-question-classification.md |
 | MODULE-REVIEW-24 | module | ticket-review | decomposed | artifacts/03-modules/ticket-review/module.md |
 | SPEC-REVIEW-24 | spec | ticket-review | approved | artifacts/03-modules/ticket-review/spec.md |
 | DESIGN-REVIEW-24 | design | ticket-review | approved | artifacts/04-plans/ticket-review/design.md |
@@ -267,6 +274,10 @@ Master registry of all artifacts in this workspace.
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-26a-web-session.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-26b-user-role.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-30a-jira-link-sign-in.md |
+| — | spec | project-integration | draft | artifacts/03-modules/project-integration/spec.md |
+| — | design | project-integration | draft | artifacts/04-plans/project-integration/design.md |
+| — | design | project-integration | draft | artifacts/04-plans/project-integration/iteration-1/design.md |
+| — | tasks | project-integration | draft | artifacts/04-plans/project-integration/iteration-1/tasks.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-30b-jira-link-record.md |
 | — | review | identity | pass | artifacts/06-evaluation/identity/task-30b-jira-link-record-review.md |
 | — | session-log | identity | passing | artifacts/05-implementation/identity/task-29a-operator-sign-in.md |
@@ -282,3 +293,21 @@ Master registry of all artifacts in this workspace.
 | — | review | platform | pass | artifacts/06-evaluation/platform/kan-14-staging-cd-review.md |
 | — | review | be-foundation | pass | artifacts/06-evaluation/be-foundation/task-bug-205-stub-workspace-ready-review.md |
 | — | review | platform | pass | artifacts/06-evaluation/platform/kan-14-bug-207-cd-docker-config-review.md |
+| RESEARCH-003 | research | jira-app | complete | artifacts/01-research/RESEARCH-003-forge-solution-form.md |
+| RESEARCH-003 | research | ticket-repository | complete | artifacts/01-research/RESEARCH-003-jira-import-auth-and-api.md |
+| — | spec | ticket-repository | approved | artifacts/03-modules/ticket-repository/spec.md |
+| — | design | ticket-repository | approved | artifacts/04-plans/ticket-repository/design.md |
+| — | design | ticket-repository | approved | artifacts/04-plans/ticket-repository/iteration-1/design.md |
+| — | tasks | ticket-repository | approved | artifacts/04-plans/ticket-repository/iteration-1/tasks.md |
+| — | design | platform | complete | artifacts/04-plans/platform/schema-ddl-alignment.md |
+| — | mockup | ticket-review | complete | artifacts/04-plans/ticket-review/review-email-mockup.html |
+| — | decisions | project-integration | complete | artifacts/04-plans/project-integration/iteration-1/kan-127-decisions.md |
+| — | research | project-integration | complete | artifacts/04-plans/project-integration/iteration-1/kan-127-scout.md |
+| — | research | workspace | complete | artifacts/04-plans/workspace/iteration-1/kan-121-default-project-scout.md |
+| — | decisions | platform | complete | artifacts/04-plans/platform/iteration-1/kan-96-decisions.md |
+| — | research | platform | complete | artifacts/04-plans/platform/iteration-1/kan-96-scout.md |
+| — | design | workspace | approved | artifacts/04-plans/workspace/iteration-1/kan-119/design.md |
+| — | tasks | workspace | approved | artifacts/04-plans/workspace/iteration-1/kan-119/tasks.md |
+| — | tasks | workspace | approved | artifacts/04-plans/workspace/iteration-1/kan-344/tasks.md |
+| — | tasks | workspace | approved | artifacts/04-plans/workspace/iteration-1/kan-349/tasks.md |
+| — | review | ticket-review | pass | artifacts/06-evaluation/ticket-review/quick-bug-339-review-email-outbox-review.md |

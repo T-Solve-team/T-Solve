@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -15,6 +16,9 @@ import org.jobrunr.storage.InMemoryStorageProvider;
 import org.jobrunr.utils.mapper.jackson.JacksonJsonMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import vn.tsolve.worker.dto.TenantJobRequest;
 import vn.tsolve.worker.service.TenantJobHandler;
 import vn.tsolve.worker.service.WorkerTenantService;
@@ -74,6 +78,36 @@ class TenantJobServiceImplTest {
             assertThatThrownBy(() -> queue.enqueue(null, recordId)).isInstanceOf(RuntimeException.class);
         });
         assertThat(storage.getJobStats().getTotal()).isZero();
+    }
+
+    @Test
+    void enqueueFromRequestBindsTheEnqueueWorkspace_BUG_324() {
+        storage.setJobMapper(mapper);
+        UUID other = UUID.randomUUID();
+        // Two Workspaces, so only the request's TenantContext Workspace can be chosen.
+        var tenants = new MockWorkerTenantService(Set.of(workspace, other), Set.of(), () -> Optional.of(workspace));
+        var queue = new TenantJobServiceImpl(tenants, new JobRequestScheduler(storage), handler);
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest()));
+        try {
+            assertThatThrownBy(() -> queue.enqueue("test-record", recordId)).isInstanceOf(IllegalStateException.class);
+
+            UUID jobId = queue.enqueueFromRequest("test-record", recordId);
+
+            var request =
+                    (TenantJobRequest) storage.getJobById(jobId).getJobDetails().getJobParameterValues()[0];
+            assertThat(request.workspaceId()).isEqualTo(workspace);
+            assertThat(tenants.currentWorkspaceId()).isEmpty();
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+        }
+        var unbound = new TenantJobServiceImpl(
+                new MockWorkerTenantService(Set.of(workspace, other), Set.of()),
+                new JobRequestScheduler(storage),
+                handler);
+        assertThatThrownBy(() -> unbound.enqueueFromRequest("test-record", recordId))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Enqueue requires a bound workspace");
+        assertThat(storage.getJobStats().getTotal()).isEqualTo(1);
     }
 
     @Test

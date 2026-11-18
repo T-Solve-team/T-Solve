@@ -1,5 +1,12 @@
 import { invokeRemote } from '@forge/bridge';
-import { ASK_TIMEOUT_MS, askQuestion, getEligibility } from './tsolveClient';
+import {
+  ASK_TIMEOUT_MS,
+  askQuestion,
+  getAccountLink,
+  getEligibility,
+  rateAnswer,
+  startAccountLink,
+} from './tsolveClient';
 
 jest.mock('@forge/bridge', () => ({ invokeRemote: jest.fn() }));
 
@@ -51,17 +58,33 @@ describe('tsolveClient', () => {
     await expect(askQuestion('VPN fails')).resolves.toEqual(ANSWER);
   });
 
-  it.each([true, false])('AC-010.2 reads whether the user is linked (%s)', async (linked) => {
-    respond(200, { linked });
+  it.each(['CONNECTED', 'SITE_NOT_CONNECTED', 'PROJECT_NOT_CONNECTED'])(
+    'AC-010.14 reads the eligibility status %s',
+    async (status) => {
+      respond(200, { status });
 
-    await expect(getEligibility()).resolves.toEqual({ linked });
-    expect(invokeRemote).toHaveBeenCalledWith({ path: '/api/v1/jira-app/questions/eligibility', method: 'GET' });
-  });
+      await expect(getEligibility()).resolves.toEqual({ status });
+      expect(invokeRemote).toHaveBeenCalledWith({ path: '/api/v1/jira-app/questions/eligibility', method: 'GET' });
+    },
+  );
 
-  it('AC-010.2 treats an answer without linked as not linked', async () => {
+  it('AC-010.14 treats an unknown status as connected (the question is refused anyway)', async () => {
     respond(200, {});
 
-    await expect(getEligibility()).resolves.toEqual({ linked: false });
+    await expect(getEligibility()).resolves.toEqual({ status: 'CONNECTED' });
+  });
+
+  it('AC-010.15 puts the rating of an answer', async () => {
+    respond(204, undefined);
+
+    await rateAnswer('a-1', 'HELPFUL', false);
+
+    expect(invokeRemote).toHaveBeenCalledWith({
+      path: '/api/v1/jira-app/questions/a-1/rating',
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: { rating: 'HELPFUL' },
+    });
   });
 
   it.each(['MSG01', 'MSG02'])('AC-010.5 gives the server %s of a rejected question', async (code) => {
@@ -70,10 +93,10 @@ describe('tsolveClient', () => {
     await expect(askQuestion('x')).rejects.toMatchObject({ code });
   });
 
-  it('AC-010.11 gives MSG62 when the user is not linked', async () => {
-    respond(403, { status: 403, code: 'MSG62', params: {} });
+  it.each(['MSG08', 'MSG124'])('AC-010.11 gives %s when the project or site is not connected', async (code) => {
+    respond(403, { status: 403, code, params: {} });
 
-    await expect(askQuestion('VPN fails')).rejects.toMatchObject({ code: 'MSG62' });
+    await expect(askQuestion('VPN fails')).rejects.toMatchObject({ code });
   });
 
   it.each([500, 503])('AC-010.8 gives MSG06 for a %s answer', async (status) => {
@@ -109,6 +132,42 @@ describe('tsolveClient', () => {
     deliver({ status: 200, headers: {}, body: ANSWER });
 
     await expect(answer).resolves.toEqual(ANSWER);
+  });
+
+  it('AC-014.2 reads the account link status', async () => {
+    respond(200, { status: 'LINKED', fullName: 'An', email: 'an@acme.example', linkedAt: '2026-11-17T08:00:00Z' });
+
+    await expect(getAccountLink()).resolves.toMatchObject({ status: 'LINKED', fullName: 'An' });
+    expect(invokeRemote).toHaveBeenCalledWith({ path: '/api/v1/jira-app/account-link', method: 'GET' });
+  });
+
+  it('AC-014.2 treats an unknown status as not linked', async () => {
+    respond(200, {});
+
+    await expect(getAccountLink()).resolves.toMatchObject({ status: 'NOT_LINKED' });
+  });
+
+  it('AC-014.6 starts a link with no body and gives back its URL', async () => {
+    respond(200, { url: 'https://acme.tsolve.io.vn/jira-link?request=abc' });
+
+    await expect(startAccountLink()).resolves.toBe('https://acme.tsolve.io.vn/jira-link?request=abc');
+    expect(invokeRemote).toHaveBeenCalledWith({ path: '/api/v1/jira-app/account-link', method: 'POST' });
+  });
+
+  it('AC-014.6 refuses an answer that is not a web link', async () => {
+    respond(200, { url: 'javascript:alert(1)' });
+
+    await expect(startAccountLink()).rejects.toMatchObject({ code: 'MSG06' });
+  });
+
+  it.each([
+    [403, 'MSG124'],
+    [403, 'MSG08'],
+    [503, 'MSG06'],
+  ])('AC-014.9 gives the %s %s of a refused link', async (status, code) => {
+    respond(status, { status, code, params: {} });
+
+    await expect(startAccountLink()).rejects.toMatchObject({ code });
   });
 
   it('AC-010.12 logs no question or answer text', async () => {

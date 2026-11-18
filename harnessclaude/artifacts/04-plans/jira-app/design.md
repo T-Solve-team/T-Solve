@@ -184,3 +184,50 @@ port 8080 was taken), ngrok to the remote baseUrl, stub link to a test Account.
 | AC-010.11 POST 403 MSG62 reaching the page through Forge (`application/problem+json`) | ⏭ not checked (the user reloaded, so MSG62 came from eligibility). If Forge rejects problem+json the page shows MSG06 and the POST still refuses — fails safe |
 
 Skipped by the user's choice (08/11); re-check both open rows when Ollama is reachable.
+
+## Change 2026-11-17: the app token reaches the backend (KAN-349)
+The app sends its app system token through an hourly scheduled trigger and its install/upgrade trigger, each invoking
+the remote endpoint `/api/v1/jira-app/app-token` directly with `appSystemToken` (Forge recommends no function hop:
+`invokeRemote` may deliver a token with much less than 2 h left). The backend (workspace STORY-014) keeps it encrypted
+in Redis. Scope `write:jira-work` is added for the MSG80 comment and issue creation (RESEARCH-005).
+
+## Change 2026-11-17: link the Jira account from a personal settings page (STORY-014)
+User decisions of 17/11: a Forge `jira:personalSettingsPage` "T-Solve account" (not a button in every panel); the
+linked state shows the Account's name and email and "Link another account" (identity AC-001.71 replaces the link, so
+no unlink); after the click the page re-reads the status every 5 s for at most 10 minutes (the link request's life);
+the Jira display name comes from Jira with the app token, so the manifest adds `read:jira-user` (a major version:
+`forge deploy` with `--approve MAJOR_VERSION_RULE`, then `forge install --upgrade --confirm-scopes`); the panel's
+MSG62 links to the page.
+
+- **Backend, who the user is.** identity gains `JiraAccountLinkLookup` (`identity/service`, impl in
+  `identity/service/impl`, reads `jira_account_links` joined to `app_user` with `status = 'ACTIVE'`, AC-001.77) and
+  returns the Account as a `TSolveUser` through `AccountLookupService.findActive` plus the link time. jira-app's
+  `JiraAskerLookup` gets one implementation, `LinkedJiraAskerLookup`, over it; `ConfigJiraAskerLookup` and the
+  `TSOLVE_STUB_JIRA_ASKERS` setting are deleted (AC-014.11). The callers (`JiraIssueAccessImpl`,
+  `JiraAppQuestionServiceImpl`) do not change: they already run the lookup inside the site's Workspace.
+- **Backend, the link request.** New `JiraAccountLinkController` (`/api/v1/jira-app/account-link`, `ROLE_JIRA_APP`)
+  and `JiraAccountLinkPageService`:
+  - `GET`: no Jira user → `NOT_LINKED` is never answered for an anonymous caller; the FIT always carries `principal`
+    on a personal settings page, and a FIT without one answers 403 MSG08 like the POST. Site with no Workspace →
+    `SITE_NOT_CONNECTED` (200, so the page can show MSG124). Otherwise, inside `TenantScope.runIn`, the lookup.
+  - `POST`: Workspace (403 MSG124), Jira user (403 MSG08), then `JiraServiceAccount.current()` for the app token and
+    the site URL (none → 503 MSG06), then the display name through a new `jiraapp/client/JiraUserClient`
+    (`GET /rest/api/3/user?accountId=` through the Atlassian gateway, Bearer app token, 10 s timeout; a blank or
+    missing `displayName` or any failure → 503 MSG06), then `JiraLinkRequestService.create(workspaceId, accountId,
+    displayName, host of the site URL)`; a Redis failure → 503 MSG06. No outbound call runs inside a transaction.
+  - jiraapp uses identity's `JiraLinkRequestService` (already a public service of identity, `identity/jiralink`).
+- **Forge.** New module `tsolve-account-settings` (`jira:personalSettingsPage`, `render: native`, resolver endpoint
+  `tsolve-ui-endpoint`), resource `account-settings`. `tsolveClient.js` gains `getAccountLink()` and
+  `startAccountLink()`. The page opens the link with `router.open(url)` (`@forge/bridge`), shows MSG74 (page
+  wording), polls `getAccountLink()` every 5 s with `setInterval`, stops on `LINKED` with `linkedAt` later than the
+  click time or after 10 minutes, and clears the timer on unmount. The panel's MSG62 state adds a link that calls
+  `router.navigate('/jira/settings/personal/apps/{appId}/{envId}')`, the ids read from `view.getContext()`
+  (`localId` / `environmentId`).
+- **Risk.** `jira:personalSettingsPage` is a Forge Preview module: it may change before GA; the dev site is enough
+  for the demo. Reported to the team.
+
+**Change 2026-11-17 (dev-site test):** the profile menu of bdang798 did not show the `jira:personalSettingsPage`
+item, although the page worked by its URL. The page becomes the app's single `jira:globalPage` (key
+`tsolve-account-settings`, title "T-Solve account", same resource and resolver), shown under **Apps** in Jira's
+navigation; its URL is `/jira/apps/{appId}/{envId}`, which the panel's MSG62 link now opens. An app may register only
+one `jira:globalPage`.

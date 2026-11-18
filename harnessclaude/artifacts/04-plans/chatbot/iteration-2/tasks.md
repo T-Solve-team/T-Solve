@@ -185,3 +185,72 @@ Order: search Task 19 → Task 6 → Task 7 → Task 8 → Task 9 → Task 10.
 **Covers:** AC-008.1 – AC-008.5 (edge cases R1–R3)
 **Dependencies:** Task 11
 **Estimated size:** small
+
+---
+
+## Task 13: Jira issue draft API and contract
+
+**Story:** STORY-010
+**Feature:** jira-issue-draft
+**Jira:** KAN-241 · branch `feat/KAN-241-chatbot-create-jira-issue`
+**Description:**
+- Contract for both endpoints (`draftChatbotIssue`, `createChatbotIssue`) and their schemas in
+  `frontend/openapi/tsolve-api.yaml`; `npm run generate:api` regenerated and committed.
+- `ChatbotIssueController.draftChatbotIssue`, `IssueTargetRepository`, `IssueDraftPrompt` and the draft path of
+  `ChatbotIssueServiceImpl` as the design says: 200 draft, empty on AI failure, 409 MSG146, 404 MSG04, 400 MSG06,
+  401 MSG07.
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**` (generated)
+- Create: `…/chatbot/issue/controller/ChatbotIssueController.java`, `…/chatbot/issue/dto/*`,
+  `…/chatbot/issue/repository/IssueTargetRepository.java`, `…/chatbot/issue/service/ChatbotIssueService.java`,
+  `…/chatbot/issue/service/impl/ChatbotIssueServiceImpl.java`, `…/chatbot/issue/service/impl/IssueDraftPrompt.java`
+- Modify: `…/chatbot/answer/repository/ChatbotAnswerRepository.java`
+- Test: `…/test/chatbot/issue/controller/ChatbotIssueControllerTest.java`,
+  `…/test/chatbot/issue/service/impl/ChatbotIssueServiceImplTest.java`, `…/test/chatbot/issue/IssueTargetRepositoryIT.java`
+**Covers:** AC-010.1 – AC-010.9 (edge cases J1, J3, J4, J6)
+**Dependencies:** none (STORY-005 is on `main`)
+**Estimated size:** medium
+
+---
+
+## Task 14: Create the Jira issue
+
+**Story:** STORY-011
+**Feature:** jira-issue-create
+**Jira:** KAN-241 · branch `feat/KAN-241-chatbot-create-jira-issue`
+**Description:**
+- Changeset `044-chatbot-answer-jira-issue.sql`, `ChatbotAnswer.jiraIssueKey`, the locked lookup.
+- `JiraIssueCreator` port and `JiraRestIssueCreator` adapter (`JiraServiceAccount`, the Jira App token since KAN-349; gateway, ADF, 10 s, error mapping of
+  the design); `createChatbotIssue` in the controller and the create path of the service: 201 / 200, 400 field
+  errors and MSG06, 409 MSG146, 502 MSG148 / MSG157, 503 MSG149, 404, 401.
+**Files:**
+- Create: `backend/src/main/resources/db/changelog/changes/044-chatbot-answer-jira-issue.sql`,
+  `…/chatbot/issue/client/JiraIssueCreator.java`, `…/chatbot/issue/client/JiraRestIssueCreator.java`
+- Modify: `…/db/changelog/db.changelog-master.xml`, `…/chatbot/answer/entity/ChatbotAnswer.java`,
+  `…/chatbot/answer/repository/ChatbotAnswerRepository.java`, `…/chatbot/issue/controller/ChatbotIssueController.java`,
+  `…/chatbot/issue/service/ChatbotIssueService.java`, `…/chatbot/issue/service/impl/ChatbotIssueServiceImpl.java`,
+  `…/chatbot/issue/dto/*`
+- Test: `…/test/chatbot/issue/client/JiraRestIssueCreatorTest.java` (MockRestServiceServer or a local HTTP stub),
+  `…/test/chatbot/issue/ChatbotIssueIT.java`, `…/test/chatbot/issue/ChatbotIssueSchemaIT.java`, the controller and
+  service tests of Task 13
+**Covers:** AC-011.1 – AC-011.11 (edge cases J1, J2, J5, J7)
+**Dependencies:** Task 13
+**Estimated size:** medium
+
+---
+
+## Task 15: Answer a question for a Jira project (KAN-294)
+
+**Story:** STORY-012
+**Feature:** chatbot-ask-for-project
+**Description:** `ChatbotAnswerService.askForProject(projectId, request)` (AC-012.1, AC-012.4, AC-012.6): the same answer
+flow with search's `SolutionRetrieval.nearestInProjectDepartment` and `WikiSources.nearestCompanyWide`, or `WikiSources.nearest(reader)` for a linked asker; an
+unknown or inactive Project throws before any AI call. Changeset `045-chatbot-answer-jira-app`: `user_id` nullable,
+`source` (`WEB`/`JIRA_APP`, default `WEB`), `project_id`, the source check, rollback (AC-012.5). The entity stores a
+`JIRA_APP` row without a user (AC-012.2); rating, prefill and create find only the caller's own `WEB` rows, so a
+`JIRA_APP` id answers 404 MSG04 (AC-012.3). `rateForProject(projectId, answerId, rating)` rates only a `JIRA_APP` row of that Project, else throws for 404 MSG04 (AC-012.7).
+**Files:** Modify `chatbot/answer/service/ChatbotAnswerService.java`, `chatbot/answer/service/impl/ChatbotAnswerServiceImpl.java`,
+`chatbot/answer/entity/ChatbotAnswer.java`, the rating and issue lookups if they do not already filter by user; add
+`db/changelog/changes/045-chatbot-answer-jira-app.sql` and its master entry; tests `ChatbotAnswerServiceImplTest`,
+the rating and issue service tests, an IT for the changeset (CI).
+**Estimated size:** medium

@@ -15,7 +15,7 @@ import {
   xcss,
 } from '@forge/react';
 import { CreateIssueModal } from '@forge/jira-bridge';
-import { askQuestion, getEligibility } from '../api/tsolveClient';
+import { askQuestion, getEligibility, rateAnswer } from '../api/tsolveClient';
 import { message } from '../messages';
 import { canSend, conversationReducer, history, initialConversation, lastAnswer, questions } from './conversation';
 import { createIssueContext, sourceLabel } from './prefill';
@@ -34,6 +34,11 @@ const CREATE = 'Not solved, create ticket';
 const SOLVED_TEXT = 'Your problem is solved. Thank you!';
 
 const FIELD_CODES = ['MSG01', 'MSG02'];
+// The outcomes the backend lets a user rate (chatbot AC-003.1).
+const RATEABLE = ['ANSWERED', 'NO_SOURCE'];
+
+// The eligibility status → what the page shows (AC-010.2, AC-010.14).
+const ACCESS = { CONNECTED: 'connected', SITE_NOT_CONNECTED: 'site', PROJECT_NOT_CONNECTED: 'project' };
 
 // The Solution of a ticket source, with the web chatbot's section names (GBR-36: no ticket id, link or Project).
 const SOLUTION_SECTIONS = [
@@ -79,14 +84,16 @@ export function AskTsolvePage() {
   const [access, setAccess] = useState('checking');
   const [conversation, dispatch] = useReducer(conversationReducer, initialConversation);
   const [draft, setDraft] = useState('');
+  const [boxVersion, setBoxVersion] = useState(0);
   const [fieldError, setFieldError] = useState(null);
 
   useEffect(() => {
     let active = true;
-    // A failed check shows the box: the question endpoint still refuses an unlinked user (AC-010.11).
+    // No T-Solve sign-in (KAN-294): only the site and the project must be connected. A failed check shows the box;
+    // the question endpoint still refuses a project that is not connected (AC-010.11).
     getEligibility().then(
-      ({ linked }) => active && setAccess(linked ? 'linked' : 'unlinked'),
-      () => active && setAccess('linked'),
+      ({ status }) => active && setAccess(ACCESS[status] ?? 'connected'),
+      () => active && setAccess('connected'),
     );
     return () => {
       active = false;
@@ -109,10 +116,13 @@ export function AskTsolvePage() {
       const answer = await askQuestion(question, earlier);
       dispatch({ type: 'answer', answer });
       setDraft('');
+      setBoxVersion((version) => version + 1);
     } catch (failure) {
       const code = failure?.code ?? 'MSG06';
-      if (code === 'MSG62') {
-        setAccess('unlinked');
+      if (code === 'MSG124') {
+        setAccess('site');
+      } else if (code === 'MSG08') {
+        setAccess('project');
       }
       if (FIELD_CODES.includes(code)) {
         setFieldError(code);
@@ -121,13 +131,29 @@ export function AskTsolvePage() {
     }
   };
 
+  // AC-010.15: the rating is a side effect; a failure changes nothing on the page and shows no message.
+  // BUG-328: only a searched answer is rated; a greeting or a refused question is not.
+  const rate = (rating) => {
+    const answer = lastAnswer(conversation);
+    const rateable = answer && RATEABLE.includes(answer.outcome);
+    Promise.resolve(rateable && rateAnswer(answer.answerId, rating)).catch(() => {});
+  };
+
+  const solve = () => {
+    rate('HELPFUL');
+    dispatch({ type: 'solve' });
+  };
+
   const openCreate = () => {
-    const linked = access === 'linked';
+    const connected = access === 'connected';
+    if (connected && conversation.status === 'answered') {
+      rate('NOT_HELPFUL');
+    }
     const modal = new CreateIssueModal({
       context: createIssueContext(
         projectId,
-        linked ? questions(conversation) : [],
-        linked ? lastAnswer(conversation) : null,
+        connected ? questions(conversation) : [],
+        connected ? lastAnswer(conversation) : null,
       ),
     });
     // Jira shows its own errors and "Created …" toast; nothing about the issue comes back to the page.
@@ -155,26 +181,26 @@ export function AskTsolvePage() {
           </Text>
         </Inline>
         {access === 'checking' && <Spinner label="loading" />}
-        {access === 'unlinked' && (
+        {(access === 'site' || access === 'project') && (
           <Stack space="space.200">
             <SectionMessage appearance="warning">
-              <Text>{message('MSG62')}</Text>
+              <Text>{message(access === 'site' ? 'MSG124' : 'PROJECT_NOT_CONNECTED')}</Text>
             </SectionMessage>
             <Inline space="space.100">{createButton}</Inline>
           </Stack>
         )}
-        {access === 'linked' && conversation.status === 'solved' && (
+        {access === 'connected' && conversation.status === 'solved' && (
           <SectionMessage appearance="success">
             <Text>{SOLVED_TEXT}</Text>
           </SectionMessage>
         )}
-        {access === 'linked' && conversation.status !== 'solved' && (
+        {access === 'connected' && conversation.status !== 'solved' && (
           <Stack space="space.200">
             {conversation.turns.map((turn, index) => (
               <Turn key={index} turn={turn}>
                 {answered && index === lastIndex && (
                   <Inline space="space.100" shouldWrap>
-                    <Button iconBefore="check-mark" onClick={() => dispatch({ type: 'solve' })}>
+                    <Button iconBefore="check-mark" onClick={solve}>
                       {SOLVED}
                     </Button>
                     {createButton}
@@ -199,9 +225,12 @@ export function AskTsolvePage() {
             <Stack space="space.050">
               <Inline space="space.100" alignBlock="end">
                 <Box xcss={growStyle}>
+                  {/* Uncontrolled: a value sent back through the Forge bridge arrives late and undoes what a
+                      Vietnamese input method rewrites (BUG-332). A new key empties it after an answer. */}
                   <TextArea
+                    key={`question-${boxVersion}`}
                     id="tsolve-question"
-                    value={draft}
+                    defaultValue=""
                     placeholder={PLACEHOLDER}
                     minimumRows={1}
                     resize="smart"

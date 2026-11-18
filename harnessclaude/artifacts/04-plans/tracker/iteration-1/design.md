@@ -14,3 +14,7 @@ builder check. Read the master; this file only marks the scope.
 
 Scope: STORY-001 … STORY-010 (Tasks 1–14 in `tasks.md`), and STORY-011 (Task 15, KAN-22 suggestion job, added
 2026-11-07 — master design "STORY-011: Suggestion job").
+
+Scope addition: STORY-013 (Task 19, `jira-project-read`, KAN-127, added 2026-11-12); master section "STORY-013: Read a Jira project for the Project module" defines the read-only service and client contract.
+
+Scope addition: Task 21 (`suggestion-web-jobs`, KAN-370, BUG-342, added 2026-11-18); master section "Change 2026-11-18: queue the suggestion job for the worker from the web process".

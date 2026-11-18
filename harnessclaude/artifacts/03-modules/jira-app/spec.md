@@ -9,7 +9,7 @@ depth: Normal
 
 The T-Solve Jira App (Forge UI Kit, `jira-app/`) and the Jira App API endpoints it calls
 (`/api/v1/jira-app/**`). STORY-001 to STORY-008 (KAN-126): Solution Form, AI Rewrite, Issue Panel (STORY-003, STORY-006
-and STORY-009 retired). STORY-010 (KAN-294): Ask T-Solve page. STORY-011 (KAN-336): daily Draft reminder email. Sources: Report3 (UC-19, GBR-04, 06, 08, 10, 12, 19, 26,
+and STORY-009 retired). STORY-010 (KAN-294): Ask T-Solve page. STORY-012 (KAN-130): resubmit after Changes requested. STORY-014: link the Jira account to T-Solve. STORY-011 (KAN-336): daily Draft reminder email. Sources: Report3 (UC-19, GBR-04, 06, 08, 10, 12, 19, 26,
 33, 36, System Messages), RESEARCH-003, RESEARCH-004, the `ticket-review` spec (STORY-009, STORY-012), the `chatbot`
 spec (STORY-005 to STORY-007). Terms: **user** = the active T-Solve Account linked to the Jira account in the FIT
 `principal`; **Project** = the ACTIVE T-Solve Project whose `jira_project_key` is the issue's project key;
@@ -35,6 +35,17 @@ an issue has at most one.
 | 2026-11-14 | STORY-005 | AC-005.1: closing the form shows the flag "Saved as draft" instead of MSG41 | User in the dev-site test (14/11): the short text says what Close did |
 | 2026-11-14 | STORY-011 (new) | Add STORY-011 (KAN-336): a daily worker job emails each writer one plain-text list of their open Drafts (issue key, last saved date, Jira link) at 08:00 Asia/Ho_Chi_Minh; one email per writer per day, retried per writer, no email without an open Draft; `worker` and `identity` added to Required interfaces | User decisions of 14/11: Close keeps a Draft (STORY-005), so writers need a reminder instead of an empty ticket; daily digest per person; the job reuses `worker`'s tenant loop and SMTP settings without changing `worker`'s or `ticket-review`'s jobs |
 | 2026-11-15 | STORY-011 | AC-011.4 and AC-011.6 reworded: the reminder queues each writer's email in the shared email outbox (worker STORY-004, KAN-162) instead of sending it over SMTP itself; delivery retries, the missing-sender case and expiry are the outbox's; queuing is retried per writer. The `worker` row of Required interfaces names `EmailOutboxService` instead of the SMTP settings. The body stays plain text | PR #233 (KAN-162) merged on 15/11; user chose to defer to the outbox (15/11) rather than one more mail path. User: plain text for now, an HTML body is to follow after 16/11 |
+| 2026-11-14 | STORY-012 (new), STORY-008 | Add STORY-012 Resubmit after Changes requested (KAN-130, UC-19): the writer reopens the form from the panel with "Edit and resubmit", sees MSG64 above the sections, edits the ticket's Solution (or their Draft) and Finish puts the same ticket back into Pending review with a new entry time and due date; Close keeps a Draft. The panel response gains `mayResubmit`, the form request gains `resubmit`; the Out of Scope line on resubmitting is removed | User decisions of 14/11 for the demo (script 2 step 8): due date reset as for a new submission; form filled from the ticket's Solution, Close keeps a Draft; success shows MSG66 (MSG71's SRS text is not available); button + MSG64 in the form. STORY-011 is taken by the KAN-336 branch |
+| 2026-11-14 | STORY-008, STORY-012 | AC-008.7: the Jira App shows MSG64 without its last sentence, as `Changes requested by {manager_name}: "{comment}".` (the SRS adds "Update the solution and resubmit."); AC-012.1 and AC-012.2 show the same text. The web app keeps the SRS text | User in the KAN-130 dev-site test (14/11): the panel already shows "Edit and resubmit", so the last sentence repeats it. Deviation from the SRS text of MSG64, Jira App only, to agree with the team |
+| 2026-11-15 | STORY-008 | New AC-008.9: while the issue's Solution Form ticket written by the user is Rejected, the panel shows `Rejected by {manager_name}: "{reason}".` from `ticket-review`'s feedback endpoint (its AC-009.13), with no button | User in the KAN-130 dev-site test (15/11): the panel was empty after a Reject. The SRS has no message for it, so the text is a Jira App label like "Edit and resubmit"; the user chose the feedback endpoint over a new panel field |
+| 2026-11-15 | STORY-008 | New AC-008.10: while the issue's ticket is Published, whatever its source, the panel shows "Solution approved and published." with no button | User in the KAN-337 dev-site test (15/11): the panel was empty after an Approve. The SRS has no message for it, so the text is a Jira App label; the user chose the status alone, without the Project Manager's name, so no server change |
+| 2026-11-17 | STORY-013 | New STORY-013 (KAN-349): the Forge app sends its app system token to the backend — hourly scheduled trigger plus install/upgrade, straight to the remote with `appSystemToken`; scope `write:jira-work` added for the MSG80 comment and issue creation | RESEARCH-005 option D, user decision 17/11: T-Solve calls Jira as its Jira App instead of a customer service account |
+| 2026-11-17 | STORY-010 | KAN-294: Ask T-Solve needs no T-Solve sign-in. The page answers anyone in a Jira project that is an Active T-Solve Project, from the Published Solutions and the Wiki of that Project's Department (chatbot STORY-012); the project comes only from the verified FIT (new AC-010.13). AC-010.2 now covers a Jira project or site that is not connected (Jira App text "This Jira project is not connected to T-Solve.", MSG124 for a site), AC-010.4 and AC-010.11 reworded, AC-010.12 says the server stores the question without a user; new AC-010.14 the eligibility answer; new AC-010.15 "Solved" and "Not solved, create ticket" rate the last answer HELPFUL or NOT_HELPFUL. MSG62 is no longer shown on the page | User decisions of 17/11: the page helps people solve a problem in the project they are in, so who asks does not matter; scope = the Project's Department; questions are still stored (without a user) and counted on the Knowledge Dashboard |
+| 2026-11-17 | STORY-010 | KAN-294 review of the risks: AC-010.4 answers from the Department's Solutions and only Company-wide Wiki documents (the MSG80 rule, UC-36), so the page never shows a Department-only Wiki document to a requester outside the Department; AC-010.11 and AC-010.14 also refuse a FIT without a Jira user (anonymous access to a Jira project) | User decision of 17/11 after the risk review: same protection as the MSG80 comment |
+| 2026-11-17 | STORY-010 | AC-010.4: a Jira account linked to an active T-Solve user also gets the Wiki documents that user may view (Department-only ones included); an unlinked one keeps the Company-wide documents only | User decision of 17/11: Department-only documents for the people allowed to read them, no sign-in required |
+| 2026-11-17 | STORY-014 (new), STORY-008, STORY-013 | New STORY-014 (AC-014.1 to AC-014.11): a Jira personal settings page "T-Solve account" links the Jira account to a T-Solve Account through identity's link request (identity AC-001.69 to AC-001.72) and shows the linked Account; the server reads the linked Account from `jira_account_links` (identity AC-001.77) and no longer from the `TSOLVE_STUB_JIRA_ASKERS` stand-in. AC-008.1: the panel shows MSG62 with a link to that page. AC-013.2: scope `read:jira-user` added for the Jira display name of the link request. Requirement 6, Out of Scope, the Exposed table and Required from `identity` follow | User decisions of 17/11: a personal settings page rather than a button in every panel; the linked state shows name and email with "Link another account" (no unlink); the page re-checks every 5 s after the click; the display name is read from Jira with the app token (new scope); the panel links to the page |
+| 2026-11-17 | STORY-014, STORY-008 | AC-014.1: the "T-Solve account" page is a Forge `jira:globalPage` in the Apps section of Jira's navigation instead of a `jira:personalSettingsPage` in the profile menu; the story and the term "settings page" follow. AC-008.1's link opens that page. No other criterion changes | KAN-358 dev-site test (user, 17/11): the profile menu of bdang798 showed no "T-Solve account" item (a Forge Preview module), although the page worked by its URL; the user chose the Apps section, which is not a Preview module |
+| 2026-11-18 | STORY-008 | AC-008.3: MSG77 and the button that reopens the form with the Draft show only while the issue is in a Done status. New AC-008.11: while the issue is not Done, the panel shows neither and the Draft is kept; when the issue is Done again, the panel shows them again and the form opens with the Draft (AC-001.1, AC-005.2) | Dev-site test (user, 18/11, KAN-365): an issue moved from Done back to In Progress still offered "Continue draft". User chose to hide it and keep the Draft |
 
 ## Requirements
 
@@ -45,10 +56,13 @@ an issue has at most one.
    Close, and Close keeps the content as the user's Draft (STORY-002, STORY-004, STORY-005). Only Finish hands a
    ticket to `ticket-review`.
 3. Rewrite with AI shows 4.2 AI Rewrite Preview (STORY-007).
-4. The panel shows the issue's Solution status, including a Project Manager's change request (STORY-008).
+4. The panel shows the issue's Solution status, including a Project Manager's change request (STORY-008); the writer
+   edits and resubmits a ticket in Changes requested from the panel (STORY-012, KAN-130).
 5. An "Ask T-Solve" page in each Jira project lets a linked user ask the Knowledge Chatbot before creating an issue;
    "Not solved, create ticket" opens Jira's Create dialog prefilled with the conversation (STORY-010). Requirements 1
    to 4 belong to KAN-126.
+6. A "T-Solve account" page in Jira's Apps section links the Jira account to a T-Solve Account and shows the linked
+   Account; every Jira App call finds its T-Solve user through that link (STORY-014).
 
 ### Non-Functional
 1. Every Jira App API call is verified with a FIT (tracker STORY-001); the user comes from the FIT `principal`.
@@ -105,27 +119,74 @@ an issue has at most one.
 ### STORY-008: Issue Panel
 - As a Ticket Resolver, I want the panel to show the issue's Solution status so that I know what is left to do for it.
 - Acceptance:
-  - AC-008.1: IF the Jira account is not linked to an active T-Solve Account, THEN THE panel SHALL show MSG62 and nothing else.
+  - AC-008.1: IF the Jira account is not linked to an active T-Solve Account, THEN THE panel SHALL show MSG62 and a link "Open T-Solve account settings" (a Jira App label — user, 2026-11-17) that opens the settings page of STORY-014, and nothing else.
   - AC-008.2: WHILE the issue's ticket is in Pending review, THE panel SHALL show MSG65.
-  - AC-008.3: WHILE the user has a Draft for the issue and the issue's ticket does not exist, THE panel SHALL show MSG77 with a button that reopens the form with the Draft.
-  - AC-008.7: WHILE the issue's Solution Form ticket written by the user is in Changes requested, THE panel SHALL show MSG64 with the Project Manager's name and comment, read from `ticket-review`'s `GET /api/v1/jira-app/issues/{issueKey}/review-feedback`.
+  - AC-008.3: WHILE the user has a Draft for the issue, the issue's ticket does not exist and the issue is in a status of the Done status category, THE panel SHALL show MSG77 with a button that reopens the form with the Draft.
+  - AC-008.7: WHILE the issue's Solution Form ticket written by the user is in Changes requested, THE panel SHALL show MSG64 with the Project Manager's name and comment, read from `ticket-review`'s `GET /api/v1/jira-app/issues/{issueKey}/review-feedback`, as `Changes requested by {manager_name}: "{comment}".` — the SRS text without its last sentence "Update the solution and resubmit." (user, 2026-11-14).
+  - AC-008.9: WHILE the issue's Solution Form ticket written by the user is in Rejected, THE panel SHALL show `Rejected by {manager_name}: "{reason}".` (a Jira App text, not an SRS message — user, 2026-11-15) with the Project Manager's name and the reason read from `ticket-review`'s `GET /api/v1/jira-app/issues/{issueKey}/review-feedback` (its AC-009.13), and SHALL offer no button that opens the form.
+  - AC-008.11: WHILE the issue is not in a status of the Done status category, THE panel SHALL show neither MSG77 nor a button that opens the form, and THE Jira App SHALL keep the user's Draft for the issue unchanged, so it shows again and fills the form when the issue is Done again (AC-001.1, AC-005.2).
+  - AC-008.10: WHILE the issue's ticket is in Published, THE panel SHALL show "Solution approved and published." (a Jira App text, not an SRS message — user, 2026-11-15) and SHALL offer no button that opens the form.
 
 ### STORY-010: Ask T-Solve before creating an issue
 - As an Employee, I want to ask T-Solve about my problem inside Jira before I create an issue, so that I fix it myself when a known Solution exists and, when not, the issue I create says what I already tried.
 - Terms: **page** = the "Ask T-Solve" Jira project page; **conversation** = the questions and answers on the page since it was opened; **chatbot answer** = the answer of the `chatbot` module's answer service (chatbot STORY-005 to STORY-007).
 - Acceptance:
   - AC-010.1: THE Jira App SHALL show a project page titled "Ask T-Solve" in every Jira project of the site, with a question box, a send button and the note "Answers from T-Solve Solutions and Wiki".
-  - AC-010.2: IF the Jira account is not linked to an active T-Solve user, THEN THE page SHALL show MSG62 instead of the question box and SHALL still show "Not solved, create ticket", which opens the Create dialog of AC-010.9 with nothing prefilled.
+  - AC-010.2: IF the open Jira project is not the Jira project of an Active T-Solve Project, THEN THE page SHALL show "This Jira project is not connected to T-Solve." (a Jira App text, not an SRS message — user, 2026-11-17) instead of the question box, or MSG124 instead when the Jira site belongs to no Workspace, and SHALL still show "Not solved, create ticket", which opens the Create dialog of AC-010.9 with nothing prefilled.
   - AC-010.3: WHEN the user sends a question, THE Jira App SHALL call `POST /api/v1/jira-app/questions` with the question and, as history, the earlier turns of the conversation — at most the last 10.
-  - AC-010.4: WHEN the server receives a valid question from a linked user, THE server SHALL return the chatbot answer for that user — the same sources, citations and outcomes as the web Knowledge Chatbot, from every Solution and Wiki document the user may see.
+  - AC-010.4: WHEN the server receives a valid question from a Jira project of an Active T-Solve Project, THE server SHALL return the chatbot answer for that Project (chatbot STORY-012) — the same citations and outcomes as the web Knowledge Chatbot, from the Published Solutions of the Project's Department and the Wiki documents the asker may read — the Company-wide ones for a Jira account not linked to an active T-Solve user (as the MSG80 suggestion, UC-36), and every document that user may view on the web for a linked one — whoever the Jira user is, linked to T-Solve or not.
   - AC-010.5: IF the question is empty or only white space, THEN THE Jira App SHALL show MSG01 under the box and send nothing; IF it is longer than 1,000 characters, THEN THE Jira App SHALL show MSG02 and send nothing; THE server SHALL answer 400 with the same codes whatever the Jira App checked.
   - AC-010.6: WHEN the answer has outcome `ANSWERED`, THE page SHALL show its text, its sources in number order — a Wiki document as "[n] <title> · Wiki document", a ticket source as "[n] Solution from a ticket" with its Solution, never the ticket's id, link or Project (GBR-36) — and the buttons "Solved" and "Not solved, create ticket".
   - AC-010.7: WHEN the answer has outcome `NO_SOURCE`, THE page SHALL show MSG109 and the buttons "Solved" and "Not solved, create ticket".
   - AC-010.8: IF the answer request fails, does not answer within 20 seconds, or the server answers 5xx, THEN THE page SHALL show MSG06, keep the question in the box and still show "Not solved, create ticket" (GBR-12).
   - AC-010.9: WHEN the user clicks "Not solved, create ticket", THE Jira App SHALL open Jira's Create issue dialog for the open Jira project with Summary = the first question of the conversation cut to 255 characters, Description = every question of the conversation followed by a part "Tried with T-Solve:" with the last answer and, after "Sources:", its sources labelled as in AC-010.6 (no Solution text), and the label `tsolve-asked`; the user can change every field before clicking Create.
   - AC-010.10: WHEN the user clicks "Solved", THE page SHALL end the conversation, show the text "Your problem is solved. Thank you!" (a Jira App label, not an SRS message — user, 2026-11-07), create no issue and store nothing.
-  - AC-010.11: IF the FIT user is not linked to an active T-Solve user, THEN THE server SHALL answer `POST /api/v1/jira-app/questions` with 403 MSG62 and call no AI.
-  - AC-010.12: THE Jira App SHALL keep the conversation only while the page is open; it SHALL store no question or answer itself and SHALL log no question or answer text.
+  - AC-010.11: IF the Jira site belongs to no Workspace, THEN THE server SHALL answer `POST /api/v1/jira-app/questions` with 403 MSG124; IF the FIT has no Jira user (`principal`) or no project, or its project is not the Jira project of an Active T-Solve Project, THEN with 403 MSG08; in both cases it SHALL call no AI and store nothing.
+  - AC-010.12: THE Jira App SHALL keep the conversation only while the page is open; it SHALL store no question or answer itself and SHALL log no question or answer text; THE server stores each answered question without a user, with its Project (chatbot AC-012.2).
+  - AC-010.13: THE server SHALL take the Jira project of a question only from the verified FIT's `context.extension.project` (its key), never from the request body, a parameter or a header, so a user cannot ask in another Department's scope.
+  - AC-010.14: WHEN the page opens, THE Jira App SHALL call `GET /api/v1/jira-app/questions/eligibility`, which SHALL answer `status` `CONNECTED`, `SITE_NOT_CONNECTED` (the site belongs to no Workspace) or `PROJECT_NOT_CONNECTED` (AC-010.11, also for a FIT without a Jira user) for the FIT's site and project and SHALL call no AI.
+  - AC-010.15: WHEN the user clicks "Solved" or "Not solved, create ticket" after an answer, THE Jira App SHALL send `PUT /api/v1/jira-app/questions/{answerId}/rating` with `HELPFUL` for "Solved" or `NOT_HELPFUL` for "Not solved, create ticket" for the last answer of the conversation, and THE server SHALL store it as the rating of that answer (chatbot AC-012.7); IF the call fails, THEN THE page SHALL go on as AC-010.9 and AC-010.10 say and show no message.
+
+### STORY-012: Resubmit after Changes requested
+- As a Ticket Resolver, I want to edit and resubmit my Solution when the Project Manager requests changes, so that the corrected Solution goes back to review (UC-19, KAN-130).
+- Terms: **resubmittable** = the issue's ticket is a Solution Form ticket whose writer is the user, it is in Changes requested, and the user is a member of its Project; **resubmission form** = the form opened for a resubmittable ticket.
+- Acceptance:
+  - AC-012.1: WHILE the issue's ticket is resubmittable, THE panel SHALL show MSG64 (AC-008.7) and a button "Edit and resubmit" (a Jira App label, not an SRS message — user, 2026-11-14).
+  - AC-012.2: WHEN the user clicks "Edit and resubmit", THE server SHALL allow the form only while the ticket is resubmittable and SHALL fill it from the user's Draft for the issue when there is one, otherwise from the ticket's current Solution; THE Jira App SHALL show MSG64 with the Project Manager's name and comment above the five sections.
+  - AC-012.3: IF the issue's ticket is not resubmittable — another status, another writer, another source, or the user is no longer a member of its Project — THEN THE panel SHALL not show "Edit and resubmit" and THE server SHALL not open the resubmission form.
+  - AC-012.4: WHEN the user clicks Finish on the resubmission form with a Solution that passes AC-002.5, THE server SHALL replace the ticket's Solution, move the same ticket to Pending review with a new Review Queue entry time and a review due date of today plus the Project's review range (as for AC-004.1, GBR-08, GBR-10), and delete the user's Draft for the issue; THE Jira App SHALL close the form and show MSG66.
+  - AC-012.5: IF at Finish the ticket is no longer resubmittable (for example it expired meanwhile), THEN THE server SHALL change nothing and answer 409 MSG06, and THE Jira App SHALL show MSG06 and keep the form open with its content.
+  - AC-012.6: WHEN the user closes the resubmission form, THE server SHALL store the five sections as the user's Draft for the issue as in AC-005.1, the ticket SHALL stay in Changes requested, and THE Jira App SHALL show the flag "Saved as draft".
+  - AC-012.7: THE resubmission form SHALL check, rewrite and retry as the first submission does (AC-002.3, AC-002.4, AC-004.4, STORY-007).
+
+### STORY-013: Hand the app token to the backend (KAN-349)
+- As the T-Solve backend, I want the Jira App to send me its app token regularly, so that I can call Jira for the
+  Workspace when nobody is inside Jira (workspace STORY-014).
+- Acceptance:
+  - AC-013.1: THE manifest SHALL declare a scheduled trigger with interval `hour` and a trigger on the app's install and
+    upgrade events, each invoking the remote endpoint of `POST /api/v1/jira-app/app-token` directly (not through a
+    Forge function), with `auth` `appSystemToken: true` and no user token.
+  - AC-013.2: THE manifest SHALL request the scopes `read:jira-work`, `write:jira-work` and `read:jira-user` and no
+    administration scope (`manage:*`), so the app token can read issues, projects, comments and a user's display name
+    (AC-014.6) and add comments and issues only.
+  - AC-013.3: WHEN the backend answers the token call with an error, THE Jira App SHALL do nothing else; the next run
+    sends a new call (no retry loop in the app).
+
+### STORY-014: Link the Jira account to T-Solve
+- As a Ticket Resolver, I want to link my Jira account to my T-Solve Account once, from the T-Solve app in Jira, so that the panel and the Solution Form know who I am in T-Solve (GBR-19, UC-59).
+- Terms: **settings page** = the app's "T-Solve account" page in the Apps section of Jira's navigation; **linked Account** = the Active T-Solve Account that identity's `jira_account_links` row of the FIT's Jira account points to, in the Workspace of the FIT's site (identity AC-001.77).
+- Acceptance:
+  - AC-014.1: THE Jira App SHALL add a page titled "T-Solve account" (Forge `jira:globalPage`) to the Apps section of Jira's navigation for every Jira user of the site.
+  - AC-014.2: WHEN the settings page opens, THE Jira App SHALL call `GET /api/v1/jira-app/account-link`, which SHALL answer, for the FIT's site and Jira user only, `status` `LINKED` with the linked Account's full name and email and the link time, `NOT_LINKED`, or `SITE_NOT_CONNECTED` (the site belongs to no Workspace), and SHALL call no AI and store nothing.
+  - AC-014.3: WHILE the status is `NOT_LINKED`, THE settings page SHALL show "Your Jira account is not linked to T-Solve." and a button "Sign in to T-Solve" (Jira App labels — user, 2026-11-17).
+  - AC-014.4: WHILE the status is `LINKED`, THE settings page SHALL show `Linked to T-Solve as {full_name} ({email}).` with the linked Account's full name and email, and a button "Link another account" (Jira App labels — user, 2026-11-17), and SHALL offer no unlink.
+  - AC-014.5: WHILE the status is `SITE_NOT_CONNECTED`, THE settings page SHALL show MSG124 and no button.
+  - AC-014.6: WHEN the user clicks "Sign in to T-Solve" or "Link another account", THE Jira App SHALL call `POST /api/v1/jira-app/account-link`; THE server SHALL read the display name of the FIT's Jira account from Jira (`GET /rest/api/3/user?accountId=`) with the Workspace's app token (STORY-013), ask identity's `JiraLinkRequestService` for a link request with the Workspace of the FIT's site, the FIT's Jira account, that display name and the Jira site name (the host of the Workspace's Jira site URL) (identity AC-001.69), and answer with the link it returns.
+  - AC-014.7: WHEN the link arrives, THE Jira App SHALL open it in a new browser tab and, instead of the button, show MSG74 with "page" in place of "panel": "Finish signing in in the new tab. This page will update when you are done." (user, 2026-11-17).
+  - AC-014.8: WHILE MSG74 is shown, THE Jira App SHALL call `GET /api/v1/jira-app/account-link` every 5 seconds and SHALL show the state of AC-014.4 as soon as the answer is `LINKED` with a link time later than the click; WHEN 10 minutes have passed without that answer (the link request has expired), THE Jira App SHALL stop calling and show the state of the last answer again, with its button.
+  - AC-014.9: IF the site belongs to no Workspace, THEN THE server SHALL answer `POST /api/v1/jira-app/account-link` with 403 MSG124; IF the FIT has no Jira user (`principal`), THEN with 403 MSG08; IF Jira or the link request store cannot be reached, or Jira returns no display name, THEN with 503 MSG06; in every case THE server SHALL create no link request, and THE Jira App SHALL show that message, open no tab and keep the button.
+  - AC-014.10: THE server SHALL take the site and the Jira account of a link request only from the verified FIT, never from the request body, a parameter or a header (identity AC-001.38, GBR-19).
+  - AC-014.11: THE server SHALL find the T-Solve user of every Jira App call — the panel, the Solution Form, the resubmission and the Ask T-Solve answer (AC-010.4) — only as the linked Account (identity AC-001.77): no link, or a link to an Account that is not Active, means not linked; THE server SHALL no longer read the `TSOLVE_STUB_JIRA_ASKERS` setting.
 
 ### STORY-011: Remind writers of their unsubmitted Drafts
 - As a Ticket Resolver, I want a daily email listing the Solutions I left as Drafts so that I finish and submit them.
@@ -144,7 +205,8 @@ an issue has at most one.
 - Evidence in the Jira App (attach, MSG34, MSG72, the Evidence list of 3.4): Forge UI calls carry at most 500 KB
   (RESEARCH-003); Evidence is added on the T-Solve web app (user, 2026-11-01, kept 2026-11-11). KAN-126 "Done when"
   items about Evidence are not met — reported to the team.
-- Resubmitting after Changes requested (MSG71) — the panel only shows the change request (AC-008.7).
+- Resubmitting an Expired or Rejected ticket, and resubmitting from the T-Solve web app.
+- MSG71: its SRS text is not available; a resubmission shows MSG66 like a first submission (user, 2026-11-14).
 - The issue-created event and the AI suggestion comment — `tracker`.
 - AI drafting and rewriting quality — `ai` (Trần Hải Anh); this module calls its chat client through one service.
 - Searching Published tickets and reading one in Jira (the SRS's 3.3 search box, 3.4 Published Ticket Preview,
@@ -158,7 +220,8 @@ an issue has at most one.
 - Recording "Solved" on the server — after the chatbot ratings backend (KAN-182).
 - Sources limited to the open Jira project — the page answers like the web chatbot (user, 2026-11-07).
 - Anything on Jira's own Create dialog (RESEARCH-004 Options A, A+, B).
-- Linking the Jira account to a T-Solve user — `identity`; a configured stub until then.
+- Recording the link and the `/jira-link` confirm page — `identity` (AC-001.69 to AC-001.72). Unlinking a Jira
+  account (user, 2026-11-17: "Link another account" replaces the link instead).
 
 ## Interface Contracts
 
@@ -170,16 +233,19 @@ feedback endpoint (AC-008.7).
 
 | Endpoint | Screen | Story |
 |----------|--------|-------|
-| `POST /api/v1/jira-app/issues/{issueKey}/solution-form` (issue summary + description) → may open, Draft or AI draft or prefill, MSG67 flag | 4.1 | 001, 002, 005 |
-| `POST /api/v1/jira-app/issues/{issueKey}/solution` (JSON: five sections) | 4.1 | 004 |
+| `POST /api/v1/jira-app/issues/{issueKey}/solution-form` (issue summary + description, `resubmit`) → may open, Draft or AI draft or prefill or the ticket's Solution, MSG67 flag | 4.1 | 001, 002, 005, 012 |
+| `POST /api/v1/jira-app/issues/{issueKey}/solution` (JSON: five sections) → a new ticket, or the resubmitted one | 4.1 | 004, 012 |
 | `PUT /api/v1/jira-app/issues/{issueKey}/solution-draft` (on Close) | 4.1 | 005 |
 | `POST /api/v1/jira-app/solution-rewrites` (five sections → rewritten five sections) | 4.2 | 007 |
-| `GET /api/v1/jira-app/issues/{issueKey}/panel` → linked, ticket status, Draft, may open | 3.3 | 001, 008 |
-| `GET /api/v1/jira-app/questions/eligibility` (→ `linked`: whether the FIT user is linked to an active T-Solve user; calls no AI) | Ask T-Solve (on open, AC-010.2) | 010 |
+| `GET /api/v1/jira-app/issues/{issueKey}/panel` → linked, ticket status, Draft, may open, may resubmit | 3.3 | 001, 008, 012 |
+| `GET /api/v1/jira-app/questions/eligibility` (→ `status`: `CONNECTED`, `SITE_NOT_CONNECTED` or `PROJECT_NOT_CONNECTED` for the FIT's site and project; calls no AI) | Ask T-Solve (on open, AC-010.2, AC-010.14) | 010 |
 | `POST /api/v1/jira-app/questions` (question + history → the chatbot answer: outcome, text, citations) | Ask T-Solve | 010 |
+| `PUT /api/v1/jira-app/questions/{answerId}/rating` (`{ rating: HELPFUL | NOT_HELPFUL }` → 204; 404 MSG04 for an answer of another Project) | Ask T-Solve, "Solved" / "Not solved" (AC-010.15) | 010 |
+| `GET /api/v1/jira-app/account-link` (→ `status` `LINKED` / `NOT_LINKED` / `SITE_NOT_CONNECTED`; when linked, `fullName`, `email`, `linkedAt`) | T-Solve account (AC-014.2) | 014 |
+| `POST /api/v1/jira-app/account-link` (no body → `{ url }`, the `/jira-link?request=<id>` link; 403 MSG124 / MSG08, 503 MSG06) | T-Solve account (AC-014.6, AC-014.9) | 014 |
 
 Forge: `jira:issueViewBackgroundScript` (opens the form), `jira:issuePanel` (panel), Modal for 4.1/4.2,
-`requestJira` for the issue summary/description; `jira:projectPage` for the Ask T-Solve page, `invokeRemote` to the
+`requestJira` for the issue summary/description; `jira:globalPage` for the T-Solve account page (Apps section); `jira:projectPage` for the Ask T-Solve page, `invokeRemote` to the
 endpoints above, and `CreateIssueModal`
 (`@forge/jira-bridge`) for the prefilled Create dialog — whether it can prefill labels and where the page shows in
 Jira's navigation are checked in a spike first (RESEARCH-004, open questions).
@@ -187,7 +253,7 @@ Jira's navigation are checked in a spike first (RESEARCH-004, open questions).
 ### Required from other modules
 | Owner | Needed operation |
 |-------|------------------|
-| `identity` | Jira accountId → T-Solve user (id, active) — stub until built |
+| `identity` | `JiraAccountLinkLookup`: Jira accountId → the linked Active Account (AC-001.77); `JiraLinkRequestService.create` (AC-001.69) |
 | `project` / `review` | Project of a Jira project key, the user's `project_membership` rows (today read by `ticket-review`'s `ProjectMembershipRepository`) |
 | `ticket-review` (Phạm Tùng Dương) | The Solution Form ticket storage it reviews (`ticket`, source `SOLUTION_FORM`, entry time and due date, AC-009.11/AC-012.2); `GET /api/v1/jira-app/issues/{issueKey}/review-feedback` (MSG64) |
 | `ai` (Trần Hải Anh) | Chat client (`LlmClient`) for the AI draft and rewrite — prompts owned here, a configured stand-in for demos |

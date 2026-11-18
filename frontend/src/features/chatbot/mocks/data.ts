@@ -1,4 +1,44 @@
-import type { ChatbotCitation } from '@/shared/api';
+import type { ChatbotAnswer, ChatbotCitation } from '@/shared/api';
+
+/**
+ * A copy of the backend's `QuestionClassifier.GREETINGS` and `PUNCTUATION_AND_EMOJI`, which are the source of
+ * truth (AC-009.1). Change both together, or the AC-004.7 mock tests pass against stale behavior.
+ */
+const GREETING_PHRASES = new Set([
+  'hi',
+  'hello',
+  'hey',
+  'thanks',
+  'thank you',
+  'thanks a lot',
+  'thx',
+  'ok thanks',
+  'good morning',
+  'good afternoon',
+  'xin chào',
+  'chào',
+  'chào bạn',
+  'cảm ơn',
+  'cám ơn',
+  'cảm ơn bạn',
+  'cảm ơn nhiều',
+]);
+
+/** AC-004.7: normalize like the greeting rules, then classify before checking answer keywords. */
+export function classifyMockQuestion(question: string): ChatbotAnswer['outcome'] | undefined {
+  const normalized = question
+    .trim()
+    .normalize('NFC')
+    .toLowerCase()
+    .replace(/[\p{P}\p{So}\p{Sk}\p{Cf}\u{FE00}-\u{FE0F}]/gu, ' ')
+    .replace(/\s+/gu, ' ')
+    .trim();
+
+  if (GREETING_PHRASES.has(normalized)) return 'GREETING';
+  if (normalized.includes('ignore previous instructions')) return 'INJECTION';
+  if (normalized.includes('weather')) return 'OFF_TOPIC';
+  return undefined;
+}
 
 /** A canned answer of the mock Knowledge Chatbot, picked when the question contains its keyword. */
 type MockAnswer = { keyword: string; text: string; citations: ChatbotCitation[] };

@@ -15,8 +15,11 @@ import { ChatbotAnswerOutcome, SolutionFormOrigin, TicketStatus } from '../model
 import type {
   ChatbotAnswer,
   ChatbotQuestion,
+  ChatbotRating,
   IssueCreatedPayload,
   IssuePanel,
+  JiraAccountLinkStart,
+  JiraAccountLinkStatus,
   JiraAskerEligibility,
   JiraReviewFeedback,
   MessageRef,
@@ -54,9 +57,42 @@ export const getGetJiraReviewFeedbackResponseMock = (
   ...overrideResponse,
 });
 
+export const getGetJiraAccountLinkResponseMock = (
+  overrideResponse: Partial<Extract<JiraAccountLinkStatus, object>> = {},
+): JiraAccountLinkStatus => ({
+  status: faker.helpers.arrayElement(['LINKED', 'NOT_LINKED', 'SITE_NOT_CONNECTED'] as const),
+  fullName: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  email: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  linkedAt: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + 'Z',
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getStartJiraAccountLinkResponseMock = (
+  overrideResponse: Partial<Extract<JiraAccountLinkStart, object>> = {},
+): JiraAccountLinkStart => ({
+  url: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
 export const getGetJiraAskerEligibilityResponseMock = (
   overrideResponse: Partial<Extract<JiraAskerEligibility, object>> = {},
-): JiraAskerEligibility => ({ linked: faker.datatype.boolean(), ...overrideResponse });
+): JiraAskerEligibility => ({
+  status: faker.helpers.arrayElement([
+    'CONNECTED',
+    'SITE_NOT_CONNECTED',
+    'PROJECT_NOT_CONNECTED',
+  ] as const),
+  ...overrideResponse,
+});
 
 export const getAskJiraAppQuestionResponseWikiDocumentCitationMock = (
   overrideResponse: Partial<WikiDocumentCitation> = {},
@@ -169,6 +205,7 @@ export const getGetIssuePanelResponseMock = (
   ]),
   hasDraft: faker.datatype.boolean(),
   mayOpenForm: faker.datatype.boolean(),
+  mayResubmit: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -217,6 +254,71 @@ export const getReceiveIssueCreatedMockHandler = (
   );
 };
 
+export const getReceiveJiraAppTokenMockHandler = (
+  overrideResponse?: void | ((info: Parameters<HttpResponseResolver>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    '*/api/v1/jira-app/app-token',
+    async (info: Parameters<HttpResponseResolver>[0]) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getGetJiraAccountLinkMockHandler = (
+  overrideResponse?:
+    | JiraAccountLinkStatus
+    | ((
+        info: Parameters<HttpResponseResolver>[0],
+      ) => Promise<JiraAccountLinkStatus> | JiraAccountLinkStatus),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    '*/api/v1/jira-app/account-link',
+    async (info: Parameters<HttpResponseResolver>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetJiraAccountLinkResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getStartJiraAccountLinkMockHandler = (
+  overrideResponse?:
+    | JiraAccountLinkStart
+    | ((
+        info: Parameters<HttpResponseResolver>[0],
+      ) => Promise<JiraAccountLinkStart> | JiraAccountLinkStart),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    '*/api/v1/jira-app/account-link',
+    async (info: Parameters<HttpResponseResolver>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getStartJiraAccountLinkResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getGetJiraAskerEligibilityMockHandler = (
   overrideResponse?:
     | JiraAskerEligibility
@@ -260,6 +362,27 @@ export const getAskJiraAppQuestionMockHandler = (
           : getAskJiraAppQuestionResponseMock(),
         { status: 200 },
       );
+    },
+    options,
+  );
+};
+
+export const getRateJiraAppAnswerMockHandler = (
+  overrideResponse?:
+    | void
+    | ((
+        info: Parameters<HttpResponseResolver<{ answerId: string }, ChatbotRating>>[0],
+      ) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put<{ answerId: string }, ChatbotRating>(
+    '*/api/v1/jira-app/questions/:answerId/rating',
+    async (info: Parameters<HttpResponseResolver<{ answerId: string }, ChatbotRating>>[0]) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
     },
     options,
   );
@@ -388,8 +511,12 @@ export const getGetIssuePanelMockHandler = (
 export const getJiraAppMock = () => [
   getGetJiraReviewFeedbackMockHandler(),
   getReceiveIssueCreatedMockHandler(),
+  getReceiveJiraAppTokenMockHandler(),
+  getGetJiraAccountLinkMockHandler(),
+  getStartJiraAccountLinkMockHandler(),
   getGetJiraAskerEligibilityMockHandler(),
   getAskJiraAppQuestionMockHandler(),
+  getRateJiraAppAnswerMockHandler(),
   getOpenSolutionFormMockHandler(),
   getSubmitSolutionMockHandler(),
   getSaveSolutionDraftMockHandler(),

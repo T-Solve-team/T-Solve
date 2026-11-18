@@ -14,7 +14,6 @@ t-solve/
 ├── backend/               Spring Boot 3 (Java 21, Maven) - modular monolith; conventions in backend/AGENTS.md
 │   └── src/main/java/vn/tsolve/
 │       ├── ticket/        resolved-ticket snapshots + idempotent import
-│       ├── knowledge/     solution + lifecycle (DRAFT -> ... -> ARCHIVED)
 │       ├── identity/      (planned) login, RBAC/ABAC
 │       ├── workspace/     (planned) workspaces and taxonomy
 │       ├── search/        (planned) keyword + semantic search
@@ -137,10 +136,6 @@ cd frontend && npm run format:check && npm run lint && npm run typecheck && npm 
 |---|---|---|
 | POST | `/api/tickets/import` | Import a resolved ticket snapshot (idempotent on `source` + `externalId`) |
 | GET | `/api/tickets`, `/api/tickets/{id}` | List / read ticket snapshots |
-| POST | `/api/solutions` | Create a DRAFT solution |
-| PUT | `/api/solutions/{id}` | Edit a DRAFT solution |
-| POST | `/api/solutions/{id}/transition?to=IN_REVIEW` | Move through the lifecycle (illegal moves return 409) |
-| GET | `/api/solutions[?status=]` | List solutions; **PUBLISHED by default** |
 
 ## Branching and conventions
 

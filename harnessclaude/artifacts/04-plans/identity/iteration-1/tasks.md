@@ -396,17 +396,17 @@ after this plan is final ("Jira: to create"). Before each commit: the full front
 
 **Story:** STORY-003
 **Feature:** my-solutions-backend
-**Decisions owned:** Q1 (DTOs and the two enums in `common`, parity test), Q3 (`@PreAuthorize` and the 400-before-403 order), Q4 (the `@Valid` query record)
+**Decisions owned:** Q1 (DTOs and the two enums in `common`, parity test), Q3 (`@PreAuthorize`; a non-resolver gets 403 before any parameter error), Q4 (String parameters parsed by `MySolutionsQuery.parse`)
 **Acceptance criteria:** AC-003.6, AC-003.7 (traced here; the spaces part is exercised in 19a), AC-003.8 (traced here for the list half; the summary half is tested in Task 19c), AC-003.9, AC-003.17 (traced here; the summary path is tested in 19c), AC-003.19. The 401 of this path (AC-003.10) is exercised here and traced in Task 19a.
-**Description:** `GET /api/v1/me/solutions` (`getMySolutions`, `@Tag("profile")`, `@PreAuthorize("hasAnyRole('TICKET_RESOLVER','PROJECT_MANAGER')")`). New port `WrittenTicketLookup` in `vn.tsolve.common.session.lookup` with `Page<MySolution> findSolutions(UUID accountId, MySolutionFilter filter, Pageable page)` (newest `updatedAt` first; Drafts, a deleted Department and the history rules are the owner's; non-null; the Javadoc tells the owner to map its own `TicketStatus` and `ReviewDecision` to these). DTOs in `vn.tsolve.common.session.dto`: `MySolution` (with the nested `LatestDecision`, `@Schema(requiredMode = REQUIRED)` as `SpaceRef` does), `MySolutionFilter` (`status`, `projectId`, `updatedFrom` inclusive and `updatedBefore` exclusive as `Instant`, all nullable), and the enums `TicketStatus` (the six values of the YAML) and `ReviewDecision` (APPROVE, REQUEST_CHANGES, REJECT): `common` imports no module, so they are new classes with the same simple names as the YAML schemas, not the `ticket` module's. In `identity.dto`: `MySolutionsQuery(page, size, status, projectId, from, to)` bound with `@Valid`, typed fields (`Integer page`, `Integer size`, `TicketStatus`, `UUID`, `LocalDate from`, `LocalDate to`), `@Min(0)` page, `@Min(1) @Max(100)` size, defaults 0 and 20 applied in the record, and the class-level `@ValidDateRange` (annotation with its validator as a nested class, reporting on `to`); every failure is a `fieldErrors` entry `MSG06` through `GlobalExceptionHandler`, one per wrong field. The first red test is "status `FOO` gives one entry on `status`"; if record binding does not give that on this Spring version, fall back to Q4 option B (String parameters parsed in the service, `FieldMessageCodeException("MSG06", field)`) for the affected fields only and say so in the hand-off. The service converts `from` to `from.atStartOfDay(ZONE).toInstant()` and `to` to `to.plusDays(1).atStartOfDay(ZONE).toInstant()` with one private `Asia/Ho_Chi_Minh` constant (a missing side stays open), builds `PageRequest.of(page, size)` with no sort, and passes the lookup's page through; with no bean it answers `Page.empty(pageable)` (AC-003.8). The Account id comes only from `TSolveUser.current()`; `userId` and `workspaceId` parameters are not bound. The answer for a signed-in non-resolver who also sends a bad parameter is not a criterion (Q3; design "Decided in planning"): the 403 tests use valid parameters and none asserts the mixed case.
+**Description:** `GET /api/v1/me/solutions` (`getMySolutions`, `@Tag("profile")`, `@PreAuthorize("hasAnyRole('TICKET_RESOLVER','PROJECT_MANAGER')")`). New port `WrittenTicketLookup` in `vn.tsolve.common.session.lookup` with `Page<MySolution> findSolutions(UUID accountId, MySolutionFilter filter, Pageable page)` (newest `updatedAt` first; Drafts, a deleted Department and the history rules are the owner's; non-null; the Javadoc tells the owner to map its own `TicketStatus` and `ReviewDecision` to these). DTOs in `vn.tsolve.common.session.dto`: `MySolution` (with the nested `LatestDecision`, `@Schema(requiredMode = REQUIRED)` as `SpaceRef` does), `MySolutionFilter` (`status`, `projectId`, `updatedFrom` inclusive and `updatedBefore` exclusive as `Instant`, all nullable), and the enums `TicketStatus` (the six values of the YAML) and `ReviewDecision` (APPROVE, REQUEST_CHANGES, REJECT): `common` imports no module, so they are new classes with the same simple names as the YAML schemas, not the `ticket` module's. In `identity.dto`: `MySolutionsQuery(page, size, status, projectId, from, to)` as the typed record (`Integer page`, `Integer size`, `TicketStatus`, `UUID`, `LocalDate from`, `LocalDate to`; defaults 0 and 20). The controller takes the six query values as `String` request parameters, and the static `MySolutionsQuery.parse(...)` collects every wrong parameter into one `InvalidFieldsException` (one `MSG06` `fieldErrors` entry per field, sorted by field name) before the service is called; there is no `@Valid` and no `@ValidDateRange`. `from` and `to` must match `\d{4}-\d{2}-\d{2}` and be a real date, `to` before `from` is the entry on `to`, an empty value counts as missing, and `projectId` is the canonical UUID form only. The Swagger parameters are documented with `@Parameter` (no `@ParameterObject`). Reason: spring-web 6.1.14 skips Bean Validation after a binding type error, so `@Valid` could not give two entries (decided during Task 19b, KAN-334). The service converts `from` to `from.atStartOfDay(ZONE).toInstant()` and `to` to `to.plusDays(1).atStartOfDay(ZONE).toInstant()` with one private `Asia/Ho_Chi_Minh` constant (a missing side stays open), builds `PageRequest.of(page, size)` with no sort, and passes the lookup's page through; with no bean it answers `Page.empty(pageable)` (AC-003.8). The Account id comes only from `TSolveUser.current()`; `userId` and `workspaceId` parameters are not bound. Parsing runs after `@PreAuthorize`, so a signed-in non-resolver gets 403 even with a bad parameter (401 first for anonymous); this is decided (Q3; design "Decided in planning"), not a criterion, and no test asserts the mixed case.
 **What Hiếu can see or try:** Swagger shows `getMySolutions` with 400 / 401 / 403; curl with `size=101`, `status=FOO` or `to` before `from` gives 400 with a `fieldErrors` entry per wrong parameter (`MSG06`); signed in as a Ticket Resolver, `200` with an empty page; signed in as an Employee only, 403 `MSG08`; removing the Role in `user_role` gives 403 on the next call; the web app on the real backend shows MSG04 "No results found." in the table.
 **Files:**
-- Create: `backend/src/main/java/vn/tsolve/common/session/lookup/WrittenTicketLookup.java`, `backend/src/main/java/vn/tsolve/common/session/dto/{MySolution,MySolutionFilter,TicketStatus,ReviewDecision}.java`, `backend/src/main/java/vn/tsolve/identity/dto/{MySolutionsQuery,ValidDateRange}.java`
+- Create: `backend/src/main/java/vn/tsolve/common/session/lookup/WrittenTicketLookup.java`, `backend/src/main/java/vn/tsolve/common/session/dto/{MySolution,MySolutionFilter,TicketStatus,ReviewDecision}.java`, `backend/src/main/java/vn/tsolve/identity/dto/MySolutionsQuery.java`
 - Modify: `backend/src/main/java/vn/tsolve/identity/controller/MyProfileController.java`, `backend/src/main/java/vn/tsolve/identity/service/MyProfileService.java`, `backend/src/main/java/vn/tsolve/identity/service/impl/MyProfileServiceImpl.java`
 - Test: modify `backend/src/test/java/vn/tsolve/identity/controller/MyProfileControllerTest.java` and `backend/src/test/java/vn/tsolve/identity/service/impl/MyProfileServiceImplTest.java`; create `backend/src/test/java/vn/tsolve/identity/dto/TicketStatusParityTest.java` (asserts the `common` `TicketStatus` names equal `vn.tsolve.ticket.entity.TicketStatus`; dropped, keeping the Javadoc note, if an architecture test forbids the cross-module import in test code; no parity test for `ReviewDecision`, the ticket one has one value today)
 **Dependencies:** Task 19a merged; then the dependency line of the Task 19 note.
 **PR / Jira:** branch `feat/KAN-334-identity-my-solutions-backend` from an up-to-date `main`; Jira: a new Subtask of KAN-160, a sibling of KAN-301 (created by a bookkeeping card after the plan is agreed).
-**Estimated size:** medium (7 new production files and 3 modified, about 300 lines); about 14 tests (over the 12 guide, accepted: AC-003.9 alone has 8 cases and splitting the validation from the endpoint would not be a vertical slice)
+**Estimated size:** medium (6 new production files and 3 modified, about 300 lines); 15 test methods in three test classes, about 19 runs with the rows of the parameterized tests (over the 12 guide, accepted: AC-003.9 alone has 8 cases and splitting the validation from the endpoint would not be a vertical slice)
 **Tests (names end with the AC id):** controller: a Ticket Resolver gets 200 (`_AC_003_6`); a Project Manager gets 200 (`_AC_003_6`); anonymous gets 401 `MSG07`, service never called (`_AC_003_10`); Employee-only gets 403 `MSG08`, service never called (`_AC_003_17`, a comment naming `RoleChangeTest`); one parameterized test over `page=-1`, `size=0`, `size=101`, `status=FOO`, `projectId=abc`, `from=2026-13-01`, `to=31/10/2026`, each with one `fieldErrors` entry `MSG06` on that field (`_AC_003_9`); `to` before `from` gives the entry on `to`, `from == to` is valid (`_AC_003_9`); two wrong parameters give two entries (`_AC_003_9`); extra `userId` and `workspaceId` parameters change nothing (`_AC_003_7`). Service: `from == to == 2026-01-15` gives `[2026-01-14T17:00Z, 2026-01-15T17:00Z)` (`_AC_003_19`); only `from`, only `to` and no dates leave the other side open (`_AC_003_19`); filters are passed as given, AND-combined, a well-formed foreign `projectId` is passed on, the defaults are page 0 and size 20 (`_AC_003_19`); an empty provider answers an empty page with totals 0 (`_AC_003_8`); the lookup is asked for the signed-in id only and two users each see only their own (`_AC_003_7`, a comment naming `WorkspaceBindingTest`). Parity: `TicketStatusParityTest` (`_AC_003_9`).
 **Verification:** design risk rows 148–155, 158, 159, 161. Targeted: `cd backend && mvn spotless:check` and `mvn -Dtest='MyProfileControllerTest,MyProfileServiceImplTest,TicketStatusParityTest' verify`. Then Hiếu's check with a real sign-in.
 **Done when:** the tests above pass; `spotless:check` is clean; the curl cases above answer as listed; `frontend/openapi/tsolve-api.yaml` is unchanged (`generate:api` leaves no diff).
@@ -917,3 +917,58 @@ Notes, not scope of Tasks 23, 23b or 23c: (1) an optional real-Google IdP switch
 **PR / Jira:** branch `feat/KAN-118-identity-scope-checks` from main; Jira KAN-118.
 **Estimated size:** small (4 production files); about 25 tests
 **Verification:** Tests name AC-011.1 to AC-011.11; `sdd.ts trace identity STORY-011`; `cd backend && mvn verify`; `generate:api` no diff.
+
+## Task 37: Jira account link lookup (for the jira-app account link page)
+
+**Story:** STORY-001
+**Feature:** jira-account-link-lookup
+**Acceptance criteria:** AC-001.77
+**Description:** `JiraAccountLinkLookup` in `identity/service` with `Optional<LinkedAccount> find(String trackerAccountId)`
+(`TSolveUser` and the link time) for the Workspace bound by `TenantScope`: the `jira_account_links` row of that
+tracker account whose `app_user` is `ACTIVE`; nothing otherwise. Used by jira-app Task 19.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/identity/service/JiraAccountLinkLookup.java`,
+  `backend/src/main/java/vn/tsolve/identity/service/impl/JiraAccountLinkLookupImpl.java`,
+  `backend/src/main/java/vn/tsolve/identity/dto/LinkedAccount.java`; modify
+  `backend/src/main/java/vn/tsolve/identity/jiralink/JiraAccountLinkRepository.java` (a read)
+- Test: `backend/src/test/java/vn/tsolve/identity/service/impl/JiraAccountLinkLookupImplTest.java`; the read in
+  `JiraAccountLinkRepositoryIT`.
+**Dependencies:** none (the table and the confirm exist, KAN-234)
+**Estimated size:** small
+
+## Task 38: Several Knowledge Managers per Space — backend (KAN-362)
+
+**Story:** STORY-005, STORY-006, STORY-007
+**Feature:** multi-km-per-space-backend
+**Decisions owned:** KAN-362 (Dương, 17/11: cap 3, handover only for the last Active Knowledge Manager, MSG117 text)
+**Acceptance criteria:** AC-005.13, AC-005.14, AC-006.14, AC-006.15, AC-007.9, AC-007.14, AC-007.16, AC-007.19
+**Description:** Design "Several Knowledge Managers per Space — KAN-362". Changeset 047 (`space_manager` key
+(`space_id`, `user_id`)); cap of three checked under a `space` row lock in creation and update; `soleManagedSpaces`
+for handover-options, update and deactivation; recipient row insert and removal of the outgoing Account's rows.
+Not in scope: the frontend and MSW (Task 39), wiki Space Settings (wiki Task 15), API contract changes.
+**Files:**
+- Create: `backend/src/main/resources/db/changelog/changes/047-identity-space-manager-many.sql`
+- Modify: `db.changelog-master.xml`, `backend/src/main/java/vn/tsolve/identity/{repository/UserCreationRepository,repository/UserRoleUpdateRepository,service/impl/UserCreationServiceImpl,service/impl/UserRoleUpdateServiceImpl,service/impl/UserStatusUpdateServiceImpl,service/impl/HandoverChoices}.java`
+- Test: `backend/src/test/java/vn/tsolve/identity/{UserCreationIT,UserRoleUpdateIT,UserStatusIT,service/impl/UserRoleUpdateServiceImplTest,service/impl/UserStatusUpdateServiceImplTest,ScopeAccessIT}.java` (existing tests of the reworded criteria updated; new cases: third manager accepted, fourth refused 409 MSG117, race for the last place, co-managed Space needs no handover, last Active manager needs one, concurrent removal of two co-managers, `canAccessSpace` true for both co-managers)
+**Dependencies:** none (Tasks 33–36 are on main).
+**PR / Jira:** branch `feat/KAN-362-identity-multi-km-per-space` from main; Jira KAN-362.
+**Estimated size:** medium (1 new, 7 modified production files); about 15 tests
+**Verification:** Tests name the criteria above; `sdd.ts trace identity`; `cd backend && mvn verify`; `generate:api` no diff.
+
+## Task 39: Several Knowledge Managers per Space — frontend and MSW (KAN-362)
+
+**Story:** STORY-005, STORY-006, STORY-007, STORY-009
+**Feature:** multi-km-per-space-frontend
+**Decisions owned:** KAN-362 (as Task 38)
+**Acceptance criteria:** AC-005.6, AC-006.2, AC-006.5, AC-007.2, AC-009.1, AC-009.2
+**Description:** Design "Several Knowledge Managers per Space — KAN-362", Frontend. MSW state keeps manager ids per
+Space; creation and role-update handlers enforce the cap of three (MSG117); handover-options, role update and status
+mocks use the sole-manager rule and remove the outgoing rows; `UserStatusActions` and `useRoleUpdateFlow` decide from
+`handover-options` whether the popup opens; MSG117 catalog text. Not in scope: backend (Task 38), wiki (wiki Task 15).
+**Files:**
+- Modify: `frontend/src/features/users/mocks/{state,handlers,roles-handler,handover,status-handlers}.ts`, `frontend/src/features/users/components/UserStatusActions.tsx`, `frontend/src/features/users/hooks/useRoleUpdateFlow.ts`, `frontend/src/shared/messages/catalog.ts`
+- Test: `frontend/src/features/users/mocks/{handlers,roles}.test.ts`, `frontend/src/features/users/pages/{UserDetailPage,UserRolesPage}.test.tsx` and the status / handover tests that cite the criteria above
+**Dependencies:** none for the MSW work; the real backend from Task 38 for an end-to-end check.
+**PR / Jira:** same branch and Jira issue as Task 38 (one commit per feature).
+**Estimated size:** medium (8 modified files); about 15 tests
+**Verification:** Tests name the criteria above; `cd frontend && npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build`; `npm run generate:api` no diff.

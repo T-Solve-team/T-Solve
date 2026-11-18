@@ -59,6 +59,24 @@ class JiraAppSolutionControllerTest {
     private JwtDecoder fitJwtDecoder;
 
     @Test
+    void passesTheResubmitFlagOfFinishToTheService_AC_012_4() throws Exception {
+        when(solutions.submit(eq(CALLER), eq("ITSUP-12"), any()))
+                .thenReturn(new SubmittedTicketResponse(TICKET, "ITSUP-12", TicketStatus.PENDING_REVIEW));
+
+        mvc.perform(post("/api/v1/jira-app/issues/ITSUP-12/solution")
+                        .with(authentication(fit()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"summary\":\"VPN drops\",\"sections\":" + SECTIONS + ",\"resubmit\":true}"))
+                .andExpect(status().isCreated());
+        verify(solutions)
+                .submit(
+                        CALLER,
+                        "ITSUP-12",
+                        new SubmitSolutionRequest(
+                                "VPN drops", new SolutionSections("Drops", "Old", "Update", "", "Laptops"), true));
+    }
+
+    @Test
     void createsTheTicketAndAnswers201_AC_004_1() throws Exception {
         when(solutions.submit(eq(CALLER), eq("ITSUP-12"), any()))
                 .thenReturn(new SubmittedTicketResponse(TICKET, "ITSUP-12", TicketStatus.PENDING_REVIEW));

@@ -1,0 +1,160 @@
+import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
+import { server } from '@/mocks/server';
+import type { WorkspaceInfo } from '@/shared/api';
+import { problem } from '@/shared/api/mocks';
+import { msg } from '@/shared/messages';
+import { paths } from '@/shared/routing';
+import { renderApp } from '@/test/render';
+
+const INFO: WorkspaceInfo = {
+  companyName: 'Example Company',
+  jiraSiteUrl: 'https://company.atlassian.net',
+  jiraAppConnected: true,
+  jiraAppTokenReceivedAt: '2026-11-17T03:00:00Z',
+};
+const LABELS = {
+  companyName: 'Company name',
+} as const;
+const INSTALL_HINT = 'Install the T-Solve Jira App on this Jira site.';
+
+async function findSave() {
+  return screen.findByRole('button', { name: 'Save' }, { timeout: 5000 });
+}
+
+async function replace(user: ReturnType<typeof userEvent.setup>, label: string, value: string) {
+  const input = screen.getByLabelText(label);
+  await user.clear(input);
+  await user.click(input);
+  await user.paste(value);
+}
+
+describe('WorkspaceSettingsPage company information', () => {
+  let getCalls = 0;
+  let putBodies: unknown[] = [];
+
+  beforeAll(async () => {
+    await import('./WorkspaceSettingsPage');
+  });
+
+  beforeEach(() => {
+    getCalls = 0;
+    putBodies = [];
+    server.use(
+      http.get('*/api/v1/workspace', () => {
+        getCalls++;
+        return HttpResponse.json(INFO);
+      }),
+      http.put('*/api/v1/workspace', async ({ request }) => {
+        const body = await request.json();
+        putBodies.push(body);
+        return HttpResponse.json({ ...INFO, ...(body as object) });
+      }),
+    );
+  });
+
+  it('AC-010.1 loads the Workspace: editable company name, read-only Jira site, no email field', async () => {
+    renderApp(paths.workspaceSettings, { role: 'ADMIN' });
+    await findSave();
+    expect(screen.getByLabelText(LABELS.companyName)).toHaveValue(INFO.companyName);
+    expect(screen.getByLabelText(LABELS.companyName)).toBeEnabled();
+    expect(screen.queryByLabelText('Service account email')).not.toBeInTheDocument();
+    expect(screen.getByText(INFO.jiraSiteUrl)).toBeInTheDocument();
+    expect(screen.queryByDisplayValue(INFO.jiraSiteUrl)).not.toBeInTheDocument();
+    expect(getCalls).toBe(1);
+  });
+
+  it('AC-010.2 shows no service account field', async () => {
+    renderApp(paths.workspaceSettings, { role: 'ADMIN' });
+    await findSave();
+    expect(screen.queryByLabelText('Service account API token')).not.toBeInTheDocument();
+    expect(screen.queryByText('Leave empty to keep the current token.')).not.toBeInTheDocument();
+  });
+
+  it('AC-010.10 shows the Jira App as connected with the time of its last update', async () => {
+    renderApp(paths.workspaceSettings, { role: 'ADMIN' });
+    await findSave();
+    expect(screen.getByText(/^Connected — last update /)).toBeInTheDocument();
+    expect(screen.queryByText(INSTALL_HINT)).not.toBeInTheDocument();
+  });
+
+  it('AC-010.10 shows the Jira App as not connected with the install hint', async () => {
+    server.use(
+      http.get('*/api/v1/workspace', () =>
+        HttpResponse.json({ ...INFO, jiraAppConnected: false, jiraAppTokenReceivedAt: null }),
+      ),
+    );
+    renderApp(paths.workspaceSettings, { role: 'ADMIN' });
+    await findSave();
+    expect(screen.getByText('Not connected')).toBeInTheDocument();
+    expect(screen.getByText(INSTALL_HINT)).toBeInTheDocument();
+  });
+
+  it('AC-010.3 sends only the company name, shows MSG05 and refreshes the Workspace', async () => {
+    const user = userEvent.setup();
+    renderApp(paths.workspaceSettings, { role: 'ADMIN' });
+    await findSave();
+    await replace(user, LABELS.companyName, 'New Company');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
+    expect(putBodies).toEqual([{ companyName: 'New Company' }]);
+    await waitFor(() => expect(getCalls).toBe(2));
+  });
+
+  it.each([
+    ['MSG01', 'companyName', { field_name: LABELS.companyName }],
+    ['MSG02', 'companyName', { field_name: LABELS.companyName, max_length: 100 }],
+  ] as const)(
+    'AC-010.4 displays server %s under %s and keeps the values entered',
+    async (code, field, params) => {
+      server.use(
+        http.put('*/api/v1/workspace', () =>
+          HttpResponse.json(
+            { status: 400, code, fieldErrors: [{ field, code, params }] },
+            { status: 400 },
+          ),
+        ),
+      );
+      const user = userEvent.setup();
+      renderApp(paths.workspaceSettings, { role: 'ADMIN' });
+      await findSave();
+      await replace(user, LABELS.companyName, 'Typed Company');
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      const message = msg(code, params);
+      await waitFor(() =>
+        expect(screen.getByLabelText(LABELS[field])).toHaveAccessibleDescription(
+          expect.stringContaining(message),
+        ),
+      );
+      expect(screen.getByLabelText(LABELS.companyName)).toHaveValue('Typed Company');
+      expect(screen.queryByText(msg('MSG05'))).not.toBeInTheDocument();
+      expect(screen.queryByText(msg('MSG06'))).not.toBeInTheDocument();
+    },
+  );
+
+  it('AC-010.5 Cancel restores the loaded values and sends nothing', async () => {
+    const user = userEvent.setup();
+    renderApp(paths.workspaceSettings, { role: 'ADMIN' });
+    await findSave();
+    await replace(user, LABELS.companyName, 'Changed Company');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByLabelText(LABELS.companyName)).toHaveValue(INFO.companyName);
+    expect(putBodies).toHaveLength(0);
+  });
+
+  it('AC-010.6 shows the shared error state when loading fails and retries', async () => {
+    let fails = true;
+    server.use(
+      http.get('*/api/v1/workspace', () => (fails ? problem(500) : HttpResponse.json(INFO))),
+    );
+    const user = userEvent.setup();
+    renderApp(paths.workspaceSettings, { role: 'ADMIN' });
+    const alert = await screen.findByRole('alert', {}, { timeout: 5000 });
+    expect(alert).toHaveTextContent(msg('MSG06'));
+    fails = false;
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+    await findSave();
+    expect(screen.getByLabelText(LABELS.companyName)).toHaveValue(INFO.companyName);
+  });
+});

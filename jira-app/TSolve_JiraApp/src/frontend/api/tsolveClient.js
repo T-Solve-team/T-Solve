@@ -38,13 +38,55 @@ export class TsolveError extends Error {
   }
 }
 
-/** Whether the viewer may ask (AC-010.2). */
+const STATUSES = ['CONNECTED', 'SITE_NOT_CONNECTED', 'PROJECT_NOT_CONNECTED'];
+
+/**
+ * Whether the page can answer in this Jira project: `CONNECTED`, `SITE_NOT_CONNECTED` or `PROJECT_NOT_CONNECTED`
+ * (AC-010.2, AC-010.14). No T-Solve sign-in is needed; an unknown answer counts as connected, as the question itself
+ * is refused anyway (AC-010.11).
+ */
 export async function getEligibility(useMock = USE_MOCK) {
   if (useMock) {
-    return { linked: true };
+    return { status: 'CONNECTED' };
   }
   const response = await call({ path: `${QUESTIONS}/eligibility`, method: 'GET' });
-  return { linked: response.body?.linked === true };
+  const status = response.body?.status;
+  return { status: STATUSES.includes(status) ? status : 'CONNECTED' };
+}
+
+const LINK_STATUSES = ['LINKED', 'NOT_LINKED', 'SITE_NOT_CONNECTED'];
+
+/**
+ * Whether the Jira user is linked to a T-Solve Account: `{status, fullName, email, linkedAt}` with `status` `LINKED`,
+ * `NOT_LINKED` or `SITE_NOT_CONNECTED` (AC-014.2). An unknown status counts as not linked.
+ */
+export async function getAccountLink() {
+  const response = await call({ path: `${JIRA_APP}/account-link`, method: 'GET' });
+  const body = response.body ?? {};
+  return { ...body, status: LINK_STATUSES.includes(body.status) ? body.status : 'NOT_LINKED' };
+}
+
+/** A single-use link to the Workspace's `/jira-link` confirm page (AC-014.6); MSG124, MSG08 or MSG06 otherwise. */
+export async function startAccountLink() {
+  const response = await call({ path: `${JIRA_APP}/account-link`, method: 'POST' });
+  const url = response.body?.url;
+  if (typeof url !== 'string' || !/^https?:\/\//.test(url)) {
+    throw new TsolveError('MSG06', { status: response.status });
+  }
+  return url;
+}
+
+/** "Solved" rates the last answer HELPFUL, "Not solved, create ticket" NOT_HELPFUL (AC-010.15). */
+export async function rateAnswer(answerId, rating, useMock = USE_MOCK) {
+  if (useMock || !answerId) {
+    return;
+  }
+  await call({
+    path: `${QUESTIONS}/${encodeURIComponent(answerId)}/rating`,
+    method: 'PUT',
+    headers: JSON_HEADERS,
+    body: { rating },
+  });
 }
 
 /**
@@ -69,34 +111,57 @@ export async function askQuestion(question, history = [], useMock = USE_MOCK) {
   return response.body;
 }
 
-/** Whether the Solution Form may open for the issue and its content `{mayOpen, origin, sections, message}`. */
-export async function openSolutionForm(issueKey, { summary, description }) {
+/**
+ * Whether the Solution Form may open for the issue and its content `{mayOpen, origin, sections, message}`; with
+ * `resubmit`, the resubmission form of the viewer's ticket in Changes requested (AC-012.2).
+ */
+export async function openSolutionForm(issueKey, { summary, description, resubmit = false }) {
   const response = await call({
     path: `${JIRA_APP}/issues/${encodeURIComponent(issueKey)}/solution-form`,
     method: 'POST',
     headers: JSON_HEADERS,
-    body: { summary, description },
+    body: resubmit ? { summary, description, resubmit: true } : { summary, description },
   });
   return response.body;
+}
+
+// After a retry, a resubmission answered 409 MSG06 may mean an earlier try got through: the panel tells (AC-012.4).
+async function earlierResubmissionGotThrough(issueKey) {
+  try {
+    return (await getIssuePanel(issueKey))?.ticketStatus === 'PENDING_REVIEW';
+  } catch {
+    return false;
+  }
 }
 
 /**
  * Finish: creates the issue's ticket `{id, ticketId, status}`. Retries 3 times when T-Solve cannot be
  * reached or fails, then gives MSG69 (AC-004.4). A 409 MSG31 after a retry means an earlier try got through; any other
- * 409 (MSG40: the Project is no longer active) is given back (BUG-233).
+ * 409 (MSG40: the Project is no longer active) is given back (BUG-233). With `resubmit` it puts the viewer's ticket in
+ * Changes requested back into Pending review (AC-012.4); its 409 MSG06 (no longer resubmittable, AC-012.5) is given back
+ * unless, after a retry, the panel shows the ticket already back in Pending review.
  */
-export async function submitSolution(issueKey, { summary, sections }, { sleep = wait } = {}) {
+export async function submitSolution(issueKey, { summary, sections, resubmit = false }, { sleep = wait } = {}) {
   const request = {
     path: `${JIRA_APP}/issues/${encodeURIComponent(issueKey)}/solution`,
     method: 'POST',
     headers: JSON_HEADERS,
-    body: { summary, sections },
+    body: resubmit ? { summary, sections, resubmit: true } : { summary, sections },
   };
   for (let attempt = 0; ; attempt += 1) {
     try {
       return (await call(request)).body;
     } catch (failure) {
-      if (attempt > 0 && failure.status === 409 && failure.code === 'MSG31') {
+      if (attempt > 0 && failure.status === 409 && failure.code === 'MSG31' && !resubmit) {
+        return { ticketId: issueKey, status: 'PENDING_REVIEW' };
+      }
+      if (
+        attempt > 0 &&
+        resubmit &&
+        failure.status === 409 &&
+        failure.code === 'MSG06' &&
+        (await earlierResubmissionGotThrough(issueKey))
+      ) {
         return { ticketId: issueKey, status: 'PENDING_REVIEW' };
       }
       if (!failure.retryable) {

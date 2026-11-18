@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
+import vn.tsolve.identity.service.ScopeAccessService;
 import vn.tsolve.review.repository.ReviewExpiryRepository;
 import vn.tsolve.review.service.ReviewExpiryService;
 import vn.tsolve.review.service.impl.ReviewExpiryServiceImpl;
@@ -60,6 +62,9 @@ class ReviewExpiryIT {
         }
     }
 
+    @MockBean
+    private ScopeAccessService scopeAccess;
+
     @Autowired
     private ReviewExpiryService expiry;
 
@@ -77,7 +82,7 @@ class ReviewExpiryIT {
 
     @BeforeEach
     void seed() {
-        jdbc.update("delete from review_decision");
+        jdbc.update("delete from ticket_decision");
         jdbc.update("delete from evidence");
         jdbc.update("delete from ticket");
         long active = jdbc.queryForObject(
@@ -144,19 +149,19 @@ class ReviewExpiryIT {
                 UUID.class,
                 UUID.randomUUID() + "@example.test");
         jdbc.update(
-                "insert into review_decision(ticket_id, project_manager_id, decision, reason_or_comment) values (?, ?, 'CHANGES_REQUESTED', 'Earlier review')",
+                "insert into ticket_decision(ticket_id, reviewer_id, decision, feedback) values (?, ?, 'CHANGES_REQUESTED', 'Earlier review')",
                 expired,
                 reviewer);
         var content = content(expired);
         var evidence = jdbc.queryForList("select * from evidence where ticket_id = ?", expired);
-        var decisions = jdbc.queryForList("select * from review_decision order by review_decision_id");
+        var decisions = jdbc.queryForList("select * from ticket_decision order by ticket_decision_id");
         var audit = jdbc.queryForList("select * from audit_log_entry");
         expiry.expireOverdue(TODAY);
         assertThat(excluded.stream().map(this::row).toList()).isEqualTo(beforeExcluded);
         assertThat(content(expired)).isEqualTo(content);
         assertThat(jdbc.queryForList("select * from evidence where ticket_id = ?", expired))
                 .isEqualTo(evidence);
-        assertThat(jdbc.queryForList("select * from review_decision order by review_decision_id"))
+        assertThat(jdbc.queryForList("select * from ticket_decision order by ticket_decision_id"))
                 .isEqualTo(decisions);
         assertThat(jdbc.queryForList("select * from audit_log_entry")).isEqualTo(audit);
         var all = jdbc.queryForList("select * from ticket order by ticket_id");
@@ -219,18 +224,12 @@ class ReviewExpiryIT {
     }
 
     private UUID ticket(UUID project, String status, LocalDate due) {
-        return jdbc.queryForObject(
-                """
+        return jdbc.queryForObject("""
                 insert into ticket(source_ticket_id, project_id, source, status, title, symptoms, root_cause,
                                    resolution_steps, workaround, scope, review_due_date)
                 values (?, ?, 'SOLUTION_FORM', ?, 'Expiry test', 'Symptom', 'Cause', 'Restart', 'Workaround', 'Scope', ?)
                 returning ticket_id
-                """,
-                UUID.class,
-                UUID.randomUUID().toString(),
-                project,
-                status,
-                due);
+                """, UUID.class, UUID.randomUUID().toString(), project, status, due);
     }
 
     private Map<String, Object> row(UUID id) {

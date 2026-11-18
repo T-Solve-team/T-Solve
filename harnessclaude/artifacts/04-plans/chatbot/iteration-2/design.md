@@ -18,3 +18,9 @@ Master: `artifacts/04-plans/chatbot/design.md`, section "Backend ratings (change
 columns `rating`, `rated_at` on `chatbot_answer` (changeset 024); `ChatbotRatingController` and a `chatbot/rating/`
 service; one owner-scoped `@Modifying` update, zero rows → 404 MSG04; a bad body → 400 MSG06. KAN-183: no backend
 change.
+
+## Backend Jira issue (change of 2026-11-17, STORY-010, STORY-011, KAN-241)
+
+Master: `artifacts/04-plans/chatbot/design.md`, section "Backend Jira issue (change of 2026-11-17...)". Package
+`vn.tsolve.chatbot.issue`: draft (AI JSON, empty on failure) and create (`JiraServiceAccount`, the Jira App token since KAN-349, chatbot-owned
+`JiraIssueCreator` adapter, row lock + `jira_issue_key`, changeset 043). Contract in `tsolve-api.yaml`.

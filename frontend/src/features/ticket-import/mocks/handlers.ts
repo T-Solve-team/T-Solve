@@ -9,15 +9,20 @@ import type {
   ImportResultResponse,
   ImportType,
   JiraPullRequest,
+  ManualEvidence,
   ManualTicketDraft,
   ManualTicketRequest,
   RemoveRowsRequest,
 } from '@/shared/api';
+import { getMe, isApiError, TicketSource } from '@/shared/api';
 import { getDownloadCsvTemplateMockHandler } from '@/shared/api/generated/import/import.msw';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
+import { APP_TIME_ZONE, PAGE_SIZE } from '@/shared/lib';
+import dayjs from 'dayjs';
 import {
   CSV_TEMPLATE,
   CSV_TEMPLATE_WITHOUT_SOLUTION,
+  IMPORT_HISTORY,
   previewResponse,
   rowPage,
   seedImport,
@@ -73,6 +78,42 @@ const MANUAL_REQUIRED = [
   ['scope', 'Scope'],
 ] as const;
 
+/** Evidence rules run before changing a Ticket or Draft (AC-006.16–AC-006.19). */
+function manualEvidence(body: ManualTicketRequest, form: FormData) {
+  const kept =
+    manualDrafts
+      .find((draft) => draft.previewId === body.draftId)
+      ?.evidence.filter((file) => body.keepEvidenceIds?.includes(file.evidenceId)) ?? [];
+  const files = form.getAll('files').filter((file): file is File => typeof file !== 'string');
+  const invalid = files.find(
+    (file) =>
+      !/\.(png|jpe?g|pdf|docx|xlsx|txt|log)$/i.test(file.name) || file.size > 10 * 1024 * 1024,
+  );
+  if (invalid) {
+    return {
+      error: problem(400, 'MSG34', {
+        fieldErrors: [{ field: 'files', code: 'MSG34', params: { file_name: invalid.name } }],
+      }),
+    };
+  }
+  if (kept.length + files.length > 5) {
+    return {
+      error: problem(400, 'MSG72', {
+        fieldErrors: [{ field: 'files', code: 'MSG72', params: {} }],
+      }),
+    };
+  }
+  const evidence: ManualEvidence[] = [
+    ...kept,
+    ...files.map((file) => ({
+      evidenceId: crypto.randomUUID(),
+      fileName: file.name,
+      fileSize: file.size,
+    })),
+  ];
+  return { evidence };
+}
+
 /** The open preview or one of the Drafts, for the read endpoints (a reopened Draft, AC-004.3). */
 function findPreview(previewId: string | readonly string[] | undefined): MockPreview | undefined {
   if (isCurrent(previewId)) return preview;
@@ -113,6 +154,56 @@ function isCurrent(previewId: string | readonly string[] | undefined): boolean {
  * "import-fails" → MSG33 on Confirm. Any other file gets the seed rows.
  */
 export const handlers: HttpHandler[] = [
+  http.get('*/api/v1/imports/history', async ({ request }) => {
+    await delay(MOCK_DELAY_MS);
+    try {
+      const user = await getMe();
+      if (!user.roles.includes('PROJECT_MANAGER')) return problem(403, 'MSG08');
+      const managed = new Set(
+        user.projects
+          .filter((project) => project.roleInProject === 'PROJECT_MANAGER')
+          .map((project) => project.projectId),
+      );
+      const params = new URL(request.url).searchParams;
+      const project = params.get('projectId');
+      const source = params.get('source');
+      const from = params.get('dateFrom');
+      const to = params.get('dateTo');
+      const page = Number(params.get('page') ?? 0);
+      const size = Number(params.get('size') ?? PAGE_SIZE);
+      if (
+        !Number.isInteger(page) ||
+        page < 0 ||
+        !Number.isInteger(size) ||
+        size < 1 ||
+        size > 100 ||
+        (source && !Object.values(TicketSource).some((value) => value === source))
+      )
+        return problem(400, 'MSG06');
+      if (from && to && from > to) return problem(400, 'MSG39');
+      const rows = IMPORT_HISTORY.filter((row) => {
+        const day = dayjs(row.createdAt).tz(APP_TIME_ZONE).format('YYYY-MM-DD');
+        return (
+          managed.has(row.project.projectId) &&
+          (!project || project === row.project.projectId) &&
+          (!source || row.source === source) &&
+          (!from || day >= from) &&
+          (!to || day <= to)
+        );
+      });
+      return HttpResponse.json({
+        content: rows.slice(page * size, page * size + size),
+        page: {
+          size,
+          number: page,
+          totalElements: rows.length,
+          totalPages: Math.ceil(rows.length / size),
+        },
+      });
+    } catch (error) {
+      return isApiError(error) ? problem(error.status, error.code) : problem(500, 'MSG06');
+    }
+  }),
   getDownloadCsvTemplateMockHandler(({ request }) =>
     new URL(request.url).searchParams.get('importType') === 'WITHOUT_SOLUTION'
       ? CSV_TEMPLATE_WITHOUT_SOLUTION
@@ -189,7 +280,8 @@ export const handlers: HttpHandler[] = [
   // Manual entry (AC-006.1, AC-006.3, AC-006.7, AC-006.12): every missing field at once; the taken Ticket ID → MSG31.
   http.post('*/api/v1/imports/manual', async ({ request }) => {
     await delay(MOCK_DELAY_MS);
-    const body = (await request.json()) as ManualTicketRequest;
+    const form = await request.formData();
+    const body = JSON.parse(form.get('entry') as string) as ManualTicketRequest;
     const missing = MANUAL_REQUIRED.filter(([field]) => !body[field]?.trim());
     if (missing.length > 0) {
       return problem(400, 'MSG01', {
@@ -208,6 +300,8 @@ export const handlers: HttpHandler[] = [
         fieldErrors: [{ field: 'ticketId', code: 'MSG31', params }],
       });
     }
+    const result = manualEvidence(body, form);
+    if (result.error) return result.error;
     manualDrafts = manualDrafts.filter((draft) => draft.previewId !== body.draftId);
     lastBatchId += 1;
     return HttpResponse.json<ImportResultResponse>(
@@ -224,7 +318,9 @@ export const handlers: HttpHandler[] = [
   // Save as draft (AC-006.9, AC-006.10): only the Project is checked; a draftId rewrites that Draft.
   http.post('*/api/v1/imports/manual/drafts', async ({ request }) => {
     await delay(MOCK_DELAY_MS);
-    const { draftId, ...fields } = (await request.json()) as ManualTicketRequest;
+    const form = await request.formData();
+    const body = JSON.parse(form.get('entry') as string) as ManualTicketRequest;
+    const { draftId, keepEvidenceIds: _keepEvidenceIds, ...fields } = body;
     if (!fields.projectId) {
       return problem(400, 'MSG01', {
         fieldErrors: [{ field: 'projectId', code: 'MSG01', params: { field_name: 'Project' } }],
@@ -233,10 +329,12 @@ export const handlers: HttpHandler[] = [
     if (draftId && !manualDrafts.some((draft) => draft.previewId === draftId)) {
       return problem(404, 'MSG04');
     }
+    const result = manualEvidence(body, form);
+    if (result.error) return result.error;
     const previewId = draftId ?? (lastManualDraftId += 1);
     const savedAt = new Date().toISOString();
     manualDrafts = [
-      { ...fields, previewId, savedAt },
+      { ...fields, previewId, savedAt, evidence: result.evidence },
       ...manualDrafts.filter((draft) => draft.previewId !== previewId),
     ];
     return HttpResponse.json<DraftSavedResponse>({

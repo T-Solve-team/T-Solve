@@ -1,0 +1,27 @@
+package vn.tsolve.workspace.dto;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.media.SchemaProperties;
+import io.swagger.v3.oas.annotations.media.SchemaProperty;
+
+/** Keeps JSON field types for ordered service validation; never prints the request. */
+@Schema(
+        name = "WorkspaceUpdateRequest",
+        type = "object",
+        requiredProperties = {"companyName"})
+@SchemaProperties({
+    @SchemaProperty(name = "companyName", schema = @Schema(type = "string", minLength = 1, maxLength = 100))
+})
+public record WorkspaceUpdateRequest(@Schema(hidden = true) JsonNode body) {
+    public static WorkspaceUpdateRequest parse(String json, ObjectMapper mapper) {
+        return new WorkspaceUpdateRequest(
+                WorkspaceSetupRequest.parse(json, mapper).body());
+    }
+
+    @Override
+    public String toString() {
+        return "WorkspaceUpdateRequest[redacted]";
+    }
+}

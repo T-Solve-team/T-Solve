@@ -52,5 +52,21 @@
     <include file="changes/028-workspace-department-name-lower-unique.sql" relativeToChangelogFile="true"/>
     <include file="changes/029-identity-jira-account-links.sql" relativeToChangelogFile="true"/>
     <include file="changes/030-dashboard-period-indexes.sql" relativeToChangelogFile="true"/>
+    <include file="changes/031-manual-entry-evidence.sql" relativeToChangelogFile="true"/>
+    <include file="changes/032-ticket-import-batch-date-range.sql" relativeToChangelogFile="true"/>
     <include file="changes/033-jira-app-solution-draft.sql" relativeToChangelogFile="true"/>
+    <include file="changes/034-project-audit-member-change.sql" relativeToChangelogFile="true"/>
+    <include file="changes/035-workspace-info.sql" relativeToChangelogFile="true"/>
+    <include file="changes/036-project-done-statuses.sql" relativeToChangelogFile="true"/>
+    <include file="changes/037-review-decision-publication.sql" relativeToChangelogFile="true"/>
+    <include file="changes/038-ticket-decision.sql" relativeToChangelogFile="true"/>
+    <include file="changes/039-drop-legacy-solution-tables.sql" relativeToChangelogFile="true"/>
+    <include file="changes/040-wiki-tables.sql" relativeToChangelogFile="true"/>
+    <include file="changes/041-wiki-audit-folder-change.sql" relativeToChangelogFile="true"/>
+    <include file="changes/042-workspace-jira-cloud-id.sql" relativeToChangelogFile="true"/>
+    <include file="changes/043-workspace-clear-service-account.sql" relativeToChangelogFile="true"/>
+    <include file="changes/044-chatbot-answer-jira-issue.sql" relativeToChangelogFile="true"/>
+    <include file="changes/045-chatbot-answer-jira-app.sql" relativeToChangelogFile="true"/>
+    <include file="changes/046-chatbot-answer-outcomes.sql" relativeToChangelogFile="true"/>
+    <include file="changes/047-identity-space-manager-many.sql" relativeToChangelogFile="true"/>
 </databaseChangeLog>

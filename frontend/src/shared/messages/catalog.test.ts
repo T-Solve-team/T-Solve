@@ -1,4 +1,5 @@
 import { MESSAGES, type MsgCode } from './catalog';
+import { msg } from './msg';
 import report3Raw from './report3-messages.json?raw';
 
 type Report3Message = { type: string; context: string; text: string };
@@ -46,12 +47,34 @@ const webMessages = Object.entries(report3).filter(
 const entry = (code: string) => (MESSAGES as Record<string, { type: string; text: string }>)[code];
 
 describe('message catalog', () => {
-  it('has the Report3 reference file with all 141 messages', () => {
-    expect(Object.keys(report3)).toHaveLength(141);
+  it.each([
+    ['MSG61', 'Please enter a valid site address, e.g. https://company.atlassian.net.'],
+    ['MSG153', 'This {tracker_name} site is already linked to another workspace.'],
+    [
+      'MSG156',
+      'The service account could not connect to {tracker_name} or lacks the required permissions.',
+    ],
+  ])('AC-007.4 holds %s as a field message with the exact v3460 text', (code, text) => {
+    expect(entry(code)).toEqual({ type: 'field', text });
+    expect(report3[code]?.text).toBe(text);
+    expect(report3[code]?.type).toBe('Red text below the field');
+    expect(report3[code]?.context).not.toMatch(/^Retired\b/);
+  });
+  it('AC-007.4 has the Report3 reference file with 143 messages including the workspace codes', () => {
+    expect(Object.keys(report3)).toHaveLength(143);
   });
 
-  it.each(webMessages)('AC-006.1 holds %s with the exact Report3 text', (code, { text }) => {
-    expect(entry(code)?.text).toBe(text);
+  it.each(webMessages.filter(([code]) => code !== 'MSG117'))(
+    'AC-006.1 holds %s with the exact Report3 text',
+    (code, { text }) => {
+      expect(entry(code)?.text).toBe(text);
+    },
+  );
+
+  it('AC-006.1 holds MSG117 with the KAN-362 text instead of Report3', () => {
+    expect(entry('MSG117')?.text).toBe(
+      '{space_name} already has the maximum of 3 Knowledge Managers.',
+    );
   });
 
   it('AC-006.1 leaves out the Jira App messages, the Retired codes, the Platform Console codes and the codes of D2 and D3', () => {
@@ -79,10 +102,10 @@ describe('message catalog', () => {
       expect(MESSAGES).not.toHaveProperty(code);
   });
 
-  it('AC-006.1 treats exactly 17 codes as Retired and 15 as Platform Console, and holds 95 web codes', () => {
-    expect(Object.values(report3).filter(isRetired)).toHaveLength(17);
+  it('AC-006.1 treats exactly 16 codes as Retired and 15 as Platform Console, and holds 98 web codes', () => {
+    expect(Object.values(report3).filter(isRetired)).toHaveLength(16);
     expect(Object.keys(report3).filter(isPlatformConsole)).toHaveLength(15);
-    expect(webMessages).toHaveLength(95);
+    expect(webMessages).toHaveLength(98);
   });
 
   it('AC-006.8 holds MSG119, MSG120, MSG122, MSG123 and MSG141 as inline and MSG134 as field with the Report3 text', () => {
@@ -105,8 +128,7 @@ describe('message catalog', () => {
     expect(entry('MSG134')?.text).toContain('{google_domain}');
   });
 
-  it('edge 20 holds no Retired code (MSG61, MSG73)', () => {
-    expect(MESSAGES).not.toHaveProperty('MSG61');
+  it('AC-006.1 holds no Retired code (MSG73, edge 20)', () => {
     expect(MESSAGES).not.toHaveProperty('MSG73');
   });
 
@@ -117,7 +139,7 @@ describe('message catalog', () => {
     },
   );
 
-  it('gives a toast the error level when the action failed and the success level otherwise', () => {
+  it('AC-006.2 gives a toast the error level when the action failed and the success level otherwise', () => {
     // design.md "Toast level": no Report3 toast is info today; a new info toast is added here.
     const levels = Object.entries(MESSAGES as Record<string, { type: string; level?: string }>)
       .filter(([, { type }]) => type === 'toast')
@@ -156,13 +178,28 @@ describe('message catalog', () => {
     expect(entry('MSG143')).toEqual({ type: 'inline', text: 'Not a member of any Project.' });
   });
 
-  it('AC-006.7 holds no code other than the Report3 web codes, MSG_NEW_2, MSG_NEW_3, MSG_NEW_4, MSG142 and MSG143', () => {
+  it('AC-013.10 holds MSG157 as a field message with the Messages-file text (K121-D41)', () => {
+    expect(entry('MSG157')).toEqual({
+      type: 'field',
+      text: '{project_name} cannot receive Chatbot issues: it has no issue type Task or requires other fields. Choose another Project.',
+    });
+    expect(msg('MSG157', { project_name: 'SUP' })).toBe(
+      'SUP cannot receive Chatbot issues: it has no issue type Task or requires other fields. Choose another Project.',
+    );
+  });
+
+  it('AC-006.7 holds no code other than the Report3 web codes, MSG_NEW_2 to MSG_NEW_7, MSG142, MSG143 and MSG157', () => {
     const expected: string[] = [
       ...webMessages.map(([code]) => code),
       'MSG_NEW_2',
       'MSG_NEW_3',
       'MSG_NEW_4',
+      'MSG_NEW_5',
+      'MSG_NEW_6',
+      'MSG_NEW_7',
       ...NOT_IN_REPORT3,
+      // K121-D41: numbered in the Messages file, not yet in report3-messages.json.
+      'MSG157',
     ];
     expect(Object.keys(MESSAGES).sort()).toEqual(expected.sort());
     expectTypeOf<'MSG20'>().not.toMatchTypeOf<MsgCode>();

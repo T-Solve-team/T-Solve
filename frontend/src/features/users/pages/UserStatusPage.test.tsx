@@ -14,7 +14,7 @@ import {
 } from '@/shared/api';
 import { setDevUser } from '@/shared/auth';
 import { store } from '../mocks/state';
-import { HANDBOOK_SPACE_ID } from '../mocks/data';
+import { HANDBOOK_SPACE_ID, IT_SPACE_ID } from '../mocks/data';
 
 const account = (n: number) => `10000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
@@ -91,6 +91,46 @@ describe('User Detail account status', () => {
     await user.click(within(dialog).getByRole('button', { name: 'OK' }));
     await settleStatusMutation(queryClient);
     expect(await screen.findByRole('button', { name: 'Reactivate' })).toBeInTheDocument();
+  });
+
+  it('AC-006.2 confirms MSG57 for a co-manager without opening handover', async () => {
+    const coManager = store.users.find((item) => item.id === account(7));
+    if (!coManager) throw new Error('Missing fixture');
+    coManager.spaceIds.push(IT_SPACE_ID);
+    const user = userEvent.setup();
+    const { queryClient } = renderUser(3);
+    await user.click(await screen.findByRole('button', { name: 'Deactivate' }, { timeout: 5000 }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent(
+      msg('MSG57', {
+        user_name: store.users.find((item) => item.id === account(3))?.fullName ?? '',
+      }),
+    );
+    expect(
+      screen.queryByRole('dialog', { name: 'Hand Over Responsibilities' }),
+    ).not.toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'OK' }));
+    await settleStatusMutation(queryClient);
+    expect(await screen.findByRole('button', { name: 'Reactivate' })).toBeInTheDocument();
+    expect((await getUserDetail(account(3))).managedSpaces).toEqual([]);
+  });
+
+  it('AC-006.5 / AC-009.1 lists only the Space losing its last Active manager', async () => {
+    const target = store.users.find((item) => item.id === account(3));
+    const coManager = store.users.find((item) => item.id === account(7));
+    if (!target || !coManager) throw new Error('Missing fixtures');
+    target.spaceIds.push(HANDBOOK_SPACE_ID);
+    coManager.spaceIds.push(IT_SPACE_ID);
+    const user = userEvent.setup();
+    renderUser(3);
+    await user.click(await screen.findByRole('button', { name: 'Deactivate' }, { timeout: 5000 }));
+    const dialog = await screen.findByRole('dialog', { name: 'Hand Over Responsibilities' });
+    expect(
+      await within(dialog).findByRole('combobox', { name: 'Engineering Handbook' }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole('combobox', { name: 'IT Knowledge' }),
+    ).not.toBeInTheDocument();
   });
 
   it('AC-006.4 explains disabled self-deactivation without hover (BUG-036)', async () => {
@@ -286,7 +326,7 @@ describe('User Detail account status', () => {
     },
   );
 
-  it('AC-006.8 disables handover confirmation until options finish loading (BUG-035)', async () => {
+  it('AC-006.8 / AC-009.8 prevents deactivation until options finish loading (BUG-035)', async () => {
     setDevUser('admin');
     const options = await getUserHandoverOptions(account(5));
     let finish: (() => void) | undefined;
@@ -302,29 +342,34 @@ describe('User Detail account status', () => {
     const user = userEvent.setup();
     renderUser(5);
     await user.click(await screen.findByRole('button', { name: 'Deactivate' }, { timeout: 5000 }));
-    const dialog = await screen.findByRole('dialog', { name: 'Hand Over Responsibilities' });
     try {
-      expect(within(dialog).getByRole('button', { name: 'Deactivate' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Deactivate' })).toBeDisabled();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     } finally {
       finish?.();
     }
+    const dialog = await screen.findByRole('dialog', { name: 'Hand Over Responsibilities' });
     await within(dialog).findByRole('combobox', { name: 'IT Support' });
-    expect(within(dialog).getByRole('button', { name: 'Deactivate' })).toBeEnabled();
+    await waitFor(() =>
+      expect(within(dialog).getByRole('button', { name: 'Deactivate' })).toBeEnabled(),
+    );
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
   });
 
-  it('AC-006.8 disables handover confirmation when options fail and enables it after retry (BUG-035)', async () => {
+  it('AC-006.8 / AC-009.8 disables handover confirmation when options fail and enables it after retry (BUG-035)', async () => {
     server.use(http.get('*/api/v1/users/:userId/handover-options', () => problem(500)));
     const user = userEvent.setup();
     renderUser(5);
     await user.click(await screen.findByRole('button', { name: 'Deactivate' }, { timeout: 5000 }));
-    const dialog = await screen.findByRole('dialog', { name: 'Hand Over Responsibilities' });
-    expect(await within(dialog).findByText(msg('MSG06'))).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: 'Deactivate' })).toBeDisabled();
+    expect(await screen.findByText(msg('MSG06'))).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     server.resetHandlers();
-    await user.click(within(dialog).getByRole('button', { name: 'Try again' }));
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Hand Over Responsibilities' });
     await within(dialog).findByRole('combobox', { name: 'IT Support' });
-    expect(within(dialog).getByRole('button', { name: 'Deactivate' })).toBeEnabled();
+    await waitFor(() =>
+      expect(within(dialog).getByRole('button', { name: 'Deactivate' })).toBeEnabled(),
+    );
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
   });
 

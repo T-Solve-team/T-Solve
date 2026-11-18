@@ -15,9 +15,22 @@ public class FitAuthenticationConverter implements Converter<Jwt, AbstractAuthen
 
     @Override
     public AbstractAuthenticationToken convert(Jwt fit) {
-        JiraAppPrincipal principal =
-                new JiraAppPrincipal(FitValidators.cloudId(fit), fit.getClaimAsString("principal"), apiBaseUrl(fit));
+        JiraAppPrincipal principal = new JiraAppPrincipal(
+                FitValidators.cloudId(fit), fit.getClaimAsString("principal"), apiBaseUrl(fit), projectKey(fit));
         return new JiraAppAuthentication(principal, List.of(new SimpleGrantedAuthority("ROLE_" + Roles.JIRA_APP)));
+    }
+
+    // context.extension.project.key of a UI call from a Jira project page; null for any other module or event.
+    private static String projectKey(Jwt fit) {
+        Map<String, Object> context = fit.getClaimAsMap("context");
+        if (context != null
+                && context.get("extension") instanceof Map<?, ?> extension
+                && extension.get("project") instanceof Map<?, ?> project
+                && project.get("key") instanceof String key
+                && !key.isBlank()) {
+            return key;
+        }
+        return null;
     }
 
     private static String apiBaseUrl(Jwt fit) {

@@ -67,7 +67,7 @@ class ReviewStorageIT {
         }
         // The changelog of main before Review: every changeset except Review's own.
         master = master.replaceAll(
-                "(?m)^.*<include file=\"changes/(?:0\\d\\d-review-search|008-review|009-review|0\\d\\d-review-queue-notify|024-review-send-back-decision|0\\d\\d-review-ticket-expiry|030-dashboard-period-indexes).*\n",
+                "(?m)^.*<include file=\"changes/(?:0\\d\\d-review-search|008-review|009-review|0\\d\\d-review-queue-notify|024-review-send-back-decision|037-review-decision-publication|038-ticket-decision|0\\d\\d-review-ticket-expiry|030-dashboard-period-indexes|031-manual-entry-evidence).*\n",
                 "");
         Path mainMaster = temporary.resolve("db/changelog/main-before-review.xml");
         Files.createDirectories(mainMaster.getParent());
@@ -128,7 +128,7 @@ class ReviewStorageIT {
     }
 
     @Test
-    void upgradesADatabaseAlreadyRunningReviewWithoutReapplyingStorage_BUG_140(@TempDir Path temporary)
+    void upgradesADatabaseAlreadyRunningReviewWithoutReapplyingStorage_BUG_140_BUG_260(@TempDir Path temporary)
             throws Exception {
         String master;
         try (var input = getClass().getClassLoader().getResourceAsStream("db/changelog/db.changelog-master.xml")) {
@@ -140,7 +140,7 @@ class ReviewStorageIT {
         master = master.replaceAll(
                 "(?m)^.*<include file=\"changes/(?:0\\d\\d-search|0\\d\\d-review-search|0\\d\\d-chatbot|011-ticket-import"
                         + "|017-project-membership|019-tracker-suggestion-uuid-keys|0\\d\\d-review-queue-notify|023-identity-one-project-manager|024-review-send-back-decision"
-                        + "|030-dashboard-period-indexes|033-jira-app-solution-draft).*\n",
+                        + "|030-dashboard-period-indexes|031-manual-entry-evidence|033-jira-app-solution-draft|038-ticket-decision|0\\d\\d-wiki).*\n",
                 "");
         Path oldMaster = temporary.resolve("db/changelog/review-before-project-uuid.xml");
         Files.createDirectories(oldMaster.getParent());
@@ -236,15 +236,15 @@ class ReviewStorageIT {
             assertThat(jdbc.queryForObject("select project_id from ticket where ticket_id = ?", UUID.class, ticketId))
                     .isEqualTo(new UUID(0, 1));
             assertThat(jdbc.queryForObject(
-                            "select ticket_id from ticket_import_decision where reviewer = 'legacy-pm'", UUID.class))
+                            "select ticket_id from ticket_decision where reviewer = 'legacy-pm'", UUID.class))
                     .isEqualTo(ticketId);
 
             UUID reviewerId = jdbc.queryForObject(
                     "insert into app_user (email, status, created_at) values ('pm@example.test', 'ACTIVE', now()) returning id",
                     UUID.class);
             assertThat(jdbc.queryForObject("""
-                            insert into review_decision (ticket_id, project_manager_id, decision)
-                            values (?, ?, 'APPROVED') returning review_decision_id
+                            insert into ticket_decision (ticket_id, reviewer_id, decision)
+                            values (?, ?, 'APPROVED') returning ticket_decision_id
                             """, UUID.class, ticketId, reviewerId))
                     .isNotNull();
             assertThat(jdbc.queryForObject("""

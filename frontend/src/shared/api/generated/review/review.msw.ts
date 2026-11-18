@@ -35,6 +35,15 @@ export const getGetReviewTicketDetailResponseMock = (
     projectId: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   },
+  department: faker.helpers.arrayElement([
+    { id: faker.string.uuid(), name: faker.string.alpha({ length: { min: 10, max: 20 } }) },
+    null,
+  ]),
+  resolvedDate: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  sourceLink: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   source: faker.helpers.arrayElement(Object.values(TicketSource)),
   status: faker.helpers.arrayElement(Object.values(TicketStatus)),
   authorId: faker.helpers.arrayElement([faker.string.uuid(), null]),
@@ -164,6 +173,14 @@ export const getGetExpiredTicketIdsResponseMock = (
 });
 
 export const getSendBackTicketsResponseMock = (
+  overrideResponse: Partial<Extract<ReviewDecisionResult, object>> = {},
+): ReviewDecisionResult => ({ count: faker.number.int(), ...overrideResponse });
+
+export const getUnpublishTicketsResponseMock = (
+  overrideResponse: Partial<Extract<ReviewDecisionResult, object>> = {},
+): ReviewDecisionResult => ({ count: faker.number.int(), ...overrideResponse });
+
+export const getRepublishTicketsResponseMock = (
   overrideResponse: Partial<Extract<ReviewDecisionResult, object>> = {},
 ): ReviewDecisionResult => ({ count: faker.number.int(), ...overrideResponse });
 
@@ -341,6 +358,54 @@ export const getSendBackTicketsMockHandler = (
   );
 };
 
+export const getUnpublishTicketsMockHandler = (
+  overrideResponse?:
+    | ReviewDecisionResult
+    | ((
+        info: Parameters<HttpResponseResolver<PathParams, ApproveTicketsRequest>>[0],
+      ) => Promise<ReviewDecisionResult> | ReviewDecisionResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<PathParams, ApproveTicketsRequest>(
+    '*/api/v1/reviews/unpublish',
+    async (info: Parameters<HttpResponseResolver<PathParams, ApproveTicketsRequest>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUnpublishTicketsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRepublishTicketsMockHandler = (
+  overrideResponse?:
+    | ReviewDecisionResult
+    | ((
+        info: Parameters<HttpResponseResolver<PathParams, ApproveTicketsRequest>>[0],
+      ) => Promise<ReviewDecisionResult> | ReviewDecisionResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<PathParams, ApproveTicketsRequest>(
+    '*/api/v1/reviews/republish',
+    async (info: Parameters<HttpResponseResolver<PathParams, ApproveTicketsRequest>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRepublishTicketsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getGetReviewQueueMockHandler = (
   overrideResponse?:
     | ReviewQueuePage
@@ -487,6 +552,8 @@ export const getReviewMock = () => [
   getGetExpiredTicketsMockHandler(),
   getGetExpiredTicketIdsMockHandler(),
   getSendBackTicketsMockHandler(),
+  getUnpublishTicketsMockHandler(),
+  getRepublishTicketsMockHandler(),
   getGetReviewQueueMockHandler(),
   getStreamReviewQueueEventsMockHandler(),
   getGetReviewQueueTicketIdsMockHandler(),

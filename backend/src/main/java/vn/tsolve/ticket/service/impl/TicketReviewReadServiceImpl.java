@@ -20,10 +20,13 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import vn.tsolve.common.exception.NotFoundException;
+import vn.tsolve.identity.service.ScopeAccessService;
+import vn.tsolve.ticket.dto.TicketReviewView.Department;
 import vn.tsolve.ticket.dto.TicketReviewView.Detail;
 import vn.tsolve.ticket.dto.TicketReviewView.Evidence;
 import vn.tsolve.ticket.dto.TicketReviewView.ExpiredItem;
@@ -31,6 +34,7 @@ import vn.tsolve.ticket.dto.TicketReviewView.ExpiredRow;
 import vn.tsolve.ticket.dto.TicketReviewView.Feedback;
 import vn.tsolve.ticket.dto.TicketReviewView.HistoryFilter;
 import vn.tsolve.ticket.dto.TicketReviewView.HistoryItem;
+import vn.tsolve.ticket.dto.TicketReviewView.Project;
 import vn.tsolve.ticket.dto.TicketReviewView.ProjectAccess;
 import vn.tsolve.ticket.dto.TicketReviewView.QueueItem;
 import vn.tsolve.ticket.dto.TicketReviewView.QueueRow;
@@ -38,8 +42,8 @@ import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.entity.TicketStatus;
 import vn.tsolve.ticket.exception.InvalidReviewHistoryFilterException;
 import vn.tsolve.ticket.mapper.TicketReviewMapper;
-import vn.tsolve.ticket.repository.ReviewDecisionRecordRepository;
-import vn.tsolve.ticket.repository.ReviewDecisionRecordRepository.HistoryRow;
+import vn.tsolve.ticket.repository.TicketDecisionRepository;
+import vn.tsolve.ticket.repository.TicketDecisionRepository.HistoryRow;
 import vn.tsolve.ticket.repository.TicketEvidenceRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
 import vn.tsolve.ticket.service.TicketReviewReadService;
@@ -59,7 +63,7 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
     private static final Instant NO_LOWER_BOUND = Instant.parse("1970-01-01T00:00:00Z");
     private static final Instant NO_UPPER_BOUND = Instant.parse("9999-01-01T00:00:00Z");
 
-    /** Contract decision value → stored review_decision.decision. Other contract values have no stored rows. */
+    /** Contract decision value → stored ticket_decision.decision. Other contract values have no stored rows. */
     private static final Map<String, String> STORED_DECISION = Map.of(
             "APPROVE",
             "APPROVED",
@@ -74,18 +78,21 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
 
     private final TicketRepository tickets;
     private final TicketEvidenceRepository evidence;
-    private final ReviewDecisionRecordRepository decisions;
+    private final TicketDecisionRepository decisions;
     private final TicketReviewMapper mapper;
+    private final ScopeAccessService scopeAccess;
 
     public TicketReviewReadServiceImpl(
             TicketRepository tickets,
             TicketEvidenceRepository evidence,
-            ReviewDecisionRecordRepository decisions,
-            TicketReviewMapper mapper) {
+            TicketDecisionRepository decisions,
+            TicketReviewMapper mapper,
+            ScopeAccessService scopeAccess) {
         this.tickets = tickets;
         this.evidence = evidence;
         this.decisions = decisions;
         this.mapper = mapper;
+        this.scopeAccess = scopeAccess;
     }
 
     @Override
@@ -217,18 +224,30 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
     @Override
     public Detail detail(Map<UUID, ProjectAccess> projects, UUID accountId, boolean manager, UUID ticketId) {
         var ticket = tickets.findForReviewDetail(ticketId).orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
+        var placement = tickets.findPlacement(ticket.getProjectId())
+                .filter(TicketRepository.Placement::getDepartmentActive)
+                .orElseThrow(() -> new AccessDeniedException("Active ticket Department required"));
         var project = projects.get(ticket.getProjectId());
-        boolean canReadReview =
-                Objects.equals(ticket.getWriterId(), accountId) || (manager && project != null && project.managed());
-        if (project == null || (ticket.getStatus() != TicketStatus.PUBLISHED && !canReadReview)) {
-            throw new NotFoundException("MSG04", Map.of());
+        // the readable Projects hold only ACTIVE ones: an inactive Project's manager is found in project_membership
+        // (AC-008.2, BUG-312)
+        boolean projectManager = manager
+                && (project != null
+                        ? project.managed()
+                        : tickets.isProjectManager(placement.getProjectPublicId(), accountId));
+        boolean canReadReview = Objects.equals(ticket.getWriterId(), accountId) || projectManager;
+        boolean canRead = ticket.getStatus() == TicketStatus.PUBLISHED
+                ? scopeAccess.canAccessDepartment(accountId, placement.getDepartmentId())
+                : canReadReview;
+        if (!canRead) {
+            throw new AccessDeniedException("Ticket access required");
         }
         List<Evidence> attachments = evidence.findByTicketIdOrderById(ticket.getId()).stream()
                 .map(mapper::evidence)
                 .toList();
         return mapper.detail(
                 ticket,
-                project.project(),
+                new Project(placement.getProjectPublicId(), placement.getProjectKey()),
+                new Department(placement.getDepartmentId(), placement.getDepartmentName()),
                 dueAt(ticket.getReviewDueDate()),
                 attachments,
                 canReadReview
@@ -236,7 +255,10 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
                                 ? ticket.getRejectionReason()
                                 : ticket.getChangeRequestComment())
                         : null,
+                // deciding stays with the active Projects the decision service checks (managedProjectIds); AC-008.2
+                // widens only reading
                 manager
+                        && project != null
                         && project.managed()
                         && ticket.getSource() == TicketSource.SOLUTION_FORM
                         && ticket.getStatus() == TicketStatus.PENDING_REVIEW);
@@ -245,6 +267,12 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
     @Override
     public Optional<Feedback> jiraFeedback(UUID projectId, UUID writerId, String issueKey) {
         return tickets.findJiraFeedback(projectId, writerId, issueKey, PageRequest.of(0, 1)).stream()
+                .findFirst();
+    }
+
+    @Override
+    public Optional<Feedback> jiraRejection(UUID projectId, UUID writerId, String issueKey) {
+        return tickets.findJiraRejection(projectId, writerId, issueKey, PageRequest.of(0, 1)).stream()
                 .findFirst();
     }
 

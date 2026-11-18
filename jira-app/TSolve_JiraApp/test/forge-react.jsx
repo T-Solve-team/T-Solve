@@ -29,10 +29,12 @@ export const Button = ({ children, onClick, isDisabled, appearance }) => (
     {children}
   </button>
 );
-export const TextArea = ({ id, value, onChange, isDisabled, isInvalid, placeholder }) => (
+// Uncontrolled with `defaultValue` (BUG-332), as in Jira; `value` still works for a controlled box.
+export const TextArea = ({ id, value, defaultValue, onChange, isDisabled, isInvalid, placeholder }) => (
   <textarea
     id={id}
     value={value}
+    defaultValue={defaultValue}
     onChange={onChange}
     disabled={isDisabled}
     aria-invalid={isInvalid}

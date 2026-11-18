@@ -6,6 +6,14 @@ modules:
         endpoint: tsolve-ui-endpoint
       render: native
       title: Ask T-Solve
+  # STORY-014: link the Jira account to T-Solve from the Apps section of Jira's navigation.
+  jira:globalPage:
+    - key: tsolve-account-settings
+      resource: account-settings
+      resolver:
+        endpoint: tsolve-ui-endpoint
+      render: native
+      title: T-Solve account
   jira:issueViewBackgroundScript:
     - key: tsolve-solution-form-watch
       resource: solution-form-watch
@@ -27,11 +35,29 @@ modules:
         - avi:jira:created:issue
       filter:
         ignoreSelf: true
+    # STORY-013: the backend calls Jira as this app, with the system token Forge sends on these calls.
+    - key: tsolve-app-token-lifecycle-trigger
+      endpoint: tsolve-app-token-endpoint
+      events:
+        - avi:forge:installed:app
+        - avi:forge:upgraded:app
+  scheduledTrigger:
+    # A system token lasts up to 4 hours; an hourly call keeps a fresh one in the backend (AC-013.1).
+    - key: tsolve-app-token-hourly-trigger
+      endpoint: tsolve-app-token-endpoint
+      interval: hour
   endpoint:
     - key: tsolve-issue-created-endpoint
       remote: tsolve-backend
       route:
         path: /api/v1/jira-app/events/issue-created
+    - key: tsolve-app-token-endpoint
+      remote: tsolve-backend
+      route:
+        path: /api/v1/jira-app/app-token
+      auth:
+        appSystemToken:
+          enabled: true
     - key: tsolve-ui-endpoint
       remote: tsolve-backend
 remotes:
@@ -46,9 +72,14 @@ resources:
     path: src/frontend/askTsolve/index.jsx
   - key: solution-form-watch
     path: src/frontend/background/index.jsx
+  - key: account-settings
+    path: src/frontend/accountSettings/index.jsx
 permissions:
   scopes:
     - read:jira-work
+    - write:jira-work
+    # The Jira display name in the account link request (AC-014.6).
+    - read:jira-user
 app:
   runtime:
     name: nodejs24.x

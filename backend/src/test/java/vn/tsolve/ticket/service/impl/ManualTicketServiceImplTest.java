@@ -23,10 +23,12 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
 import vn.tsolve.common.audit.AuditAction;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.BusinessRuleException;
@@ -34,23 +36,25 @@ import vn.tsolve.common.exception.InvalidFieldsException;
 import vn.tsolve.common.exception.ProblemDetails.FieldError;
 import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.TSolveUser;
+import vn.tsolve.platform.service.FileStorage;
 import vn.tsolve.ticket.dto.ImportResultResponse;
 import vn.tsolve.ticket.dto.ManualTicketRequest;
 import vn.tsolve.ticket.dto.MessageRef;
 import vn.tsolve.ticket.entity.ImportBatch;
 import vn.tsolve.ticket.entity.ImportBatchStatus;
-import vn.tsolve.ticket.entity.ReviewDecision;
 import vn.tsolve.ticket.entity.Ticket;
-import vn.tsolve.ticket.entity.TicketReviewDecision;
+import vn.tsolve.ticket.entity.TicketDecision;
 import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.entity.TicketStatus;
 import vn.tsolve.ticket.event.TicketsPublishedEvent;
 import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
 import vn.tsolve.ticket.repository.ImportBatchRepository;
+import vn.tsolve.ticket.repository.ImportPreviewEvidenceRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRepository;
 import vn.tsolve.ticket.repository.ImportPreviewRowRepository;
+import vn.tsolve.ticket.repository.TicketDecisionRepository;
+import vn.tsolve.ticket.repository.TicketEvidenceRepository;
 import vn.tsolve.ticket.repository.TicketRepository;
-import vn.tsolve.ticket.repository.TicketReviewDecisionRepository;
 import vn.tsolve.ticket.service.ProjectAccess;
 
 class ManualTicketServiceImplTest {
@@ -66,7 +70,7 @@ class ManualTicketServiceImplTest {
     static final UUID TICKET = UUID.fromString("22222222-2222-2222-2222-222222222222");
 
     final TicketRepository tickets = mock(TicketRepository.class);
-    final TicketReviewDecisionRepository decisions = mock(TicketReviewDecisionRepository.class);
+    final TicketDecisionRepository decisions = mock(TicketDecisionRepository.class);
     final ImportBatchRepository batches = mock(ImportBatchRepository.class);
     final ProjectAccess projects = mock(ProjectAccess.class);
     final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
@@ -81,7 +85,11 @@ class ManualTicketServiceImplTest {
             projects,
             events,
             audit,
-            CLOCK);
+            CLOCK,
+            mock(ImportPreviewEvidenceRepository.class),
+            mock(TicketEvidenceRepository.class),
+            new StaticListableBeanFactory().getBeanProvider(FileStorage.class),
+            mock(PlatformTransactionManager.class));
 
     static ManualTicketRequest valid() {
         return new ManualTicketRequest(
@@ -95,6 +103,7 @@ class ManualTicketServiceImplTest {
                 " Restart ",
                 null,
                 " All users ",
+                null,
                 null);
     }
 
@@ -119,6 +128,7 @@ class ManualTicketServiceImplTest {
                 resolutionSteps,
                 workaround,
                 scope,
+                null,
                 null);
     }
 
@@ -185,11 +195,11 @@ class ManualTicketServiceImplTest {
         assertThat(b.getErrorCount()).isZero();
         assertThat(b.getRemovedCount()).isZero();
 
-        ArgumentCaptor<TicketReviewDecision> decision = ArgumentCaptor.forClass(TicketReviewDecision.class);
+        ArgumentCaptor<TicketDecision> decision = ArgumentCaptor.forClass(TicketDecision.class);
         verify(decisions).save(decision.capture());
         assertThat(decision.getValue())
                 .extracting("ticketId", "reviewer", "decision")
-                .containsExactly(TICKET, PM.getName(), ReviewDecision.APPROVE);
+                .containsExactly(TICKET, PM.getName(), TicketDecision.Decision.APPROVED);
         verify(audit).record(AuditAction.IMPORT, "PROJECT", PROJECT, Map.of("importBatchId", 7L, "created", 1));
 
         assertThat(result)
@@ -218,8 +228,8 @@ class ManualTicketServiceImplTest {
 
     @Test
     void AC_006_3_rejectsEveryMissingOrBlankFieldWithMsg01() {
-        ManualTicketRequest request =
-                new ManualTicketRequest(null, " ", null, "", "  ", "\t", null, " ", "kept as optional", null, null);
+        ManualTicketRequest request = new ManualTicketRequest(
+                null, " ", null, "", "  ", "\t", null, " ", "kept as optional", null, null, null);
 
         List<FieldError> errors = fieldErrorsOf(request);
 

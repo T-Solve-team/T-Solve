@@ -39,7 +39,7 @@ describe('the client in mock mode', () => {
     jest.runAllTimers();
 
     await expect(answer).resolves.toMatchObject({ outcome: 'ANSWERED' });
-    await expect(getEligibility(true)).resolves.toEqual({ linked: true });
+    await expect(getEligibility(true)).resolves.toEqual({ status: 'CONNECTED' });
     expect(invokeRemote).not.toHaveBeenCalled();
   });
 

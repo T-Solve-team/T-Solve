@@ -24,6 +24,8 @@ export const STATUS_TAGS = {
   ERROR: { label: 'Error', color: 'red' },
   // Colour is a placeholder until the Figma kit sets it, like the triage classes below.
   NEEDS_SOLUTION: { label: 'Needs Solution', color: 'orange' },
+  // Wiki document read from the trash (wiki AC-005.18); colour is a placeholder until the Figma kit sets it.
+  IN_TRASH: { label: 'In trash', color: 'default' },
   // AI Ticket Triage class (GBR-35). Colours are placeholders until the Figma kit sets them (design).
   SIMPLE: { label: 'Simple', color: 'green' },
   COMPLEX: { label: 'Complex', color: 'orange' },

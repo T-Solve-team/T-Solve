@@ -18,6 +18,7 @@ type MessageDefinition = {
  * the Platform Console codes MSG125-MSG133 and MSG135-MSG140 (their own module); MSG20 and MSG70 (decision D2: a Solution is
  * never empty); MSG58 and MSG79 (decision D3: the Hand Over popup with MSG_NEW_2 replaces them).
  * MSG_NEW_3 (import-ticket-list D14): MSG78, asked for by the CSV import, was given to another message in v3460.
+ * Workspace v3460 (KAN-119 D2): MSG61 is active again; MSG153 and MSG156 are field messages.
  * Toast level: error when the action failed (MSG06, MSG33, MSG69), success otherwise.
  */
 export const MESSAGES = {
@@ -127,7 +128,7 @@ export const MESSAGES = {
   MSG47: { type: 'toast', level: 'success', text: 'Connected to {tracker_name} successfully.' },
   MSG48: {
     type: 'inline',
-    text: 'Could not connect to {tracker_name}. Check the project and token and try again.',
+    text: 'Could not connect to {tracker_name}. Check the project key and that the service account can browse this project.',
   },
   MSG49: {
     type: 'field',
@@ -164,6 +165,10 @@ export const MESSAGES = {
     type: 'inline',
     text: 'Welcome to T-Solve. Enter your company information to finish setting up the Workspace.',
   },
+  MSG61: {
+    type: 'field',
+    text: 'Please enter a valid site address, e.g. https://company.atlassian.net.',
+  },
   MSG62: { type: 'inline', text: 'Sign in to T-Solve to use the T-Solve panel.' },
   MSG65: { type: 'inline', text: 'Solution submitted – awaiting review.' },
   MSG66: {
@@ -194,7 +199,7 @@ export const MESSAGES = {
     type: 'confirm',
     text: 'Remove the Ticket Resolver role from {user_name}? They will be removed from {count} Project(s). Their tickets are kept.',
   },
-  MSG117: { type: 'field', text: '{space_name} already has a Knowledge Manager.' },
+  MSG117: { type: 'field', text: '{space_name} already has the maximum of 3 Knowledge Managers.' },
   MSG118: {
     type: 'inline',
     text: 'No other active Knowledge Manager is available. Add a Knowledge Manager first.',
@@ -260,6 +265,31 @@ export const MESSAGES = {
   /** Provisional (KAN-237): System_Messages will number these two. */
   MSG142: { type: 'inline', text: 'No Spaces found' },
   MSG143: { type: 'inline', text: 'Not a member of any Project.' },
+  MSG153: {
+    type: 'field',
+    text: 'This {tracker_name} site is already linked to another workspace.',
+  },
+  MSG156: {
+    type: 'field',
+    text: 'The service account could not connect to {tracker_name} or lacks the required permissions.',
+  },
+  MSG_NEW_5: {
+    type: 'inline',
+    text: "Hi! Ask me about your team's Solutions or Wiki.",
+  },
+  MSG_NEW_6: {
+    type: 'inline',
+    text: "I can only answer questions about your team's knowledge.",
+  },
+  MSG_NEW_7: {
+    type: 'inline',
+    text: "I can't change how I work. Ask a question about your team's knowledge.",
+  },
+  // KAN-121 K121-D41: the Messages-file text; not yet in report3-messages.json.
+  MSG157: {
+    type: 'field',
+    text: '{project_name} cannot receive Chatbot issues: it has no issue type Task or requires other fields. Choose another Project.',
+  },
   /** Provisional key (decision D3) until System_Messages numbers it: the intro of 1.3.3 Hand Over Responsibilities. */
   MSG_NEW_2: {
     type: 'inline',

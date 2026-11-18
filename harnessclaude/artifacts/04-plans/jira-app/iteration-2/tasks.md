@@ -216,6 +216,60 @@ ticket and a writer with none are left out; an inactive creator is left out by t
   `backend/src/main/java/vn/tsolve/ticket/repository/SolutionDraftRepository.java`
 - Create: `backend/src/main/java/vn/tsolve/ticket/dto/OpenDraft.java`, tests
 **Dependencies:** Task 10
+
+## Task 13: Resubmit — contract, ticket storage and endpoints
+
+**Story:** STORY-012
+**Feature:** resubmit-backend
+**Description:** OpenAPI first: `resubmit` (boolean, default false) on `SolutionFormRequest` and
+`SubmitSolutionRequest`, `mayResubmit` on `IssuePanel`, origin `TICKET`, 409 MSG06 on `submitSolution`; regenerate the
+frontend client. `ticket`: the resubmittable read and the guarded UPDATE of the design (due date reset, Draft deleted,
+409 MSG06 on a guard miss). `jiraapp`: `openForm`, `submit` and `panel` as the design says. Tests: service unit tests
+and one IT on the real database for the UPDATE (status, sections, due date, entry time, Draft gone, guard misses).
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`,
+  `backend/src/main/java/vn/tsolve/ticket/repository/TicketRepository.java`, `ticket/service/SolutionFormTicketService.java`,
+  `ticket/service/impl/SolutionFormTicketServiceImpl.java`, `jiraapp/dto/SolutionFormRequest.java`,
+  `jiraapp/dto/SubmitSolutionRequest.java`, `jiraapp/dto/SolutionFormResponse.java`, `jiraapp/dto/IssuePanelResponse.java`,
+  `jiraapp/service/impl/JiraAppSolutionServiceImpl.java`, their tests, `ticket/SolutionFormTicketIT.java`
+- Create: `ticket/exception/TicketNotResubmittableException.java`
+**Dependencies:** Task 10
+**Estimated size:** medium
+
+## Task 14: Resubmit — Issue Panel and Solution Form
+
+**Story:** STORY-012
+**Feature:** resubmit-forge
+**Description:** The panel shows "Edit and resubmit" with MSG64 when `mayResubmit` and opens the form with
+`resubmit: true`; the form shows MSG64 above the sections, sends `resubmit` on Finish, keeps a Draft on Close, and
+checks, rewrites and retries as before (AC-012.7). The client's retry counts 409 MSG06 + panel `PENDING_REVIEW` as
+submitted. Check the flow on the dev site (Request changes → Edit and resubmit → Pending review).
+**Files:**
+- Modify: `jira-app/TSolve_JiraApp/src/frontend/panel/IssuePanel.jsx`, `form/SolutionFormModal.jsx`,
+  `api/tsolveClient.js`, their tests
+**Dependencies:** Task 13
+**Estimated size:** small
+
+## Task 15: Issue Panel — Rejected ticket
+
+**Story:** STORY-008
+**Feature:** panel-rejected
+**Description:** AC-008.9: while the writer's Solution Form ticket is Rejected the panel reads the feedback endpoint and
+shows `Rejected by {manager_name}: "{reason}".` (code `REJECTED`, a Jira App text) with no button.
+**Files:**
+- Modify: `jira-app/TSolve_JiraApp/src/frontend/panel/IssuePanel.jsx`, `messages.js`, their tests
+**Dependencies:** ticket-review Task 22
+**Estimated size:** small
+
+## Task 16: Issue Panel — Published ticket
+
+**Story:** STORY-008
+**Feature:** panel-published
+**Description:** AC-008.10: while the issue's ticket is Published, whatever its source, the panel shows "Solution
+approved and published." (a Jira App text) with no button. No server change: the panel already reads `ticketStatus`.
+**Files:**
+- Modify: `jira-app/TSolve_JiraApp/src/frontend/panel/IssuePanel.jsx`, its test
+**Dependencies:** none
 **Estimated size:** small
 
 ---
@@ -237,3 +291,109 @@ email queued inside the Workspace, logs without addresses).
 **Dependencies:** Task 11
 **Estimated size:** medium
 
+
+## Task 17: Hand the app token to the backend (KAN-349)
+
+**Story:** STORY-013
+**Feature:** app-token-trigger
+**Description:** Manifest: a `scheduledTrigger` (interval `hour`) and a `trigger` on `avi:forge:installed:app` /
+`avi:forge:upgraded:app`, both to a new endpoint `tsolve-app-token-endpoint` on remote `tsolve-backend`, route
+`/api/v1/jira-app/app-token`, `auth.appSystemToken.enabled: true` (AC-013.1); scopes `read:jira-work`,
+`write:jira-work` (AC-013.2); no Forge function in between, no retry (AC-013.3). The backend side is workspace Task 12.
+**Files:** Modify `jira-app/TSolve_JiraApp/manifest.yml`; test `jira-app/TSolve_JiraApp/test/manifest.test.js` (the
+three ACs read from the parsed manifest); `forge lint`.
+**Estimated size:** small
+
+---
+
+## Task 18: Ask T-Solve without a T-Solve sign-in (KAN-294)
+
+**Story:** STORY-010
+**Feature:** ask-without-sign-in
+**Description:** Backend: the FIT's `context.extension.project.key` becomes part of `JiraAppPrincipal` (AC-010.13);
+`JiraAppQuestionServiceImpl` binds the site's Workspace, finds the Active Project of that key and calls
+`ChatbotAnswerService.askForProject` with the asker's linked T-Solve user, if any, as `reader` (AC-010.4); a site with no Workspace answers 403 MSG124, no Jira user, no or an unknown project
+403 MSG08, with no AI call (AC-010.11); `GET /questions/eligibility` answers `status` (AC-010.14). Contract first:
+`JiraAskerEligibility` becomes `{ status }`. Forge page: `CONNECTED` shows the box for everyone; `PROJECT_NOT_CONNECTED`
+shows "This Jira project is not connected to T-Solve."; `SITE_NOT_CONNECTED` shows MSG124; both keep "Not solved,
+create ticket" with nothing prefilled (AC-010.2). MSG62 is no longer used on the page. `PUT /questions/{answerId}/rating`: "Solved" sends HELPFUL, "Not solved, create ticket" NOT_HELPFUL for the last answer; a failure is silent (AC-010.15).
+**Files:** Modify `common/security/JiraAppPrincipal.java` and the FIT conversion that builds it,
+`jiraapp/service/impl/JiraAppQuestionServiceImpl.java`, `jiraapp/dto/JiraAskerEligibility.java`,
+`jiraapp/controller/JiraAppQuestionController.java`, `frontend/openapi/tsolve-api.yaml` (+ `npm run generate:api`),
+`jira-app/TSolve_JiraApp/src/frontend/askTsolve/*`, `jira-app/TSolve_JiraApp/src/frontend/messages.js`; tests
+`JiraAppQuestionServiceImplTest`, `JiraAppQuestionControllerTest`, the FIT conversion test, the Ask page tests.
+**Estimated size:** medium
+
+---
+
+## Task 19: Read the linked Account instead of the stub (STORY-014)
+
+**Story:** STORY-014
+**Feature:** linked-asker-lookup
+**Description:** Design "Change 2026-11-17: link the Jira account". `LinkedJiraAskerLookup implements JiraAskerLookup`
+over identity's `JiraAccountLinkLookup` (identity Task 37); delete `ConfigJiraAskerLookup`, its test and the
+`TSOLVE_STUB_JIRA_ASKERS` line of `.env.example` (AC-014.11); the staging `.env` line is removed on the VPS after deploy.
+**Files:** Create `jiraapp/service/impl/LinkedJiraAskerLookup.java`; delete `jiraapp/service/impl/ConfigJiraAskerLookup.java`;
+modify `.env.example`; tests `LinkedJiraAskerLookupTest` (AC-014.11)
+and the existing callers' tests.
+**Dependencies:** identity Task 37
+**Estimated size:** small
+
+---
+
+## Task 20: Account link endpoints (STORY-014)
+
+**Story:** STORY-014
+**Feature:** account-link-endpoints
+**Description:** Contract first: `GET` and `POST /api/v1/jira-app/account-link` in `frontend/openapi/tsolve-api.yaml`
+(`JiraAccountLinkStatus { status, fullName?, email?, linkedAt? }`, `JiraAccountLinkStart { url }`), then
+`npm run generate:api`. `JiraAccountLinkController`, `JiraAccountLinkPageService` (+ impl) and
+`jiraapp/client/JiraUserClient` as the design says; AC-014.2, AC-014.6, AC-014.9, AC-014.10.
+**Files:** Create `jiraapp/controller/JiraAccountLinkController.java`, `jiraapp/service/JiraAccountLinkPageService.java`,
+`jiraapp/service/impl/JiraAccountLinkPageServiceImpl.java`, `jiraapp/client/JiraUserClient.java`,
+`jiraapp/dto/JiraAccountLinkStatus.java`, `jiraapp/dto/JiraAccountLinkStart.java`; modify
+`frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`; tests
+`JiraAccountLinkPageServiceImplTest`, `JiraAccountLinkControllerTest`, `JiraUserClientTest`.
+**Dependencies:** Task 19
+**Estimated size:** medium
+
+---
+
+## Task 21: T-Solve account page and the panel link (STORY-014)
+
+**Story:** STORY-014
+**Feature:** account-settings-page
+**Description:** Manifest: `jira:personalSettingsPage` "T-Solve account" (AC-014.1) and scope `read:jira-user`
+(AC-013.2). The page: states of AC-014.3 to AC-014.5, the click of AC-014.6 and AC-014.7, polling of AC-014.8,
+failures of AC-014.9. The panel's MSG62 state adds "Open T-Solve account settings" (AC-008.1).
+**Files:** Modify `jira-app/TSolve_JiraApp/manifest.yml`, `src/frontend/api/tsolveClient.js`,
+`src/frontend/messages.js`, the issue panel component; create `src/frontend/accountSettings/*`; tests
+`AccountSettingsPage.test.jsx`, the panel test, `test/manifest.test.js`; `forge lint`.
+**Dependencies:** Task 20
+**Estimated size:** medium
+
+---
+
+## Task 22: Move the T-Solve account page to the Apps section (STORY-014)
+
+**Story:** STORY-014
+**Feature:** account-page-global
+**Description:** Manifest: replace `jira:personalSettingsPage` with `jira:globalPage` (same key, resource, resolver and
+title) (AC-014.1). `settingsPagePath` builds `/jira/apps/{appId}/{envId}` for the panel's MSG62 link (AC-008.1).
+**Files:** Modify `jira-app/TSolve_JiraApp/manifest.yml`, `src/frontend/accountSettings/settingsPage.js`; tests
+`src/manifest.test.js`, `settingsPage.test.js`, `IssuePanel.test.jsx`; `forge lint`.
+**Dependencies:** Task 21
+**Estimated size:** small
+
+---
+
+## Task 23: Draft only while the issue is Done (STORY-008)
+
+**Story:** STORY-008
+**Feature:** draft-only-when-done
+**Description:** The panel shows MSG77 and "Continue draft" only while the issue's status category is Done
+(AC-008.3); otherwise it shows neither, and "Continue draft" re-checks the status before it opens the form. The
+Draft is not touched (AC-008.11). Jira App only; the panel already reloads on `JIRA_ISSUE_CHANGED` (BUG-231).
+**Files:** Modify `jira-app/TSolve_JiraApp/src/frontend/panel/IssuePanel.jsx`; test `IssuePanel.test.jsx`.
+**Dependencies:** none
+**Estimated size:** small

@@ -160,3 +160,47 @@ Blockers: Tasks 6 and 9 need `FileStorage` (KAN-96) on `main`. AC-001.7 needs tr
 - Create: `frontend/src/features/wiki/components/GrantAccessModal.tsx`
 - Test: `frontend/src/features/wiki/pages/SpaceSettingsPage.test.tsx`
 **Tests:** AC-006.11 to AC-006.14.
+
+## Task 13: Trashed document view (PR #255 review)
+
+**Story:** STORY-005
+**Feature:** wiki-trash-detail
+**Description:** `inTrash` on `WikiDocumentDetail` (false on a normal read, true on the Knowledge Manager's trash read); 11.2 shows the StatusTag preset `IN_TRASH` ("In trash") and hides Download and Delete when `inTrash` is true. Also from the review: after a trash from 11.2, return to 11.1 with the document's Space selected.
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`, `backend/src/main/java/vn/tsolve/wiki/dto/WikiDocumentDetail.java`, `backend/src/main/java/vn/tsolve/wiki/repository/WikiSearchRepository.java`, `frontend/src/features/wiki/pages/WikiDocumentPage.tsx`, `frontend/src/shared/ui/StatusTag/status-tags.ts`
+- Test: `WikiBrowseIT.java` (or the existing trash IT), `WikiDocumentPage.test.tsx`
+**Tests:** AC-002.11, AC-005.4, AC-005.18.
+
+---
+
+## Task 14: Wiki passages of a Project's Department (KAN-294)
+
+**Story:** STORY-001
+**Feature:** wiki-project-department-sources
+**Description:** `WikiSources.nearestCompanyWide(vector, minSimilarity, limit)` (AC-001.12): the existing
+`AccessRepository.nearestCompanyWide` query (Published Company-wide documents of Active Spaces), mapped by
+`WikiSourcesImpl` (risk review of 17/11: no Department-only document for a page without a T-Solve user). For the Jira App's Ask T-Solve page (the chatbot's answer for a Jira project).
+**Files:** Modify `backend/src/main/java/vn/tsolve/chatbot/source/service/WikiSources.java` (the chatbot-owned port),
+`backend/src/main/java/vn/tsolve/wiki/repository/AccessRepository.java`,
+`backend/src/main/java/vn/tsolve/wiki/service/impl/WikiSourcesImpl.java`; tests `WikiPortsTest` (mapping, arguments) and
+`WikiIndexIT` (the three Space rules and the unknown Project, on CI).
+**Estimated size:** small
+
+## Task 15: Space Settings lists every Knowledge Manager (KAN-362)
+
+**Story:** STORY-006
+**Feature:** wiki-space-managers-list
+**Decisions owned:** KAN-362 (Dương, 17/11: Space Settings shows the Knowledge Managers as a list)
+**Acceptance criteria:** AC-006.11
+**Description:** identity design "Several Knowledge Managers per Space — KAN-362", Wiki. `WikiSpaceSettings.knowledgeManager`
+becomes `knowledgeManagers: string[]` (Active Knowledge Managers' full names, ordered by name ignoring case, empty when
+none); the header query aggregates instead of joining one row; the page joins the names with ", " or shows "—"; the
+MSW wiki mock returns the list. Access checks already use `EXISTS`; a test proves both co-managers can manage the Space.
+Not in scope: identity assignment and handover (identity Tasks 38–39).
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml` (`WikiSpaceSettings`), `backend/src/main/java/vn/tsolve/wiki/{dto/WikiSpaceSettings,repository/WikiPermissionRepository}.java`, `frontend/src/features/wiki/pages/SpaceSettingsPage.tsx`, `frontend/src/features/wiki/mocks/handlers.ts`, regenerated `frontend/src/shared/api/generated`
+- Test: `backend/src/test/java/vn/tsolve/wiki/WikiPermissionIT.java` (two managers), `frontend/src/features/wiki/pages/SpaceSettingsPage.test.tsx`
+**Dependencies:** identity Task 38 (changeset 047) for two `space_manager` rows in the IT.
+**PR / Jira:** same branch as identity Tasks 38–39; Jira KAN-362.
+**Estimated size:** small (5 modified files); about 5 tests
+**Verification:** Tests name AC-006.11; `sdd.ts trace wiki`; backend `mvn verify`; frontend verify; `generate:api` committed with no further diff.

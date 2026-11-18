@@ -50,8 +50,7 @@ class SuggestionResultServiceImplTest {
     private static final UUID ITSUP_ID = UUID.fromString(ITSUP.publicId());
     private static final UUID ITNET_ID = UUID.fromString(ITNET.publicId());
     private static final HistoryQuery ALL = new HistoryQuery(null, null, null, null, null, null, null);
-    private static final String SOURCES =
-            """
+    private static final String SOURCES = """
             [{"type": "TICKET", "id": 11, "similarity": 0.91},
              {"type": "TICKET", "id": "12", "similarity": 0.83},
              {"type": "WIKI", "id": "a01", "title": "VPN troubleshooting", "similarity": 0.8},
@@ -315,15 +314,16 @@ class SuggestionResultServiceImplTest {
     }
 
     @Test
-    void marksEveryWikiDocumentUnavailableUntilTheWikiModuleAnswers_AC_004_3() {
+    void marksEveryWikiDocumentUnavailableWhenTheWikiPortDeniesAccess_AC_004_3() {
         given(managedProjects.of(PM)).willReturn(List.of(ITSUP));
         given(repository.findByJiraIssueKeyAndProjectIdIn(anyString(), anyCollection()))
                 .willReturn(Optional.of(record(ITSUP_ID, "ITSUP-1", SOURCES, null, null)));
+        given(wikiDocuments.available(eq(PM), anyCollection())).willReturn(Set.of());
         SuggestionResultServiceImpl service = new SuggestionResultServiceImpl(
                 repository,
                 managedProjects,
-                new NoJiraSite(),
-                new NoWikiDocumentAccess(),
+                () -> Optional.empty(),
+                wikiDocuments,
                 new SuggestionResultMapperImpl(),
                 new ObjectMapper());
 
@@ -335,8 +335,7 @@ class SuggestionResultServiceImplTest {
 
     @Test
     void skipsSourceItemsItCannotRead_AC_004_4() {
-        String messy =
-                """
+        String messy = """
                 [{"type": "TICKET", "id": 1}, {"type": "TICKET"}, {"type": "PDF", "id": 2},
                  {"type": "WIKI", "id": "a01"}, {"type": "WIKI", "id": {"x": 1}, "title": "Odd"},
                  "text", {"type": "WIKI", "id": "a03", "title": "Kept"}]

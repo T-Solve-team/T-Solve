@@ -1,7 +1,7 @@
 ---
 module: workspace
 date: 2026-11-11
-total_tasks: 4
+total_tasks: 6
 owner: Dev
 ---
 
@@ -9,7 +9,7 @@ owner: Dev
 
 Spec: `artifacts/03-modules/workspace/spec.md` · Design: `artifacts/04-plans/workspace/iteration-1/design.md` · Master: `artifacts/04-plans/workspace/design.md`
 
-Branch: `feat/KAN-120-workspace-create-department` for Tasks 1 and 2 (KAN-120), `feat/KAN-121-workspace-update-department` for Tasks 3 and 4 (KAN-121). Each task is one commit after the user agrees. Test names cite the AC id: backend `..._AC_001_7`, frontend `it('AC-002.6 ...')`.
+Branch: `feat/KAN-120-workspace-create-department` for Tasks 1 and 2 (KAN-120), `feat/KAN-121-workspace-update-department` for Tasks 3 and 4 (KAN-121 rename), `feat/KAN-121-workspace-default-project` for Tasks 12 and 13 (KAN-121 default Project; Tasks 5 to 11 are in `kan-119/` and `kan-344/`). Each task is one commit after the user agrees. Test names cite the AC id: backend `..._AC_001_7`, frontend `it('AC-002.6 ...')`.
 
 ## Task 1: Create Department API, Space and audit
 
@@ -176,4 +176,103 @@ Branch: `feat/KAN-120-workspace-create-department` for Tasks 1 and 2 (KAN-120), 
 
 **Verify:** in `frontend/`: `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`, and `npm run generate:api` leaves no diff in `src/shared/api/generated`.
 **Dependencies:** Task 3
+**Estimated size:** medium
+
+---
+
+## Task 12: Default Project API with the Jira check
+
+**Story:** STORY-012
+**Feature:** default-project-api
+**Description:** KAN-121, branch `feat/KAN-121-workspace-default-project` (K121-D26). Build from the master design, section "KAN-121: default Project". Contract first (`backend/AGENTS.md` rule 8): in `frontend/openapi/tsolve-api.yaml` add schemas `DepartmentProjectOption` and `DepartmentDetail`, point the 200 of `getDepartment` and `updateDepartment` at `DepartmentDetail`, add `defaultProjectId` (`type: [string, 'null']`, `format: uuid`, not required) to `UpdateDepartmentRequest`; the tag description stays; run `npm run generate:api`. Tracker (K121-D39): `ChatbotProjectCheck`, `TrackerCreateField`, `TicketTrackerClient.hasProjectPermissions` and `createFields` in `JiraClient` (URI templates, paging by `startAt`/`total` with `maxResults=200`, `issueTypes`/`fields` with `values` as fallback), `TrackerProjectService.checkChatbotProject` in `TrackerProjectServiceImpl`. Workspace: the two response records, `UpdateDepartmentRequest.defaultProjectId`, repository (`Current` widened, `ProjectOption`, `activeProjects`, `findActiveProject`, `lockActiveProject`, `setDefaultProject`, `FOR UPDATE OF d`), `DepartmentService` return types, `DepartmentServiceImpl.update` on a `TransactionTemplate` with the Jira check before it. Keep the web app green (K121-D29): `DepartmentNameForm` props become `DepartmentDetail` and its PUT body adds `defaultProjectId: department.defaultProject?.projectId ?? null`, so a rename keeps the default Project; the MSW GET and PUT of `features/workspace/mocks/handlers.ts` answer `defaultProject: null, projects: []` until Task 13. Make the three Jira calls once by hand on the staging site (service account of the staging Workspace) and note the response shapes in the task log (Definition of Done). No changeset; no file outside `module.md` `paths`.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/workspace/dto/DepartmentDetailResponse.java`
+- Create: `backend/src/main/java/vn/tsolve/workspace/dto/DepartmentProjectOptionResponse.java`
+- Modify: `backend/src/main/java/vn/tsolve/workspace/dto/UpdateDepartmentRequest.java`
+- Modify: `backend/src/main/java/vn/tsolve/workspace/controller/DepartmentController.java`
+- Modify: `backend/src/main/java/vn/tsolve/workspace/service/DepartmentService.java`
+- Modify: `backend/src/main/java/vn/tsolve/workspace/service/impl/DepartmentServiceImpl.java`
+- Modify: `backend/src/main/java/vn/tsolve/workspace/repository/DepartmentRepository.java`
+- Create: `backend/src/main/java/vn/tsolve/tracker/dto/ChatbotProjectCheck.java`
+- Create: `backend/src/main/java/vn/tsolve/tracker/dto/TrackerCreateField.java`
+- Modify: `backend/src/main/java/vn/tsolve/tracker/client/TicketTrackerClient.java`
+- Modify: `backend/src/main/java/vn/tsolve/tracker/client/JiraClient.java`
+- Modify: `backend/src/main/java/vn/tsolve/tracker/service/TrackerProjectService.java`
+- Modify: `backend/src/main/java/vn/tsolve/tracker/service/impl/TrackerProjectServiceImpl.java`
+- Modify: `frontend/openapi/tsolve-api.yaml`
+- Modify: `frontend/src/shared/api/generated/**` (regenerated, never by hand)
+- Modify: `frontend/src/features/workspace/components/DepartmentNameForm.tsx`
+- Modify: `frontend/src/features/workspace/mocks/handlers.ts`
+- Test: `backend/src/test/java/vn/tsolve/tracker/client/JiraClientTest.java`
+- Test: `backend/src/test/java/vn/tsolve/tracker/service/impl/TrackerProjectServiceImplTest.java`
+- Test: `backend/src/test/java/vn/tsolve/workspace/controller/DepartmentControllerTest.java`
+- Test: `backend/src/test/java/vn/tsolve/workspace/service/impl/DepartmentServiceImplTest.java`
+- Test: `backend/src/test/java/vn/tsolve/workspace/DepartmentRenameIT.java`
+- Test: `frontend/src/features/workspace/pages/DepartmentDetailPage.test.tsx` (the AC-004.8 body assertion gains `defaultProjectId: null`)
+**Tests** (edge-case rows 69 to 98 of the iteration design; backend names end in the AC id, e.g. `storesDefaultProject_AC_012_4`):
+- `JiraClientTest` (stub server, as the existing gateway tests):
+  - AC-012.7 `hasProjectPermissions` sends `projectKey` and `CREATE_ISSUES,MODIFY_REPORTER` with `Authorization: Bearer`; false when one `havePermission` is false
+  - AC-012.7 `createFields` finds `task` ignoring case, skips a sub-task named Task, reads `fields` of that type, pages past 200 (row 91), and is empty with no Task (rows 88, 89)
+  - AC-012.8, AC-012.17 401, 403, 404 throw `JiraRejectedException`; 429, 500 and a read timeout (client built with the configured timeouts) throw `JiraUnavailableException`; no body in the message (rows 86, 87)
+  - AC-012.7 both response shapes are read: `issueTypes`/`fields` and the `values` fallback
+- `TrackerProjectServiceImplTest` (Mockito):
+  - AC-012.7 READY with only allowed fields required, and with a required field that has a default (rows 82, 83)
+  - AC-012.8 DENIED for no account (no client call), a missing permission and a `JiraRejectedException` (404 included); UNAVAILABLE for `JiraUnavailableException` and a `RuntimeException` (rows 84 to 87)
+  - AC-012.9 NOT_READY for no Task and for a required custom field with no default (rows 88, 90)
+  - AC-012.17 with `OutputCaptureExtension`: for each outcome the captured log holds the key and Jira's status, never the token or a stubbed Jira body (row 97)
+- `DepartmentControllerTest`:
+  - AC-012.1 GET body has `defaultProject` and `projects`
+  - AC-012.8, AC-012.9, AC-012.5 service errors give 400 with `fieldErrors[0].field` `defaultProjectId` and the code and params
+  - AC-012.14 non-Admin and anonymous PUT with a `defaultProjectId` never call the service (rows 69, 70)
+- `DepartmentServiceImplTest` (Mockito; `TransactionTemplate` over a mocked `PlatformTransactionManager`):
+  - AC-012.10 same default Project, and null with none: no tracker call (rows 77 to 79)
+  - AC-012.5 `findActiveProject` empty: MSG04, no tracker call, no transaction (rows 73, 75, 76)
+  - AC-012.8, AC-012.9 each outcome maps to its code and params, nothing written
+  - AC-012.13 `lockActiveProject` empty in the callback: MSG04, no write (row 92)
+  - AC-012.11 audit details: `defaultProject` in `before`/`after` only when it changed, `spaceId` only when the name changed (rows 80, 81)
+  - AC-012.14 unbound scope, and blank name never reaching the service: no tracker call (rows 71, 72)
+  - AC-012.7 tracker is called before `getTransaction` (`InOrder`)
+- `DepartmentRenameIT` (real PostgreSQL, `TwoTenantDatabases`; `TrackerProjectService` as `@MockitoBean`; Projects inserted with SQL into `project`):
+  - AC-012.1 GET lists the Department's Active Projects by key, not its Removed one or another Department's
+  - AC-012.3 a stored Removed default reads as null, and a PUT with null adds no audit row (row 77)
+  - AC-012.4, AC-012.2 PUT stores `default_project_id` and answers the detail (row 82)
+  - AC-012.5 another Department's Project, a Removed one and a random id: 400 MSG04, column unchanged (rows 73, 75, 76)
+  - AC-012.6 null and absent clear it, audit `after.defaultProject` null (row 80)
+  - AC-012.12 only the default changes: Department and Space names unchanged (row 81)
+  - AC-012.15 MSG43 after a READY check keeps the old default (row 95); audit failure keeps both (row 96)
+  - AC-012.16 two threads set two Projects: both 200, column holds the later, second audit `before.defaultProject` equals first `after.defaultProject` (row 93)
+  - AC-003.6, AC-003.14 reworded: a rename that sends the current default keeps it and a no-change save adds no audit row (rows 78, 79)
+  - AC-012.17 captured logs and the audit row hold no token (row 97)
+- `DepartmentDetailPage.test.tsx`: AC-004.8 PUT body is `{ name, defaultProjectId: null }` for a Department with none
+
+**Verify:** in `backend/`: `mvn -B -Dapi.version=1.44 verify` (tests and `spotless:check`; JAVA_HOME as in the local-verify note); in `frontend/`: `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`, and `npm run generate:api` leaves no diff in `src/shared/api/generated`.
+**Dependencies:** Task 3; KAN-119 Task 6 and KAN-344 Task 10 (service account through the gateway), KAN-127 (Projects), all on `main`
+**Estimated size:** large
+
+---
+
+## Task 13: Default Project on 2.3 Department Detail
+
+**Story:** STORY-013
+**Feature:** default-project-screen
+**Description:** KAN-121. Build from the master design, "KAN-121: default Project", part "Web app". `DepartmentNameForm`: the "Default Project" `Descriptions` item; in edit mode the `FormField` `defaultProjectId` "Default Project" with the AC-013.4 help text as `extra` and an antd `Select` ("None" as `''`, then `projects` by key in received order, `disabled` while saving); submit sends `values.defaultProjectId || null`. Add MSG157 to `shared/messages/catalog.ts` beside MSG156. MSW: seed IT with `OPS` and `SUP`, HR with none; GET answers the detail; PUT answers 400 MSG04 on `defaultProjectId` for an id outside the Department's list, else stores it (null clears). Do not touch `routes.ts` or `src/mocks/handlers.ts`.
+**Files:**
+- Modify: `frontend/src/features/workspace/components/DepartmentNameForm.tsx`
+- Modify: `frontend/src/features/workspace/mocks/handlers.ts`
+- Modify: `frontend/src/shared/messages/catalog.ts`
+- Test: `frontend/src/features/workspace/pages/DepartmentDetailPage.test.tsx`
+**Tests** (`renderApp(paths.departmentDetail(id), { role: 'ADMIN' })`; `server.use` for errors and held requests; edge-case rows 99 to 104; names start with the AC id):
+- AC-013.1 a `server.use` GET answering `SUP` as default shows "SUP"; HR (seed) shows "None" (row 99)
+- AC-013.2 Edit shows the select holding the current value with options None, OPS, SUP
+- AC-013.3 HR offers only None (row 100)
+- AC-013.4 the help text is shown
+- AC-013.5 choosing OPS sends its `projectId`; choosing None sends null (row 101)
+- AC-013.6 MSG05 and the stored key shown after 200
+- AC-013.7 MSG156 with "Jira", MSG157 with the key, and MSG04 show under the select; form, name and choice kept (row 102)
+- AC-013.8 Cancel after changing the select shows the stored value, and the next Edit holds it (row 104)
+- AC-013.9 the select is disabled while the PUT is held (row 103)
+- AC-013.10 `msg('MSG157', { project_name: 'SUP' })` gives the catalog text (in `DepartmentDetailPage.test.tsx`, or the catalog's own test if one exists)
+
+**Verify:** in `frontend/`: `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`, and `npm run generate:api` leaves no diff in `src/shared/api/generated`.
+**Dependencies:** Task 12
 **Estimated size:** medium

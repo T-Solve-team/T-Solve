@@ -1202,7 +1202,7 @@ are re-read per request and the Workspace is bound from the cookie. `common/sess
 
 ```text
 GET /api/v1/me/spaces | solutions | solutions/summary
-  MyProfileController (identity.controller)   @PreAuthorize, @Valid MySolutionsQuery, one service call each
+  MyProfileController (identity.controller)   @PreAuthorize, String parameters parsed by MySolutionsQuery.parse, one service call each
     MyProfileService / MyProfileServiceImpl   (identity.service, .impl) Account id from TSolveUser.current() only
       ObjectProvider<ViewableSpaceLookup>     common.session.lookup  → empty List when no bean   (owner: wiki)
       ObjectProvider<WrittenTicketLookup>     common.session.lookup  → Page.empty / summary empty (owner: ticket-repository)
@@ -1211,14 +1211,19 @@ GET /api/v1/me/spaces | solutions | solutions/summary
 `ViewableSpaceLookup.findViewableSpaces(UUID accountId)` returns `List<SpaceRef>`. `WrittenTicketLookup` has
 `findSolutions(UUID accountId, MySolutionFilter filter, Pageable page)` (19b) and `summarize(UUID accountId)` (19c).
 DTOs in `common.session.dto`: `MySolution` (+ `LatestDecision`), `MySolutionFilter`, `MySolutionSummary`, `ProjectRef`,
-and the enums `TicketStatus` and `ReviewDecision`. `MySolutionsQuery` and `ValidDateRange` are in `identity.dto`.
+and the enums `TicketStatus` and `ReviewDecision`. `MySolutionsQuery` is in `identity.dto`.
 The page answer is the shared `PagedModel` shape (`{content, page{size,number,totalElements,totalPages}}`).
 
 **Decided in planning (not new decisions):**
-- **400 versus 403 (Q3).** `@PreAuthorize` runs after Spring has bound and validated the arguments, so a signed-in
-  non-resolver who also sends a bad parameter most likely gets 400, not 403. No criterion fixes this order (nothing is
-  revealed either way); the 403 tests use valid parameters and none asserts the mixed case. An anonymous request is
-  always 401 first (the security chain, AC-003.10).
+- **400 versus 403 (Q3).** The solutions handler takes plain `String` parameters and parses them inside the handler,
+  after `@PreAuthorize`, so a signed-in non-resolver who also sends a bad parameter gets 403, not 400. No criterion fixes
+  this order (nothing is revealed either way); the 403 tests use valid parameters and none asserts the mixed case. An
+  anonymous request is always 401 first (the security chain, AC-003.10).
+- **Decided during Task 19b (KAN-334).** The six query values are `String` parameters; `MySolutionsQuery.parse(...)`
+  collects every wrong one into one `InvalidFieldsException` (one `MSG06` entry per field, sorted by name) before the
+  service is called, because spring-web 6.1.14 skips Bean Validation after a binding type error. `from` and `to` must
+  match `\d{4}-\d{2}-\d{2}` and be a real date; an empty value is missing; `projectId` is the canonical UUID form
+  only; Swagger uses `@Parameter`.
 - **Spaces order (Q5).** AC-003.4's "sorted by name, exactly as the viewable Space lookup returns them" is read as
   "exactly the lookup's Spaces, in name order": the service sorts (Vietnamese `Collator`, ties by `spaceId`); the
   `wiki` owner does not have to sort. No spec edit.
@@ -1240,7 +1245,7 @@ The page answer is the shared `PagedModel` shape (`{content, page{size,number,to
 | Q1 Where the ports and DTOs live | `common.session.lookup` (ports) and `common.session.dto` (DTOs, with new `TicketStatus` and `ReviewDecision` enums of the YAML's values; a parity test on the status names) | `common.profile` package (B); ports in `identity.service` (C, breaks the one-way rule) | The spec says "in `common`", the team pattern is there and `SpaceRef` already is; `common` cannot import the ticket module, so the enums are copies, guarded by the parity test; the ticket module's enum is another owner's code and is not edited |
 | Q2 Stand-in until the owner builds the lookup | `ObjectProvider` in the service, empty answer when no bean, no stub classes | Stub `@Component`s (B: two beans fail startup when the owner adds theirs); `@ConditionalOnMissingBean` (C, unreliable on a scanned component) | The pattern of `SessionServiceImpl`; the owner only adds a bean and deletes nothing; two files and a test class fewer |
 | Q3 The 403 check | `@PreAuthorize` (`hasAnyRole('TICKET_RESOLVER','PROJECT_MANAGER')` on the two solutions endpoints, `hasRole('EMPLOYEE')` on spaces); order against 400 not made a criterion | A check that makes 403 win (B); a role check in the service (C, breaks AGENTS rule 7) | AGENTS rule 7; the handler already renders 403 `MSG08` and 401 `MSG07`; a spec edit would re-lock all identity code for a case that reveals nothing |
-| Q4 Binding and validation | `MySolutionsQuery` record with `@Valid`, typed fields, `@Min` / `@Max`, class-level `@ValidDateRange` reporting on `to`, defaults in the record | Strings parsed in the service (B); plain `@RequestParam` (C, no `fieldErrors`) | Least code; the handler already turns `typeMismatch` and constraint errors into `fieldErrors` `MSG06`; two wrong parameters give two entries. Fallback to B for the affected fields only if record binding does not give one entry per field on this Spring version |
+| Q4 Binding and validation | `String` request parameters parsed by the static `MySolutionsQuery.parse(...)` into the typed record (defaults 0 and 20); all wrong parameters collected into one `InvalidFieldsException`, one `MSG06` entry per field, sorted by name | `MySolutionsQuery` record with `@Valid` and `@ValidDateRange` (A, dropped: spring-web 6.1.14 skips Bean Validation after a binding type error, so two wrong parameters gave one entry); plain `@RequestParam` (C, no `fieldErrors`) | Gives one entry per wrong parameter on this Spring version, and runs after `@PreAuthorize`, so 403 wins over a bad parameter |
 | Q5 Who sorts the Spaces | The service, Vietnamese `Collator`, ties by `spaceId` | The port contract says sorted (B); `CASE_INSENSITIVE_ORDER` (C) | AC-003.4 holds whatever the `wiki` lookup does and matches the web mock |
 | Q6 Dependence on Tasks 26a and 26b | None to wait for (merged); `@WithTSolveUser` tests, no new integration test | An end-to-end integration test with Redis (B); wait (C) | The Role re-read, the cookie and the binding are already tested on `main`; Task 19 adds only `@PreAuthorize`; no Docker for these tests; Hiếu's check with a real sign-in is the end-to-end proof |
 | Q7 Cards | Three (19a, 19b, 19c), one PR and branch each; KAN-301 for 19a, two new Subtasks of KAN-160 for 19b and 19c; no sprint fields | Two cards (B, about 550 lines); one (C) | Each is one thing Hiếu can try; folding 19c into 19b is about 13 production files and 20 tests |
@@ -1268,7 +1273,7 @@ apply to the screens. Every Critical or High row has its test task.
 | 152 | STORY-003 | Authorization | A request carries `userId` or `workspaceId` (query string edited); two users in two Workspaces | Critical | Not bound; the lookups are asked for the signed-in Account's id only, and user A never sees B's rows; the Workspace comes from the session binding (AC-003.7, GBR-37; `WorkspaceBindingTest` on `main`) | Tasks 19a, 19b |
 | 153 | STORY-003 | Authorization | The Ticket Resolver Role is removed between two calls | High | 403 `MSG08` on the next call, never cached in the controller; the real re-read is `WebSessionFilter` (AC-003.17; `RoleChangeTest` on `main`); the controller test proves the check is made on the principal it is given | Task 19b |
 | 154 | STORY-003 | Authorization | Anonymous call to each of the three paths, with or without a bad parameter or a non-resolver Role | Critical | 401 `MSG07` from the security chain before validation and before the Role check; the service is never called (AC-003.10) | Tasks 19a, 19b, 19c |
-| 155 | STORY-003 | Authorization | A signed-in non-resolver sends a bad parameter | Low | Most likely 400 (arguments are validated before `@PreAuthorize`); no criterion fixes the order and nothing is revealed; decided in planning (Q3), no test asserts it | none (decided in planning) |
+| 155 | STORY-003 | Authorization | A signed-in non-resolver sends a bad parameter | Low | 403 (parameters are parsed in the handler, after `@PreAuthorize`; 401 first for anonymous); no criterion fixes the order and nothing is revealed; decided in planning (Q3), no test asserts it | none (decided in planning) |
 | 156 | STORY-003 | Error cascades | A lookup throws (the owner's database is down) | Medium | 500 `MSG06` through `GlobalExceptionHandler`, no detail and no stack trace in the body; the exception is not swallowed | Tasks 19a, 19b |
 | 157 | STORY-003 | Data integrity | The lookup returns Spaces in any order, with equal names or Vietnamese diacritics; a lookup returns `null` | Medium | Sorted by name with the Vietnamese `Collator`, ties by `spaceId`; the port contract is non-null, so the service never passes `null` on (AC-003.4) | Task 19a |
 | 158 | STORY-003 | Scale | 0 Solutions; a page past the end | Medium | 200 with an empty `content`, the lookup's real totals (AC-003.6, AC-003.8) | Task 19b |
@@ -1555,3 +1560,51 @@ code, the rules per Role, only the helpers before the code freeze, 403 MSG08 als
 - `space.department_id` is unique (one Space per Department); a Space of a deleted Department is refused even if its
   own status is still `ACTIVE`.
 - Several Roles: the union of the rules (GBR-28), e.g. a Knowledge Manager who is also a Ticket Resolver.
+
+## Several Knowledge Managers per Space — KAN-362, Tasks 38–39 (2026-11-17)
+
+Spec: identity changelog 2026-11-17 (14 reworded criteria) and wiki changelog 2026-11-17. Decisions (Dương, 17/11):
+- **Cap.** chosen: one to three Knowledge Managers per Space; alternatives: no cap / 2 / 5; rationale: enough to share
+  a Department's Wiki while keeping clear ownership. MSG117 stays the cap error, text
+  "`{space_name}` already has the maximum of 3 Knowledge Managers." (same code and `space_name` parameter).
+- **Handover.** chosen: a Space needs a handover only when the outgoing Account is its only Active Knowledge Manager;
+  alternatives: always hand over / never hand over; rationale: a co-manager already covers the Space, and a Space is
+  never left without an Active Knowledge Manager.
+- **Store.** chosen: changeset `047-identity-space-manager-many.sql` drops the `space_id` primary key of
+  `space_manager` and adds `PRIMARY KEY (space_id, user_id)` (the baseline's key); `idx_space_manager_user` stays.
+  Alternative: a separate join table; rejected, the baseline already has this shape. Rollback restores the single key
+  only when no Space has two rows (precondition in the rollback comment).
+- **Cap enforcement.** The cap is a count, not a key, so the services lock the requested `space` rows
+  (`SELECT … FOR UPDATE`, ordered by `space_id` to avoid deadlocks) before counting `space_manager` rows, in the same
+  transaction as the insert. Two creations or updates racing for the last place are serialized by that lock (AC-005.13,
+  AC-007.14). The old "unique violation → MSG117" mapping goes away.
+- **Affected Spaces.** `UserRoleUpdateRepository` gets `soleManagedSpaces(accountId, candidateSpaceIds)`: the Spaces of
+  the Account, locked `FOR UPDATE`, with no other `space_manager` row whose Account is `ACTIVE` and holds
+  KNOWLEDGE_MANAGER. Used by handover-options (AC-007.9), the update (AC-007.16) and the status change (AC-006.14), so
+  two co-managers removed at once are serialized and the second one sees itself as the last.
+- **Writes.** `transferSpace` becomes "insert the recipient's row (`ON CONFLICT DO NOTHING`)" plus the removal below;
+  the outgoing Account's rows are removed: on deactivation all of them (AC-006.15), on an update those of the Spaces
+  not in `spaceIds` (AC-007.19). `UserRoleUpdateRepository.Space.managerId` becomes `managerIds` (a list) for the
+  options and checks.
+- **Frontend.** The web app stops deciding from `user.managedSpaces` whether a handover is due: deactivation
+  (`UserStatusActions`) and the role update (`useRoleUpdateFlow`) read `handover-options` and open the popup only
+  when it has a Project or Space entry; otherwise deactivation shows the MSG57 confirmation (AC-006.2). The MSW mock
+  keeps a list of manager ids per Space and mirrors the backend (cap 3, sole-manager rule, row removal). No OpenAPI
+  change for identity.
+- **Wiki (wiki Task 15).** `WikiSpaceSettings.knowledgeManager` becomes `knowledgeManagers: string[]` (OpenAPI change,
+  `generate:api`); `WikiPermissionRepository` aggregates the Active Knowledge Managers' names (`ORDER BY lower(full_name)`),
+  so the header query no longer fails with two rows; `SpaceSettingsPage` joins them with ", " or shows "—". Access
+  checks (`AccessRepository`, `ScopeAccessRepository`) already use `EXISTS` and need no change; tests prove it with two
+  managers.
+
+### Edge cases — KAN-362
+- Adding an Account to a Space it already manages (update) does not count against the cap (AC-007.14: "the Account
+  does not already manage").
+- A Deactivated co-manager does not count as "another Active Knowledge Manager"; going forward a deactivation removes
+  its rows, so only data from before this change can hold such rows.
+- A co-manager who holds the row but lost KNOWLEDGE_MANAGER does not count either (AC-007.19 removes the rows when the
+  role is dropped, since `spaceIds` must then be empty).
+- The recipient of a last-manager handover cannot already manage that Space (the outgoing Account is the only one).
+- Two Admins removing the two co-managers of one Space at the same time: the row locks make the second request see
+  itself as the last and require a handover (409 MSG118 when nobody else is eligible).
+- Mock seed (`MockUserListSeeder`, AC-006.19) unchanged: the second Knowledge Manager still manages no Space.

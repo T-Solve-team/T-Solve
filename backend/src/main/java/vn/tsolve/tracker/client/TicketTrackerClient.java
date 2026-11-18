@@ -3,6 +3,8 @@ package vn.tsolve.tracker.client;
 import java.util.List;
 import java.util.Optional;
 import vn.tsolve.tracker.dto.JiraAccount;
+import vn.tsolve.tracker.dto.TrackerCreateField;
+import vn.tsolve.tracker.dto.TrackerStatus;
 
 /**
  * Calls to the ticket tracker as the Workspace's service account. Failures are {@code JiraUnavailableException} (retry
@@ -18,4 +20,19 @@ public interface TicketTrackerClient {
      * or empty.
      */
     Optional<String> findComment(JiraAccount account, String issueKey, String textPrefix);
+
+    /** Returns the canonical project key, or empty when Jira answers 404. */
+    Optional<String> findProject(JiraAccount account, String projectKey);
+
+    /** Returns statuses across the project's issue types in encounter order, including duplicates. */
+    List<TrackerStatus> projectStatuses(JiraAccount account, String projectKey);
+
+    /** True when the account has every one of these project permissions in the project. */
+    boolean hasProjectPermissions(JiraAccount account, String projectKey, List<String> permissions);
+
+    /**
+     * The create-screen fields of the project's first non-sub-task issue type with this name (ignoring case), or
+     * empty when the project has no such type.
+     */
+    Optional<List<TrackerCreateField>> createFields(JiraAccount account, String projectKey, String issueTypeName);
 }

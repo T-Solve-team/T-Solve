@@ -24,6 +24,10 @@ import type {
 
 import type {
   ChatbotAnswer,
+  ChatbotIssueDraft,
+  ChatbotIssueDraftRequest,
+  ChatbotIssueRequest,
+  ChatbotJiraIssue,
   ChatbotQuestion,
   ChatbotRating,
   ListUnavailableCitedDocumentsParams,
@@ -505,4 +509,221 @@ export const useRemoveChatbotAnswerRating = <
   TContext
 > => {
   return useMutation(getRemoveChatbotAnswerRatingMutationOptions(options), queryClient);
+};
+export const getDraftChatbotIssueUrl = (answerId: string) => {
+  return `/api/v1/chatbot/answers/${answerId}/issue-draft`;
+};
+
+/**
+ * For an ANSWERED or NO_SOURCE answer of the user. Offers only the Departments with a default Project. When the AI fails the draft is empty and the user fills it. Nothing is stored and nothing reaches Jira. A user with no linked Jira account (UC-59) gets 409 code MSG146 instead of the form.
+ * @summary The Jira issue form of an own answer, prefilled by the AI from the conversation (UC-58, MSG144).
+ */
+export const draftChatbotIssue = async (
+  answerId: string,
+  chatbotIssueDraftRequest: ChatbotIssueDraftRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<ChatbotIssueDraft> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ChatbotIssueDraft>(getDraftChatbotIssueUrl(answerId), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(chatbotIssueDraftRequest),
+  });
+};
+
+export const getDraftChatbotIssueMutationKey = () => ['draftChatbotIssue'] as const;
+
+export const getDraftChatbotIssueMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof draftChatbotIssue>>,
+    TError,
+    DraftChatbotIssueMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof draftChatbotIssue>>,
+  TError,
+  DraftChatbotIssueMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDraftChatbotIssueMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof draftChatbotIssue>>,
+    DraftChatbotIssueMutationVariables
+  > = (props) => {
+    const { answerId, data } = props ?? {};
+
+    return draftChatbotIssue(answerId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DraftChatbotIssueMutationResult = NonNullable<
+  Awaited<ReturnType<typeof draftChatbotIssue>>
+>;
+export type DraftChatbotIssueMutationBody = ChatbotIssueDraftRequest;
+export type DraftChatbotIssueMutationError = ErrorType<ProblemResponse>;
+export type DraftChatbotIssueMutationVariables = {
+  answerId: string;
+  data: ChatbotIssueDraftRequest;
+};
+
+/**
+ * @summary The Jira issue form of an own answer, prefilled by the AI from the conversation (UC-58, MSG144).
+ */
+export const useDraftChatbotIssue = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof draftChatbotIssue>>,
+      TError,
+      DraftChatbotIssueMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof draftChatbotIssue>>,
+  TError,
+  DraftChatbotIssueMutationVariables,
+  TContext
+> => {
+  return useMutation(getDraftChatbotIssueMutationOptions(options), queryClient);
+};
+export const getCreateChatbotIssueUrl = (answerId: string) => {
+  return `/api/v1/chatbot/answers/${answerId}/jira-issue`;
+};
+
+/**
+ * Issue type Task, label tsolve-chatbot, in the default Project of the chosen Department, created with the Workspace's Jira service account with the user's linked Jira account as reporter. One issue per answer: when it exists, 200 returns it without calling Jira. Errors (code): 400 field errors MSG01/MSG02 or MSG06 for a Department that is not offered; 409 MSG146 no linked Jira account; 502 MSG148 Jira refused, MSG157 the default Project has no Task type or requires other fields; 503 MSG149 Jira unreachable. Nothing is created on an error.
+ * @summary Creates the Jira issue of an own answer when the user clicks Create in Jira (UC-58, GBR-40).
+ */
+export const createChatbotIssue = async (
+  answerId: string,
+  chatbotIssueRequest: ChatbotIssueRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<ChatbotJiraIssue> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ChatbotJiraIssue>(getCreateChatbotIssueUrl(answerId), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(chatbotIssueRequest),
+  });
+};
+
+export const getCreateChatbotIssueMutationKey = () => ['createChatbotIssue'] as const;
+
+export const getCreateChatbotIssueMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createChatbotIssue>>,
+    TError,
+    CreateChatbotIssueMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createChatbotIssue>>,
+  TError,
+  CreateChatbotIssueMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateChatbotIssueMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createChatbotIssue>>,
+    CreateChatbotIssueMutationVariables
+  > = (props) => {
+    const { answerId, data } = props ?? {};
+
+    return createChatbotIssue(answerId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateChatbotIssueMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createChatbotIssue>>
+>;
+export type CreateChatbotIssueMutationBody = ChatbotIssueRequest;
+export type CreateChatbotIssueMutationError = ErrorType<ProblemResponse>;
+export type CreateChatbotIssueMutationVariables = { answerId: string; data: ChatbotIssueRequest };
+
+/**
+ * @summary Creates the Jira issue of an own answer when the user clicks Create in Jira (UC-58, GBR-40).
+ */
+export const useCreateChatbotIssue = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createChatbotIssue>>,
+      TError,
+      CreateChatbotIssueMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createChatbotIssue>>,
+  TError,
+  CreateChatbotIssueMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateChatbotIssueMutationOptions(options), queryClient);
 };
