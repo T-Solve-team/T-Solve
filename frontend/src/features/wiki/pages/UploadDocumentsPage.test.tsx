@@ -346,9 +346,9 @@ describe('UploadDocumentsPage', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe(paths.wikiHome));
     expect(new URLSearchParams(router.state.location.search).get('folder')).toBe(NETWORK);
     expect(
-      await within(await screen.findByRole('table', { name: 'Documents' })).findByRole('link', {
-        name: 'selected-folder',
-      }),
+      await within(
+        await screen.findByRole('list', { name: /Network$/ }, { timeout: 5000 }),
+      ).findByRole('link', { name: 'selected-folder' }, { timeout: 5000 }),
     ).toBeInTheDocument();
   });
 

@@ -2173,4 +2173,8 @@
 {"ts":"2026-11-18T09:05:35.532Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"89dd9005967af8d83f6ff323eec985b5f8578329"}
 {"ts":"2026-11-18T08:54:06.641Z","type":"spec-approved","module":"jira-app","specHash":"1008ac99b3efb6ee52626e867fa856a21a0ac2d8578c320adb0181fff2fb915b"}
 {"ts":"2026-11-18T09:17:11.989Z","type":"spec-approved","module":"jira-app","specHash":"7d2193ec5b6a3cb57488f3fb9ed44db57b0923d292ce6fd1bfa746e2f40d5f95"}
+{"ts":"2026-11-18T10:18:30.961Z","type":"spec-approved","module":"wiki","specHash":"190fc32686d5e5d6daa685e3592af56259916b79037c730a08a751dd7a153fe9"}
+{"ts":"2026-11-18T10:19:05.780Z","type":"feature-status","module":"wiki","feature":"wiki-home-explorer","from":null,"to":"pending"}
+{"ts":"2026-11-18T10:51:46.183Z","type":"feature-status","module":"wiki","feature":"wiki-home-explorer","from":"pending","to":"in-progress"}
+{"ts":"2026-11-18T10:52:02.926Z","type":"feature-status","module":"wiki","feature":"wiki-home-explorer","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-18T10:24:11.805Z","type":"spec-approved","module":"chatbot","specHash":"ddff8da5c8e3e1f0d097065b9cee98f0d94614440dc80baf75aeedaa0d844b10"}
