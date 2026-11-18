@@ -2675,6 +2675,59 @@ paths:
           $ref: '#/components/responses/Problem'
         '404':
           $ref: '#/components/responses/Problem'
+  /api/v1/chatbot/conversations:
+    get:
+      tags: [chatbot]
+      operationId: listChatbotConversations
+      summary: List your saved conversations, newest startedAt first.
+      responses:
+        '200':
+          description: Exactly the signed-in user's conversations.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChatbotConversationSummary'
+        '401':
+          $ref: '#/components/responses/Problem'
+  /api/v1/chatbot/conversations/{chatSessionId}:
+    parameters:
+      - name: chatSessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [chatbot]
+      operationId: getChatbotConversation
+      summary: Open your saved conversation with every turn and its current rating.
+      responses:
+        '200':
+          description: The conversation, turns oldest first.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatbotConversation'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+    delete:
+      tags: [chatbot]
+      operationId: deleteChatbotConversation
+      summary: Delete your conversation and its disposable answers.
+      description: Unknown, malformed and other users' ids answer 404 MSG04 and change nothing.
+      responses:
+        '204':
+          description: Conversation and messages deleted; rated, NO_SOURCE and INJECTION answers kept.
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
   /api/v1/chatbot/answers:
     post:
       tags: [chatbot]
@@ -5063,6 +5116,45 @@ components:
         fileSize:
           type: integer
           format: int64
+    ChatbotConversationSummary:
+      type: object
+      required: [chatSessionId, title, startedAt]
+      properties:
+        chatSessionId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+    ChatbotConversation:
+      type: object
+      required: [chatSessionId, title, startedAt, turns]
+      properties:
+        chatSessionId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+        turns:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatbotConversationTurn'
+    ChatbotConversationTurn:
+      type: object
+      required: [question, answer, rating]
+      properties:
+        question:
+          type: string
+        answer:
+          $ref: '#/components/schemas/ChatbotAnswer'
+        rating:
+          type: [string, 'null']
+          enum: [HELPFUL, NOT_HELPFUL, null]
     ChatbotAsk:
       type: object
       required: [question]
