@@ -1,10 +1,12 @@
 package vn.tsolve.ticket.service.impl;
 
 import java.time.Clock;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import vn.tsolve.ticket.dto.OpenDraft;
 import vn.tsolve.ticket.dto.SolutionSections;
 import vn.tsolve.ticket.entity.SolutionDraft;
 import vn.tsolve.ticket.repository.SolutionDraftRepository;
@@ -36,5 +38,17 @@ public class SolutionDraftServiceImpl implements SolutionDraftService {
     public Optional<SolutionSections> find(UUID creatorId, UUID projectId, String issueKey) {
         return drafts.findByCreatorIdAndProjectIdAndIssueKey(creatorId, projectId, issueKey)
                 .map(SolutionDraft::getContent);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<OpenDraft> findOpenDrafts() {
+        return drafts.findOpenDrafts();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<OpenDraft> findOpenDrafts(UUID creatorId) {
+        return drafts.findOpenDrafts(creatorId);
     }
 }

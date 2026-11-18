@@ -1731,6 +1731,16 @@
 {"ts":"2026-11-14T14:22:13.957Z","type":"feature-status","module":"worker","feature":"email-outbox-review-fixes","from":"evaluating","to":"passing"}
 {"ts":"2026-11-14T14:22:14.010Z","type":"feature-status","module":"ticket-review","feature":"review-email-link-fallback","from":"evaluating","to":"passing"}
 {"ts":"2026-11-14T18:12:01.543Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"19215afba9f44eb4f6dfc48ddb6f85e65e68c6b0"}
+{"ts":"2026-11-14T08:35:25.351Z","type":"spec-approved","module":"jira-app","specHash":"3fcd90db567191b28aa648a6da4e023bb513935ca63291b7d2e77cf291f04302"}
+{"ts":"2026-11-14T08:35:25.668Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-query","from":null,"to":"pending"}
+{"ts":"2026-11-14T08:35:25.967Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-job","from":null,"to":"pending"}
+{"ts":"2026-11-14T08:47:36.497Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-query","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T08:47:36.781Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-job","from":"pending","to":"in-progress"}
+{"ts":"2026-11-14T08:51:42.214Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-query","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T08:51:42.478Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-job","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-14T19:12:47.936Z","type":"spec-approved","module":"jira-app","specHash":"d50241ff212550033a1b215a52daa559bdc48b1d3cc8a01daaf7984d5fcfdad8"}
+{"ts":"2026-11-14T19:13:26.929Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-query","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-14T19:13:27.218Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-job","from":"evaluating","to":"fixing"}
 {"ts":"2026-11-14T14:18:28.898Z","type":"spec-approved","module":"jira-app","specHash":"a3d60df6378a619c4c347e8e1b0c0c718ace12007456a5e8c76600319a1c9393"}
 {"ts":"2026-11-14T14:19:29.103Z","type":"feature-status","module":"jira-app","feature":"resubmit-backend","from":null,"to":"pending"}
 {"ts":"2026-11-14T14:19:29.494Z","type":"feature-status","module":"jira-app","feature":"resubmit-forge","from":null,"to":"pending"}
@@ -2097,3 +2107,13 @@
 {"ts":"2026-11-18T04:33:22.097Z","type":"feature-status","module":"tracker","feature":"suggestion-web-jobs","from":"pending","to":"in-progress"}
 {"ts":"2026-11-18T05:13:46.041Z","type":"commit-recorded","module":"tracker","repo":"default","sha":"92c551d28cb61c60a32d50b5dfef93c5a19b8117"}
 {"ts":"2026-11-18T05:13:46.351Z","type":"feature-status","module":"tracker","feature":"suggestion-web-jobs","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-18T06:18:07.805Z","type":"spec-approved","module":"jira-app","specHash":"699e1afdbcfb1cbb580615c7e780569fbf00e9457e08569423c9c6ac11d1b834"}
+{"ts":"2026-11-18T06:24:19.066Z","type":"spec-approved","module":"jira-app","specHash":"7f62a6dc931a084f3013501872829a79658b512ca13f2ede8e94b4ec951fba9a"}
+{"ts":"2026-11-18T06:25:54.136Z","type":"spec-approved","module":"ticket-review","specHash":"e69cb9f06e5c370a11a27c036624518563dc89c049948212d64403a9538b7cce"}
+{"ts":"2026-11-18T06:34:45.159Z","type":"spec-approved","module":"jira-app","specHash":"56f6e0827271e66b1360d178ea0e44474e1c042077caeb4bd6a9ab03c652b4da"}
+{"ts":"2026-11-18T06:35:02.764Z","type":"spec-approved","module":"ticket-review","specHash":"b2b9ac9981ee4f8f9d337cc24b27177a773bf4efad5a2c3ee0da64879bb2b38d"}
+{"ts":"2026-11-18T06:35:15.179Z","type":"quick-opened","what":"Read the import preview cleanup run time and time zone from env","files":["backend/src/main/java/vn/tsolve/ticket/service/impl/PreviewCleanupJob.java","backend/src/test/java/vn/tsolve/ticket/service/impl/PreviewCleanupJobTest.java"]}
+{"ts":"2026-11-18T06:37:28.054Z","type":"quick-closed","what":"Read the import preview cleanup run time and time zone from env","files":["backend/src/main/java/vn/tsolve/ticket/service/impl/PreviewCleanupJob.java","backend/src/test/java/vn/tsolve/ticket/service/impl/PreviewCleanupJobTest.java"]}
+{"ts":"2026-11-18T06:47:27.645Z","type":"spec-approved","module":"jira-app","specHash":"7f62a6dc931a084f3013501872829a79658b512ca13f2ede8e94b4ec951fba9a"}
+{"ts":"2026-11-18T06:47:32.328Z","type":"spec-approved","module":"ticket-review","specHash":"e69cb9f06e5c370a11a27c036624518563dc89c049948212d64403a9538b7cce"}
+{"ts":"2026-11-18T06:47:55.411Z","type":"quick-opened","what":"Keep the import preview cleanup in Vietnam time; drop TSOLVE_JOB_TIME_ZONE","files":["backend/src/main/java/vn/tsolve/ticket/service/impl/PreviewCleanupJob.java","backend/src/test/java/vn/tsolve/ticket/service/impl/PreviewCleanupJobTest.java"]}

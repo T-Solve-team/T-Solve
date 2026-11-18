@@ -400,6 +400,8 @@
         "issue-panel-ui": "passing",
         "remove-jira-search": "passing",
         "close-keeps-draft": "passing",
+        "draft-reminder-query": "fixing",
+        "draft-reminder-job": "fixing",
         "resubmit-backend": "evaluating",
         "resubmit-forge": "evaluating",
         "panel-rejected": "passing",
@@ -413,7 +415,7 @@
         "draft-only-when-done": "evaluating"
       },
       "lastUpdated": "2026-11-17T17:28:51.182Z",
-      "branch": "feat/KAN-337-jira-app-reject-reason",
+      "branch": "feat/KAN-336-jira-app-draft-reminder",
       "repos": [
         "default"
       ],

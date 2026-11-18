@@ -189,6 +189,41 @@ integrity, 10 Integration · Skipped: 4 Scale (one form per user), 6 Environment
 - The daily Draft reminder email (worker job, own recurring id and mail sender, reuses `WorkerTenantService` only) is
   a separate Jira issue.
 
+## Change — 2026-11-14: Draft reminder email (STORY-011, KAN-336, Tasks 11–12)
+
+Branch `feat/KAN-336-jira-app-draft-reminder`, cut from the KAN-126 branch (Close keeps a Draft is not on `main` yet);
+rebased onto `main` once PR #203 merges.
+
+```
+JobRunr recurring "jira-app-draft-reminder"  0 8 * * *  Asia/Ho_Chi_Minh   (DraftReminderRegistration)
+  └─ DraftReminderDispatchHandler          for each WorkerTenantService.activeWorkspaceIds()
+       └─ DraftReminderWorkspaceHandler    runInTenant: writers with an open Draft (ticket's SolutionDraftService)
+            └─ enqueue(jobId = UUID(workspace, account, date), DraftReminderEmailRequest)   ← one per writer per day
+                 └─ DraftReminderEmailHandler   runInTenant: active Account (identity) + its open Drafts → EmailOutboxService.queue
+```
+
+| Decision | Chosen | Alternatives | Rationale |
+|---|---|---|---|
+| Where the code lives | `vn.tsolve.jiraapp` (handlers); the open-Draft query in `ticket` (`SolutionDraftService`) | in `worker`; in `ticket-review` | User 14/11: do not change Dương's `worker`/`ticket-review` code; only use `WorkerTenantService`, `TenantExecutionService`, `JobRunrRuntime` |
+| Schedule | own recurring id `jira-app-draft-reminder`, `0 8 * * *`, Asia/Ho_Chi_Minh | reuse JOB-02's run | A shared id would overwrite JOB-02; 08:00 avoids JOB-02's 00:00 |
+| One email per writer per day (AC-011.5) | JobRunr job id = name-based UUID of workspace + account + date; JobRunr ignores a second enqueue with the same id | a "last reminded" column | No schema change; a retried dispatch cannot mail twice |
+| Retry per writer (AC-011.4) | one JobRunr job per writer queues its email; JobRunr's default retries if the queue call fails; delivery retries are the outbox's (3 attempts in 1 hour). An address the outbox rejects is logged and dropped, not retried | one job per Workspace | A failed writer does not requeue the others; a bad address cannot succeed on retry |
+| Mail sender (changed 15/11) | the shared email outbox, `EmailOutboxService.queue(OutboundEmail)` (worker STORY-004, KAN-162), plain text, HTML body null; called inside `runInTenant` because the outbox stores the bound Workspace | own SMTP client (the 14/11 choice); reuse `ReviewNotificationSender` | PR #233 merged: one mail path for the team, with its validation, display name and retries; backend AGENTS §1 forbids calling `worker`'s `client/` directly. HTML body to follow (user, 15/11) |
+| No sender configured (AC-011.6) | queue anyway; the outbox logs the missing sender once and expires the row (worker AC-004.9, AC-004.10) | skip the run and warn (the 14/11 choice) | jira-app cannot see the outbox's SMTP sender without reaching into `worker` internals |
+| Open Draft | `solution_draft` row whose `jira_issue_key` has no `ticket` (any source, as "the issue's ticket"), creator ACTIVE | also check Project membership | The spec says nothing of membership; a Draft stays the writer's |
+| Jira link | `JIRA_SITE_URL` (already read by `tracker`) + `/browse/` + key; omitted when empty | per-Workspace site registry | No registry yet (platform); one dev site today |
+| Logs (AC-011.7) | Workspace id, account id, counts, error class only | — | NF 3 |
+
+Decided in planning: "last saved" is `solution_draft.updated_at`; dates format `yyyy-MM-dd` in Asia/Ho_Chi_Minh; the
+singular subject is used for exactly one open Draft (builder check).
+
+Change 2026-11-18 (AC-011.3, HTML body): `DraftReminderMessage` also renders `mail/draft-reminder.html`, a copy of
+the frame of `ticket-review`'s `mail/review-notification.html` (KAN-333) — header, badge "Draft reminder", heading,
+greeting with the Account's full name, one card with a table of the open Drafts (issue key linked to Jira, last saved
+date), closing line, footer. Its own template and renderer in `jiraapp`, not `worker/client/ReviewEmailRenderer`:
+backend AGENTS §1 forbids using another module's `client/`. Values are HTML-escaped and filled in one pass, as
+`ReviewEmailRenderer` does. The outbox sends the HTML with the plain-text body as its alternative.
+
 ## Change — 2026-11-14: Resubmit after Changes requested (Tasks 13, 14; KAN-130)
 - Spec: STORY-012 (AC-012.1 to AC-012.7). Decisions of 14/11: due date reset as for a new submission; the form is filled
   from the writer's Draft, else the ticket's Solution; Close keeps a Draft; success shows MSG66; the panel button
