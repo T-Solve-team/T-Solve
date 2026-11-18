@@ -436,7 +436,7 @@ class ChatbotAnswerServiceImplTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"No citation", "Unknown [9]", "[01] [ 1 ] [0] [1, 2]", "[100]"})
+    @ValueSource(strings = {"No citation", "Unknown [9]", "[01] [ 1 ] [0] [n=1]", "[100]"})
     void answersNoSourceWhenNoMarker_AC_005_5(String text) {
         withSolution();
         when(llm.chat(any(), isNull())).thenReturn(text);

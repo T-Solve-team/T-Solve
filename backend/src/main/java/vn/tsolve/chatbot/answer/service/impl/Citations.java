@@ -7,12 +7,15 @@ import vn.tsolve.chatbot.answer.dto.ChatbotCitation;
 
 /** The model's text with unknown {@code [n]} markers removed, and the kept sources it cites, in number order. */
 record Citations(String text, List<ChatbotCitation> citations) {
-    // Only a single integer 1..99 is a marker: [01], [ 1 ], [0] and [1, 2] stay plain text. Right after a letter,
+    // Only a single integer 1..99 is a marker: [01], [ 1 ], [0] and [n=1] stay plain text. Right after a letter,
     // digit or underscore it is indexing in code (args[1]), not a marker (BUG-185); [1][2] still counts as two.
+    // A group [1,2] or [3, 5] is first rewritten as [1][2] / [3][5] (AC-006.8, BUG-348).
+    private static final Pattern GROUP = Pattern.compile("(?<![\\p{L}\\p{N}_])\\[([1-9]\\d?(?:, ?[1-9]\\d?)+)\\]");
     private static final Pattern MARKER = Pattern.compile("(?<![\\p{L}\\p{N}_])\\[([1-9]\\d?)\\]");
     private static final String WORD_END = " \n.,;:!?)";
 
     static Citations of(String text, List<ChatbotSource> kept) {
+        text = GROUP.matcher(text).replaceAll(group -> "[" + group.group(1).replaceAll(", ?", "][") + "]");
         var cited = new TreeSet<Integer>();
         var result = new StringBuilder();
         var matcher = MARKER.matcher(text);
