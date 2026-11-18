@@ -328,7 +328,8 @@ describe('FolderModal', () => {
       const tree = screen.getByRole('tree', { name: 'Folders' });
       await within(tree).findByText(label);
       await clickFolderAction(user, label, action);
-      return screen.findByRole('dialog', { name: action === 'Delete' ? 'Delete' : 'Folder' });
+      // In tests antd gives every popup the id "test-id", so the open "⋯" menu can take the dialog's name; find it by role.
+      return screen.findByRole('dialog');
     }
     const rename = await openAction('Operations', 'Rename');
     const renamedName = within(rename).getByRole('textbox', { name: 'Name' });
