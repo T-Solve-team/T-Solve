@@ -26,7 +26,8 @@ public interface SolutionDraftService {
     void recordIssueStatus(IssueStatusChange change);
 
     /**
-     * Every Draft of the bound Workspace whose issue has no ticket of any source, newest saved first; whether the creator
+     * Every Draft of the bound Workspace whose issue has no ticket of any source and is recorded in Done (AC-005.9),
+     * newest saved first; whether the creator
      * is still active is the caller's check (jira-app AC-011.2).
      */
     List<OpenDraft> findOpenDrafts();

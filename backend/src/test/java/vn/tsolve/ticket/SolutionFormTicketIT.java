@@ -222,14 +222,23 @@ class SolutionFormTicketIT {
     }
 
     @Test
-    void listsOpenDraftsNewestFirstAndLeavesOutIssuesWithATicket_AC_011_2_AC_011_3() {
+    void listsOpenDraftsNewestFirstAndLeavesOutIssuesWithATicketOrNotDone_AC_011_2_AC_011_3() {
         String older = KEY + "-7";
         String newer = KEY + "-8";
         String submitted = KEY + "-9";
+        String reopened = KEY + "-10";
+        String neverRecorded = KEY + "-11";
         scope.runIn(TwoTenantDatabases.ACME, () -> {
             drafts.save(WRITER, PROJECT, older, new SolutionSections("Older", "", "", "", ""));
             drafts.save(OTHER, PROJECT, newer, new SolutionSections("Newer", "", "", "", ""));
             drafts.save(WRITER, PROJECT, submitted, new SolutionSections("Kept", "", "", "", ""));
+            drafts.save(WRITER, PROJECT, reopened, new SolutionSections("Reopened", "", "", "", ""));
+            drafts.save(WRITER, PROJECT, neverRecorded, new SolutionSections("Before KAN-371", "", "", "", ""));
+            for (String issue : List.of(older, newer, submitted, reopened)) {
+                drafts.recordIssueStatus(new IssueStatusChange(PROJECT, issue, true, null, null));
+            }
+            // Moved out of Done after the Draft: no reminder while it is not Done (AC-011.2, AC-008.11).
+            drafts.recordIssueStatus(new IssueStatusChange(PROJECT, reopened, false, null, null));
             return null;
         });
         db.update("UPDATE solution_draft SET updated_at = now() - interval '2 days' WHERE jira_issue_key = ?", older);

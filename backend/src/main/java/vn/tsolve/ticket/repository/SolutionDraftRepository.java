@@ -42,21 +42,30 @@ public interface SolutionDraftRepository extends JpaRepository<SolutionDraft, UU
             @Param("content") String content,
             @Param("now") Instant now);
 
-    /** Drafts whose issue has no ticket of any source, newest saved first (jira-app AC-011.2, AC-011.3). */
+    /**
+     * Drafts whose issue has no ticket of any source and is recorded in Done, newest saved first (jira-app AC-011.2,
+     * AC-011.3); an issue never recorded is left out (KAN-371).
+     */
     @Query("""
             select new vn.tsolve.ticket.dto.OpenDraft(d.creatorId, d.issueKey, d.updatedAt)
             from SolutionDraft d
             where not exists (select t.id from Ticket t where t.ticketId = d.issueKey)
+                and exists (
+                    select s.id from JiraIssueDoneState s
+                    where s.projectId = d.projectId and s.issueKey = d.issueKey and s.done = true)
             order by d.updatedAt desc, d.issueKey
             """)
     List<OpenDraft> findOpenDrafts();
 
-    /** The open Drafts of one creator, newest saved first (jira-app AC-011.3). */
+    /** The open Drafts of one creator, as {@link #findOpenDrafts()}, newest saved first (jira-app AC-011.3). */
     @Query("""
             select new vn.tsolve.ticket.dto.OpenDraft(d.creatorId, d.issueKey, d.updatedAt)
             from SolutionDraft d
             where d.creatorId = :creatorId
                 and not exists (select t.id from Ticket t where t.ticketId = d.issueKey)
+                and exists (
+                    select s.id from JiraIssueDoneState s
+                    where s.projectId = d.projectId and s.issueKey = d.issueKey and s.done = true)
             order by d.updatedAt desc, d.issueKey
             """)
     List<OpenDraft> findOpenDrafts(@Param("creatorId") UUID creatorId);
