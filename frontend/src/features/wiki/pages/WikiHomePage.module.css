@@ -1,0 +1,96 @@
+/* DOM order is Company-wide, Spaces, then the rest (AC-002.14); the grid puts Spaces in the left column. */
+.explorer {
+  display: grid;
+  grid-template-columns: 256px minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    'spaces company'
+    'spaces rest';
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-bg-container);
+  box-shadow: var(--ant-box-shadow-tertiary);
+}
+
+/* No viewable Space: only Company-wide and Search (AC-002.15). */
+.noSpaces {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'company'
+    'rest';
+}
+
+.company {
+  grid-area: company;
+  min-width: 0;
+  padding: var(--ant-padding-lg) var(--ant-padding-lg) 0;
+}
+
+.rest {
+  grid-area: rest;
+  min-width: 0;
+  padding: var(--ant-padding-lg);
+}
+
+.navigator {
+  grid-area: spaces;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ant-margin-xxs);
+  padding: var(--ant-padding) var(--ant-padding-sm);
+  border-right: var(--ant-line-width) solid var(--ant-color-border-secondary);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ant-margin-xxs);
+}
+
+.label {
+  padding: 0 var(--ant-padding-xs);
+  color: var(--ant-color-text-secondary);
+  font-size: var(--ant-font-size-sm);
+}
+
+.entry {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: var(--ant-control-height-lg);
+  padding: var(--ant-padding-xxs) var(--ant-padding-xs);
+  border-radius: var(--ant-border-radius-lg);
+  color: var(--ant-color-text);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.entry:hover {
+  background: var(--ant-color-fill-tertiary);
+  color: var(--ant-color-text);
+}
+
+.entry:focus-visible {
+  outline: var(--ant-control-outline-width) solid var(--ant-color-primary);
+  outline-offset: 1px;
+}
+
+.entry[aria-current='page'] {
+  background: var(--ant-color-primary-bg);
+  color: var(--ant-color-primary);
+  font-weight: var(--ant-font-weight-strong);
+}
+
+.access {
+  padding: 0 var(--ant-padding-xs);
+  color: var(--ant-color-text-secondary);
+  font-size: var(--ant-font-size-sm);
+}
+
+.folders {
+  padding-left: var(--ant-padding-xs);
+}
+
+.search {
+  flex: 1;
+}
