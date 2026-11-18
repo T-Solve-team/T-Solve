@@ -4,16 +4,21 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.dao.DataRetrievalFailureException;
 import org.springframework.data.redis.connection.RedisStringCommands.SetOption;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.types.Expiration;
 import org.springframework.stereotype.Component;
+import vn.tsolve.common.security.JiraAppPrincipal;
+import vn.tsolve.jiraapp.dto.JiraAppJobStatus;
 
 @Component
 class RedisAskJobStore {
+    // Well past any job deadline: JiraAppJobs.jobTimeout keeps those at 70 s or less.
     private static final Duration TTL = Duration.ofSeconds(300);
 
     private final StringRedisTemplate redis;
@@ -37,7 +42,8 @@ class RedisAskJobStore {
             return Optional.of(
                     mapper.readValue(json, mapper.getTypeFactory().constructParametricType(Job.class, payloadType)));
         } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Cannot read Jira App job", e);
+            // E.g. a job the previous release wrote: unavailable like a Redis failure, not a 500.
+            throw new DataRetrievalFailureException("Cannot read Jira App job", e);
         }
     }
 
@@ -61,15 +67,38 @@ class RedisAskJobStore {
         }
     }
 
-    enum Status {
-        PENDING,
-        DONE,
-        FAILED
-    }
+    /** {@code code}: the refusal of a FAILED job (see JiraAppJobs.refusalCode); null otherwise. */
+    record Job<T>(
+            String cloudId, String accountId, String projectKey, JiraAppJobStatus status, T payload, String code) {
+        Job(String cloudId, String accountId, String projectKey, JiraAppJobStatus status, T payload) {
+            this(cloudId, accountId, projectKey, status, payload, null);
+        }
 
-    record Job<T>(String cloudId, String accountId, String projectKey, Status status, T payload) {
-        Job<T> finish(Status status, T payload) {
-            return new Job<>(cloudId, accountId, projectKey, status, payload);
+        /** {@code inProject}: only that Jira project may read it (Ask, AC-010.13); a rewrite may not (AC-007.6). */
+        static <T> Job<T> pending(JiraAppPrincipal caller, boolean inProject) {
+            return new Job<>(
+                    caller.cloudId(),
+                    caller.accountId(),
+                    inProject ? caller.projectKey() : null,
+                    JiraAppJobStatus.PENDING,
+                    null);
+        }
+
+        Job<T> done(T payload) {
+            return new Job<>(cloudId, accountId, projectKey, JiraAppJobStatus.DONE, payload, null);
+        }
+
+        Job<T> failed(Throwable error) {
+            return new Job<>(
+                    cloudId, accountId, projectKey, JiraAppJobStatus.FAILED, null, JiraAppJobs.refusalCode(error));
+        }
+
+        /** Only the account that started the job, in the same site (and Jira project, if it has one), may read it. */
+        boolean ownedBy(JiraAppPrincipal caller) {
+            return caller != null
+                    && Objects.equals(cloudId, caller.cloudId())
+                    && Objects.equals(accountId, caller.accountId())
+                    && (projectKey == null || projectKey.equals(caller.projectKey()));
         }
     }
 }

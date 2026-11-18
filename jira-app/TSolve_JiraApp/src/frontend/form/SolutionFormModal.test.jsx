@@ -214,7 +214,7 @@ describe('SolutionFormModal', () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
-  it('AC-007.1 AC-007.2 shows the rewrite next to the Solution and Accept replaces it', async () => {
+  it('AC-007.1 AC-007.2 shows the rewrite next to the Solution and Accept replaces it (BUG-345)', async () => {
     rewriteSolution.mockResolvedValue({ ...FULL, symptoms: 'The VPN drops every hour.' });
     open();
 

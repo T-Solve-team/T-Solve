@@ -156,6 +156,10 @@ export const getGetJiraAppQuestionJobResponseMock = (
     },
     undefined,
   ]),
+  code: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
   ...overrideResponse,
 });
 

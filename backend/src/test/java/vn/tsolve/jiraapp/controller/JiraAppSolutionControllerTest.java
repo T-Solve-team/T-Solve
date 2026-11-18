@@ -31,9 +31,9 @@ import vn.tsolve.common.security.JiraAppSecurityConfig;
 import vn.tsolve.common.security.Roles;
 import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.jiraapp.dto.IssuePanelResponse;
+import vn.tsolve.jiraapp.dto.JiraAppJobStatus;
 import vn.tsolve.jiraapp.dto.SolutionRewriteJob;
 import vn.tsolve.jiraapp.dto.SolutionRewriteJobResult;
-import vn.tsolve.jiraapp.dto.SolutionRewriteJobResult.Status;
 import vn.tsolve.jiraapp.dto.SubmitSolutionRequest;
 import vn.tsolve.jiraapp.dto.SubmittedTicketResponse;
 import vn.tsolve.jiraapp.exception.JiraIssueAccessDeniedException;
@@ -192,7 +192,7 @@ class JiraAppSolutionControllerTest {
     void returnsDoneRewriteSections_AC_007_5() throws Exception {
         when(solutions.rewriteResult(CALLER, TICKET))
                 .thenReturn(new SolutionRewriteJobResult(
-                        Status.DONE, new SolutionSections("Drops.", "Old.", "Update.", "", "Laptops.")));
+                        JiraAppJobStatus.DONE, new SolutionSections("Drops.", "Old.", "Update.", "", "Laptops.")));
         mvc.perform(get("/api/v1/jira-app/solution-rewrites/" + TICKET).with(authentication(fit())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("DONE"))
@@ -201,7 +201,7 @@ class JiraAppSolutionControllerTest {
 
     @Test
     void omitsSectionsForPendingAndFailed_AC_007_5() throws Exception {
-        for (var state : List.of(Status.PENDING, Status.FAILED)) {
+        for (var state : List.of(JiraAppJobStatus.PENDING, JiraAppJobStatus.FAILED)) {
             when(solutions.rewriteResult(CALLER, TICKET)).thenReturn(new SolutionRewriteJobResult(state, null));
             mvc.perform(get("/api/v1/jira-app/solution-rewrites/" + TICKET).with(authentication(fit())))
                     .andExpect(status().isOk())

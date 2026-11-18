@@ -47,12 +47,14 @@ import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse.Outcome;
 import vn.tsolve.chatbot.answer.dto.ChatbotQuestionRequest;
 import vn.tsolve.chatbot.answer.dto.ChatbotTurnRequest;
 import vn.tsolve.chatbot.answer.service.ChatbotAnswerService;
+import vn.tsolve.chatbot.exception.ChatbotProjectNotActiveException;
 import vn.tsolve.chatbot.rating.entity.ChatbotRating;
 import vn.tsolve.chatbot.rating.exception.ChatbotAnswerNotFoundException;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.common.security.JiraAppPrincipal;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.identity.signin.port.LocalTenantScope;
+import vn.tsolve.jiraapp.dto.JiraAppJobStatus;
 import vn.tsolve.jiraapp.dto.JiraAppQuestionJobResult;
 import vn.tsolve.jiraapp.dto.JiraAppQuestionRequest;
 import vn.tsolve.jiraapp.dto.JiraAppRatingRequest;
@@ -92,10 +94,13 @@ class JiraAppQuestionServiceImplTest {
         }
         queued.add(task);
     };
-    private final Executor completionExecutor = task -> {
-        if (rejectCompletions) throw new RejectedExecutionException("private completion error");
-        completions.add(task);
-    };
+    // Production falls back to a new virtual thread; inline here keeps the test synchronous.
+    private final Executor completionExecutor = JiraAppJobCompletions.withFallback(
+            task -> {
+                if (rejectCompletions) throw new RejectedExecutionException("private completion error");
+                completions.add(task);
+            },
+            Runnable::run);
     private final InMemoryAskJobStore jobs = new InMemoryAskJobStore();
     private final AtomicReference<CompletableFuture<ChatbotAnswerResponse>> pending = new AtomicReference<>();
     private final Logger logger = (Logger) LoggerFactory.getLogger(JiraAppQuestionServiceImpl.class);
@@ -153,12 +158,12 @@ class JiraAppQuestionServiceImplTest {
         queued.remove().run();
 
         assertThat(pending.get()).isCompletedWithValue(ANSWER);
-        assertThat(service.result(CALLER, job.jobId()).status()).isEqualTo(JiraAppQuestionJobResult.Status.PENDING);
+        assertThat(service.result(CALLER, job.jobId()).status()).isEqualTo(JiraAppJobStatus.PENDING);
         assertThat(queued).isEmpty();
         assertThat(completions).hasSize(1);
         completions.remove().run();
         assertThat(service.result(CALLER, job.jobId()))
-                .isEqualTo(new JiraAppQuestionJobResult(JiraAppQuestionJobResult.Status.DONE, ANSWER));
+                .isEqualTo(new JiraAppQuestionJobResult(JiraAppJobStatus.DONE, ANSWER));
     }
 
     @Test
@@ -172,8 +177,8 @@ class JiraAppQuestionServiceImplTest {
         assertThat(queued).hasSize(1);
         completions.remove().run();
 
-        assertThat(service.result(CALLER, first.jobId()).status()).isEqualTo(JiraAppQuestionJobResult.Status.DONE);
-        assertThat(service.result(CALLER, second.jobId()).status()).isEqualTo(JiraAppQuestionJobResult.Status.PENDING);
+        assertThat(service.result(CALLER, first.jobId()).status()).isEqualTo(JiraAppJobStatus.DONE);
+        assertThat(service.result(CALLER, second.jobId()).status()).isEqualTo(JiraAppJobStatus.PENDING);
         assertThat(queued).hasSize(1);
     }
 
@@ -184,11 +189,11 @@ class JiraAppQuestionServiceImplTest {
 
         pending.get().completeExceptionally(new TimeoutException("private timeout"));
 
-        assertThat(service.result(CALLER, job.jobId()).status()).isEqualTo(JiraAppQuestionJobResult.Status.PENDING);
+        assertThat(service.result(CALLER, job.jobId()).status()).isEqualTo(JiraAppJobStatus.PENDING);
         assertThat(queued).hasSize(1);
         assertThat(completions).hasSize(1);
         completions.remove().run();
-        assertThat(service.result(CALLER, job.jobId()).status()).isEqualTo(JiraAppQuestionJobResult.Status.FAILED);
+        assertThat(service.result(CALLER, job.jobId()).status()).isEqualTo(JiraAppJobStatus.FAILED);
         queued.remove().run();
         verifyNoInteractions(answers);
         assertOnlyLog(job.jobId(), "TimeoutException");
@@ -196,7 +201,7 @@ class JiraAppQuestionServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
-    void completesInlineWhenTheCompletionPoolRejectsTheCallback_AC_010_4_AC_010_17(boolean timeout) {
+    void completesThroughTheFallbackWhenTheCompletionPoolRejectsTheCallback_AC_010_4_AC_010_17(boolean timeout) {
         var service = service(Duration.ofSeconds(60));
         var job = service.start(CALLER, new JiraAppQuestionRequest("q", List.of()));
         rejectCompletions = true;
@@ -209,11 +214,7 @@ class JiraAppQuestionServiceImplTest {
 
         assertThat(service.result(CALLER, job.jobId()))
                 .isEqualTo(new JiraAppQuestionJobResult(
-                        timeout ? JiraAppQuestionJobResult.Status.FAILED : JiraAppQuestionJobResult.Status.DONE,
-                        timeout ? null : ANSWER));
-        assertThat(appender.list)
-                .extracting(ILoggingEvent::getFormattedMessage)
-                .contains("Jira App question job " + job.jobId() + ": error type RejectedExecutionException");
+                        timeout ? JiraAppJobStatus.FAILED : JiraAppJobStatus.DONE, timeout ? null : ANSWER));
         assertThat(appender.list).allSatisfy(event -> {
             assertThat(event.getFormattedMessage()).doesNotContain("private", ANSWER.text());
             assertThat(event.getThrowableProxy()).isNull();
@@ -271,7 +272,7 @@ class JiraAppQuestionServiceImplTest {
 
     @Test
     void buildsABoundedPoolThatRefusesWhenFull_BUG_183() {
-        ThreadPoolExecutor pool = JiraAppQuestionServiceImpl.askPool(3);
+        ThreadPoolExecutor pool = JiraAppJobs.pool(3, "JIRA_APP_ASK_THREADS", "jira-app-ask-");
         try {
             assertThat(pool.getCorePoolSize()).isEqualTo(3);
             assertThat(pool.getMaximumPoolSize()).isEqualTo(3);
@@ -311,6 +312,18 @@ class JiraAppQuestionServiceImplTest {
     }
 
     @Test
+    void keepsTheRefusalCodeOfAFailedJob_AC_010_4() {
+        when(answers.askForProject(any(), any(), any())).thenThrow(new ChatbotProjectNotActiveException());
+        var service = service(Duration.ofSeconds(60));
+        var job = service.start(CALLER, new JiraAppQuestionRequest("q", List.of()));
+
+        runQueuedTasks();
+
+        assertThat(service.result(CALLER, job.jobId()))
+                .isEqualTo(new JiraAppQuestionJobResult(JiraAppJobStatus.FAILED, null, "MSG08"));
+    }
+
+    @Test
     void returnsAJobBeforeTheChatbotAnswersThenPendingBecomesDone_AC_010_4_BUG_343() {
         List<ChatbotTurnRequest> history = List.of(new ChatbotTurnRequest("VPN fails", "Check the client [1]"));
         when(answers.askForProject(any(), any(), any())).thenReturn(ANSWER);
@@ -320,12 +333,12 @@ class JiraAppQuestionServiceImplTest {
 
         assertThat(job.jobId()).isNotNull();
         assertThat(service.result(CALLER, job.jobId()))
-                .isEqualTo(new JiraAppQuestionJobResult(JiraAppQuestionJobResult.Status.PENDING, null));
+                .isEqualTo(new JiraAppQuestionJobResult(JiraAppJobStatus.PENDING, null));
         assertThat(pending.get()).isNotCompleted();
         verifyNoInteractions(answers);
         runQueuedTasks();
         assertThat(service.result(CALLER, job.jobId()))
-                .isEqualTo(new JiraAppQuestionJobResult(JiraAppQuestionJobResult.Status.DONE, ANSWER));
+                .isEqualTo(new JiraAppQuestionJobResult(JiraAppJobStatus.DONE, ANSWER));
         verify(answers).askForProject(PROJECT, Optional.empty(), new ChatbotQuestionRequest("Still failing", history));
     }
 
@@ -424,7 +437,7 @@ class JiraAppQuestionServiceImplTest {
         runQueuedTasks();
 
         assertThat(service.result(CALLER, job.jobId()))
-                .isEqualTo(new JiraAppQuestionJobResult(JiraAppQuestionJobResult.Status.FAILED, null));
+                .isEqualTo(new JiraAppQuestionJobResult(JiraAppJobStatus.FAILED, null));
     }
 
     @Test
@@ -437,10 +450,10 @@ class JiraAppQuestionServiceImplTest {
         runQueuedTasks();
 
         assertThat(service.result(CALLER, job.jobId()))
-                .isEqualTo(new JiraAppQuestionJobResult(JiraAppQuestionJobResult.Status.FAILED, null));
+                .isEqualTo(new JiraAppQuestionJobResult(JiraAppJobStatus.FAILED, null));
         assertThat(pending.get().complete(ANSWER)).isFalse();
         verifyNoInteractions(answers);
-        assertThat(service.result(CALLER, job.jobId()).status()).isEqualTo(JiraAppQuestionJobResult.Status.FAILED);
+        assertThat(service.result(CALLER, job.jobId()).status()).isEqualTo(JiraAppJobStatus.FAILED);
     }
 
     @Test
@@ -559,7 +572,7 @@ class JiraAppQuestionServiceImplTest {
         var job = service.start(CALLER, new JiraAppQuestionRequest("private question", List.of()));
         runQueuedTasks();
         assertOnlyLog(job.jobId(), "IllegalStateException");
-        assertThat(service.result(CALLER, job.jobId()).status()).isEqualTo(JiraAppQuestionJobResult.Status.PENDING);
+        assertThat(service.result(CALLER, job.jobId()).status()).isEqualTo(JiraAppJobStatus.PENDING);
     }
 
     private static class InMemoryAskJobStore extends RedisAskJobStore {

@@ -1,11 +1,8 @@
 package vn.tsolve.jiraapp.service.impl;
 
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RejectedExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +26,6 @@ import vn.tsolve.jiraapp.service.JiraAppSolutionService;
 import vn.tsolve.jiraapp.service.JiraIssueAccess;
 import vn.tsolve.jiraapp.service.SolutionFormAi;
 import vn.tsolve.jiraapp.service.impl.RedisAskJobStore.Job;
-import vn.tsolve.jiraapp.service.impl.RedisAskJobStore.Status;
 import vn.tsolve.ticket.dto.MessageRef;
 import vn.tsolve.ticket.dto.SolutionFormSubmission;
 import vn.tsolve.ticket.dto.SolutionSections;
@@ -137,16 +133,13 @@ public class JiraAppSolutionServiceImpl implements JiraAppSolutionService {
     public SolutionRewriteJob startRewrite(JiraAppPrincipal caller, SolutionSections sections) {
         access.asUser(caller, user -> true);
         UUID id = UUID.randomUUID();
-        Job<SolutionSections> job = new Job<>(caller.cloudId(), caller.accountId(), null, Status.PENDING, null);
+        Job<SolutionSections> job = Job.pending(caller, false);
         try {
             jobs.create(REWRITE_PREFIX, id, job);
             ai.startRewrite(sections, (rewritten, error) -> {
                 if (error != null) logFailure(id, error);
                 try {
-                    jobs.update(
-                            REWRITE_PREFIX,
-                            id,
-                            job.finish(error == null ? Status.DONE : Status.FAILED, error == null ? rewritten : null));
+                    jobs.update(REWRITE_PREFIX, id, error == null ? job.done(rewritten) : job.failed(error));
                 } catch (RuntimeException e) {
                     logFailure(id, e);
                 }
@@ -172,21 +165,13 @@ public class JiraAppSolutionServiceImpl implements JiraAppSolutionService {
             logFailure(jobId, e);
             throw new AiRewriteUnavailableException();
         }
-        Job<SolutionSections> job = stored.filter(record -> caller != null
-                        && Objects.equals(record.cloudId(), caller.cloudId())
-                        && Objects.equals(record.accountId(), caller.accountId()))
-                .orElseThrow(SolutionRewriteJobNotFoundException::new);
-        return new SolutionRewriteJobResult(
-                SolutionRewriteJobResult.Status.valueOf(job.status().name()),
-                job.status() == Status.DONE ? job.payload() : null);
+        Job<SolutionSections> job =
+                stored.filter(record -> record.ownedBy(caller)).orElseThrow(SolutionRewriteJobNotFoundException::new);
+        return new SolutionRewriteJobResult(job.status(), job.payload());
     }
 
     private static void logFailure(UUID id, Throwable error) {
-        while ((error instanceof CompletionException || error instanceof ExecutionException)
-                && error.getCause() != null) {
-            error = error.getCause();
-        }
-        log.warn("Jira App rewrite job {}: error type {}", id, error.getClass().getSimpleName());
+        JiraAppJobs.logFailure(log, "Jira App rewrite job", id, error);
     }
 
     @Override

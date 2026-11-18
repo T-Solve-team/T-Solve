@@ -4,15 +4,12 @@ import jakarta.annotation.PreDestroy;
 import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
@@ -77,8 +74,8 @@ public class SolutionFormAiImpl implements SolutionFormAi {
         this(
                 ai,
                 Mode.of(stub),
-                pool(threads, "JIRA_APP_AI_THREADS", "jira-app-ai-"),
-                pool(rewriteThreads, "JIRA_APP_REWRITE_THREADS", "jira-app-rewrite-"),
+                JiraAppJobs.pool(threads, "JIRA_APP_AI_THREADS", "jira-app-ai-"),
+                JiraAppJobs.pool(rewriteThreads, "JIRA_APP_REWRITE_THREADS", "jira-app-rewrite-"),
                 completions.executor(),
                 DurationStyle.detectAndParse(timeout),
                 DurationStyle.detectAndParse(rewriteTimeout),
@@ -97,16 +94,13 @@ public class SolutionFormAiImpl implements SolutionFormAi {
         if (timeout.isNegative() || timeout.isZero()) {
             throw new IllegalArgumentException("JIRA_APP_AI_TIMEOUT must be positive");
         }
-        if (rewriteTimeout.isNegative() || rewriteTimeout.isZero()) {
-            throw new IllegalArgumentException("JIRA_APP_REWRITE_TIMEOUT must be positive");
-        }
         this.ai = ai;
         this.mode = mode;
         this.executor = executor;
         this.rewriteExecutor = rewriteExecutor;
         this.completionExecutor = completionExecutor;
         this.timeoutNanos = timeout.toNanos();
-        this.rewriteTimeout = rewriteTimeout;
+        this.rewriteTimeout = JiraAppJobs.jobTimeout(rewriteTimeout, "JIRA_APP_REWRITE_TIMEOUT");
         this.rewriteDeadline = rewriteDeadline;
     }
 
@@ -141,28 +135,21 @@ public class SolutionFormAiImpl implements SolutionFormAi {
 
     @Override
     public void startRewrite(SolutionSections sections, BiConsumer<SolutionSections, Throwable> completion) {
-        var future = CompletableFuture.supplyAsync(
+        var future = JiraAppJobs.supply(
                 () -> switch (mode) {
                     case AVAILABLE -> cannedRewrite(sections);
                     case UNAVAILABLE -> throw new AiRewriteUnavailableException();
                     case AI -> toForm(ai.rewrite(toAi(sections)));
                 },
                 rewriteExecutor);
-        // Queue time counts; a timed-out queued supplier is skipped by CompletableFuture.
+        // Queue time counts; a timed-out rewrite is skipped if still queued, interrupted if running.
         rewriteDeadline.accept(future, rewriteTimeout);
-        future.whenCompleteAsync(completion, task -> {
-            try {
-                completionExecutor.execute(task);
-            } catch (RejectedExecutionException e) {
-                // A completed job must not stay PENDING when the completion pool is saturated or stopped.
-                task.run();
-            }
-        });
+        future.whenCompleteAsync(completion, completionExecutor);
     }
 
     private <T> T withinDeadline(Supplier<T> call) {
         try {
-            return CompletableFuture.supplyAsync(call, executor)
+            return JiraAppJobs.supply(call, executor)
                     .orTimeout(timeoutNanos, TimeUnit.NANOSECONDS)
                     .join();
         } catch (CompletionException e) {
@@ -238,25 +225,6 @@ public class SolutionFormAiImpl implements SolutionFormAi {
                 sections.resolutionSteps(),
                 sections.workaround(),
                 sections.scopeOfApplicability());
-    }
-
-    static ThreadPoolExecutor pool(int threads, String setting, String prefix) {
-        if (threads < 1) {
-            throw new IllegalArgumentException(setting + " must be positive");
-        }
-        AtomicInteger number = new AtomicInteger();
-        return new ThreadPoolExecutor(
-                threads,
-                threads,
-                0,
-                TimeUnit.SECONDS,
-                new ArrayBlockingQueue<>(threads),
-                work -> {
-                    Thread thread = new Thread(work, prefix + number.incrementAndGet());
-                    thread.setDaemon(true);
-                    return thread;
-                },
-                new ThreadPoolExecutor.AbortPolicy());
     }
 
     /** A failed AI call with only its error type: no message, cause or stack that could carry text. */

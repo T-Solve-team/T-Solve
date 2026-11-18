@@ -39,7 +39,7 @@ import vn.tsolve.ai.service.SolutionAiService;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.common.security.JiraAppPrincipal;
 import vn.tsolve.common.security.TSolveUser;
-import vn.tsolve.jiraapp.dto.SolutionRewriteJobResult.Status;
+import vn.tsolve.jiraapp.dto.JiraAppJobStatus;
 import vn.tsolve.jiraapp.exception.JiraIssueAccessDeniedException;
 import vn.tsolve.jiraapp.service.JiraIssueAccess;
 import vn.tsolve.ticket.dto.SolutionSections;
@@ -65,10 +65,13 @@ class SolutionRewriteJobTest {
         if (reject || queue.size() >= rewriteCapacity) throw new RejectedExecutionException("private pool message");
         queue.add(task);
     };
-    private final Executor completionExecutor = task -> {
-        if (rejectCompletions) throw new RejectedExecutionException("private completion message");
-        completions.add(task);
-    };
+    // Production falls back to a new virtual thread; inline here keeps the test synchronous.
+    private final Executor completionExecutor = JiraAppJobCompletions.withFallback(
+            task -> {
+                if (rejectCompletions) throw new RejectedExecutionException("private completion message");
+                completions.add(task);
+            },
+            Runnable::run);
 
     @BeforeEach
     void allowAccess() {
@@ -85,14 +88,14 @@ class SolutionRewriteJobTest {
         var service = service(SolutionFormAiImpl.Mode.AI);
         var job = service.startRewrite(CALLER, INPUT);
         verifyNoInteractions(ai);
-        assertThat(service.rewriteResult(CALLER, job.jobId()).status()).isEqualTo(Status.PENDING);
+        assertThat(service.rewriteResult(CALLER, job.jobId()).status()).isEqualTo(JiraAppJobStatus.PENDING);
         assertThat(service.rewriteResult(CALLER, job.jobId()).sections()).isNull();
         queue.remove().run();
-        assertThat(service.rewriteResult(CALLER, job.jobId()).status()).isEqualTo(Status.PENDING);
+        assertThat(service.rewriteResult(CALLER, job.jobId()).status()).isEqualTo(JiraAppJobStatus.PENDING);
         assertThat(queue).isEmpty();
         assertThat(completions).hasSize(1);
         completions.remove().run();
-        assertThat(service.rewriteResult(CALLER, job.jobId()).status()).isEqualTo(Status.DONE);
+        assertThat(service.rewriteResult(CALLER, job.jobId()).status()).isEqualTo(JiraAppJobStatus.DONE);
         assertThat(service.rewriteResult(CALLER, job.jobId()).sections()).isEqualTo(OUTPUT);
     }
 
@@ -107,7 +110,7 @@ class SolutionRewriteJobTest {
             var service = service(SolutionFormAiImpl.Mode.AI);
             var job = service.startRewrite(CALLER, INPUT);
             drain();
-            assertThat(service.rewriteResult(CALLER, job.jobId()).status()).isEqualTo(Status.FAILED);
+            assertThat(service.rewriteResult(CALLER, job.jobId()).status()).isEqualTo(JiraAppJobStatus.FAILED);
             assertThat(service.rewriteResult(CALLER, job.jobId()).sections()).isNull();
             assertThat(logs.list).singleElement().satisfies(event -> {
                 assertThat(event.getFormattedMessage())
@@ -127,7 +130,7 @@ class SolutionRewriteJobTest {
         var job = service.startRewrite(CALLER, INPUT);
         future.get().completeExceptionally(new TimeoutException("private timeout"));
         drain();
-        assertThat(service.rewriteResult(CALLER, job.jobId()).status()).isEqualTo(Status.FAILED);
+        assertThat(service.rewriteResult(CALLER, job.jobId()).status()).isEqualTo(JiraAppJobStatus.FAILED);
         assertThat(service.rewriteResult(CALLER, job.jobId()).sections()).isNull();
         verifyNoInteractions(ai);
         assertThat(future.get().complete(OUTPUT)).isFalse();
@@ -142,7 +145,7 @@ class SolutionRewriteJobTest {
         var service = service(SolutionFormAiImpl.Mode.AI);
         var job = service.startRewrite(CALLER, INPUT);
         drain();
-        assertThat(service.rewriteResult(CALLER, job.jobId()).status()).isEqualTo(Status.FAILED);
+        assertThat(service.rewriteResult(CALLER, job.jobId()).status()).isEqualTo(JiraAppJobStatus.FAILED);
         assertThat(service.rewriteResult(CALLER, job.jobId()).sections()).isNull();
     }
 
@@ -151,7 +154,7 @@ class SolutionRewriteJobTest {
         var service = service(SolutionFormAiImpl.Mode.AVAILABLE);
         var job = service.startRewrite(CALLER, INPUT);
         drain();
-        assertThat(service.rewriteResult(CALLER, job.jobId()).status()).isEqualTo(Status.DONE);
+        assertThat(service.rewriteResult(CALLER, job.jobId()).status()).isEqualTo(JiraAppJobStatus.DONE);
         assertThat(service.rewriteResult(CALLER, job.jobId()).sections().symptoms())
                 .isEqualTo("private symptoms.");
         verifyNoInteractions(ai);
@@ -168,7 +171,7 @@ class SolutionRewriteJobTest {
         assertNotFound(() -> service.rewriteResult(CALLER, UUID.randomUUID()));
         assertThat(service.rewriteResult(new JiraAppPrincipal("cloud", "account", null, "OTHER"), job.jobId())
                         .status())
-                .isEqualTo(Status.PENDING);
+                .isEqualTo(JiraAppJobStatus.PENDING);
         jobs.records.clear();
         assertNotFound(() -> service.rewriteResult(CALLER, job.jobId()));
     }
@@ -239,7 +242,7 @@ class SolutionRewriteJobTest {
         var job = service.startRewrite(CALLER, INPUT);
         rejectCompletions = true;
         drain();
-        assertThat(service.rewriteResult(CALLER, job.jobId()).status()).isEqualTo(Status.DONE);
+        assertThat(service.rewriteResult(CALLER, job.jobId()).status()).isEqualTo(JiraAppJobStatus.DONE);
         assertThat(completions).isEmpty();
     }
 
@@ -251,7 +254,7 @@ class SolutionRewriteJobTest {
 
         future.get().completeExceptionally(new TimeoutException());
 
-        assertThat(service.rewriteResult(CALLER, job.jobId()).status()).isEqualTo(Status.FAILED);
+        assertThat(service.rewriteResult(CALLER, job.jobId()).status()).isEqualTo(JiraAppJobStatus.FAILED);
         assertThat(completions).isEmpty();
         verifyNoInteractions(ai);
     }
@@ -266,8 +269,8 @@ class SolutionRewriteJobTest {
         assertThat(queue).hasSize(1);
         completions.remove().run();
 
-        assertThat(service.rewriteResult(CALLER, first.jobId()).status()).isEqualTo(Status.DONE);
-        assertThat(service.rewriteResult(CALLER, second.jobId()).status()).isEqualTo(Status.PENDING);
+        assertThat(service.rewriteResult(CALLER, first.jobId()).status()).isEqualTo(JiraAppJobStatus.DONE);
+        assertThat(service.rewriteResult(CALLER, second.jobId()).status()).isEqualTo(JiraAppJobStatus.PENDING);
         assertThat(queue).hasSize(1);
     }
 

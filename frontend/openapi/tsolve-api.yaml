@@ -4667,6 +4667,12 @@ components:
           description: Present only when status is DONE.
           allOf:
             - $ref: '#/components/schemas/ChatbotAnswer'
+        code:
+          type: string
+          description: >-
+            Only on a FAILED job the chatbot refused, its SRS code (e.g. MSG08 when the Project is no longer Active);
+            absent for a timeout or an AI failure, which the Jira App shows as MSG06.
+          example: MSG08
     SolutionRewriteJob:
       type: object
       required: [jobId]

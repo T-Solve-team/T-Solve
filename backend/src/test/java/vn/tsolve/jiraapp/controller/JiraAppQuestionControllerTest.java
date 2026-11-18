@@ -39,6 +39,7 @@ import vn.tsolve.common.security.JiraAppPrincipal;
 import vn.tsolve.common.security.JiraAppSecurityConfig;
 import vn.tsolve.common.security.Roles;
 import vn.tsolve.common.security.SecurityConfig;
+import vn.tsolve.jiraapp.dto.JiraAppJobStatus;
 import vn.tsolve.jiraapp.dto.JiraAppQuestionJob;
 import vn.tsolve.jiraapp.dto.JiraAppQuestionJobResult;
 import vn.tsolve.jiraapp.dto.JiraAppQuestionRequest;
@@ -89,8 +90,7 @@ class JiraAppQuestionControllerTest {
 
     @Test
     void readsTheCompletedAnswer_AC_010_4() throws Exception {
-        when(questions.result(CALLER, JOB_ID))
-                .thenReturn(new JiraAppQuestionJobResult(JiraAppQuestionJobResult.Status.DONE, ANSWER));
+        when(questions.result(CALLER, JOB_ID)).thenReturn(new JiraAppQuestionJobResult(JiraAppJobStatus.DONE, ANSWER));
         mvc.perform(get(QUESTIONS + "/" + JOB_ID).with(authentication(fit())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("DONE"))
@@ -104,7 +104,7 @@ class JiraAppQuestionControllerTest {
     @ValueSource(strings = {"PENDING", "FAILED"})
     void readsStatusWithoutAnAnswer_AC_010_4(String state) throws Exception {
         when(questions.result(CALLER, JOB_ID))
-                .thenReturn(new JiraAppQuestionJobResult(JiraAppQuestionJobResult.Status.valueOf(state), null));
+                .thenReturn(new JiraAppQuestionJobResult(JiraAppJobStatus.valueOf(state), null));
         mvc.perform(get(QUESTIONS + "/" + JOB_ID).with(authentication(fit())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(state))
@@ -129,7 +129,7 @@ class JiraAppQuestionControllerTest {
     void answersNoSource_AC_010_7() throws Exception {
         when(questions.result(CALLER, JOB_ID))
                 .thenReturn(new JiraAppQuestionJobResult(
-                        JiraAppQuestionJobResult.Status.DONE,
+                        JiraAppJobStatus.DONE,
                         new ChatbotAnswerResponse(ANSWER.answerId(), Outcome.NO_SOURCE, "", List.of())));
         mvc.perform(get(QUESTIONS + "/" + JOB_ID).with(authentication(fit())))
                 .andExpect(status().isOk())

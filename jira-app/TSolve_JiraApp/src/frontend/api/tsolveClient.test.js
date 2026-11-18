@@ -116,6 +116,13 @@ describe('tsolveClient', () => {
     expect(invokeRemote).toHaveBeenCalledTimes(2);
   });
 
+  it('AC-010.4 a FAILED job keeps the refusal code of the chatbot (MSG08)', async () => {
+    startJob();
+    respond(200, { status: 'FAILED', code: 'MSG08' });
+    await expect(askNow('VPN fails')).rejects.toMatchObject({ code: 'MSG08' });
+    expect(invokeRemote).toHaveBeenCalledTimes(2);
+  });
+
   it.each([404, 503])('AC-010.8 AC-010.16 GET %s gives MSG06 and stops polling', async (status) => {
     startJob();
     respond(status, { code: 'MSG06' });

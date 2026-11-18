@@ -173,7 +173,7 @@ class SolutionFormAiImplTest {
 
     @Test
     void rewritePoolHasAsManyWaitingSlotsAsWorkersAndAbortsWhenFull_AC_007_8() {
-        var pool = SolutionFormAiImpl.pool(4, "JIRA_APP_REWRITE_THREADS", "jira-app-rewrite-");
+        var pool = JiraAppJobs.pool(4, "JIRA_APP_REWRITE_THREADS", "jira-app-rewrite-");
         try {
             assertThat(pool.getCorePoolSize()).isEqualTo(4);
             assertThat(pool.getMaximumPoolSize()).isEqualTo(4);
@@ -185,7 +185,7 @@ class SolutionFormAiImplTest {
         } finally {
             pool.shutdownNow();
         }
-        assertThatThrownBy(() -> SolutionFormAiImpl.pool(0, "JIRA_APP_REWRITE_THREADS", "jira-app-rewrite-"))
+        assertThatThrownBy(() -> JiraAppJobs.pool(0, "JIRA_APP_REWRITE_THREADS", "jira-app-rewrite-"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("JIRA_APP_REWRITE_THREADS must be positive");
     }

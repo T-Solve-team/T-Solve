@@ -13,4 +13,6 @@ export interface JiraAppQuestionJobResult {
   status: JiraAppQuestionJobResultStatus;
   /** Present only when status is DONE. */
   answer?: ChatbotAnswer;
+  /** Only on a FAILED job the chatbot refused, its SRS code (e.g. MSG08 when the Project is no longer Active); absent for a timeout or an AI failure, which the Jira App shows as MSG06. */
+  code?: string;
 }

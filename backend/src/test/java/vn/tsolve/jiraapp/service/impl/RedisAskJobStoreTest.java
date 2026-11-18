@@ -1,6 +1,7 @@
 package vn.tsolve.jiraapp.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisStringCommands;
 import org.springframework.data.redis.core.RedisCallback;
@@ -23,8 +25,8 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.types.Expiration;
 import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse;
 import vn.tsolve.chatbot.answer.dto.WikiDocumentCitation;
+import vn.tsolve.jiraapp.dto.JiraAppJobStatus;
 import vn.tsolve.jiraapp.service.impl.RedisAskJobStore.Job;
-import vn.tsolve.jiraapp.service.impl.RedisAskJobStore.Status;
 
 class RedisAskJobStoreTest {
     private final StringRedisTemplate redis = mock(StringRedisTemplate.class);
@@ -39,7 +41,8 @@ class RedisAskJobStoreTest {
     void rewritePrefixPreservesTtlAndCannotRecreateExpiredJobs_AC_007_7() throws Exception {
         when(redis.opsForValue()).thenReturn(values);
         UUID id = UUID.randomUUID();
-        var pending = new Job<vn.tsolve.ticket.dto.SolutionSections>("cloud", "account", null, Status.PENDING, null);
+        var pending = new Job<vn.tsolve.ticket.dto.SolutionSections>(
+                "cloud", "account", null, JiraAppJobStatus.PENDING, null);
         store.create("jira-app:rewrite:", id, pending);
         var initialJson = ArgumentCaptor.forClass(String.class);
         var ttl = ArgumentCaptor.forClass(Duration.class);
@@ -57,7 +60,7 @@ class RedisAskJobStoreTest {
                 .when(redis)
                 .execute(any(RedisCallback.class));
         var sections = new vn.tsolve.ticket.dto.SolutionSections("Symptoms", "Cause", "Steps", "", "Scope");
-        var done = pending.finish(Status.DONE, sections);
+        var done = pending.done(sections);
         store.update("jira-app:rewrite:", id, done);
         var json = ArgumentCaptor.forClass(byte[].class);
         var expiry = ArgumentCaptor.forClass(Expiration.class);
@@ -77,10 +80,32 @@ class RedisAskJobStoreTest {
     }
 
     @Test
+    void anUnreadableJobIsADataAccessFailureNotA500_AC_010_17() {
+        when(redis.opsForValue()).thenReturn(values);
+        UUID id = UUID.randomUUID();
+        when(values.get("jira-app:ask:" + id)).thenReturn("{\"status\":\"RENAMED\"}");
+
+        assertThatThrownBy(() -> store.find("jira-app:ask:", id, ChatbotAnswerResponse.class))
+                .isInstanceOf(DataAccessException.class);
+    }
+
+    @Test
+    void readsAJobWrittenWithoutARefusalCode_AC_010_17() {
+        when(redis.opsForValue()).thenReturn(values);
+        UUID id = UUID.randomUUID();
+        when(values.get("jira-app:ask:" + id))
+                .thenReturn("{\"cloudId\":\"cloud\",\"accountId\":\"account\",\"projectKey\":\"DP\","
+                        + "\"status\":\"FAILED\"}");
+
+        assertThat(store.find("jira-app:ask:", id, ChatbotAnswerResponse.class))
+                .contains(new Job<>("cloud", "account", "DP", JiraAppJobStatus.FAILED, null));
+    }
+
+    @Test
     void writesPendingOwnerAsJsonWithAtMost300Seconds_AC_010_17() throws Exception {
         when(redis.opsForValue()).thenReturn(values);
         UUID id = UUID.randomUUID();
-        Job<ChatbotAnswerResponse> pending = new Job<>("cloud", "account", "DP", Status.PENDING, null);
+        Job<ChatbotAnswerResponse> pending = new Job<>("cloud", "account", "DP", JiraAppJobStatus.PENDING, null);
 
         store.create("jira-app:ask:", id, pending);
 
@@ -114,7 +139,7 @@ class RedisAskJobStoreTest {
                 ChatbotAnswerResponse.Outcome.ANSWERED,
                 "Answer [1]",
                 List.of(new WikiDocumentCitation(1, UUID.randomUUID(), "Wiki title")));
-        Job<ChatbotAnswerResponse> done = new Job<>("cloud", "account", "DP", Status.DONE, answer);
+        Job<ChatbotAnswerResponse> done = new Job<>("cloud", "account", "DP", JiraAppJobStatus.DONE, answer);
 
         store.update("jira-app:ask:", id, done);
 

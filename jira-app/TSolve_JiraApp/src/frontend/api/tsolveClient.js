@@ -152,6 +152,7 @@ async function pollJob(path, body, { signal, sleep = wait, now = Date.now, failC
   }
 
   for (;;) {
+    let job;
     try {
       await within(() => sleep(Math.min(ASK_POLL_MS, remaining()), signal), remaining(), signal);
       // remaining() is checked after the wait and before invoking Forge: no GET at or after the deadline.
@@ -160,16 +161,20 @@ async function pollJob(path, body, { signal, sleep = wait, now = Date.now, failC
         { signal, timeoutMs: remaining() },
       );
       remaining();
-      const job = poll.body;
-      if (job?.status === 'DONE') {
-        return job;
-      }
-      if (job?.status !== 'PENDING') {
-        throw new TsolveError(failCode);
-      }
+      job = poll.body;
     } catch (failure) {
       if (failure?.name === 'AbortError') throw failure;
       throw new TsolveError(failCode, { status: failure?.status });
+    }
+    if (job?.status === 'DONE') {
+      return job;
+    }
+    // The job's own refusal (e.g. MSG08: the Project was deactivated meanwhile) keeps its code, as on the POST.
+    if (job?.status === 'FAILED' && typeof job.code === 'string' && /^MSG\d+$/.test(job.code)) {
+      throw new TsolveError(job.code);
+    }
+    if (job?.status !== 'PENDING') {
+      throw new TsolveError(failCode);
     }
   }
 }
