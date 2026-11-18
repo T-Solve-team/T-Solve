@@ -367,15 +367,15 @@
         "conversation-store": "passing",
         "conversation-api": "evaluating",
         "conversation-ui": "evaluating",
-        "conversation-paging": "in-progress"
+        "conversation-paging": "evaluating"
       },
-      "lastUpdated": "2026-11-18T09:05:17.675Z",
+      "lastUpdated": "2026-11-18T09:47:55.005Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "3a1b4d749222a0e226acc9f43baf3b2fc2c12e39"
+        "default": "e77bdca21be69c8a5fc5170e4fa295c71eab3cde"
       }
     },
     "jira-app": {
