@@ -296,8 +296,8 @@ describe('WikiHomePage', () => {
     await waitFor(() => expect(search().has('folder')).toBe(false));
     expect(search().get('space')).toBe(IT);
     expect(search().get('q')).toBe('VPN');
-    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
-    expect(requestedFolders).toEqual([HR, null]);
+    // The root request starts only after the stale folder leaves the URL; wait for it.
+    await waitFor(() => expect(requestedFolders).toEqual([HR, null]));
     await user.click(screen.getByRole('link', { name: 'Clear search' }));
     expect(await screen.findByRole('link', { name: 'Root guide' })).toBeInTheDocument();
     await waitFor(() => expect(queryClient.isFetching()).toBe(0));
