@@ -414,17 +414,17 @@
         "account-page-global": "evaluating",
         "draft-only-when-done": "evaluating",
         "form-from-issue": "evaluating",
-        "draft-at-done-backend": "pending",
+        "draft-at-done-backend": "evaluating",
         "issue-updated-trigger": "pending",
         "draft-reminder-done-only": "pending"
       },
-      "lastUpdated": "2026-11-18T08:03:42.458Z",
+      "lastUpdated": "2026-11-18T08:13:06.964Z",
       "branch": "feat/KAN-336-jira-app-draft-reminder",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "0897441d50ece692817817fa7d1fa8148b86d223"
+        "default": "1dbf74ac3495ac2b88158c07ef2cb32855a990a4"
       }
     },
     "dashboard-audit": {
