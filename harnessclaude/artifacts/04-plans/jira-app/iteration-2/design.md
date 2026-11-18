@@ -251,3 +251,48 @@ backend AGENTS §1 forbids using another module's `client/`. Values are HTML-esc
   409 MSG06 re-reads the panel and counts a `PENDING_REVIEW` status as submitted (an earlier try got through).
 - Risk: a PM decision and a resubmission at the same time — the guarded UPDATE changes the row only while it is still
   `CHANGES_REQUESTED`, so one of them wins and the other gets 409.
+
+## Change — 2026-11-18: no AI draft, a Draft at Done, reminders only while Done (KAN-371, Tasks 28–31)
+
+Branch `feat/KAN-371-jira-app-draft-at-done`, from `main` after KAN-336 (#296). Spec: AC-002.1, AC-005.2,
+AC-005.6 to AC-005.10, AC-011.2.
+
+```
+Forge trigger avi:jira:updated:issue ──(remote, FIT, ROLE_JIRA_APP)──▶ POST /api/v1/jira-app/events/issue-updated
+  JiraAppIssueEventController → IssueUpdatedService (jiraapp)
+    1. no issue key / no `status` item in changelog.items → 202, nothing           (AC-005.10)
+    2. JiraWorkspaceLookup.workspaceOf(FIT cloudId) → none → 202, nothing
+    3. TenantScope.runIn(workspace):
+         ProjectService: project of the key's prefix → none → 202, nothing
+         done = issue.fields.status.statusCategory.key == "done"
+         SolutionDraftService.recordIssueDone(projectId, issueKey, done)            (AC-005.9)
+         moved into Done (changelog `status` item whose from-status was not Done, now done)
+           owner = assignee.accountId ?: atlassianId → JiraAskerLookup.find(cloudId, owner)
+           member? (ScopeAccessService, as JiraIssueAccessImpl) · no ticket? (SolutionFormTicketService.findStatus)
+           SolutionDraftService.createIfAbsent(owner, projectId, issueKey, issueText)  (AC-005.7, AC-005.8)
+       the Jira status read (below) runs first, outside any transaction; the two writes of 3 share one
+       transaction; a failure → 500, nothing stored                                    (AC-005.10)
+```
+
+| Decision | Chosen | Alternatives | Rationale |
+|---|---|---|---|
+| Form prefill (AC-002.1) | `JiraAppSolutionServiceImpl.openForm` returns `Origin.ISSUE` with the existing `fromIssue(summary, description)` (summary, blank line, description, cut to 10,000), message null; `SolutionFormAi.draft`, `Origin.AI_DRAFT` and `MSG67` go away; `SolutionFormAi.rewrite` stays | keep the AI call behind a flag | User 18/11: drop the AI draft. `fromIssue` moves to a small `IssueText` helper in `jiraapp/service/impl` so the trigger uses the same text |
+| Where the Done state lives | new table `jira_issue_done_state` in the Workspace DB, owned by `ticket` next to `solution_draft` (changeset `048-jira-app-issue-done-state.sql`): `project_id`, `jira_issue_key` (PK with project), `done` boolean, `updated_at` | a column on `solution_draft`; a table in `jiraapp` | The state is per issue, not per Draft (a Draft made later by Close still needs it); the open-Draft query already lives in `ticket` (KAN-336 decision), so the filter stays one JPQL `exists` |
+| Reminder filter (AC-011.2) | `findOpenDrafts` gains `exists (select s from JiraIssueDoneState s where s.projectId = d.projectId and s.issueKey = d.issueKey and s.done = true)` | filter in the handler | One query; a never-recorded issue is simply absent, so it is not reminded (user 18/11) |
+| Owner (AC-005.7) | `issue.fields.assignee.accountId`, else the event's `atlassianId`; looked up with `JiraAskerLookup` (the linked active Account) | the person who moved it first | User 18/11 |
+| Create without replacing (AC-005.8) | `SolutionDraftService.createIfAbsent` — `INSERT … ON CONFLICT (creator_id, project_id, jira_issue_key) DO NOTHING` | read then insert | A Close at the same moment wins and is never overwritten; no race |
+| Description text | the event's description is ADF; a `jiraapp` copy of the frontend's `issueText` (paragraphs and list items on their own lines, trailing breaks stripped) | `tracker/client/AdfTextExtractor` | backend AGENTS §1 forbids another module's `client/`; the same rules as `watchDone.js#issueText` keep the Draft equal to what the form shows when opened from the issue view |
+| Trigger (AC-005.6) | manifest `trigger` key `tsolve-issue-updated-trigger`, events `avi:jira:updated:issue`, `filter.ignoreSelf: true`, endpoint `tsolve-issue-updated-endpoint` (remote `tsolve-backend`, route `/api/v1/jira-app/events/issue-updated`) | a Forge function that filters first | Same shape as the issue-created trigger; the server ignores events without a status change, so no function hop |
+| Payload | `IssueUpdatedPayload` reads only `issue.key`, `issue.fields.{summary, description, status.statusCategory.key, assignee.accountId}`, `atlassianId`, `changelog.items[]{field, from, to}`; unknown fields ignored | full event | Forge sends more than T-Solve needs; logs carry the issue key and ids only (NF 3) |
+
+Decided in planning: "moved into Done" = a changelog item with `field == "status"`, the issue's current category
+`done`, and a "before" state that is not Done. The event's `from` is a status id, not a category, so the "before" is
+the server's recorded state for the issue; when there is none (the first status change T-Solve sees for that issue),
+the server reads the `from` status's category from Jira (`GET /rest/api/3/status/{id}`) with the Workspace's app
+token through a new `jiraapp/client/JiraStatusClient` (as `RestJiraUserClient`, 10 s timeout). If that read fails,
+the change counts as a move into Done — a missing Draft costs a reminder, an extra one costs nothing. The
+`JiraAppIssueEventController` lives in `jiraapp/controller` (the issue-created one stays in `tracker`).
+
+Risks: Forge may deliver an event twice — `createIfAbsent` and the idempotent state upsert make a repeat harmless.
+Forge does not retry a failed remote trigger, so a 500 loses that move; the next status change records the state
+again (AC-005.10). Reassigning after Done does not move the Draft (Out of Scope).

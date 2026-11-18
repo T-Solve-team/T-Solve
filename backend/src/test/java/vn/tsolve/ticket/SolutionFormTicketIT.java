@@ -24,6 +24,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import vn.tsolve.identity.TwoTenantDatabases;
 import vn.tsolve.identity.signin.port.TenantScope;
+import vn.tsolve.ticket.dto.IssueStatusChange;
 import vn.tsolve.ticket.dto.OpenDraft;
 import vn.tsolve.ticket.dto.SolutionFormSubmission;
 import vn.tsolve.ticket.dto.SolutionSections;
@@ -85,6 +86,7 @@ class SolutionFormTicketIT {
     @BeforeEach
     void seed() {
         db.update("DELETE FROM solution_draft WHERE project_id = ?", PROJECT);
+        db.update("DELETE FROM jira_issue_done_state WHERE project_id = ?", PROJECT);
         db.update("DELETE FROM ticket WHERE project_id = ?", PROJECT);
         db.update("DELETE FROM app_user WHERE id IN (?,?)", WRITER, OTHER);
         db.update("DELETE FROM project WHERE public_id = ?", PROJECT);
@@ -186,14 +188,57 @@ class SolutionFormTicketIT {
     }
 
     @Test
-    void listsOpenDraftsNewestFirstAndLeavesOutIssuesWithATicket_AC_011_2_AC_011_3() {
+    void recordsTheDoneStateAndCreatesTheDraftWithoutReplacingOne_AC_005_7_AC_005_8_AC_005_9() {
+        String issue = KEY + "-5";
+        SolutionSections closed = new SolutionSections("Typed before", "", "", "", "");
+        SolutionSections issueText = new SolutionSections("From the issue", "", "", "", "");
+
+        scope.runIn(TwoTenantDatabases.ACME, () -> {
+            drafts.save(WRITER, PROJECT, issue, closed);
+            drafts.recordIssueStatus(new IssueStatusChange(PROJECT, issue, true, WRITER, issueText));
+            drafts.recordIssueStatus(new IssueStatusChange(PROJECT, issue, true, OTHER, issueText));
+            return null;
+        });
+        assertThat(scope.runIn(TwoTenantDatabases.ACME, () -> drafts.find(WRITER, PROJECT, issue)))
+                .contains(closed);
+        assertThat(scope.runIn(TwoTenantDatabases.ACME, () -> drafts.find(OTHER, PROJECT, issue)))
+                .contains(issueText);
+        assertThat(scope.runIn(TwoTenantDatabases.ACME, () -> drafts.findIssueDone(PROJECT, issue)))
+                .contains(true);
+
+        scope.runIn(TwoTenantDatabases.ACME, () -> {
+            drafts.recordIssueStatus(new IssueStatusChange(PROJECT, issue, false, null, null));
+            return null;
+        });
+        assertThat(scope.runIn(TwoTenantDatabases.ACME, () -> drafts.findIssueDone(PROJECT, issue)))
+                .contains(false);
+        assertThat(scope.runIn(TwoTenantDatabases.ACME, () -> drafts.find(OTHER, PROJECT, issue)))
+                .contains(issueText);
+        assertThat(scope.runIn(TwoTenantDatabases.ACME, () -> drafts.findIssueDone(PROJECT, KEY + "-404")))
+                .isEmpty();
+        assertThat(db.queryForObject(
+                        "SELECT count(*) FROM jira_issue_done_state WHERE project_id = ?", Integer.class, PROJECT))
+                .isEqualTo(1);
+    }
+
+    @Test
+    void listsOpenDraftsNewestFirstAndLeavesOutIssuesWithATicketOrNotDone_AC_011_2_AC_011_3() {
         String older = KEY + "-7";
         String newer = KEY + "-8";
         String submitted = KEY + "-9";
+        String reopened = KEY + "-10";
+        String neverRecorded = KEY + "-11";
         scope.runIn(TwoTenantDatabases.ACME, () -> {
             drafts.save(WRITER, PROJECT, older, new SolutionSections("Older", "", "", "", ""));
             drafts.save(OTHER, PROJECT, newer, new SolutionSections("Newer", "", "", "", ""));
             drafts.save(WRITER, PROJECT, submitted, new SolutionSections("Kept", "", "", "", ""));
+            drafts.save(WRITER, PROJECT, reopened, new SolutionSections("Reopened", "", "", "", ""));
+            drafts.save(WRITER, PROJECT, neverRecorded, new SolutionSections("Before KAN-371", "", "", "", ""));
+            for (String issue : List.of(older, newer, submitted, reopened)) {
+                drafts.recordIssueStatus(new IssueStatusChange(PROJECT, issue, true, null, null));
+            }
+            // Moved out of Done after the Draft: no reminder while it is not Done (AC-011.2, AC-008.11).
+            drafts.recordIssueStatus(new IssueStatusChange(PROJECT, reopened, false, null, null));
             return null;
         });
         db.update("UPDATE solution_draft SET updated_at = now() - interval '2 days' WHERE jira_issue_key = ?", older);

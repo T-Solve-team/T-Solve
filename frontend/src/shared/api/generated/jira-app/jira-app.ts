@@ -27,6 +27,7 @@ import type {
   ChatbotRating,
   IssueCreatedPayload,
   IssuePanel,
+  IssueUpdatedPayload,
   JiraAccountLinkStart,
   JiraAccountLinkStatus,
   JiraAppQuestionJob,
@@ -310,6 +311,113 @@ export const useReceiveIssueCreated = <TError = ErrorType<ProblemResponse>, TCon
   TContext
 > => {
   return useMutation(getReceiveIssueCreatedMutationOptions(options), queryClient);
+};
+export const getReceiveIssueUpdatedUrl = () => {
+  return `/api/v1/jira-app/events/issue-updated`;
+};
+
+/**
+ * @summary Forge trigger avi:jira:updated:issue — records whether the issue is in Done and, on a move into Done, creates the Solution Form Draft of the assignee or the mover (jira-app STORY-005, AC-005.6 to AC-005.10).
+
+ */
+export const receiveIssueUpdated = async (
+  issueUpdatedPayload: IssueUpdatedPayload,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<void>(getReceiveIssueUpdatedUrl(), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(issueUpdatedPayload),
+  });
+};
+
+export const getReceiveIssueUpdatedMutationKey = () => ['receiveIssueUpdated'] as const;
+
+export const getReceiveIssueUpdatedMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof receiveIssueUpdated>>,
+    TError,
+    ReceiveIssueUpdatedMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof receiveIssueUpdated>>,
+  TError,
+  ReceiveIssueUpdatedMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReceiveIssueUpdatedMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof receiveIssueUpdated>>,
+    ReceiveIssueUpdatedMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return receiveIssueUpdated(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReceiveIssueUpdatedMutationResult = NonNullable<
+  Awaited<ReturnType<typeof receiveIssueUpdated>>
+>;
+export type ReceiveIssueUpdatedMutationBody = IssueUpdatedPayload;
+export type ReceiveIssueUpdatedMutationError = ErrorType<ProblemResponse>;
+export type ReceiveIssueUpdatedMutationVariables = { data: IssueUpdatedPayload };
+
+/**
+ * @summary Forge trigger avi:jira:updated:issue — records whether the issue is in Done and, on a move into Done, creates the Solution Form Draft of the assignee or the mover (jira-app STORY-005, AC-005.6 to AC-005.10).
+
+ */
+export const useReceiveIssueUpdated = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof receiveIssueUpdated>>,
+      TError,
+      ReceiveIssueUpdatedMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof receiveIssueUpdated>>,
+  TError,
+  ReceiveIssueUpdatedMutationVariables,
+  TContext
+> => {
+  return useMutation(getReceiveIssueUpdatedMutationOptions(options), queryClient);
 };
 export const getReceiveJiraAppTokenUrl = () => {
   return `/api/v1/jira-app/app-token`;
@@ -1065,7 +1173,7 @@ export const getOpenSolutionFormUrl = (issueKey: string) => {
 };
 
 /**
- * @summary Whether the viewer may open 4.1 Solution Form for the issue and, if so, its content: the viewer's Draft, else the AI draft, else the issue text in Symptoms with MSG67 (STORY-001, 002, 005).
+ * @summary Whether the viewer may open 4.1 Solution Form for the issue and, if so, its content: the viewer's Draft, else the issue text in Symptoms — summary, a blank line, description — with no AI call (STORY-001, 002, 005).
 
  */
 export const openSolutionForm = async (
@@ -1146,7 +1254,7 @@ export type OpenSolutionFormMutationError = ErrorType<ProblemResponse | ProblemD
 export type OpenSolutionFormMutationVariables = { issueKey: string; data: SolutionFormRequest };
 
 /**
- * @summary Whether the viewer may open 4.1 Solution Form for the issue and, if so, its content: the viewer's Draft, else the AI draft, else the issue text in Symptoms with MSG67 (STORY-001, 002, 005).
+ * @summary Whether the viewer may open 4.1 Solution Form for the issue and, if so, its content: the viewer's Draft, else the issue text in Symptoms — summary, a blank line, description — with no AI call (STORY-001, 002, 005).
 
  */
 export const useOpenSolutionForm = <

@@ -9,7 +9,7 @@ depth: Normal
 
 The T-Solve Jira App (Forge UI Kit, `jira-app/`) and the Jira App API endpoints it calls
 (`/api/v1/jira-app/**`). STORY-001 to STORY-008 (KAN-126): Solution Form, AI Rewrite, Issue Panel (STORY-003, STORY-006
-and STORY-009 retired). STORY-010 (KAN-294): Ask T-Solve page. STORY-012 (KAN-130): resubmit after Changes requested. STORY-014: link the Jira account to T-Solve. STORY-011 (KAN-336): daily Draft reminder email. Sources: Report3 (UC-19, GBR-04, 06, 08, 10, 12, 19, 26,
+and STORY-009 retired). STORY-010 (KAN-294): Ask T-Solve page. STORY-012 (KAN-130): resubmit after Changes requested. STORY-014: link the Jira account to T-Solve. STORY-011 (KAN-336): daily Draft reminder email. KAN-371: no AI draft, a Draft made when an issue moves to Done (STORY-005), reminders only while Done. Sources: Report3 (UC-19, GBR-04, 06, 08, 10, 12, 19, 26,
 33, 36, System Messages), RESEARCH-003, RESEARCH-004, the `ticket-review` spec (STORY-009, STORY-012), the `chatbot`
 spec (STORY-005 to STORY-007). Terms: **user** = the active T-Solve Account linked to the Jira account in the FIT
 `principal`; **Project** = the ACTIVE T-Solve Project whose `jira_project_key` is the issue's project key;
@@ -50,6 +50,7 @@ an issue has at most one.
 | 2026-11-18 | STORY-007 | Rewrite with AI runs as a job like Ask T-Solve: `POST /api/v1/jira-app/solution-rewrites` answers 202 with a job id at once, the form polls the new `GET /api/v1/jira-app/solution-rewrites/{jobId}` every 1.5 s and shows MSG68 after 75 s (AC-007.1, AC-007.4 reworded); the AI rewrite gets 60 s. New AC-007.5 (202 and the job statuses), AC-007.6 (a job of another Jira account or site is not found), AC-007.7 (kept 5 minutes, no text in logs), AC-007.8 (too many jobs: 503 MSG68 at once). NF 2 and Out of Scope follow: only the AI draft keeps the 20-second limit | User, 18/11: the rewrite has the same Forge 25 s problem (cut at `JIRA_APP_AI_TIMEOUT` 18 s); make it work like the Ask T-Solve job |
 | 2026-11-18 | STORY-011 | AC-011.3: the reminder gets an HTML body next to the plain-text one, in the layout of `ticket-review`'s review emails (KAN-333): badge "Draft reminder", heading = subject, greeting with the full name, one card with a table of the open Drafts (issue key linked to Jira, last saved date), closing line and an automated-message footer | User 18/11: the HTML body promised for after 16/11, designed like Hiếu's Approve/Reject emails; user chose one card with a table over one card per Draft |
 | 2026-11-18 | STORY-011 | AC-011.1: the run time comes from `JIRA_APP_DRAFT_REMINDER_CRON` (default `0 8 * * *`, also when blank; an invalid value stops the start with an error naming the variable); the time zone stays Asia/Ho_Chi_Minh like the rest of the system | User 18/11: a customer changes when the email goes out through env, without a code change |
+| 2026-11-18 | STORY-002, STORY-005, STORY-011 | KAN-371. AC-002.1: the form opens without a Draft with Symptoms = the issue summary, a blank line and the description, the other four sections empty, and calls no AI; AC-002.2 (AI draft fallback, MSG67) removed; AC-005.2 says "instead of the issue text"; AC-002.5 reworded as IF … THEN with the same rule (STORY-002 keeps a failure path). New AC-005.6 to AC-005.10: a Forge trigger on `avi:jira:updated:issue` calls the new `POST /api/v1/jira-app/events/issue-updated`; on a move into the Done status category the server creates that same Draft for the issue's assignee, or the person who moved it when there is no assignee, if that Account is linked and a member and the issue has no ticket, never replacing a Draft; the server records whether each issue is in Done. STORY-011: an open Draft also needs its issue recorded in Done (AC-011.2), so a Draft of an issue never recorded in Done — including Drafts saved before this change — is not reminded. Requirement 2, the Exposed table, the `ai` row and Out of Scope follow | User (18/11): moving an issue to Done on the board opens no form (the background script runs only in the issue view), so nobody was reminded. User decisions 18/11: drop the AI draft rather than run it in the background; Symptoms from summary + description only; the Draft goes to the assignee, else the mover; remind only while the issue is Done; an issue whose state was never recorded is not reminded. Deviation from the SRS (UC-19 AI draft) to agree with the team |
 | 2026-11-18 | STORY-010 | AC-010.19 added: a `GREETING`, `OFF_TOPIC` or `INJECTION` answer shows MSG_NEW_5, MSG_NEW_6 or MSG_NEW_7 and no buttons, as on the web chatbot. | Ask T-Solve showed MSG109 and both buttons for every outcome other than `ANSWERED` (written before chatbot AC-009 added the three outcomes); the user wants both sides to match. |
 
 ## Requirements
@@ -57,9 +58,10 @@ an issue has at most one.
 ### Functional
 1. The form opens by itself when an issue of a Project moves to a Done status, only for members of that Project,
    and only while the issue has no ticket of any source (STORY-001).
-2. The form edits the five-section Solution, pre-filled by a Draft, the AI draft or the issue; it can Finish or
+2. The form edits the five-section Solution, pre-filled by a Draft or the issue text; it can Finish or
    Close, and Close keeps the content as the user's Draft (STORY-002, STORY-004, STORY-005). Only Finish hands a
-   ticket to `ticket-review`.
+   ticket to `ticket-review`. Moving an issue into Done anywhere — the board included — gives its assignee (or the
+   person who moved it) a Draft, so the daily reminder covers it (STORY-005, STORY-011).
 3. Rewrite with AI shows 4.2 AI Rewrite Preview (STORY-007).
 4. The panel shows the issue's Solution status, including a Project Manager's change request (STORY-008); the writer
    edits and resubmits a ticket in Changes requested from the panel (STORY-012, KAN-130).
@@ -71,9 +73,8 @@ an issue has at most one.
 
 ### Non-Functional
 1. Every Jira App API call is verified with a FIT (tracker STORY-001); the user comes from the FIT `principal`.
-2. UI calls answer within 20 seconds (Forge's limit is 25 s). The Solution Form's AI draft (STORY-002) counts as
-   unavailable when it takes longer; an AI rewrite (STORY-007) and an Ask T-Solve answer (STORY-010) run as jobs on
-   the server, so no call waits for them.
+2. UI calls answer within 20 seconds (Forge's limit is 25 s). An AI rewrite (STORY-007) and an Ask T-Solve answer
+   (STORY-010) run as jobs on the server, so no call waits for them; opening the form calls no AI (AC-002.1, KAN-371).
 3. UI Kit components only; every server call goes through one client module in `jira-app/`; logs carry ids,
    issue keys and error types only — never question, answer or Solution text, or personal data.
 4. AI failures never block the user: the form and creating an issue stay usable without AI (GBR-12).
@@ -92,11 +93,10 @@ an issue has at most one.
 ### STORY-002: Write the Solution
 - As a Ticket Resolver, I want to write the Solution in the five sections of the template so that it can be reviewed and reused.
 - Acceptance:
-  - AC-002.1: WHEN the form opens without a Draft, THE Jira App SHALL fill the five sections — Symptoms, Root cause, Resolution steps, Workaround, Scope of applicability — with the AI draft the server makes from the issue summary and description.
-  - AC-002.2: IF the AI draft is unavailable or takes longer than the UI call allows, THEN THE Jira App SHALL fill Symptoms from the issue summary and description, leave the other sections empty, and show MSG67.
+  - AC-002.1: WHEN the form opens without a Draft, THE Jira App SHALL fill Symptoms with the **issue text** — the issue summary, a blank line, then the description as plain text (the summary alone when the description is empty) — and leave Root cause, Resolution steps, Workaround and Scope of applicability empty; THE server SHALL call no AI to open the form and the form SHALL show no MSG67.
   - AC-002.3: WHEN the user clicks Finish with a required section empty (every section except Workaround), THE Jira App SHALL show MSG01 under that section and not submit.
   - AC-002.4: WHEN the user clicks Finish and the five sections together exceed 10,000 characters, THE Jira App SHALL show MSG02 and not submit.
-  - AC-002.5: THE server SHALL reject a submission with an empty required section (400 MSG01) or more than 10,000 characters in total (400 MSG02), whatever the Jira App checked.
+  - AC-002.5: IF a submission has an empty required section or more than 10,000 characters in total, THEN THE server SHALL reject it with 400 MSG01 or 400 MSG02 respectively, whatever the Jira App checked.
 
 ### STORY-004: Finish
 - As a Ticket Resolver, I want to submit the Solution so that it enters the Project's Review Queue.
@@ -110,10 +110,15 @@ an issue has at most one.
 - As a Ticket Resolver, I want what I wrote to be kept when I close the form so that I can finish it later.
 - Acceptance:
   - AC-005.1: WHEN the user closes the form (its Close button or the dialog's close control), THE server SHALL store the five sections as the user's only Solution Form Draft for the issue, without validation and without creating a ticket, and THE Jira App SHALL close the form and show the flag "Saved as draft" (a Jira App label, not an SRS message — user, 2026-11-14).
-  - AC-005.2: WHEN the form opens and the user has a Draft for the issue, THE Jira App SHALL fill the sections from the Draft instead of the AI draft.
+  - AC-005.2: WHEN the form opens and the user has a Draft for the issue, THE Jira App SHALL fill the sections from the Draft instead of the issue text.
   - AC-005.3: THE server SHALL show a Draft only to its creator.
   - AC-005.4: IF saving the Draft fails, THEN THE Jira App SHALL show MSG06 and keep the form open with its content.
   - AC-005.5: THE Jira App SHALL offer no separate Save as draft button and SHALL never create a ticket when the form is closed; THE server SHALL create a Solution Form ticket only from a submission that passes AC-002.5, so a Solution with every section empty never enters the Review Queue.
+  - AC-005.6: THE manifest SHALL declare a trigger on `avi:jira:updated:issue` that invokes the remote endpoint of `POST /api/v1/jira-app/events/issue-updated` directly (not through a Forge function), as the issue-created trigger does; THE server SHALL accept the call only from the Jira App (role `JIRA_APP`) and SHALL take the Workspace only from the verified call's site, never from the payload.
+  - AC-005.7: WHEN the event's changelog changes the issue's status from a status outside the Done status category to one in it, THE server SHALL create a Draft for the issue whose Symptoms is the issue text of AC-002.1, read from the event's issue summary and description, with the other four sections empty, owned by the issue's assignee or, when the issue has no assignee, by the Jira account that made the change (the event's `atlassianId`).
+  - AC-005.8: IF the owner of AC-005.7 is not linked to an active T-Solve Account, is not a member of the Project, already has a Draft for the issue, or the issue's ticket already exists, or the issue's project key is no Project's, THEN THE server SHALL create no Draft and SHALL leave any existing Draft unchanged; a change made by an app or automation with no assignee on the issue creates no Draft.
+  - AC-005.9: WHEN the event's changelog changes the issue's status, THE server SHALL record whether the issue's new status is in the Done status category, for issues of a Project only; a later move out of Done keeps every Draft for the issue (AC-008.11).
+  - AC-005.10: IF the event cannot be read (no issue key, no status change in the changelog) or the issue is not in a Project, THEN THE server SHALL answer 202 and change nothing; IF storing the Draft or the Done state fails, THEN THE server SHALL answer 5xx and store neither, and THE Jira App SHALL not retry (the next status change records the state again).
 
 ### STORY-007: Rewrite with AI
 - As a Ticket Resolver, I want AI to improve my Solution's wording so that it is clearer, while I stay in control (GBR-12).
@@ -206,10 +211,11 @@ an issue has at most one.
 ### STORY-011: Remind writers of their unsubmitted Drafts
 - As a Ticket Resolver, I want a daily email listing the Solutions I left as Drafts so that I finish and submit them.
 - Terms: **reminder job** = the worker job of this story; **open Draft** = a Solution Form Draft (STORY-005) whose
-  issue's ticket does not exist; **writer** = the active Account that owns an open Draft.
+  issue's ticket does not exist and whose issue the server last recorded in the Done status category (AC-005.9) — an
+  issue never recorded makes no open Draft (user, 2026-11-18); **writer** = the active Account that owns an open Draft.
 - Acceptance:
   - AC-011.1: WHILE the worker runs with jobs enabled, THE server SHALL run the reminder job on the cron schedule read from the environment variable `JIRA_APP_DRAFT_REMINDER_CRON` in the Asia/Ho_Chi_Minh time zone — every day at 08:00 (`0 8 * * *`) when the variable is unset or blank — under its own recurring job id (not shared with any other job), once for each active Workspace. IF the variable holds an invalid cron expression, THEN THE server SHALL fail to start with an error naming the variable.
-  - AC-011.2: WHEN the reminder job runs for a Workspace, THE server SHALL send exactly one email to each writer of that Workspace and SHALL send no email to an Account without an open Draft, to an inactive Account or for a Draft whose issue's ticket exists.
+  - AC-011.2: WHEN the reminder job runs for a Workspace, THE server SHALL send exactly one email to each writer of that Workspace and SHALL send no email to an Account without an open Draft, to an inactive Account, for a Draft whose issue's ticket exists, or for a Draft whose issue is not recorded in the Done status category (moved out of Done, or never recorded).
   - AC-011.3: THE email SHALL go to the writer's Account email, with the subject "You have 1 unsubmitted Solution draft in T-Solve" for one open Draft and "You have N unsubmitted Solution drafts in T-Solve" for N of them (N > 1), and both an HTML body and a plain-text body. The HTML body SHALL use the layout of `ticket-review`'s review emails (KAN-333): the T-Solve header, the badge "Draft reminder", the subject as heading, a greeting "Hi " + the Account's full name + "," ("Hi there," when the name is blank) and a card holding a table with one row per open Draft, newest saved first — the issue key, linked to the Jira site URL + `/browse/` + the key when that URL is configured, and the date it was last saved (yyyy-MM-dd, Asia/Ho_Chi_Minh) — then the line "Open the issue in Jira and use Continue draft in the T-Solve panel to submit it." and the footer "You got this email because you have unsubmitted Solution drafts on T-Solve. This is an automated message — please do not reply."; every value from the database is HTML-escaped. The plain-text body SHALL carry the same rows, one line per open Draft (the issue key, the date and, when the Jira site URL is configured, the link), followed by the same closing line. The email SHALL contain no Solution text.
   - AC-011.4: THE server SHALL hand each writer's email to the shared email outbox (`worker` STORY-004), whose dispatcher sends it and retries a failed delivery (worker AC-004.4 to AC-004.10). IF queuing a writer's email fails, THEN THE server SHALL retry queuing that writer's email by itself, without queuing again for the other writers.
   - AC-011.5: IF the reminder job runs again for a Workspace on the same day, THEN THE server SHALL not send a writer a second email that day.
@@ -219,14 +225,17 @@ an issue has at most one.
 ## Out of Scope
 - Streaming the answer word by word (Forge Async Events + Realtime) — needs a streaming answer from `chatbot` and
   `ai`; the page shows the whole answer when the job ends (user, 2026-11-18).
-- A job for the Solution Form's AI draft — it keeps the 20-second limit of NF 2.
 - Evidence in the Jira App (attach, MSG34, MSG72, the Evidence list of 3.4): Forge UI calls carry at most 500 KB
   (RESEARCH-003); Evidence is added on the T-Solve web app (user, 2026-11-01, kept 2026-11-11). KAN-126 "Done when"
   items about Evidence are not met — reported to the team.
 - Resubmitting an Expired or Rejected ticket, and resubmitting from the T-Solve web app.
 - MSG71: its SRS text is not available; a resubmission shows MSG66 like a first submission (user, 2026-11-14).
 - The issue-created event and the AI suggestion comment — `tracker`.
-- AI drafting and rewriting quality — `ai` (Trần Hải Anh); this module calls its chat client through one service.
+- AI rewriting quality — `ai` (Trần Hải Anh); this module calls its chat client through one service. An AI draft
+  of the Solution (UC-19) — removed by KAN-371 (user, 2026-11-18).
+- Moving a Draft to a new assignee when the issue is reassigned after it is Done, and reading the Done state of
+  issues the trigger has not seen (Drafts saved before KAN-371) — the Draft stays with its owner, and such issues
+  are not reminded (user, 2026-11-18).
 - Searching Published tickets and reading one in Jira (the SRS's 3.3 search box, 3.4 Published Ticket Preview,
   MSG04 and MSG76 in the panel; formerly AC-008.4 to AC-008.6, AC-008.8 and STORY-009): search stays on the T-Solve
   web app (UC-26) — user, 2026-11-14; a deviation from the SRS to agree with the team.
@@ -251,7 +260,8 @@ feedback endpoint (AC-008.7).
 
 | Endpoint | Screen | Story |
 |----------|--------|-------|
-| `POST /api/v1/jira-app/issues/{issueKey}/solution-form` (issue summary + description, `resubmit`) → may open, Draft or AI draft or prefill or the ticket's Solution, MSG67 flag | 4.1 | 001, 002, 005, 012 |
+| `POST /api/v1/jira-app/issues/{issueKey}/solution-form` (issue summary + description, `resubmit`) → may open, Draft or the issue text or the ticket's Solution | 4.1 | 001, 002, 005, 012 |
+| `POST /api/v1/jira-app/events/issue-updated` (Forge `avi:jira:updated:issue`: issue key, summary, description, status category, assignee, changelog, `atlassianId` → 202) | — (trigger) | 005, 011 |
 | `POST /api/v1/jira-app/issues/{issueKey}/solution` (JSON: five sections) → a new ticket, or the resubmitted one | 4.1 | 004, 012 |
 | `PUT /api/v1/jira-app/issues/{issueKey}/solution-draft` (on Close) | 4.1 | 005 |
 | `POST /api/v1/jira-app/solution-rewrites` (five sections → 202 `{jobId}`; 400, 403 and 503 MSG68 at once) | 4.2 | 007 |
@@ -264,7 +274,8 @@ feedback endpoint (AC-008.7).
 | `GET /api/v1/jira-app/account-link` (→ `status` `LINKED` / `NOT_LINKED` / `SITE_NOT_CONNECTED`; when linked, `fullName`, `email`, `linkedAt`) | T-Solve account (AC-014.2) | 014 |
 | `POST /api/v1/jira-app/account-link` (no body → `{ url }`, the `/jira-link?request=<id>` link; 403 MSG124 / MSG08, 503 MSG06) | T-Solve account (AC-014.6, AC-014.9) | 014 |
 
-Forge: `jira:issueViewBackgroundScript` (opens the form), `jira:issuePanel` (panel), Modal for 4.1/4.2,
+Forge: `jira:issueViewBackgroundScript` (opens the form), a `trigger` on `avi:jira:updated:issue` straight to the
+remote (Draft at Done, AC-005.6), `jira:issuePanel` (panel), Modal for 4.1/4.2,
 `requestJira` for the issue summary/description; `jira:globalPage` for the T-Solve account page (Apps section); `jira:projectPage` for the Ask T-Solve page, `invokeRemote` to the
 endpoints above, and `CreateIssueModal`
 (`@forge/jira-bridge`) for the prefilled Create dialog — whether it can prefill labels and where the page shows in
@@ -276,7 +287,7 @@ Jira's navigation are checked in a spike first (RESEARCH-004, open questions).
 | `identity` | `JiraAccountLinkLookup`: Jira accountId → the linked Active Account (AC-001.77); `JiraLinkRequestService.create` (AC-001.69) |
 | `project` / `review` | Project of a Jira project key, the user's `project_membership` rows (today read by `ticket-review`'s `ProjectMembershipRepository`) |
 | `ticket-review` (Phạm Tùng Dương) | The Solution Form ticket storage it reviews (`ticket`, source `SOLUTION_FORM`, entry time and due date, AC-009.11/AC-012.2); `GET /api/v1/jira-app/issues/{issueKey}/review-feedback` (MSG64) |
-| `ai` (Trần Hải Anh) | Chat client (`LlmClient`) for the AI draft and rewrite — prompts owned here, a configured stand-in for demos |
+| `ai` (Trần Hải Anh) | Chat client (`LlmClient`) for the rewrite only (no AI draft since KAN-371) — prompts owned here, a configured stand-in for demos |
 | `chatbot` (Trần Hải Anh) | Answer a question with history for a given T-Solve user (`ChatbotAnswerService`, chatbot STORY-005 to STORY-007), callable from the Jira App API — to agree with the owner |
 | `tracker` | Skip the suggestion job for an issue created with label `tsolve-asked` — a change of tracker AC-011.8 (tracker spec, KAN-22) |
 | `worker` (Phạm Tùng Dương) | Used, not changed: `WorkerTenantService` (active Workspaces, run in a Workspace), `JobRunrRuntime` scheduler for a recurring job and per-writer jobs, `EmailOutboxService.queue(OutboundEmail)` of the shared email outbox (STORY-011) |

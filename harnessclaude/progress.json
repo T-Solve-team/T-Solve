@@ -417,7 +417,11 @@
         "ask-job-forge": "passing",
         "rewrite-job-backend": "passing",
         "rewrite-job-forge": "passing",
-        "ask-outcome-texts": "passing"
+        "ask-outcome-texts": "passing",
+        "form-from-issue": "evaluating",
+        "draft-at-done-backend": "evaluating",
+        "issue-updated-trigger": "evaluating",
+        "draft-reminder-done-only": "evaluating"
       },
       "lastUpdated": "2026-11-18T09:05:35.529Z",
       "branch": "feat/KAN-337-jira-app-reject-reason",

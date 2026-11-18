@@ -46,4 +46,19 @@ describe('manifest: app token for the backend', () => {
     expect(endpoint.function).toBeUndefined();
     expect(manifest.modules.function).toBeUndefined();
   });
+
+  it('AC-005.6 sends every issue update straight to the issue-updated endpoint, as the issue-created trigger', () => {
+    const trigger = manifest.modules.trigger.find((t) => t.key === 'tsolve-issue-updated-trigger');
+    expect(trigger).toMatchObject({
+      endpoint: 'tsolve-issue-updated-endpoint',
+      events: ['avi:jira:updated:issue'],
+      filter: { ignoreSelf: true },
+    });
+    const endpoint = manifest.modules.endpoint.find((e) => e.key === 'tsolve-issue-updated-endpoint');
+    expect(endpoint).toEqual({
+      key: 'tsolve-issue-updated-endpoint',
+      remote: 'tsolve-backend',
+      route: { path: '/api/v1/jira-app/events/issue-updated' },
+    });
+  });
 });
