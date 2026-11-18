@@ -2122,3 +2122,6 @@
 {"ts":"2026-11-18T07:56:23.770Z","type":"feature-status","module":"jira-app","feature":"draft-at-done-backend","from":null,"to":"pending"}
 {"ts":"2026-11-18T07:56:24.020Z","type":"feature-status","module":"jira-app","feature":"issue-updated-trigger","from":null,"to":"pending"}
 {"ts":"2026-11-18T07:56:24.274Z","type":"feature-status","module":"jira-app","feature":"draft-reminder-done-only","from":null,"to":"pending"}
+{"ts":"2026-11-18T07:57:12.943Z","type":"feature-status","module":"jira-app","feature":"form-from-issue","from":"pending","to":"in-progress"}
+{"ts":"2026-11-18T08:03:42.173Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"0897441d50ece692817817fa7d1fa8148b86d223"}
+{"ts":"2026-11-18T08:03:42.459Z","type":"feature-status","module":"jira-app","feature":"form-from-issue","from":"in-progress","to":"evaluating"}
