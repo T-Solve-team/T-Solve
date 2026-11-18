@@ -1,6 +1,6 @@
 import { Flex, Typography } from 'antd';
 import type { ApiError, WikiDocumentSummary } from '@/shared/api';
-import { EmptyState, ErrorState, LoadingState, SectionCard } from '@/shared/ui';
+import { EmptyState, ErrorState, LoadingState } from '@/shared/ui';
 import { DocumentsTable } from './DocumentsTable';
 
 type CompanyWideViewProps = {
@@ -22,7 +22,8 @@ export function CompanyWideView({ documents, isLoading, error, onRetry }: Compan
 
   return (
     <section aria-label="Company-wide">
-      <SectionCard title="Company-wide">
+      <Flex vertical gap="middle">
+        <Typography.Title level={2}>Company-wide</Typography.Title>
         {isLoading ? (
           <LoadingState />
         ) : error ? (
@@ -30,16 +31,14 @@ export function CompanyWideView({ documents, isLoading, error, onRetry }: Compan
         ) : groups.size === 0 ? (
           <EmptyState />
         ) : (
-          <Flex vertical gap="middle">
-            {[...groups].map(([spaceId, rows]) => (
-              <div key={spaceId}>
-                <Typography.Title level={3}>{rows[0]?.spaceName}</Typography.Title>
-                <DocumentsTable label={`Company-wide ${rows[0]?.spaceName}`} rows={rows} />
-              </div>
-            ))}
-          </Flex>
+          [...groups].map(([spaceId, rows]) => (
+            <Flex key={spaceId} vertical gap="small">
+              <Typography.Title level={3}>{rows[0]?.spaceName}</Typography.Title>
+              <DocumentsTable label={`Company-wide ${rows[0]?.spaceName}`} rows={rows} />
+            </Flex>
+          ))
         )}
-      </SectionCard>
+      </Flex>
     </section>
   );
 }

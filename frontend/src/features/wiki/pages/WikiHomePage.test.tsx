@@ -73,7 +73,7 @@ async function openHome(query = `?space=${IT}&folder=${FOLDER}`) {
 
 describe('WikiHomePage', () => {
   it('AC-002.14 groups Company-wide documents before Spaces and renders access levels, folders and columns (BUG-254, BUG-255)', async () => {
-    await openHome();
+    const { box } = await openHome();
     const company = screen.getByRole('region', { name: 'Company-wide' });
     expect(
       within(company)
@@ -84,10 +84,12 @@ describe('WikiHomePage', () => {
     expect(
       company.compareDocumentPosition(spaceList) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+    expect(spaceList.compareDocumentPosition(box) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(spaceList).getByText('View')).toBeInTheDocument();
     expect(within(spaceList).getByText('Knowledge Manager')).toBeInTheDocument();
     expect(await screen.findByRole('tree', { name: 'Folders' })).toHaveTextContent('Network');
     const table = screen.getByRole('table', { name: 'Documents' });
+    expect(box.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(
       within(table)
         .getAllByRole('columnheader')
@@ -228,6 +230,19 @@ describe('WikiHomePage', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe(paths.wikiUpload));
     expect(new URLSearchParams(router.state.location.search).get('space')).toBe(IT);
     expect(new URLSearchParams(router.state.location.search).get('folder')).toBe(FOLDER);
+  });
+
+  it('AC-002.21 shows no manager buttons until the user selects a Space they manage', async () => {
+    const { user, queryClient } = await openHome('');
+    expect(screen.queryByRole('button', { name: 'Upload documents' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'New folder' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Space Settings' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('link', { name: 'IT Space' }));
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    expect(screen.getByRole('link', { name: 'IT Space' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Upload documents' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New folder' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Space Settings' })).toBeInTheDocument();
   });
 
   it('AC-002.21 navigates Space Settings and hides manager buttons on a different Space (BUG-254)', async () => {
