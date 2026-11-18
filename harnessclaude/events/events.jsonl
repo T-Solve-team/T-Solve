@@ -2128,3 +2128,6 @@
 {"ts":"2026-11-18T08:12:52.264Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"1dbf74ac3495ac2b88158c07ef2cb32855a990a4"}
 {"ts":"2026-11-18T08:13:06.734Z","type":"feature-status","module":"jira-app","feature":"draft-at-done-backend","from":"pending","to":"in-progress"}
 {"ts":"2026-11-18T08:13:06.965Z","type":"feature-status","module":"jira-app","feature":"draft-at-done-backend","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-18T08:13:14.910Z","type":"feature-status","module":"jira-app","feature":"issue-updated-trigger","from":"pending","to":"in-progress"}
+{"ts":"2026-11-18T08:16:03.412Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"f0a4214f11661ab79ebb10ac9cd9812ae096326d"}
+{"ts":"2026-11-18T08:16:03.723Z","type":"feature-status","module":"jira-app","feature":"issue-updated-trigger","from":"in-progress","to":"evaluating"}
