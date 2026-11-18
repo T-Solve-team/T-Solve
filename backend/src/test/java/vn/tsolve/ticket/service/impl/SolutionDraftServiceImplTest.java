@@ -2,11 +2,13 @@ package vn.tsolve.ticket.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -14,8 +16,10 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import vn.tsolve.ticket.dto.IssueStatusChange;
 import vn.tsolve.ticket.dto.SolutionSections;
 import vn.tsolve.ticket.entity.SolutionDraft;
+import vn.tsolve.ticket.repository.JiraIssueDoneStateRepository;
 import vn.tsolve.ticket.repository.SolutionDraftRepository;
 
 class SolutionDraftServiceImplTest {
@@ -27,8 +31,29 @@ class SolutionDraftServiceImplTest {
     private static final Instant NOW = Instant.parse("2026-11-11T03:00:00Z");
 
     private final SolutionDraftRepository drafts = mock(SolutionDraftRepository.class);
+    private final JiraIssueDoneStateRepository doneStates = mock(JiraIssueDoneStateRepository.class);
     private final SolutionDraftServiceImpl service =
-            new SolutionDraftServiceImpl(drafts, Clock.fixed(NOW, ZoneOffset.UTC));
+            new SolutionDraftServiceImpl(drafts, doneStates, new ObjectMapper(), Clock.fixed(NOW, ZoneOffset.UTC));
+
+    @Test
+    void recordsTheDoneStateAndCreatesTheOwnersDraftIfAbsent_AC_005_7_AC_005_9() {
+        SolutionSections issueText = new SolutionSections("VPN drops\n\nAfter sleep", "", "", "", "");
+
+        service.recordIssueStatus(new IssueStatusChange(PROJECT, ISSUE, true, CREATOR, issueText));
+
+        verify(doneStates).record(PROJECT, ISSUE, true, NOW);
+        ArgumentCaptor<String> content = ArgumentCaptor.forClass(String.class);
+        verify(drafts).insertIfAbsent(eq(CREATOR), eq(PROJECT), eq(ISSUE), content.capture(), eq(NOW));
+        assertThat(content.getValue()).contains("\"symptoms\":\"VPN drops\\n\\nAfter sleep\"");
+    }
+
+    @Test
+    void recordsOnlyTheStateWithoutADraftOwner_AC_005_9() {
+        service.recordIssueStatus(new IssueStatusChange(PROJECT, ISSUE, false, null, null));
+
+        verify(doneStates).record(PROJECT, ISSUE, false, NOW);
+        verify(drafts, never()).insertIfAbsent(any(), any(), any(), any(), any());
+    }
 
     @Test
     void storesAFirstDraftUnvalidated_AC_005_1() {
