@@ -70,3 +70,45 @@ export function initialMembers(): Record<string, ProjectMemberResponse[]> {
     [ITNET_ID]: [{ ...QUAN, role: 'PROJECT_MANAGER', dateAdded: '2026-09-20T02:00:00Z' }],
   };
 }
+
+/** The Jira project roles of every mock Project (STORY-011), without the app role the backend leaves out. */
+export const JIRA_ROLES = [
+  { id: 10014, name: 'Administrator' },
+  { id: 10015, name: 'Member' },
+  { id: 10016, name: 'Viewer' },
+];
+
+/**
+ * The people of each Jira role, with the T-Solve account each Jira account is linked to (null = not linked), and the
+ * role's group actors.
+ */
+export const JIRA_ROLE_PEOPLE: Record<
+  number,
+  {
+    people: { jiraAccountId: string; displayName: string; userId: string | null }[];
+    groups: string[];
+  }
+> = {
+  10014: {
+    people: [{ jiraAccountId: 'jira-quan', displayName: 'Quân Admin', userId: QUAN.userId }],
+    groups: [],
+  },
+  10015: {
+    people: [
+      {
+        jiraAccountId: 'jira-bao',
+        displayName: 'Bảo Phạm',
+        userId: '00000000-0000-4000-8000-000000000301',
+      },
+      { jiraAccountId: 'jira-lan', displayName: 'Lan Trần', userId: LAN.userId },
+      { jiraAccountId: 'jira-guest', displayName: 'Guest Contractor', userId: null },
+      {
+        jiraAccountId: 'jira-mai',
+        displayName: 'Mai Ngô',
+        userId: '00000000-0000-4000-8000-000000000302',
+      },
+    ],
+    groups: ['it-support-team'],
+  },
+  10016: { people: [], groups: [] },
+};

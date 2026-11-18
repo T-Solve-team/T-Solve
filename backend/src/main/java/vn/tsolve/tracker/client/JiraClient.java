@@ -20,6 +20,8 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import vn.tsolve.tracker.dto.JiraAccount;
 import vn.tsolve.tracker.dto.TrackerCreateField;
+import vn.tsolve.tracker.dto.TrackerRole;
+import vn.tsolve.tracker.dto.TrackerRoleActors;
 import vn.tsolve.tracker.dto.TrackerStatus;
 import vn.tsolve.tracker.exception.JiraRejectedException;
 import vn.tsolve.tracker.exception.JiraUnavailableException;
@@ -168,6 +170,60 @@ public class JiraClient implements TicketTrackerClient {
                 .path(permission)
                 .path("havePermission")
                 .booleanValue());
+    }
+
+    @Override
+    public List<TrackerRole> projectRoles(JiraAccount account, String projectKey) {
+        // {"Member": "https://…/rest/api/3/project/10001/role/10015", …}: the id is the last part of each link.
+        JsonNode roles = call(() -> http(account)
+                .get()
+                .uri("/rest/api/3/project/{projectKey}/role", projectKey)
+                .retrieve()
+                .body(JsonNode.class));
+        if (roles == null || !roles.isObject()) {
+            throw new JiraUnavailableException(0);
+        }
+        List<TrackerRole> read = new ArrayList<>();
+        roles.fields().forEachRemaining(role -> {
+            String link = role.getValue().asText("");
+            String id = link.substring(link.lastIndexOf('/') + 1);
+            if (id.chars().allMatch(Character::isDigit) && !id.isEmpty()) {
+                read.add(new TrackerRole(Long.parseLong(id), role.getKey()));
+            }
+        });
+        return List.copyOf(read);
+    }
+
+    @Override
+    public TrackerRoleActors roleActors(JiraAccount account, String projectKey, long roleId) {
+        JsonNode role = call(() -> http(account)
+                .get()
+                .uri("/rest/api/3/project/{projectKey}/role/{roleId}", projectKey, roleId)
+                .retrieve()
+                .body(JsonNode.class));
+        if (role == null || !role.path("actors").isArray()) {
+            throw new JiraUnavailableException(0);
+        }
+        List<TrackerRoleActors.Person> people = new ArrayList<>();
+        List<String> groups = new ArrayList<>();
+        for (JsonNode actor : role.path("actors")) {
+            String type = actor.path("type").asText("");
+            if ("atlassian-user-role-actor".equals(type)) {
+                String accountId = actor.path("actorUser").path("accountId").asText("");
+                if (!accountId.isBlank()) {
+                    String name = actor.path("displayName").asText("");
+                    people.add(new TrackerRoleActors.Person(accountId, name.isBlank() ? accountId : name));
+                }
+            } else if ("atlassian-group-role-actor".equals(type)) {
+                String name = actor.path("actorGroup")
+                        .path("name")
+                        .asText(actor.path("displayName").asText(""));
+                if (!name.isBlank()) {
+                    groups.add(name);
+                }
+            }
+        }
+        return new TrackerRoleActors(people, groups);
     }
 
     @Override
