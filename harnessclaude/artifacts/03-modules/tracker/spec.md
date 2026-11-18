@@ -35,6 +35,7 @@ the request belongs to; **discovery** = finding that database from the request (
 | 2026-11-12 | STORY-013 | Correct client findProject return type to Optional<String>, empty on project 404; no acceptance criterion changes | Explicit RUN 2 contract, KAN-127 D56 |
 | 2026-11-16 | STORY-012, STORY-013 | KAN-344: new AC-012.9 — every `JiraClient` call sends the service account's scoped token as `Authorization: Bearer` to `https://api.atlassian.com/ex/jira/{cloudId}` instead of Basic auth on the site; `JiraAccount` becomes `(siteUrl, cloudId, apiToken)`. AC-013.10, AC-013.12, functional requirement 9, the service account term and Required from other modules follow | RESEARCH-003: a real service account's scoped token gets 401 on the site URL; user decisions of 16/11 (option B, no email, workspace and tracker in one PR) |
 | 2026-11-17 | STORY-012, STORY-013 | KAN-349: Jira calls use the T-Solve Jira App's app token held by `workspace` (STORY-014 there) instead of a customer service-account token; Non-Functional 3 and 9 and the service account term reworded; the 01/11 decision "the system token is not stored" is replaced. AC-012.9 and AC-013.10 are unchanged (same gateway and Bearer call, another token) | RESEARCH-005 and its probe; user decision 17/11 (option D) |
+| 2026-11-18 | STORY-011 | KAN-370 (BUG-342): AC-011.9 runs in-process only while web jobs are also off; new AC-011.10 (a web process with web jobs enabled queues the suggestion job on the Jobs database for the worker process, in the request's Workspace or the single Active Workspace of the configured list) and AC-011.11 (no single Workspace or a queue failure: no job, a warning, still 202). Out of Scope follows | On staging the in-process job runs with no Workspace bound and the MSG80 comment is never posted (DP-121, 17/11); the Jira App webhook binds no Workspace either. User chose to queue for the worker like the review email (KAN-366, 368, 369), which also gives the retries of AC-011.6 (user, 2026-11-18) |
 
 ## Requirements
 
@@ -126,7 +127,9 @@ the request belongs to; **discovery** = finding that database from the request (
   - AC-011.6: IF search fails or does not answer, or the suggestion result cannot be read or stored, THEN THE suggestion job SHALL fail so that the job runner retries it, leave the issue's suggestion result unchanged, and log only the issue key and the error type.
   - AC-011.7: IF the issue's suggestion result no longer exists or already has a suggested solution when the job runs, THEN THE tracker SHALL not ask search and SHALL change no suggestion field; a stored suggestion whose comment is still missing is posted (AC-012.3).
   - AC-011.8: WHERE the new issue has the label `tsolve-chatbot` (created by the Chatbot), THE tracker SHALL record it and enqueue its suggestion job like any other issue (GBR-40).
-  - AC-011.9: WHERE the `worker` job runner is not enabled, THE tracker SHALL run the suggestion job in its own process instead, without retries, and still respond 202 without waiting for it.
+  - AC-011.9: WHERE neither the `worker` job runner nor web jobs are enabled, THE tracker SHALL run the suggestion job in its own process instead, without retries, and still respond 202 without waiting for it.
+  - AC-011.10: WHERE web jobs are enabled and the `worker` job runner is not, THE tracker SHALL queue the suggestion job on the Jobs database for the worker process to run, in the request's Workspace or else the single Active Workspace of the configured list, run no job itself, and still respond 202 without waiting for it.
+  - AC-011.11: IF web jobs are enabled and there is no single Workspace or the job cannot be queued, THEN THE tracker SHALL queue no job, log a warning with only the issue key and the error type, and still respond 202.
 
 ### STORY-012: Post the suggestion on the issue (KAN-131)
 - As a reporter, I want the T-Solve suggestion to appear on my new issue as a comment so that I can try it without waiting for the team (UC-36, GBR-35).
@@ -172,9 +175,11 @@ the request belongs to; **discovery** = finding that database from the request (
   2026-11-07); a later change may show them in the Issue Panel with a per-viewer access check.
 - The job runner: JobRunr, its storage, retries, not running jobs of a Suspended Workspace, the per-Workspace cap
   — `worker` KAN-102 (merged) / KAN-161; tracker enqueues through the worker's `TenantJobService` when the worker is
-  enabled, else runs the job in-process (AC-011.9).
+  enabled, queues it for the worker process from a web process with web jobs enabled (AC-011.10), else runs the job
+  in-process (AC-011.9).
 - Binding the request's Workspace: platform / discovery. Until then the tracker binds a configured dev Workspace when
-  it enqueues (design, dev and mock only).
+  it enqueues (design, dev and mock only), and a web process with web jobs enabled uses the single Active Workspace of
+  the configured list (AC-011.10; the same stand-in as the review email outbox, BUG-341).
 - Skipping issues of a deleted Department (KAN-22): the `project` module does not map the Department yet; added
   when it does.
 - AI draft Solution when an issue is Done and the "issue updated" event (was STORY-006, AC-003.2, AC-003.3).

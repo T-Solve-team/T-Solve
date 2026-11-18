@@ -2099,3 +2099,24 @@
 {"ts":"2026-11-18T03:03:39.936Z","type":"feature-status","module":"jira-app","feature":"rewrite-job-backend","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-18T03:03:40.283Z","type":"feature-status","module":"jira-app","feature":"rewrite-job-backend","from":"evaluating","to":"passing"}
 {"ts":"2026-11-18T03:03:57.938Z","type":"commit-recorded","module":"jira-app","repo":"default","sha":"305535947b3bc1991c844a198337d3f89f76858f"}
+{"ts":"2026-11-17T18:49:09.417Z","type":"spec-approved","module":"project-integration","specHash":"4f8ac3bff95caa919fe0d5ebd0a786c549856b4439aff3081fc54483d12f07e2"}
+{"ts":"2026-11-17T18:49:09.699Z","type":"spec-approved","module":"identity","specHash":"f082fa4affd873a4b898a95500449e6ac78645ede76712613a4b927e663a349b"}
+{"ts":"2026-11-17T18:49:54.105Z","type":"feature-status","module":"project-integration","feature":"jira-role-suggestions-backend","from":null,"to":"pending"}
+{"ts":"2026-11-17T18:49:54.341Z","type":"feature-status","module":"project-integration","feature":"jira-role-suggestions-ui","from":null,"to":"pending"}
+{"ts":"2026-11-17T18:49:54.576Z","type":"feature-status","module":"identity","feature":"jira-linked-account-ids","from":null,"to":"pending"}
+{"ts":"2026-11-17T18:54:25.407Z","type":"feature-status","module":"identity","feature":"jira-linked-account-ids","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T18:54:25.783Z","type":"feature-status","module":"identity","feature":"jira-linked-account-ids","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T18:54:26.294Z","type":"commit-recorded","module":"identity","repo":"default","sha":"674754748cee4b19bf11c92633f8ea166548ce67"}
+{"ts":"2026-11-17T18:54:26.526Z","type":"feature-status","module":"project-integration","feature":"jira-role-suggestions-backend","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T19:02:17.102Z","type":"feature-status","module":"project-integration","feature":"jira-role-suggestions-backend","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T19:02:17.498Z","type":"commit-recorded","module":"project-integration","repo":"default","sha":"f8d69ddbfe7a337712dcc66453de7bc9f3e10536"}
+{"ts":"2026-11-17T19:02:17.720Z","type":"feature-status","module":"project-integration","feature":"jira-role-suggestions-ui","from":"pending","to":"in-progress"}
+{"ts":"2026-11-17T19:24:53.549Z","type":"feature-status","module":"project-integration","feature":"jira-role-suggestions-ui","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-17T19:25:13.477Z","type":"commit-recorded","module":"project-integration","repo":"default","sha":"6c3211050cb1fd44ad647cace769d80be0667326"}
+{"ts":"2026-11-17T20:09:33.555Z","type":"quick-opened","what":"BUG-339: in-process suggestion job runs with no Workspace, MSG80 comment never posted on staging","files":["backend/src/main/java/vn/tsolve/tracker/controller/JiraAppEventController.java","backend/src/test/java/vn/tsolve/tracker/controller/JiraAppEventControllerTest.java","backend/src/main/java/vn/tsolve/tracker/service/impl/InProcessSuggestionJobQueue.java","backend/src/test/java/vn/tsolve/tracker/service/impl/InProcessSuggestionJobQueueTest.java","docs/bug-log.md"]}
+{"ts":"2026-11-18T04:25:58.588Z","type":"quick-closed","what":"BUG-339: in-process suggestion job runs with no Workspace, MSG80 comment never posted on staging","files":["backend/src/main/java/vn/tsolve/tracker/controller/JiraAppEventController.java","backend/src/test/java/vn/tsolve/tracker/controller/JiraAppEventControllerTest.java","backend/src/main/java/vn/tsolve/tracker/service/impl/InProcessSuggestionJobQueue.java","backend/src/test/java/vn/tsolve/tracker/service/impl/InProcessSuggestionJobQueueTest.java","docs/bug-log.md"]}
+{"ts":"2026-11-18T04:26:46.705Z","type":"spec-approved","module":"tracker","specHash":"66a60ca94d8a7e1e6ce3b68a9ea453fb4041843e75e8ebc0632aa8975ab231a6"}
+{"ts":"2026-11-18T04:27:51.613Z","type":"feature-status","module":"tracker","feature":"suggestion-web-jobs","from":null,"to":"pending"}
+{"ts":"2026-11-18T04:33:22.097Z","type":"feature-status","module":"tracker","feature":"suggestion-web-jobs","from":"pending","to":"in-progress"}
+{"ts":"2026-11-18T05:13:46.041Z","type":"commit-recorded","module":"tracker","repo":"default","sha":"92c551d28cb61c60a32d50b5dfef93c5a19b8117"}
+{"ts":"2026-11-18T05:13:46.351Z","type":"feature-status","module":"tracker","feature":"suggestion-web-jobs","from":"in-progress","to":"evaluating"}

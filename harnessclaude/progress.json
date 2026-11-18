@@ -144,15 +144,16 @@
         "my-solutions-summary-backend": "pending",
         "jira-account-link-lookup": "evaluating",
         "multi-km-per-space-backend": "passing",
-        "multi-km-per-space-frontend": "passing"
+        "multi-km-per-space-frontend": "passing",
+        "jira-linked-account-ids": "evaluating"
       },
-      "lastUpdated": "2026-11-17T16:24:25.974Z",
+      "lastUpdated": "2026-11-17T18:54:26.293Z",
       "branch": "feat/identity",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "64c47ea6055b60efab6852df1c752facd95b82f1"
+        "default": "674754748cee4b19bf11c92633f8ea166548ce67"
       }
     },
     "workspace": {
@@ -205,15 +206,17 @@
         "project-reconnect": "passing",
         "project-list": "passing",
         "jira-integration-projects-table": "passing",
-        "jira-integration-add-project": "passing"
+        "jira-integration-add-project": "passing",
+        "jira-role-suggestions-backend": "evaluating",
+        "jira-role-suggestions-ui": "evaluating"
       },
-      "lastUpdated": "2026-11-17T15:18:09.203Z",
+      "lastUpdated": "2026-11-17T19:25:13.474Z",
       "branch": "feat/KAN-128-project-integration-add-ticket-resolver",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "2cdb750e142857df28d5e567b6e25c66ea169fa9"
+        "default": "6c3211050cb1fd44ad647cace769d80be0667326"
       }
     },
     "wiki": {
@@ -556,15 +559,16 @@
         "suggestion-uuid-keys": "evaluating",
         "suggestion-comment": "passing",
         "jira-project-read": "passing",
-        "jira-gateway-bearer": "evaluating"
+        "jira-gateway-bearer": "evaluating",
+        "suggestion-web-jobs": "evaluating"
       },
-      "lastUpdated": "2026-11-16T14:29:52.260Z",
+      "lastUpdated": "2026-11-18T05:13:46.348Z",
       "branch": "feat/tracker",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "1ac3c6051b2742a4e4a4326b437cd4eccc7a95ae"
+        "default": "92c551d28cb61c60a32d50b5dfef93c5a19b8117"
       }
     },
     "ticket-review": {

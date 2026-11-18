@@ -972,3 +972,15 @@ mocks use the sole-manager rule and remove the outgoing rows; `UserStatusActions
 **PR / Jira:** same branch and Jira issue as Task 38 (one commit per feature).
 **Estimated size:** medium (8 modified files); about 15 tests
 **Verification:** Tests name the criteria above; `cd frontend && npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build`; `npm run generate:api` no diff.
+
+## Task 40: Linked account ids for Jira accounts (for the project-integration role suggestions)
+
+**Story:** STORY-001
+**Feature:** jira-linked-account-ids
+**Acceptance criteria:** AC-001.78
+**Description:** `JiraAccountLinkLookup.linkedAccountIds(Set<String> trackerAccountIds)` → `Map<String, UUID>` in the
+Workspace bound by `TenantScope`, whatever the account's status; an empty set reads nothing.
+**Files:** Modify `identity/service/JiraAccountLinkLookup.java`, `identity/service/impl/JiraAccountLinkLookupImpl.java`,
+`identity/jiralink/JiraAccountLinkRepository.java`; tests `JiraAccountLinkLookupImplTest`, `JiraAccountLinkRepositoryIT`.
+**Dependencies:** none
+**Estimated size:** small

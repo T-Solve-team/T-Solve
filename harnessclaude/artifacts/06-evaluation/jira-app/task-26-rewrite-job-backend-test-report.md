@@ -17,7 +17,7 @@ Date: 2026-11-18. Source: `backend/target/surefire-reports` from the `mvn verify
 - Traceability: `sdd.ts trace jira-app STORY-007 STORY-012` reports 15/15.
 - Not checked by the reviewer: Spotless, ITs, and the final result of the full `mvn verify`.
 
-## Re-run after the review fixes (separate rewrite pool, `JiraAppJobCompletions`, BUG-344)
+## Re-run after the review fixes (separate rewrite pool, `JiraAppJobCompletions`, BUG-345)
 
 Date: 2026-11-18, main session. Command (in `backend/`): `mvn verify -Dtest='vn.tsolve.jiraapp.**' -Dit.test=RedisWiringIT -Djacoco.skip=true`. Exit code 0.
 

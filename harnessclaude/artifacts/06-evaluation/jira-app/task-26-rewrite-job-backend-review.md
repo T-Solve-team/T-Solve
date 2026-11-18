@@ -40,7 +40,7 @@ DONE and FAILED are written with `SET XX KEEPTTL`. Completion runs on the pool, 
 - I did not run `npm run generate:api`, because it rewrites the tree. I read the generated diff against the YAML instead. `prettier --check` on the changed contract and generated files passes, and so does `npm run typecheck`.
 - The owner check leaves out projectKey, following the design. AC-007.6 names only "Jira account or site". A test confirms that a FIT from another project can read the job.
 - Starvation of the draft (issue 2) is minor because AC-002.2's fallback covers it. This is a judgment call for the user.
-- `docs/bug-log.md` has no row for the 18 s rewrite cut that this change fixes. Ask T-Solve had BUG-342 for the same cut. That file is outside the diff I reviewed. The main session should decide whether CLAUDE.md's "log every bug" requires a row.
+- `docs/bug-log.md` has no row for the 18 s rewrite cut that this change fixes. Ask T-Solve had BUG-343 for the same cut. That file is outside the diff I reviewed. The main session should decide whether CLAUDE.md's "log every bug" requires a row.
 - I did not change the feature status (dispatcher instruction).
 
 ## Test Report

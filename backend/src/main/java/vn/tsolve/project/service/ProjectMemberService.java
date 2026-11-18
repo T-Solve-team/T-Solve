@@ -3,6 +3,8 @@ package vn.tsolve.project.service;
 import java.util.List;
 import java.util.UUID;
 import vn.tsolve.project.dto.AddProjectMembersRequest;
+import vn.tsolve.project.dto.JiraProjectRoleResponse;
+import vn.tsolve.project.dto.JiraRolePeopleResponse;
 import vn.tsolve.project.dto.MemberCandidateResponse;
 import vn.tsolve.project.dto.ProjectMemberResponse;
 import vn.tsolve.project.dto.ProjectSummaryResponse;
@@ -21,4 +23,10 @@ public interface ProjectMemberService {
 
     /** Removes one {@code MEMBER}; answers the full member list after the remove. */
     List<ProjectMemberResponse> removeMember(UUID projectId, UUID userId);
+
+    /** The roles of the Project's Jira project, read as the T-Solve Jira App (STORY-011, AC-011.1). */
+    List<JiraProjectRoleResponse> jiraRoles(UUID projectId);
+
+    /** The people of a Jira project role and whether each can be added; changes nothing (AC-011.2, AC-011.3). */
+    JiraRolePeopleResponse jiraRolePeople(UUID projectId, long roleId);
 }

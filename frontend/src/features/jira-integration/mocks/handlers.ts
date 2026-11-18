@@ -10,12 +10,15 @@ import {
   type ProjectManagerRef,
   type ProjectRow,
   type TrackerStatus,
+  type JiraProjectRoleResponse,
+  type JiraRolePeopleResponse,
+  type JiraRolePersonResponse,
   type MemberCandidateResponse,
   type ProjectMemberResponse,
   type ProjectSummaryResponse,
 } from '@/shared/api';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
-import { initialMembers, PROJECTS, TICKET_RESOLVERS } from './data';
+import { initialMembers, JIRA_ROLE_PEOPLE, JIRA_ROLES, PROJECTS, TICKET_RESOLVERS } from './data';
 
 /**
  * MSW mock handlers of the "jira-integration" feature (guideline 10 §5): the Projects of screen 3.1 and the
@@ -309,6 +312,35 @@ const memberHandlers: HttpHandler[] = [
     if (!list) return notFound();
     return HttpResponse.json<ProjectMemberResponse[]>(sorted(list));
   }),
+  http.get<{ projectId: string }>('*/api/v1/projects/:projectId/jira-roles', async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    if (!members[params.projectId]) return notFound();
+    return HttpResponse.json<JiraProjectRoleResponse[]>(JIRA_ROLES);
+  }),
+  http.get<{ projectId: string; roleId: string }>(
+    '*/api/v1/projects/:projectId/jira-roles/:roleId/people',
+    async ({ params }) => {
+      await delay(MOCK_DELAY_MS);
+      const list = members[params.projectId];
+      if (!list) return notFound();
+      const role = JIRA_ROLE_PEOPLE[Number(params.roleId)];
+      if (!role) return problem(503, 'MSG06');
+      // Same status order as the backend (design KAN-367): not linked, member, not Active, not a Ticket Resolver.
+      const people = role.people.map((person): JiraRolePersonResponse => {
+        const base = { jiraAccountId: person.jiraAccountId, displayName: person.displayName };
+        if (person.userId === null) return { ...base, status: 'NOT_LINKED' };
+        if (list.some((member) => member.userId === person.userId))
+          return { ...base, status: 'ALREADY_MEMBER' };
+        const account = TICKET_RESOLVERS.find((candidate) => candidate.userId === person.userId);
+        if (!account) return { ...base, status: 'NOT_TICKET_RESOLVER' };
+        return { ...base, status: 'ADDABLE', ...account };
+      });
+      people.sort((a, b) =>
+        a.displayName.localeCompare(b.displayName, 'en', { sensitivity: 'base' }),
+      );
+      return HttpResponse.json<JiraRolePeopleResponse>({ people, groups: role.groups });
+    },
+  ),
   http.get<{ projectId: string }>(
     '*/api/v1/projects/:projectId/member-candidates',
     async ({ params, request }) => {

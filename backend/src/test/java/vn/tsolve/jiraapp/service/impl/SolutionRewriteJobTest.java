@@ -79,7 +79,7 @@ class SolutionRewriteJobTest {
     }
 
     @Test
-    void returnsBeforeAiThenPendingAndDone_AC_007_5_AC_012_7_BUG_344() {
+    void returnsBeforeAiThenPendingAndDone_AC_007_5_AC_012_7_BUG_345() {
         when(ai.rewrite(any()))
                 .thenReturn(new vn.tsolve.ai.dto.SolutionSections("Rewritten", "Cause", "Steps", "", "Scope"));
         var service = service(SolutionFormAiImpl.Mode.AI);

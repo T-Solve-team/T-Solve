@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -33,6 +34,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -43,6 +45,7 @@ import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.WithTSolveUser;
 import vn.tsolve.identity.TwoTenantDatabases;
 import vn.tsolve.identity.signin.port.TenantScope;
+import vn.tsolve.project.repository.ProjectMemberRepository;
 
 @SpringBootTest(
         properties = {
@@ -555,6 +558,23 @@ class ProjectMembersIT {
         for (String role : roles) {
             db.update("INSERT INTO user_role(user_id,role,assigned_at) VALUES (?,?,now())", id, role);
         }
+    }
+
+    @Test
+    void readsWhatTheFromJiraTabNeedsOfEachAccount_AC_011_2() {
+        var repository = new ProjectMemberRepository(new NamedParameterJdbcTemplate(db));
+        UUID unknown = new UUID(128, 499);
+
+        var states = repository.memberStates(PROJECT, Set.of(ALICE, DAVE, INACTIVE, EMPLOYEE, unknown));
+
+        assertThat(states).containsOnlyKeys(ALICE, DAVE, INACTIVE, EMPLOYEE);
+        assertThat(states.get(ALICE).member()).isTrue();
+        assertThat(states.get(DAVE))
+                .extracting("active", "ticketResolver", "member", "email")
+                .containsExactly(true, true, false, "dave" + FIXTURE);
+        assertThat(states.get(INACTIVE).active()).isFalse();
+        assertThat(states.get(EMPLOYEE).ticketResolver()).isFalse();
+        assertThat(repository.memberStates(PROJECT, Set.of())).isEmpty();
     }
 
     private void membership(UUID account, UUID project, String role) {

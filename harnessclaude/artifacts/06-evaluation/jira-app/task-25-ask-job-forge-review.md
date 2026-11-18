@@ -28,7 +28,7 @@ iteration: 2
 
 ## Issues
 1. `jira-app/TSolve_JiraApp/src/frontend/api/tsolveClient.js:122-131` — Low — A GET 4xx other than 404 keeps the server's code. For example, a 401 or 403 body carrying MSG08 or MSG124 would switch the page to "not connected" in the middle of polling. AC-010.8 says that any failed call of AC-010.3 shows MSG06. Fix: map every GET failure except an abort to MSG06, and keep the POST mapping as it is. This is a judgment call (see Assumptions).
-2. `docs/bug-log.md:357` — Low — BUG-342 "Fixed in" holds the branch name. Other rows hold the PR (`#284`). Fix: put the PR number there when the PR is opened.
+2. `docs/bug-log.md:357` — Low — BUG-343 "Fixed in" holds the branch name. Other rows hold the PR (`#284`). Fix: put the PR number there when the PR is opened.
 3. Task 25 / `jira-app/AGENTS.md` rule 6 — Info — The dev-site check has not been done: a question the chatbot answers in 30–50 s should show the answer. The bug-log row says so too. Run it before the commit or the PR.
 
 ### Reuse for Task 27 (advisory)

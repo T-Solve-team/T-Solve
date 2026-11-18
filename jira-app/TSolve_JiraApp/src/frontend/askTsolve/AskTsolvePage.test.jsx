@@ -128,7 +128,7 @@ describe('AskTsolvePage', () => {
     );
   });
 
-  it('AC-010.3 AC-010.15 shows the answer from a pending job and rates its answerId (BUG-342)', async () => {
+  it('AC-010.3 AC-010.15 shows the answer from a pending job and rates its answerId (BUG-343)', async () => {
     await renderLinked();
     jest.useFakeTimers();
     askQuestion.mockImplementationOnce(jest.requireActual('../api/tsolveClient').askQuestion);

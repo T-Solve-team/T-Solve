@@ -34,7 +34,7 @@ The Ask polling now lives in one shared helper, `pollJob` (`tsolveClient.js:130`
 
 ## Issues
 1. `jira-app/TSolve_JiraApp/src/frontend/form/SolutionFormModal.jsx:211` — Low — The Rewrite with AI button now stays enabled while a rewrite runs, because it shares `busy && !rewriteController.current` with Close. Before, it was disabled. Each extra click aborts the poll, but the backend cannot cancel its job. So repeated clicks start several AI jobs, use up job capacity and can hit 503 MSG68 (AC-007.8). Fix: keep `isDisabled={busy}` on Rewrite, leave Close as it is, and keep the abort-previous code in `rewrite()` to cover the late Forge re-render (BUG-237). This is a judgment call; the spec says nothing on it.
-2. `docs/bug-log.md` — Low — No row exists for "Rewrite with AI shows MSG68 when the AI rewrite takes more than 18 s". The Ask case was logged as BUG-342. The project rule is "log every bug". Fix: add a row (KAN-294) that names the AC-007.4 tests, or record it in the Task 26 bug row if that one covers it.
+2. `docs/bug-log.md` — Low — No row exists for "Rewrite with AI shows MSG68 when the AI rewrite takes more than 18 s". The Ask case was logged as BUG-343. The project rule is "log every bug". Fix: add a row (KAN-294) that names the AC-007.4 tests, or record it in the Task 26 bug row if that one covers it.
 3. Task 27 / `jira-app/AGENTS.md` rule 6 — Info — The dev-site check has not been done: a rewrite that takes 30–50 s should show the preview. Run it in `forge tunnel` before the commit or the PR.
 
 ## Assumptions made

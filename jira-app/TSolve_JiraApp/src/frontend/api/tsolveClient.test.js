@@ -67,7 +67,7 @@ describe('tsolveClient', () => {
     await expect(askNow('VPN fails')).resolves.toEqual(ANSWER);
   });
 
-  it('AC-010.3 polls every 1.5 seconds until DONE and trims history to 10 (BUG-342)', async () => {
+  it('AC-010.3 polls every 1.5 seconds until DONE and trims history to 10 (BUG-343)', async () => {
     jest.useFakeTimers();
     const times = [];
     const started = Date.now();
