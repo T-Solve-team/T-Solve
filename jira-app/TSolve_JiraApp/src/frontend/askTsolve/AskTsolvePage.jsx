@@ -34,8 +34,12 @@ const CREATE = 'Not solved, create ticket';
 const SOLVED_TEXT = 'Your problem is solved. Thank you!';
 
 const FIELD_CODES = ['MSG01', 'MSG02'];
-// The outcomes the backend lets a user rate (chatbot AC-003.1).
+// The outcomes the backend lets a user rate (chatbot AC-003.1); also the only outcomes that show the
+// "Solved" / "Not solved, create ticket" buttons (AC-010.19).
 const RATEABLE = ['ANSWERED', 'NO_SOURCE'];
+// What the page shows for an answer other than ANSWERED (AC-010.7, AC-010.19), as the web chatbot.
+// An outcome not listed here (one the backend may add later) shows MSG06.
+const ANSWER_MESSAGES = { NO_SOURCE: 'MSG109', GREETING: 'MSG_NEW_5', OFF_TOPIC: 'MSG_NEW_6', INJECTION: 'MSG_NEW_7' };
 
 // The eligibility status → what the page shows (AC-010.2, AC-010.14).
 const ACCESS = { CONNECTED: 'connected', SITE_NOT_CONNECTED: 'site', PROJECT_NOT_CONNECTED: 'project' };
@@ -215,7 +219,7 @@ export function AskTsolvePage() {
           <Stack space="space.200">
             {conversation.turns.map((turn, index) => (
               <Turn key={index} turn={turn}>
-                {answered && index === lastIndex && (
+                {answered && index === lastIndex && RATEABLE.includes(turn.answer.outcome) && (
                   <Inline space="space.100" shouldWrap>
                     <Button iconBefore="check-mark" onClick={solve}>
                       {SOLVED}
@@ -304,7 +308,7 @@ function Turn({ turn, children }) {
       <Stack space="space.150">
         <Question text={question} />
         <Answer>
-          <Text>{message('MSG109')}</Text>
+          <Text>{message(ANSWER_MESSAGES[answer.outcome] ?? 'MSG06')}</Text>
           {children}
         </Answer>
       </Stack>

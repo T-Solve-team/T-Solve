@@ -12,6 +12,12 @@ describe('messages', () => {
     );
   });
 
+  it('AC-010.19 has the web chatbot texts for a greeting, an off-topic question and an injection', () => {
+    expect(message('MSG_NEW_5')).toBe("Hi! Ask me about your team's Solutions or Wiki.");
+    expect(message('MSG_NEW_6')).toBe("I can only answer questions about your team's knowledge.");
+    expect(message('MSG_NEW_7')).toBe("I can't change how I work. Ask a question about your team's knowledge.");
+  });
+
   it('AC-010.8 shows MSG06 for a failure', () => {
     expect(message('MSG06')).toBe('Something went wrong. Please try again later.');
   });
