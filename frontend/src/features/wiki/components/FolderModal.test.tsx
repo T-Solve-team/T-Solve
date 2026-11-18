@@ -40,6 +40,16 @@ beforeEach(() => {
   );
 });
 
+/** Folder actions live in the per-folder "⋯" menu (AC-002.21). */
+async function clickFolderAction(
+  user: ReturnType<typeof userEvent.setup>,
+  name: string,
+  action: string,
+) {
+  await user.click(screen.getByRole('button', { name: `Actions for ${name}` }));
+  await user.click(await screen.findByRole('menuitem', { name: action }));
+}
+
 async function openFolder(action = 'New folder', name = 'Guides') {
   const user = userEvent.setup();
   const view = renderApp(`${paths.wikiHome}?space=${SPACE}`, { role: 'KNOWLEDGE_MANAGER' });
@@ -47,9 +57,8 @@ async function openFolder(action = 'New folder', name = 'Guides') {
   if (action === 'New folder') {
     await user.click(screen.getByRole('button', { name: action }));
   } else {
-    const row = within(tree).getByText(name).closest('[role="treeitem"]');
-    if (!(row instanceof HTMLElement)) throw new Error('Folder row missing');
-    await user.click(within(row).getByRole('button', { name: `${action} ${name}` }));
+    expect(within(tree).getByText(name)).toBeInTheDocument();
+    await clickFolderAction(user, name, action);
   }
   const dialog = await screen.findByRole('dialog', { name: 'Folder' });
   return { ...view, user, dialog, name: within(dialog).getByRole('textbox', { name: 'Name' }) };
@@ -182,16 +191,9 @@ describe('FolderModal', () => {
         name: action === 'Rename' ? 'Connections' : 'Network',
         parentId: action === 'Move' ? null : ROOT,
       });
-      const row = await within(screen.getByRole('tree', { name: 'Folders' })).findByText(
-        action === 'Rename' ? 'Connections' : 'Network',
-      );
-      const item = row.closest('[role="treeitem"]');
-      if (!(item instanceof HTMLElement)) throw new Error('Folder row missing');
-      await user.click(
-        within(item).getByRole('button', {
-          name: `Move ${action === 'Rename' ? 'Connections' : 'Network'}`,
-        }),
-      );
+      const renamed = action === 'Rename' ? 'Connections' : 'Network';
+      await within(screen.getByRole('tree', { name: 'Folders' })).findByText(renamed);
+      await clickFolderAction(user, renamed, 'Move');
       const reopened = await screen.findByRole('dialog', { name: 'Folder' });
       expect(within(reopened).getByRole('textbox', { name: 'Name' })).toHaveValue(
         action === 'Rename' ? 'Connections' : 'Network',
@@ -260,9 +262,8 @@ describe('FolderModal', () => {
     server.use(http.delete('*/api/v1/wiki/folders/:folderId', submitted));
     renderApp(`${paths.wikiHome}?space=${SPACE}`, { role: 'KNOWLEDGE_MANAGER' });
     const tree = await screen.findByRole('tree', { name: 'Folders' }, { timeout: 5000 });
-    const row = within(tree).getByText('Guides').closest('[role="treeitem"]');
-    if (!(row instanceof HTMLElement)) throw new Error('Folder row missing');
-    await user.click(within(row).getByRole('button', { name: 'Delete Guides' }));
+    expect(within(tree).getByText('Guides')).toBeInTheDocument();
+    await clickFolderAction(user, 'Guides', 'Delete');
     const dialog = await screen.findByRole('dialog', { name: 'Delete' });
     expect(within(dialog).getByText('Guides')).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
@@ -312,10 +313,8 @@ describe('FolderModal', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     async function openAction(label: string, action: string) {
       const tree = screen.getByRole('tree', { name: 'Folders' });
-      const text = await within(tree).findByText(label);
-      const row = text.closest('[role="treeitem"]');
-      if (!(row instanceof HTMLElement)) throw new Error('Folder row missing');
-      await user.click(within(row).getByRole('button', { name: `${action} ${label}` }));
+      await within(tree).findByText(label);
+      await clickFolderAction(user, label, action);
       return screen.findByRole('dialog', { name: action === 'Delete' ? 'Delete' : 'Folder' });
     }
     const rename = await openAction('Operations', 'Rename');
