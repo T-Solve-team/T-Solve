@@ -6,7 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import vn.tsolve.tracker.dto.SuggestionJobRequest;
@@ -15,12 +15,14 @@ import vn.tsolve.tracker.service.SuggestionJobQueue;
 import vn.tsolve.tracker.service.SuggestionJobService;
 
 /**
- * Runs the suggestion job in this process while the worker is not enabled (AC-011.9): no retry, and queued jobs are
+ * Runs the suggestion job in this process while neither the worker nor web jobs are enabled (AC-011.9): no retry,
+ * no Workspace bound (so no MSG80 comment, BUG-342), and queued jobs are
  * lost on restart. Jobs run on a small pool owned by this class — not a Spring bean, so Boot's application executor
  * is left alone.
  */
 @Service
-@ConditionalOnProperty(prefix = "tsolve.worker", name = "enabled", havingValue = "false", matchIfMissing = true)
+@ConditionalOnExpression(
+        "'${tsolve.worker.enabled:false}' != 'true' and '${tsolve.worker.web-jobs-enabled:false}' != 'true'")
 public class InProcessSuggestionJobQueue implements SuggestionJobQueue, DisposableBean {
 
     private static final Logger log = LoggerFactory.getLogger(InProcessSuggestionJobQueue.class);
