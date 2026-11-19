@@ -41,13 +41,13 @@
         "publish-preview-row": "evaluating",
         "apply-and-publish-popup": "evaluating"
       },
-      "lastUpdated": "2026-11-19T03:55:48.480Z",
+      "lastUpdated": "2026-11-19T08:19:20.455Z",
       "branch": "feat/import-ticket-list",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "fc506beaa49a3a35ffa4a759fc6c79513b54f935"
+        "default": "720ef9d22a5ea3a54ce8d2f50575ad569ad41ea8"
       }
     },
     "be-foundation": {

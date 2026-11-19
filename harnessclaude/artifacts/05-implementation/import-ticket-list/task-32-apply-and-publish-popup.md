@@ -21,3 +21,12 @@
 
 ### Next up
 evaluate import-ticket-list STORY-017
+
+## Session 2026-11-19 — fixing, attempt 2 (review attempt 1: fail)
+- BUG-349: `onPublished(rowNo)` — the page drops the published row from the selection.
+- The row is marked Valid once its Solution is saved (`onSuccess` after fill-solution), so MSG36 counts it even if publishing is then rejected.
+- The clicked button spins: Apply & publish for both requests, with Apply disabled meanwhile.
+- Tests added: BUG-349 selection, double click (one save and one publish), publish 404 (MSG04, popup kept), a Jira issue published while the others stay.
+- Kept: the button in the popup body — a footer slot needs a `shared/ui/FormModal` change and the FE Lead's review.
+- Verify: `src/features/ticket-import` 142/142; `format:check`, `typecheck`, `build` OK; lint 1 existing warning; full `npm run test` 1989/1990 (known flaky `AddMemberModal`); `generate:api` no diff.
+- Commit: default@720ef9d2

@@ -24,3 +24,10 @@ apply-and-publish-popup (Task 32)
 ## Session 2026-11-19 (re-verify with Docker)
 - `mvn -B -Dapi.version=1.44 verify` at af61fd61: surefire 3138 run, 0 failures, 0 errors; failsafe 945 run, 0 failures, 1 error — `EmailOutboxIT.concurrentClaims` TimeoutException (also alone), the known BUG-298 / BUG-346 (open, worker, local Windows only; no worker code changed here).
 - Import ITs pass: ImportConfirmIT 12/12, JiraFinishIT 4/4, ImportHistoryControllerIT 13/13, ImportDraftRepositoryIT 6/6.
+
+## Session 2026-11-19 — fixing, attempt 2 (review attempt 1: fail)
+- A save failure during publish answers `ImportFailedException(500)` (MSG33) with no Failed batch; a non-unique `DataIntegrityViolationException` too; coded rejections pass through.
+- Tests added: `uniqueViolationOnSaveIsATakenTicketId_AC_017_5`, `savingFailureAnswersMsg33WithoutAFailedBatch_AC_017_5`; `ImportControllerTest` 200 and 403 cases; `ImportConfirmIT` publish-then-confirm on the database (row deleted, counts, event after commit) and publish waiting on a running Confirm (404).
+- Controller summary now names Jira.
+- Verify: `mvn test -Dtest='vn.tsolve.ticket.**.*Test'` 417/417; `spotless:check` OK; `ImportConfirmIT` 14/14, `ImportControllerTest` 24/24.
+- Commit: default@4e2b56cd
