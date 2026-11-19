@@ -362,4 +362,23 @@ describe('Import Preview of a Jira pull', () => {
       expect(within(dialog).queryByRole('textbox')).not.toBeInTheDocument();
     });
   });
+
+  it('AC-017.8 AC-017.9 publishes one issue at once with Apply & publish; the others stay', async () => {
+    const posts = recordPosts();
+    const { user } = await openPreview();
+    const dialog = await openRow(user, 2);
+    writeSolution(dialog);
+
+    await user.click(within(dialog).getByRole('button', { name: 'Apply & publish' }));
+
+    expect(await screen.findByText(msg('MSG32', { created: 1, skipped: 0 }))).toBeInTheDocument();
+    expect(posts).toEqual([
+      '/api/v1/imports/previews/1/fill-solution',
+      '/api/v1/imports/previews/1/rows/2/publish',
+    ]);
+    const table = screen.getByRole('table', { name: 'Import rows' });
+    await waitFor(() => expect(within(table).queryByText('ITSUP-1002')).not.toBeInTheDocument());
+    expect(within(table).getByText('ITSUP-1001')).toBeInTheDocument();
+    expect(statCard('Needs Solution')).toHaveTextContent('2');
+  });
 });

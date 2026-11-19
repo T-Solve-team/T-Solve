@@ -23,7 +23,10 @@ type SolutionFormModalProps = {
   /** Fill solution opens empty sections for these selected rows (AC-015.5). */
   rowNumbers?: number[];
   replaceCount?: number;
+  /** After the Solution is saved, also when Apply & publish then publishes the row. */
   onSuccess?: () => void;
+  /** After Apply & publish: the row has left the preview (BUG-349). */
+  onPublished?: (rowNo: number) => void;
   /** After the popup has shown the rejection, e.g. for the page to leave a preview that is gone (design Edge 10). */
   onError?: (error: ApiError) => void;
   onClose: () => void;
@@ -39,6 +42,7 @@ export function SolutionFormModal({
   rowNumbers = [],
   replaceCount = 0,
   onSuccess,
+  onPublished,
   onError,
   onClose,
 }: SolutionFormModalProps) {
@@ -46,6 +50,8 @@ export function SolutionFormModal({
   const fill = useFillPreviewSolution(previewId);
   const publish = usePublishPreviewRow(previewId);
   const isBusy = fill.isPending || publish.isPending;
+  // The clicked button spins: Apply, or Apply & publish for both of its requests.
+  const [isPublishing, setIsPublishing] = useState(false);
   // A double click reaches the handler twice before `isPending` renders: one request only.
   const isSending = useRef(false);
   const [pendingValues, setPendingValues] = useState<SolutionValues | null>(null);
@@ -84,25 +90,31 @@ export function SolutionFormModal({
       .then((values) => {
         if (isSending.current) return;
         isSending.current = true;
+        setIsPublishing(true);
+        const finish = () => {
+          isSending.current = false;
+          setIsPublishing(false);
+        };
         fill.mutate(
           { previewId, data: { ...values, rowNumbers: [row] } },
           {
-            onSuccess: () =>
+            onSuccess: () => {
+              // Saved: the row is Valid even if publishing is then rejected.
+              onSuccess?.();
               publish.mutate(
                 { previewId, rowNo: row },
                 {
-                  onSettled: () => {
-                    isSending.current = false;
-                  },
+                  onSettled: finish,
                   onSuccess: () => {
-                    onSuccess?.();
+                    onPublished?.(row);
                     onClose();
                   },
                   onError: showError,
                 },
-              ),
+              );
+            },
             onError: (error) => {
-              isSending.current = false;
+              finish();
               showError(error);
             },
           },
@@ -126,7 +138,8 @@ export function SolutionFormModal({
         width={720}
         form={form}
         okText="Apply"
-        isSubmitting={isBusy}
+        isSubmitting={isBusy && !isPublishing}
+        isOkDisabled={isPublishing}
         onSubmit={handleSubmit}
         onCancel={() => {
           if (!isSending.current) onClose();
@@ -137,8 +150,8 @@ export function SolutionFormModal({
             <RowFields previewId={previewId} rowNo={rowNo} />
             <Flex justify="end">
               <Button
-                loading={publish.isPending}
-                disabled={isBusy}
+                loading={isPublishing}
+                disabled={isBusy && !isPublishing}
                 onClick={() => saveAndPublish(rowNo)}
               >
                 Apply &amp; publish

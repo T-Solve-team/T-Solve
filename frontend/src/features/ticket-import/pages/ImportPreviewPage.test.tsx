@@ -852,6 +852,66 @@ describe('ImportPreviewPage', () => {
       );
     });
 
+    it('AC-017.9 drops a published row from the selection, so Fill solution sends only the rows left (BUG-349)', async () => {
+      const saved = recordFills();
+      const { user } = await openPreview();
+      await user.click(screen.getByLabelText('Select row 1'));
+      await user.click(screen.getByLabelText('Select row 7'));
+      await user.click(within(rowOf(1)).getByRole('button', { name: 'Preview' }));
+      const popup = await screen.findByRole('dialog', { name: 'Import Ticket Preview' });
+      await within(popup).findByText('ITSUP-0871');
+      writeSolution(popup);
+      await user.click(within(popup).getByRole('button', { name: 'Apply & publish' }));
+      await screen.findByText(msg('MSG32', { created: 1, skipped: 0 }));
+      await waitFor(() => expect(statCard('Needs Solution')).toHaveTextContent('19'));
+
+      await user.click(screen.getByRole('button', { name: 'Fill solution' }));
+      // jsdom keeps the closing popup in the DOM: wait for the Fill solution popup next to it.
+      const dialog = await waitFor(() => {
+        const found = screen
+          .getAllByRole('dialog', { name: 'Import Ticket Preview' })
+          .find((element) => element !== popup);
+        if (!found) throw new Error('no Fill solution popup yet');
+        return found;
+      });
+      writeSolution(dialog);
+      await user.click(within(dialog).getByRole('button', { name: 'Apply' }));
+
+      await waitFor(() => expect(saved).toHaveBeenCalledTimes(2));
+      expect(saved).toHaveBeenLastCalledWith(expect.objectContaining({ rowNumbers: [7] }));
+      expect(screen.queryByText(msg('MSG04'))).not.toBeInTheDocument();
+    });
+
+    it('AC-017.8 sends one save and one publish on a double click', async () => {
+      const posts: string[] = [];
+      server.events.on('request:start', ({ request }) => {
+        if (request.method === 'POST') posts.push(new URL(request.url).pathname);
+      });
+      const { user, dialog } = await openSolutionPopup(1);
+      writeSolution(dialog);
+
+      await user.dblClick(within(dialog).getByRole('button', { name: 'Apply & publish' }));
+
+      await screen.findByText(msg('MSG32', { created: 1, skipped: 0 }));
+      expect(posts).toEqual([
+        '/api/v1/imports/previews/1/fill-solution',
+        '/api/v1/imports/previews/1/rows/1/publish',
+      ]);
+    });
+
+    it('AC-017.10 shows MSG04 when the row is gone and keeps the popup open', async () => {
+      server.use(
+        http.post('*/api/v1/imports/previews/1/rows/1/publish', () => problem(404, 'MSG04')),
+      );
+      const { user, dialog } = await openSolutionPopup(1);
+      writeSolution(dialog);
+
+      await user.click(within(dialog).getByRole('button', { name: 'Apply & publish' }));
+
+      expect(await screen.findByText(msg('MSG04'))).toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: 'Import Ticket Preview' })).toBeInTheDocument();
+    });
+
     it('AC-017.10 shows a rejected Solution at its field and publishes nothing', async () => {
       let published = false;
       server.use(
