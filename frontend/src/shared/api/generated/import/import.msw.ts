@@ -639,6 +639,43 @@ export const getConfirmImportResponseMock = (
   ...overrideResponse,
 });
 
+export const getPublishImportPreviewRowResponseMessageRefMock = (
+  overrideResponse: Partial<MessageRef> = {},
+): MessageRef => ({
+  ...{
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    params: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        faker.number.float({ fractionDigits: 2 }),
+      ]),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getPublishImportPreviewRowResponseMock = (
+  overrideResponse: Partial<Extract<ImportResultResponse, object>> = {},
+): ImportResultResponse => ({
+  importBatchId: faker.number.int(),
+  created: faker.number.int(),
+  skipped: faker.number.int(),
+  message: {
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    params: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        faker.number.float({ fractionDigits: 2 }),
+      ]),
+    },
+  },
+  notice: faker.helpers.arrayElement([
+    { ...getPublishImportPreviewRowResponseMessageRefMock() },
+    null,
+  ]),
+  ...overrideResponse,
+});
+
 export const getPullJiraImportResponseMessageRefMock = (
   overrideResponse: Partial<MessageRef> = {},
 ): MessageRef => ({
@@ -1104,6 +1141,30 @@ export const getConfirmImportMockHandler = (
   );
 };
 
+export const getPublishImportPreviewRowMockHandler = (
+  overrideResponse?:
+    | ImportResultResponse
+    | ((
+        info: Parameters<HttpResponseResolver<{ previewId: string; rowNo: string }>>[0],
+      ) => Promise<ImportResultResponse> | ImportResultResponse),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<{ previewId: string; rowNo: string }>(
+    '*/api/v1/imports/previews/:previewId/rows/:rowNo/publish',
+    async (info: Parameters<HttpResponseResolver<{ previewId: string; rowNo: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getPublishImportPreviewRowResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getPullJiraImportMockHandler = (
   overrideResponse?:
     | ImportPreviewResponse
@@ -1299,6 +1360,7 @@ export const getImportMock = () => [
   getRemoveImportPreviewRowsMockHandler(),
   getFillImportPreviewSolutionMockHandler(),
   getConfirmImportMockHandler(),
+  getPublishImportPreviewRowMockHandler(),
   getPullJiraImportMockHandler(),
   getSaveImportDraftMockHandler(),
   getListImportDraftsMockHandler(),

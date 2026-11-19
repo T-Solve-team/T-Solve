@@ -16,6 +16,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import vn.tsolve.common.audit.AuditAction;
 import vn.tsolve.common.audit.AuditService;
+import vn.tsolve.common.exception.BusinessRuleException;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.ticket.csv.CsvRowValidator;
 import vn.tsolve.ticket.dto.ImportResultResponse;
@@ -163,6 +164,77 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
                         : new MessageRef(
                                 "MSG38",
                                 Map.of("count", skippedKeys.size(), "issue_keys", String.join(", ", skippedKeys))));
+    }
+
+    @Override
+    public ImportResultResponse publishRow(String user, long previewId, int rowNo) {
+        ImportPreview preview = previews.findByIdAndOwner(previewId, user)
+                .filter(p -> p.getSource() != TicketSource.MANUAL)
+                .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
+        // the same order as Confirm: MSG40 first, then 403 (AC-017.6)
+        if (!projects.isActive(preview.getProjectId())) {
+            throw new ProjectNotActiveException();
+        }
+        if (!projects.managesActive(user, preview.getProjectId())) {
+            throw new ProjectAccessDeniedException();
+        }
+        Imported imported;
+        try {
+            imported = transaction.execute(status -> publishOne(user, previewId, rowNo));
+        } catch (DataIntegrityViolationException e) {
+            // a Ticket with this ID was saved after the check: taken, as AC-017.5 says
+            if (UNIQUE_VIOLATION.equals(sqlState(e))) {
+                throw new ImportFailedException(HttpStatus.CONFLICT);
+            }
+            throw e;
+        }
+        return new ImportResultResponse(
+                imported.batchId(),
+                imported.created(),
+                imported.skipped(),
+                new MessageRef("MSG32", Map.of("created", imported.created(), "skipped", imported.skipped())),
+                null);
+    }
+
+    /** One row in a Completed batch of its own; the preview and its other rows stay (AC-017.1, AC-017.2). */
+    private Imported publishOne(String user, long previewId, int rowNo) {
+        // the lock Confirm takes, so a Confirm and a publish never both import the row
+        ImportPreview preview = previews.lockByIdAndOwner(previewId, user)
+                .orElseThrow(() -> new NotFoundException("Import preview " + previewId));
+        ImportPreviewRow row = previewRows
+                .findById(new ImportPreviewRow.Id(previewId, rowNo))
+                .orElseThrow(() -> new NotFoundException("A row of import preview " + previewId));
+        if (preview.getImportType() != ImportType.WITHOUT_SOLUTION || row.getStatus() != PreviewRowStatus.VALID) {
+            throw new BusinessRuleException("MSG06", Map.of());
+        }
+        // a taken Ticket ID records no Failed batch: nothing else was attempted (AC-017.5, D21)
+        if (!tickets.findExistingTicketIds(
+                        List.of(CsvRowValidator.trim(row.getValues().ticketId())))
+                .isEmpty()) {
+            throw new ImportFailedException(HttpStatus.CONFLICT);
+        }
+        ImportBatch batch = batches.save(ImportBatch.completed(
+                preview.getProjectId(),
+                user,
+                preview.getSource(),
+                preview.getFileName(),
+                preview.getResolvedFrom(),
+                preview.getResolvedTo(),
+                1,
+                0,
+                0));
+        UUID ticketId = tickets.saveAll(List.of(toTicket(row, preview, batch.getId())))
+                .get(0)
+                .getId();
+        decisions.saveAll(List.of(TicketDecision.approvedByImport(ticketId, user)));
+        previewRows.delete(row);
+        events.publishEvent(new TicketsPublishedEvent(List.of(ticketId)));
+        audit.record(
+                AuditAction.IMPORT,
+                "PROJECT",
+                preview.getProjectId(),
+                Map.of("importBatchId", batch.getId(), "created", 1, "skipped", 0));
+        return new Imported(batch.getId(), 1, 0, List.of());
     }
 
     /**

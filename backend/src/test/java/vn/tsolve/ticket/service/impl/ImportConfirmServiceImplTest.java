@@ -36,6 +36,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.SimpleTransactionStatus;
+import vn.tsolve.common.exception.BusinessRuleException;
 import vn.tsolve.common.exception.MessageCodeException;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.ticket.dto.ImportResultResponse;
@@ -476,5 +477,169 @@ class ImportConfirmServiceImplTest {
 
         assertThatThrownBy(() -> service.confirm(PM, PREVIEW)).isInstanceOf(NotFoundException.class);
         verify(recorder, never()).recordFailed(any(), any(), anyString());
+    }
+
+    // STORY-017: publish one row of a preview of a file without Solutions (KAN-373)
+
+    private static final int ROW = 5;
+
+    private ImportPreviewRow publishable;
+
+    /** A preview of a file without Solutions with one row whose Solution is written. */
+    private ImportPreview withoutSolutions(TicketSource source) {
+        ImportPreview preview =
+                new ImportPreview(PM, PROJECT, source, ImportType.WITHOUT_SOLUTION, "no-solution.csv", Instant.EPOCH);
+        ReflectionTestUtils.setField(preview, "id", PREVIEW);
+        when(previews.findByIdAndOwner(PREVIEW, PM)).thenReturn(Optional.of(preview));
+        when(previews.lockByIdAndOwner(PREVIEW, PM)).thenReturn(Optional.of(preview));
+        publishable = new ImportPreviewRow(
+                PREVIEW,
+                ROW,
+                new ImportPreviewRow.Values(
+                        " T-5 ", " Printer jam ", "Paper", " Binh ", "2026-10-02", null, null, null, null, null),
+                List.of(),
+                ImportType.WITHOUT_SOLUTION);
+        publishable.fillSolution("Jam", "Roller", "Clean roller", null, "Floor 2");
+        when(rows.findById(new ImportPreviewRow.Id(PREVIEW, ROW))).thenReturn(Optional.of(publishable));
+        return preview;
+    }
+
+    @Test
+    void publishesTheRowAsATicketInABatchOfItsOwn_AC_017_1() {
+        withoutSolutions(TicketSource.CSV);
+
+        ImportResultResponse result = service.publishRow(PM, PREVIEW, ROW);
+
+        Ticket ticket = savedTickets().get(0);
+        assertThat(savedTickets()).hasSize(1);
+        assertThat(ticket.getTicketId()).isEqualTo("T-5");
+        assertThat(ticket.getStatus()).isEqualTo(TicketStatus.PUBLISHED);
+        assertThat(ticket.getWriter()).isEqualTo("Binh");
+        assertThat(ticket.getSolution())
+                .isEqualTo(new Ticket.Solution("Jam", "Roller", "Clean roller", null, "Floor 2"));
+        assertThat(ticket.getImportBatchId()).isEqualTo(7L);
+        ArgumentCaptor<ImportBatch> batch = ArgumentCaptor.forClass(ImportBatch.class);
+        verify(batches).save(batch.capture());
+        assertThat(batch.getValue().getStatus()).isEqualTo(ImportBatchStatus.COMPLETED);
+        assertThat(batch.getValue().getSource()).isEqualTo(TicketSource.CSV);
+        assertThat(batch.getValue().getPublishedCount()).isEqualTo(1);
+        assertThat(batch.getValue().getErrorCount()).isZero();
+        assertThat(batch.getValue().getRemovedCount()).isZero();
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<TicketDecision>> decision = ArgumentCaptor.forClass(List.class);
+        verify(decisions).saveAll(decision.capture());
+        assertThat(decision.getValue())
+                .singleElement()
+                .matches(d -> d.getTicketId().equals(ticket.getId())
+                        && d.getReviewer().equals(PM));
+        verify(rows).delete(publishable);
+        assertThat(result.created()).isEqualTo(1);
+        assertThat(result.skipped()).isZero();
+        assertThat(result.message()).isEqualTo(new MessageRef("MSG32", Map.of("created", 1, "skipped", 0L)));
+        assertThat(transactions).containsExactly("commit");
+    }
+
+    @Test
+    void publishesARowOfAJiraPreviewWithItsSource_AC_017_1() {
+        withoutSolutions(TicketSource.JIRA_IMPORT);
+
+        service.publishRow(PM, PREVIEW, ROW);
+
+        assertThat(savedTickets().get(0).getSource()).isEqualTo(TicketSource.JIRA_IMPORT);
+    }
+
+    @Test
+    void keepsThePreviewAndItsOtherRows_AC_017_2() {
+        withoutSolutions(TicketSource.CSV);
+
+        service.publishRow(PM, PREVIEW, ROW);
+
+        verify(previews, never()).deleteById(any());
+        verify(rows, never()).deleteAll(any());
+    }
+
+    @Test
+    void publishesTheTicketsPublishedEvent_AC_017_3() {
+        withoutSolutions(TicketSource.CSV);
+
+        service.publishRow(PM, PREVIEW, ROW);
+
+        verify(events).publishEvent(new TicketsPublishedEvent(List.of(new UUID(0, 101))));
+    }
+
+    @Test
+    void rejectsAPreviewOfAFileWithSolutions_AC_017_4() {
+        when(rows.findById(new ImportPreviewRow.Id(PREVIEW, 1))).thenReturn(Optional.of(row(1, "T-1", null, null)));
+
+        assertThatThrownBy(() -> service.publishRow(PM, PREVIEW, 1))
+                .isInstanceOf(BusinessRuleException.class)
+                .extracting("code")
+                .isEqualTo("MSG06");
+        verify(tickets, never()).saveAll(anyCollection());
+        verify(batches, never()).save(any());
+    }
+
+    @Test
+    void rejectsARowThatIsNotValid_AC_017_4() {
+        withoutSolutions(TicketSource.CSV);
+        publishable.remove();
+
+        assertThatThrownBy(() -> service.publishRow(PM, PREVIEW, ROW))
+                .isInstanceOf(BusinessRuleException.class)
+                .extracting("code")
+                .isEqualTo("MSG06");
+        verify(tickets, never()).saveAll(anyCollection());
+        verify(batches, never()).save(any());
+    }
+
+    @Test
+    void rejectsATakenTicketIdWithoutAFailedBatch_AC_017_5() {
+        withoutSolutions(TicketSource.CSV);
+        when(tickets.findExistingTicketIds(anyCollection())).thenReturn(Set.of("T-5"));
+
+        MessageCodeException e =
+                catchThrowableOfType(() -> service.publishRow(PM, PREVIEW, ROW), MessageCodeException.class);
+
+        assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(e.getCode()).isEqualTo("MSG33");
+        verify(batches, never()).save(any());
+        verify(recorder, never()).recordFailed(any(), any(), anyString());
+        verify(rows, never()).delete(any());
+    }
+
+    @Test
+    void rejectsWhenTheProjectIsNoLongerActive_AC_017_6() {
+        withoutSolutions(TicketSource.CSV);
+        when(projects.isActive(PROJECT)).thenReturn(false);
+
+        MessageCodeException e =
+                catchThrowableOfType(() -> service.publishRow(PM, PREVIEW, ROW), MessageCodeException.class);
+
+        assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(e.getCode()).isEqualTo("MSG40");
+        verify(batches, never()).save(any());
+    }
+
+    @Test
+    void rejectsACallerWhoNoLongerManagesTheProject_AC_017_6() {
+        withoutSolutions(TicketSource.CSV);
+        when(projects.managesActive(PM, PROJECT)).thenReturn(false);
+
+        MessageCodeException e =
+                catchThrowableOfType(() -> service.publishRow(PM, PREVIEW, ROW), MessageCodeException.class);
+
+        assertThat(e.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(e.getCode()).isEqualTo("MSG08");
+        verify(batches, never()).save(any());
+    }
+
+    @Test
+    void rejectsAnotherUsersPreviewOrAMissingRow_AC_017_7() {
+        withoutSolutions(TicketSource.CSV);
+
+        assertThatThrownBy(() -> service.publishRow("other@company.vn", PREVIEW, ROW))
+                .isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> service.publishRow(PM, PREVIEW, 99)).isInstanceOf(NotFoundException.class);
+        verify(tickets, never()).saveAll(anyCollection());
     }
 }
