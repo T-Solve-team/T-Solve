@@ -151,7 +151,8 @@ public class ImportController {
     @PostMapping("/previews/{previewId}/rows/{rowNo}/publish")
     @Operation(
             operationId = "publishImportPreviewRow",
-            summary = "Publishes one Valid row of a preview of a file without Solutions at once.")
+            summary =
+                    "Publishes one Valid row of a file without Solutions or of a Jira preview at once, in an Import Batch of its own.")
     @ApiResponse(responseCode = "403")
     @ApiResponse(responseCode = "404")
     @ApiResponse(responseCode = "409")

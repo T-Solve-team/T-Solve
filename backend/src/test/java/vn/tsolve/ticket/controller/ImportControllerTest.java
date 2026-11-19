@@ -100,6 +100,28 @@ class ImportControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
+    void publishRowReturnsTheImportResult_AC_017_1() throws Exception {
+        when(confirms.publishRow("pm@company.vn", 42L, 5))
+                .thenReturn(new ImportResultResponse(
+                        8L, 1, 0L, new MessageRef("MSG32", Map.of("created", 1, "skipped", 0L)), null));
+
+        mvc.perform(post("/api/v1/imports/previews/42/rows/5/publish").with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.importBatchId").value(8))
+                .andExpect(jsonPath("$.message.code").value("MSG32"))
+                .andExpect(jsonPath("$.message.params.created").value(1));
+    }
+
+    @Test
+    @WithMockUser(username = "staff@company.vn", roles = "STAFF")
+    void publishRowNeedsProjectManagerRole_AC_017_6() throws Exception {
+        mvc.perform(post("/api/v1/imports/previews/42/rows/5/publish").with(csrf()))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(confirms);
+    }
+
+    @Test
     @WithMockUser(username = "staff@company.vn", roles = "STAFF")
     void confirmNeedsProjectManagerRole_AC_001_10() throws Exception {
         mvc.perform(post("/api/v1/imports/previews/42/confirm").with(csrf())).andExpect(status().isForbidden());

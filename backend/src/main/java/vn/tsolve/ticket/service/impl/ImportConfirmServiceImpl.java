@@ -17,6 +17,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import vn.tsolve.common.audit.AuditAction;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.BusinessRuleException;
+import vn.tsolve.common.exception.CodedException;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.ticket.csv.CsvRowValidator;
 import vn.tsolve.ticket.dto.ImportResultResponse;
@@ -181,12 +182,22 @@ public class ImportConfirmServiceImpl implements ImportConfirmService {
         Imported imported;
         try {
             imported = transaction.execute(status -> publishOne(user, previewId, rowNo));
-        } catch (DataIntegrityViolationException e) {
-            // a Ticket with this ID was saved after the check: taken, as AC-017.5 says
-            if (UNIQUE_VIOLATION.equals(sqlState(e))) {
-                throw new ImportFailedException(HttpStatus.CONFLICT);
-            }
+        } catch (CodedException e) {
+            // rejected before anything was saved: 404, MSG06 or MSG33 (AC-017.4, AC-017.5, AC-017.7)
             throw e;
+        } catch (DataIntegrityViolationException e) {
+            // a unique violation: a Ticket with this ID was saved after the check (AC-017.5)
+            boolean taken = UNIQUE_VIOLATION.equals(sqlState(e));
+            log.warn("Publish of row {} of preview {} failed (SQLState {})", rowNo, previewId, sqlState(e));
+            throw new ImportFailedException(taken ? HttpStatus.CONFLICT : HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (RuntimeException e) {
+            // nothing was published; no Failed batch, as for a taken Ticket ID (D21)
+            log.warn(
+                    "Publish of row {} of preview {} failed: {}",
+                    rowNo,
+                    previewId,
+                    e.getClass().getSimpleName());
+            throw new ImportFailedException(HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return new ImportResultResponse(
                 imported.batchId(),

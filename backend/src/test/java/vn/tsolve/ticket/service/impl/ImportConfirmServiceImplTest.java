@@ -642,4 +642,34 @@ class ImportConfirmServiceImplTest {
         assertThatThrownBy(() -> service.publishRow(PM, PREVIEW, 99)).isInstanceOf(NotFoundException.class);
         verify(tickets, never()).saveAll(anyCollection());
     }
+
+    @Test
+    void uniqueViolationOnSaveIsATakenTicketId_AC_017_5() {
+        withoutSolutions(TicketSource.CSV);
+        when(tickets.saveAll(anyCollection()))
+                .thenThrow(new DataIntegrityViolationException(
+                        "uq_ticket_ticket_id", new SQLException("duplicate key value", "23505")));
+
+        MessageCodeException e =
+                catchThrowableOfType(() -> service.publishRow(PM, PREVIEW, ROW), MessageCodeException.class);
+
+        assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(e.getCode()).isEqualTo("MSG33");
+        assertThat(transactions).containsExactly("rollback");
+        verify(recorder, never()).recordFailed(any(), any(), anyString());
+    }
+
+    @Test
+    void savingFailureAnswersMsg33WithoutAFailedBatch_AC_017_5() {
+        withoutSolutions(TicketSource.CSV);
+        when(tickets.saveAll(anyCollection())).thenThrow(new QueryTimeoutException("slow"));
+
+        MessageCodeException e =
+                catchThrowableOfType(() -> service.publishRow(PM, PREVIEW, ROW), MessageCodeException.class);
+
+        assertThat(e.getStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(e.getCode()).isEqualTo("MSG33");
+        assertThat(transactions).containsExactly("rollback");
+        verify(recorder, never()).recordFailed(any(), any(), anyString());
+    }
 }
