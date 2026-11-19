@@ -39,15 +39,15 @@
         "row-solution-popup": "passing",
         "fill-solution-screen": "passing",
         "publish-preview-row": "evaluating",
-        "apply-and-publish-popup": "pending"
+        "apply-and-publish-popup": "evaluating"
       },
-      "lastUpdated": "2026-11-19T03:54:42.619Z",
+      "lastUpdated": "2026-11-19T03:55:48.480Z",
       "branch": "feat/import-ticket-list",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "80cece71598d797ce0189de9ffa11d27cccf034a"
+        "default": "fc506beaa49a3a35ffa4a759fc6c79513b54f935"
       }
     },
     "be-foundation": {
