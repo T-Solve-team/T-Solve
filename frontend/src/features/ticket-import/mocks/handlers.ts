@@ -426,6 +426,26 @@ export const handlers: HttpHandler[] = [
     return HttpResponse.json<ImportPreviewResponse>(previewResponse(next));
   }),
 
+  // Like the backend (AC-017.1, AC-017.4): one Valid row in a batch of its own; the row leaves the preview.
+  http.post('*/api/v1/imports/previews/:previewId/rows/:rowNo/publish', async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    const found = findPreview(params.previewId);
+    const target = found?.rows.find((row) => String(row.rowNo) === params.rowNo);
+    if (!found || !target) return problem(404, 'MSG04');
+    if (found.importType !== 'WITHOUT_SOLUTION' || target.status !== 'VALID') {
+      return problem(409, 'MSG06');
+    }
+    if (found.fileName?.includes('inactive-project')) return problem(409, 'MSG40');
+    savePreview({ ...found, rows: found.rows.filter((row) => row !== target) });
+    lastBatchId += 1;
+    return HttpResponse.json<ImportResultResponse>({
+      importBatchId: lastBatchId,
+      created: 1,
+      skipped: 0,
+      message: { code: 'MSG32', params: { created: 1, skipped: 0 } },
+    });
+  }),
+
   // Save as draft of a Jira preview (AC-004.1, AC-004.7): no validation; a CSV preview has no Draft (404).
   http.post('*/api/v1/imports/previews/:previewId/draft', async ({ params }) => {
     await delay(MOCK_DELAY_MS);

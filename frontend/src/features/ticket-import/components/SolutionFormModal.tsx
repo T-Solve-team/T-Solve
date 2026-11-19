@@ -1,5 +1,5 @@
-/** 5.3 Import Ticket Preview with the Solution to write — spec STORY-015 (a file without Solutions). */
-import { Descriptions, Flex, Form, Input } from 'antd';
+/** 5.3 Import Ticket Preview with the Solution to write — spec STORY-015, STORY-017 (a file without Solutions). */
+import { Button, Descriptions, Flex, Form, Input } from 'antd';
 import { useRef, useState } from 'react';
 import {
   useGetImportPreviewRow,
@@ -10,7 +10,7 @@ import {
 import { applyApiErrors, rules } from '@/shared/forms';
 import { showMessage } from '@/shared/messages';
 import { ConfirmDialog, ErrorState, FormField, FormModal, LoadingState } from '@/shared/ui';
-import { useFillPreviewSolution } from '../hooks/useImportPreview';
+import { useFillPreviewSolution, usePublishPreviewRow } from '../hooks/useImportPreview';
 import { SECTIONS } from '../lib/import-row';
 import { jiraSnapshotItems } from './jira-snapshot';
 
@@ -44,6 +44,8 @@ export function SolutionFormModal({
 }: SolutionFormModalProps) {
   const [form] = Form.useForm<SolutionValues>();
   const fill = useFillPreviewSolution(previewId);
+  const publish = usePublishPreviewRow(previewId);
+  const isBusy = fill.isPending || publish.isPending;
   // A double click reaches the handler twice before `isPending` renders: one request only.
   const isSending = useRef(false);
   const [pendingValues, setPendingValues] = useState<SolutionValues | null>(null);
@@ -62,14 +64,52 @@ export function SolutionFormModal({
           onSuccess?.();
           onClose();
         },
-        onError: (error) => {
-          // The global MSG07 dialog is the one message for a 401 (guideline 06 §6).
-          if (error.status === 401) return;
-          if (!applyApiErrors(form, error)) showMessage(error.code, error.params);
-          onError?.(error);
-        },
+        onError: showError,
       },
     );
+  }
+
+  function showError(error: ApiError) {
+    // The global MSG07 dialog is the one message for a 401 (guideline 06 §6).
+    if (error.status === 401) return;
+    if (!applyApiErrors(form, error)) showMessage(error.code, error.params);
+    onError?.(error);
+  }
+
+  /** Apply & publish (AC-017.8): saves the Solution of this row, then publishes it; a rejection keeps the form. */
+  function saveAndPublish(row: number) {
+    if (isSending.current) return;
+    form
+      .validateFields()
+      .then((values) => {
+        if (isSending.current) return;
+        isSending.current = true;
+        fill.mutate(
+          { previewId, data: { ...values, rowNumbers: [row] } },
+          {
+            onSuccess: () =>
+              publish.mutate(
+                { previewId, rowNo: row },
+                {
+                  onSettled: () => {
+                    isSending.current = false;
+                  },
+                  onSuccess: () => {
+                    onSuccess?.();
+                    onClose();
+                  },
+                  onError: showError,
+                },
+              ),
+            onError: (error) => {
+              isSending.current = false;
+              showError(error);
+            },
+          },
+        );
+      })
+      // The form shows its own field errors.
+      .catch(() => undefined);
   }
 
   function handleSubmit(values: SolutionValues) {
@@ -86,13 +126,28 @@ export function SolutionFormModal({
         width={720}
         form={form}
         okText="Apply"
-        isSubmitting={fill.isPending}
+        isSubmitting={isBusy}
         onSubmit={handleSubmit}
         onCancel={() => {
           if (!isSending.current) onClose();
         }}
       >
-        {rowNo !== null ? <RowFields previewId={previewId} rowNo={rowNo} /> : <SolutionFields />}
+        {rowNo !== null ? (
+          <Flex vertical gap="middle">
+            <RowFields previewId={previewId} rowNo={rowNo} />
+            <Flex justify="end">
+              <Button
+                loading={publish.isPending}
+                disabled={isBusy}
+                onClick={() => saveAndPublish(rowNo)}
+              >
+                Apply &amp; publish
+              </Button>
+            </Flex>
+          </Flex>
+        ) : (
+          <SolutionFields />
+        )}
       </FormModal>
       <ConfirmDialog
         isOpen={pendingValues !== null}

@@ -7,6 +7,7 @@ import {
   useConfirmImport,
   useFillImportPreviewSolution,
   useGetImportPreviewRows,
+  usePublishImportPreviewRow,
   useRemoveImportPreviewRows,
   useSaveImportDraft,
 } from '@/shared/api';
@@ -53,6 +54,26 @@ export function useFillPreviewSolution(previewId: number) {
             }),
           ),
         ]),
+    },
+  });
+}
+
+/**
+ * Apply & publish (AC-017.9): MSG32, then the Summary and every page of rows are read again — the row has left the
+ * preview. The popup handles its own errors and keeps what was written (AC-017.10).
+ */
+export function usePublishPreviewRow(previewId: number) {
+  const queryClient = useQueryClient();
+  return usePublishImportPreviewRow({
+    mutation: {
+      meta: { handlesOwnErrors: true },
+      onSuccess: ({ created, skipped }) => {
+        showMessage('MSG32', { created, skipped });
+        return Promise.all([
+          queryClient.invalidateQueries({ queryKey: getGetImportPreviewQueryKey(previewId) }),
+          queryClient.invalidateQueries({ queryKey: getGetImportPreviewRowsQueryKey(previewId) }),
+        ]);
+      },
     },
   });
 }

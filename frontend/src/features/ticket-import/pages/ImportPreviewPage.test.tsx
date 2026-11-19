@@ -808,5 +808,72 @@ describe('ImportPreviewPage', () => {
       expect(within(dialog).queryByRole('button', { name: 'Apply' })).toBeNull();
       expect(within(dialog).queryByRole('textbox')).toBeNull();
     });
+
+    it('AC-017.8 shows Apply & publish next to Apply for a Needs Solution row', async () => {
+      const { dialog } = await openSolutionPopup(1);
+
+      expect(within(dialog).getByRole('button', { name: 'Apply & publish' })).toBeEnabled();
+    });
+
+    it('AC-017.8 AC-017.9 saves the Solution, publishes the row, shows MSG32 and refreshes the preview', async () => {
+      const calls: string[] = [];
+      server.events.on('request:start', ({ request }) => {
+        if (request.method === 'POST') calls.push(new URL(request.url).pathname);
+      });
+      const { user, dialog } = await openSolutionPopup(1);
+      writeSolution(dialog);
+
+      await user.click(within(dialog).getByRole('button', { name: 'Apply & publish' }));
+
+      expect(await screen.findByText(msg('MSG32', { created: 1, skipped: 0 }))).toBeInTheDocument();
+      expect(calls).toEqual([
+        '/api/v1/imports/previews/1/fill-solution',
+        '/api/v1/imports/previews/1/rows/1/publish',
+      ]);
+      await waitFor(() => expect(dialog).toHaveClass('ant-zoom-leave'));
+      await waitFor(() => expect(statCard('Needs Solution')).toHaveTextContent('19'));
+      expect(statCard('Valid')).toHaveTextContent('0');
+      server.events.removeAllListeners();
+    });
+
+    it('AC-017.10 shows the publish rejection and keeps the popup open with what was written', async () => {
+      server.use(
+        http.post('*/api/v1/imports/previews/1/rows/1/publish', () => problem(409, 'MSG40')),
+      );
+      const { user, dialog } = await openSolutionPopup(1);
+      writeSolution(dialog);
+
+      await user.click(within(dialog).getByRole('button', { name: 'Apply & publish' }));
+
+      expect(await screen.findByText(msg('MSG40'))).toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: 'Import Ticket Preview' })).toBeInTheDocument();
+      expect(within(dialog).getByRole('textbox', { name: 'Symptoms' })).toHaveValue(
+        'Outlook asks for the password',
+      );
+    });
+
+    it('AC-017.10 shows a rejected Solution at its field and publishes nothing', async () => {
+      let published = false;
+      server.use(
+        http.post('*/api/v1/imports/previews/1/fill-solution', () =>
+          problem(400, 'MSG01', {
+            fieldErrors: [{ field: 'scope', code: 'MSG01', params: { field_name: 'Scope' } }],
+          }),
+        ),
+        http.post('*/api/v1/imports/previews/1/rows/1/publish', () => {
+          published = true;
+          return problem(500, 'MSG33');
+        }),
+      );
+      const { user, dialog } = await openSolutionPopup(1);
+      writeSolution(dialog);
+
+      await user.click(within(dialog).getByRole('button', { name: 'Apply & publish' }));
+
+      expect(
+        await within(dialog).findByText(msg('MSG01', { field_name: 'Scope' })),
+      ).toBeInTheDocument();
+      expect(published).toBe(false);
+    });
   });
 });
