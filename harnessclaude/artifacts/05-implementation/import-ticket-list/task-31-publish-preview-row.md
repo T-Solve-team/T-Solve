@@ -20,3 +20,7 @@
 
 ### Next up
 apply-and-publish-popup (Task 32)
+
+## Session 2026-11-19 (re-verify with Docker)
+- `mvn -B -Dapi.version=1.44 verify` at af61fd61: surefire 3138 run, 0 failures, 0 errors; failsafe 945 run, 0 failures, 1 error — `EmailOutboxIT.concurrentClaims` TimeoutException (also alone), the known BUG-298 / BUG-346 (open, worker, local Windows only; no worker code changed here).
+- Import ITs pass: ImportConfirmIT 12/12, JiraFinishIT 4/4, ImportHistoryControllerIT 13/13, ImportDraftRepositoryIT 6/6.
