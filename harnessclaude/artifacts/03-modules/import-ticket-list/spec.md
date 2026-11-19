@@ -26,6 +26,7 @@ The web app screens (STORY-008..010) follow the SRS v3460 screen layouts III.5.1
 | 2026-11-05 | STORY-012..016 | New import type: a file of tickets without a Solution, whose Solutions the Project Manager writes on the Import Preview (D15–D20); new row result Needs Solution; AC-002.1, AC-002.2, AC-003.3, AC-005.1 and AC-010.1 limited to the file type they apply to; Out of Scope updated; `MSG_NEW_4` | The user wants to choose between importing tickets that have a Solution and tickets that do not (user decision 2026-11-05) |
 | 2026-11-07 | STORY-008 | AC-008.1 and D13: the Jira tab works and the Drafts list is shown, as `ticket-repository` STORY-001 and STORY-004 say; only Manual entry stays disabled; Out of Scope updated | KAN-45 (`ticket-repository`) builds the Jira tab and the Drafts list on this screen; its evaluation found AC-008.1 contradicting the code (user decision 2026-11-07) |
 | 2026-11-14 | STORY-008 | AC-008.1 and D13: the Manual entry tab is enabled and behaves as `ticket-repository` STORY-006 says | KAN-133 (`ticket-repository`) builds manual entry on this screen; AC-008.1 still said "Manual entry disabled" |
+| 2026-11-19 | STORY-017 | New STORY-017: Apply & publish publishes one Valid row of a preview of a file without Solutions or of a Jira preview at once, in an Import Batch of its own (D21); new endpoint `POST /imports/previews/{previewId}/rows/{rowNo}/publish` | KAN-373: the Project Manager wants a ticket published as soon as its Solution is written (user decision 2026-11-19) |
 
 ## Decisions taken while planning (2026-10-21, with the user)
 | # | Question | Decision |
@@ -57,6 +58,7 @@ The web app screens (STORY-008..010) follow the SRS v3460 screen layouts III.5.1
 | D17 | Confirm while rows are not ready | Blocked, as Finish in UC-20: Confirm needs every row of the preview to be Valid or Removed. A row with an error cannot get a Solution, so the Project Manager removes it. |
 | D18 | Columns of a file without a Solution | Required: `ticket_id, title`. Optional: `description, author, resolved_date`. Solution columns in such a file are ignored, like other columns outside its template (AC-001.8). |
 | D19 | Row result | New result Needs Solution: the row passes every other rule and has no complete Solution yet. It is not an Error, so it does not count in MSG30. |
+| D21 | Publish one row before the rest (KAN-373, 2026-11-19) | Apply & publish in the popup of one row: saves the Solution, then publishes that row in an Import Batch of its own (1 published). The row leaves the preview; the other rows are confirmed or finished as before. Only one row at a time, not Fill solution of several rows. A taken Ticket ID rejects the request and records no Failed batch, since nothing was attempted for the other rows. |
 | D20 | Message for the blocked Confirm | New `MSG_NEW_4` until System_Messages numbers it, like `MSG_NEW_3` (D14). A Fill solution request that cannot apply returns MSG06: the screen never sends one. |
 
 ## Requirements
@@ -237,6 +239,20 @@ The web app screens (STORY-008..010) follow the SRS v3460 screen layouts III.5.1
 - Acceptance:
   - AC-016.1: WHILE a preview is of a file with Solutions, THE system SHALL keep its rows read-only and SHALL let Confirm skip Error rows, as STORY-002 to STORY-004 say.
 
+### STORY-017: Publish one row as soon as its Solution is written (KAN-373)
+- As a Project Manager, I want to publish a ticket right after I write its Solution so that it reaches the knowledge base without waiting for the rest of the preview.
+- Acceptance:
+  - AC-017.1: WHEN the Project Manager publishes a Valid row of a preview of a file without Solutions or of a Jira preview, THE system SHALL, in one transaction, save the row as a Ticket as AC-004.1 says (for a Jira preview: as `ticket-repository` AC-003.1 says), record an approve decision by the caller for it, record one Import Batch of the preview's source with status Completed, 1 published, 0 skipped and 0 removed, link the Ticket to it, delete the row from the preview, and return MSG32 with created 1 and skipped 0.
+  - AC-017.2: WHEN a row is published, THE system SHALL keep the preview, its other rows and their Solutions, and SHALL leave a Draft a Draft.
+  - AC-017.3: WHEN a row is published, THE system SHALL publish a "tickets published" event with the UUID key of the new Ticket after the transaction commits.
+  - AC-017.4: IF the preview is a file with Solutions, or the row is not Valid, THEN THE system SHALL reject the request with HTTP 409 (MSG06), publish nothing and record no Import Batch.
+  - AC-017.5: IF the row's Ticket ID has become an existing Ticket since the preview was created, THEN THE system SHALL reject the request with HTTP 409 (MSG33), publish nothing, record no Import Batch and keep the row.
+  - AC-017.6: IF the preview's Project is no longer Active, THEN THE system SHALL reject the request with HTTP 409 (MSG40); IF the Project is Active but the caller no longer manages it, THEN THE system SHALL reject it with HTTP 403 (MSG08). In both cases it SHALL publish nothing and record no Import Batch.
+  - AC-017.7: IF the preview belongs to another user or no longer exists, or the row does not exist in it, THEN THE system SHALL reject the request with HTTP 404 and publish nothing.
+  - AC-017.8: WHEN the popup opens for a Needs Solution or Valid row of a preview of a file without Solutions or of a Jira preview, THE web app SHALL show Apply & publish next to Apply; WHEN Apply & publish is clicked, it SHALL save the Solution as AC-015.2 says and then publish the row.
+  - AC-017.9: WHEN Apply & publish succeeds, THE web app SHALL show MSG32, close the popup, and refresh the Summary and the rows.
+  - AC-017.10: IF saving the Solution or publishing the row is rejected, THEN THE web app SHALL show the message the backend returned and keep the popup open with what was written.
+
 ## Out of Scope
 - Save as Draft / reopen / delete Draft on the Import Preview (GBR-26, UC-21 step 7b) — feature "Import Drafts". Until then, preview cleanup (STORY-006) treats every preview as non-Draft.
 - Import History screen (UC-23) — this spec only records the Import Batch.
@@ -264,6 +280,7 @@ All under `/api/v1`, role Project Manager, errors as RFC 9457 `ProblemDetail` wi
 | `POST /imports/previews/{previewId}/remove-rows` | `{ rowNumbers: [] }` | `ImportPreviewResponse` |
 | `POST /imports/previews/{previewId}/fill-solution` | `{ rowNumbers: [], symptoms, rootCause, resolutionSteps, workaround?, scope }` | `ImportPreviewResponse` (STORY-013; one row or several) |
 | `POST /imports/previews/{previewId}/confirm` | — | `ImportResultResponse` (importBatchId, created, skipped, message MSG32) |
+| `POST /imports/previews/{previewId}/rows/{rowNo}/publish` | — | `ImportResultResponse` (created 1, skipped 0, message MSG32) (STORY-017) |
 | Event `TicketsPublishedEvent` | in-process, after commit | `{ ticketIds: [] }` |
 
 Rejections: MSG27, MSG29, MSG04 → 400 · MSG28 → 413 · no PM role or Project not managed → 403 (MSG08) · preview or row not found, or the preview already confirmed → 404 (MSG04) · no Valid row left → 409 (MSG30) · rows not ready on a file without Solutions → 409 (`MSG_NEW_4`) · Fill solution that cannot apply → 409 (MSG06) · MSG40 → 409 · MSG33 because a Ticket ID was taken → 409, because saving failed → 500. Only the two MSG33 cases record a Failed Import Batch.

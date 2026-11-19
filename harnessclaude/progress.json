@@ -5,8 +5,8 @@
   "status": "active",
   "modules": {
     "import-ticket-list": {
-      "status": "completed",
-      "currentPhase": "evaluate",
+      "status": "implementing",
+      "currentPhase": "implement",
       "features": {
         "csv-import-contract": "passing",
         "csv-import-schema": "passing",
@@ -37,15 +37,17 @@
         "import-type-confirm": "passing",
         "import-type-form": "passing",
         "row-solution-popup": "passing",
-        "fill-solution-screen": "passing"
+        "fill-solution-screen": "passing",
+        "publish-preview-row": "evaluating",
+        "apply-and-publish-popup": "pending"
       },
-      "lastUpdated": "2026-11-07T08:33:00.846Z",
+      "lastUpdated": "2026-11-19T03:54:42.619Z",
       "branch": "feat/import-ticket-list",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "d3df9400e6587689b5b58b312c66a99f8d4b406a"
+        "default": "80cece71598d797ce0189de9ffa11d27cccf034a"
       }
     },
     "be-foundation": {

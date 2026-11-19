@@ -477,3 +477,31 @@ Design: master design, section "Change 2026-11-01". `F` = `frontend/src/features
 **Files:** Ticket entity and repository, import decision entity, confirm service and published event, tenant changelog, and import and migration tests.
 **Dependencies:** Approved Import and Review specs.
 **Verification:** AC-004.10 and AC-004.13, the existing import regression suite and the Review storage migration test.
+
+---
+
+## Change 2026-11-19 — Apply & publish one row (STORY-017, D21, KAN-373)
+
+## Task 31: Publish one preview row
+
+**Story:** STORY-017
+**Feature:** publish-preview-row
+**Description:** Contract first: `POST /imports/previews/{previewId}/rows/{rowNo}/publish` (operationId `publishImportPreviewRow`, no body, `ImportResultResponse`; 403, 404, 409). `ImportConfirmService.publishRow(user, previewId, rowNo)` in `ImportConfirmServiceImpl`: the same Project checks as Confirm (MSG40, then 403); under the preview lock, a `WITHOUT_SOLUTION` preview and a Valid row or MSG06; a taken Ticket ID → 409 MSG33 with no batch; then one Completed Import Batch (1, 0, 0), the Ticket, the approve decision, delete the row, the IMPORT audit event and `TicketsPublishedEvent`. The preview stays.
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `backend/src/main/java/vn/tsolve/ticket/controller/ImportController.java`, `backend/src/main/java/vn/tsolve/ticket/service/ImportConfirmService.java`, `backend/src/main/java/vn/tsolve/ticket/service/impl/ImportConfirmServiceImpl.java`, `backend/src/main/java/vn/tsolve/ticket/repository/ImportPreviewRowRepository.java` (if a finder is missing)
+- Test: `backend/src/test/java/vn/tsolve/ticket/service/impl/ImportConfirmServiceImplTest.java` (AC-017.1 to AC-017.7), `backend/src/test/java/vn/tsolve/ticket/controller/ImportControllerTest.java`
+**Dependencies:** —
+**Estimated size:** medium
+
+---
+
+## Task 32: Apply & publish in the popup
+
+**Story:** STORY-017
+**Feature:** apply-and-publish-popup
+**Description:** `npm run generate:api`. `usePublishPreviewRow` in `useImportPreview.ts` refreshes the Summary and every page of rows. `SolutionFormModal` shows Apply & publish beside Apply only for the popup of one row: it runs fill-solution for that row, then publish; on success shows MSG32 and closes; on a rejection shows the backend message and keeps the form. Mock handler for publish.
+**Files:**
+- Modify: `frontend/src/features/ticket-import/components/SolutionFormModal.tsx`, `frontend/src/features/ticket-import/hooks/useImportPreview.ts`, `frontend/src/features/ticket-import/mocks/handlers.ts`, `frontend/src/shared/api/generated/**`
+- Test: `frontend/src/features/ticket-import/pages/ImportPreviewPage.test.tsx` (AC-017.8 to AC-017.10)
+**Dependencies:** Task 31
+**Estimated size:** small

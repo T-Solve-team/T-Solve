@@ -2178,3 +2178,11 @@
 {"ts":"2026-11-18T10:51:46.183Z","type":"feature-status","module":"wiki","feature":"wiki-home-explorer","from":"pending","to":"in-progress"}
 {"ts":"2026-11-18T10:52:02.926Z","type":"feature-status","module":"wiki","feature":"wiki-home-explorer","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-18T10:24:11.805Z","type":"spec-approved","module":"chatbot","specHash":"ddff8da5c8e3e1f0d097065b9cee98f0d94614440dc80baf75aeedaa0d844b10"}
+{"ts":"2026-11-19T03:28:12.629Z","type":"spec-approved","module":"import-ticket-list","specHash":"3ecb20ecca3158384edc5faad0c847bf9c74c7053f42087b6779756c8cd2c35a"}
+{"ts":"2026-11-19T03:28:16.975Z","type":"module-status","module":"import-ticket-list","from":"completed","to":"planned"}
+{"ts":"2026-11-19T03:28:17.229Z","type":"feature-status","module":"import-ticket-list","feature":"publish-preview-row","from":null,"to":"pending"}
+{"ts":"2026-11-19T03:28:17.487Z","type":"feature-status","module":"import-ticket-list","feature":"apply-and-publish-popup","from":null,"to":"pending"}
+{"ts":"2026-11-19T03:28:23.778Z","type":"module-status","module":"import-ticket-list","from":"planned","to":"implementing"}
+{"ts":"2026-11-19T03:28:24.358Z","type":"feature-status","module":"import-ticket-list","feature":"publish-preview-row","from":"pending","to":"in-progress"}
+{"ts":"2026-11-19T03:54:42.288Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"80cece71598d797ce0189de9ffa11d27cccf034a"}
+{"ts":"2026-11-19T03:54:42.621Z","type":"feature-status","module":"import-ticket-list","feature":"publish-preview-row","from":"in-progress","to":"evaluating"}
