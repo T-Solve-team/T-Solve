@@ -2,7 +2,11 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { delay, http } from 'msw';
 import { server } from '@/mocks/server';
-import { fillImportPreviewSolution, type FillSolutionRequest } from '@/shared/api';
+import {
+  fillImportPreviewSolution,
+  publishImportPreviewRow,
+  type FillSolutionRequest,
+} from '@/shared/api';
 import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
@@ -880,6 +884,25 @@ describe('ImportPreviewPage', () => {
       await waitFor(() => expect(saved).toHaveBeenCalledTimes(2));
       expect(saved).toHaveBeenLastCalledWith(expect.objectContaining({ rowNumbers: [7] }));
       expect(screen.queryByText(msg('MSG04'))).not.toBeInTheDocument();
+    });
+
+    it('AC-017.9 opens the page before when publishing empties the last page (BUG-352)', async () => {
+      // 21 rows left: page 2 holds row 21 only.
+      await fillImportPreviewSolution(1, { ...solution, rowNumbers: [22, 23, 24, 25] });
+      for (const rowNo of [22, 23, 24, 25]) await publishImportPreviewRow(1, rowNo);
+      const { user } = await openPreview();
+      await user.click(screen.getByRole('listitem', { name: '2' }));
+      await screen.findByLabelText('Select row 21');
+      await user.click(within(rowOf(21)).getByRole('button', { name: 'Preview' }));
+      const dialog = await screen.findByRole('dialog', { name: 'Import Ticket Preview' });
+      await within(dialog).findByText('ITSUP-0921');
+      writeSolution(dialog);
+
+      await user.click(within(dialog).getByRole('button', { name: 'Apply & publish' }));
+
+      expect(await screen.findByLabelText('Select row 1')).toBeInTheDocument();
+      expect(screen.getByLabelText('Select row 20')).toBeInTheDocument();
+      expect(screen.queryByLabelText('Select row 21')).not.toBeInTheDocument();
     });
 
     it('AC-017.8 sends one save and one publish on a double click', async () => {
