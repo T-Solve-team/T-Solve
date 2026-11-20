@@ -432,10 +432,11 @@ export const handlers: HttpHandler[] = [
     const found = findPreview(params.previewId);
     const target = found?.rows.find((row) => String(row.rowNo) === params.rowNo);
     if (!found || !target) return problem(404, 'MSG04');
+    // The backend checks the Project (AC-017.6) before the row (MSG06).
+    if (found.fileName?.includes('inactive-project')) return problem(409, 'MSG40');
     if (found.importType !== 'WITHOUT_SOLUTION' || target.status !== 'VALID') {
       return problem(409, 'MSG06');
     }
-    if (found.fileName?.includes('inactive-project')) return problem(409, 'MSG40');
     savePreview({ ...found, rows: found.rows.filter((row) => row !== target) });
     lastBatchId += 1;
     return HttpResponse.json<ImportResultResponse>({

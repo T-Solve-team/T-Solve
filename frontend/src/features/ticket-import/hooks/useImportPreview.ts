@@ -59,21 +59,28 @@ export function useFillPreviewSolution(previewId: number) {
 }
 
 /**
- * Apply & publish (AC-017.9): MSG32, then the Summary and every page of rows are read again — the row has left the
- * preview. The popup handles its own errors and keeps what was written (AC-017.10).
+ * Apply & publish (AC-017.9): MSG32, then the Summary, every page of rows and the Drafts list (its row count) are
+ * read again — the row has left the preview (BUG-351). The popup handles its own errors and keeps what was written
+ * (AC-017.10). A 404 also reads the preview again: only a preview that is gone makes a Jira page leave (BUG-350).
  */
 export function usePublishPreviewRow(previewId: number) {
   const queryClient = useQueryClient();
+  const refresh = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: getGetImportPreviewQueryKey(previewId) }),
+      queryClient.invalidateQueries({ queryKey: getGetImportPreviewRowsQueryKey(previewId) }),
+    ]);
   return usePublishImportPreviewRow({
     mutation: {
       meta: { handlesOwnErrors: true },
       onSuccess: ({ created, skipped }) => {
         showMessage('MSG32', { created, skipped });
         return Promise.all([
-          queryClient.invalidateQueries({ queryKey: getGetImportPreviewQueryKey(previewId) }),
-          queryClient.invalidateQueries({ queryKey: getGetImportPreviewRowsQueryKey(previewId) }),
+          refresh(),
+          queryClient.invalidateQueries({ queryKey: getListImportDraftsQueryKey() }),
         ]);
       },
+      onError: (error) => (error.status === 404 ? refresh() : undefined),
     },
   });
 }

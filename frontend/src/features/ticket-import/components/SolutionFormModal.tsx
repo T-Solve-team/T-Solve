@@ -70,16 +70,16 @@ export function SolutionFormModal({
           onSuccess?.();
           onClose();
         },
-        onError: showError,
+        onError: (error) => showError(error),
       },
     );
   }
 
-  function showError(error: ApiError) {
+  function showError(error: ApiError, isAboutPreview = true) {
     // The global MSG07 dialog is the one message for a 401 (guideline 06 §6).
     if (error.status === 401) return;
     if (!applyApiErrors(form, error)) showMessage(error.code, error.params);
-    onError?.(error);
+    if (isAboutPreview) onError?.(error);
   }
 
   /** Apply & publish (AC-017.8): saves the Solution of this row, then publishes it; a rejection keeps the form. */
@@ -109,7 +109,9 @@ export function SolutionFormModal({
                     onPublished?.(row);
                     onClose();
                   },
-                  onError: showError,
+                  // A 404 here may mean only the row is gone (AC-017.7): the hook reads the preview again, and
+                  // the page leaves only if the preview itself is gone (BUG-350).
+                  onError: (error) => showError(error, false),
                 },
               );
             },

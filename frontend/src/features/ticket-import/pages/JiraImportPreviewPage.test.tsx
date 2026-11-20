@@ -5,6 +5,7 @@ import { server } from '@/mocks/server';
 import {
   fillImportPreviewSolution,
   getGetImportPreviewQueryKey,
+  getListImportDraftsQueryKey,
   removeImportPreviewRows,
   type FillSolutionRequest,
   type ImportResultResponse,
@@ -380,5 +381,52 @@ describe('Import Preview of a Jira pull', () => {
     await waitFor(() => expect(within(table).queryByText('ITSUP-1002')).not.toBeInTheDocument());
     expect(within(table).getByText('ITSUP-1001')).toBeInTheDocument();
     expect(statCard('Needs Solution')).toHaveTextContent('2');
+  });
+
+  it('AC-017.10 stays on the preview when only the row is gone, e.g. published in another tab (BUG-350)', async () => {
+    server.use(
+      http.post('*/api/v1/imports/previews/1/rows/2/publish', () => problem(404, 'MSG04')),
+    );
+    const { user, router } = await openPreview();
+    const dialog = await openRow(user, 2);
+    writeSolution(dialog);
+    let previewReads = 0;
+    server.events.on('response:mocked', ({ request }) => {
+      if (new URL(request.url).pathname === '/api/v1/imports/previews/1') previewReads += 1;
+    });
+
+    await user.click(within(dialog).getByRole('button', { name: 'Apply & publish' }));
+
+    expect(await screen.findByText(msg('MSG04'))).toBeInTheDocument();
+    // Read again after the save and after the 404: it still exists, so the page and the popup stay.
+    await waitFor(() => expect(previewReads).toBeGreaterThanOrEqual(2));
+    expect(router.state.location.pathname).toBe('/import/preview');
+    expect(screen.getByRole('dialog', { name: 'Import Ticket Preview' })).toBeInTheDocument();
+  });
+
+  it('AC-017.10 leaves for Import Tickets when the publish finds the preview gone (BUG-350)', async () => {
+    const { user, router } = await openPreview();
+    const dialog = await openRow(user, 2);
+    writeSolution(dialog);
+    server.use(
+      http.post('*/api/v1/imports/previews/1/rows/2/publish', () => problem(404, 'MSG04')),
+      http.get('*/api/v1/imports/previews/1', () => problem(404, 'MSG04')),
+    );
+
+    await user.click(within(dialog).getByRole('button', { name: 'Apply & publish' }));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/import'));
+  });
+
+  it('AC-017.9 reads the Drafts list again after Apply & publish, so its row count is current (BUG-351)', async () => {
+    const { user, queryClient } = await openPreview(DRAFT_PATH);
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+    const dialog = await openRow(user, 3);
+    writeSolution(dialog);
+
+    await user.click(within(dialog).getByRole('button', { name: 'Apply & publish' }));
+
+    await screen.findByText(msg('MSG32', { created: 1, skipped: 0 }));
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: getListImportDraftsQueryKey() });
   });
 });
