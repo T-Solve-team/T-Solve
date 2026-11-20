@@ -1,5 +1,5 @@
-/** 5.3 Import Ticket Preview with the Solution to write — spec STORY-015 (a file without Solutions). */
-import { Descriptions, Flex, Form, Input } from 'antd';
+/** 5.3 Import Ticket Preview with the Solution to write — spec STORY-015, STORY-017 (a file without Solutions). */
+import { Button, Descriptions, Flex, Form, Input } from 'antd';
 import { useRef, useState } from 'react';
 import {
   useGetImportPreviewRow,
@@ -10,7 +10,7 @@ import {
 import { applyApiErrors, rules } from '@/shared/forms';
 import { showMessage } from '@/shared/messages';
 import { ConfirmDialog, ErrorState, FormField, FormModal, LoadingState } from '@/shared/ui';
-import { useFillPreviewSolution } from '../hooks/useImportPreview';
+import { useFillPreviewSolution, usePublishPreviewRow } from '../hooks/useImportPreview';
 import { SECTIONS } from '../lib/import-row';
 import { jiraSnapshotItems } from './jira-snapshot';
 
@@ -23,7 +23,10 @@ type SolutionFormModalProps = {
   /** Fill solution opens empty sections for these selected rows (AC-015.5). */
   rowNumbers?: number[];
   replaceCount?: number;
+  /** After the Solution is saved, also when Apply & publish then publishes the row. */
   onSuccess?: () => void;
+  /** After Apply & publish: the row has left the preview (BUG-349). */
+  onPublished?: (rowNo: number) => void;
   /** After the popup has shown the rejection, e.g. for the page to leave a preview that is gone (design Edge 10). */
   onError?: (error: ApiError) => void;
   onClose: () => void;
@@ -39,11 +42,16 @@ export function SolutionFormModal({
   rowNumbers = [],
   replaceCount = 0,
   onSuccess,
+  onPublished,
   onError,
   onClose,
 }: SolutionFormModalProps) {
   const [form] = Form.useForm<SolutionValues>();
   const fill = useFillPreviewSolution(previewId);
+  const publish = usePublishPreviewRow(previewId);
+  const isBusy = fill.isPending || publish.isPending;
+  // The clicked button spins: Apply, or Apply & publish for both of its requests.
+  const [isPublishing, setIsPublishing] = useState(false);
   // A double click reaches the handler twice before `isPending` renders: one request only.
   const isSending = useRef(false);
   const [pendingValues, setPendingValues] = useState<SolutionValues | null>(null);
@@ -62,14 +70,60 @@ export function SolutionFormModal({
           onSuccess?.();
           onClose();
         },
-        onError: (error) => {
-          // The global MSG07 dialog is the one message for a 401 (guideline 06 §6).
-          if (error.status === 401) return;
-          if (!applyApiErrors(form, error)) showMessage(error.code, error.params);
-          onError?.(error);
-        },
+        onError: (error) => showError(error),
       },
     );
+  }
+
+  function showError(error: ApiError, isAboutPreview = true) {
+    // The global MSG07 dialog is the one message for a 401 (guideline 06 §6).
+    if (error.status === 401) return;
+    if (!applyApiErrors(form, error)) showMessage(error.code, error.params);
+    if (isAboutPreview) onError?.(error);
+  }
+
+  /** Apply & publish (AC-017.8): saves the Solution of this row, then publishes it; a rejection keeps the form. */
+  function saveAndPublish(row: number) {
+    if (isSending.current) return;
+    form
+      .validateFields()
+      .then((values) => {
+        if (isSending.current) return;
+        isSending.current = true;
+        setIsPublishing(true);
+        const finish = () => {
+          isSending.current = false;
+          setIsPublishing(false);
+        };
+        fill.mutate(
+          { previewId, data: { ...values, rowNumbers: [row] } },
+          {
+            onSuccess: () => {
+              // Saved: the row is Valid even if publishing is then rejected.
+              onSuccess?.();
+              publish.mutate(
+                { previewId, rowNo: row },
+                {
+                  onSettled: finish,
+                  onSuccess: () => {
+                    onPublished?.(row);
+                    onClose();
+                  },
+                  // A 404 here may mean only the row is gone (AC-017.7): the hook reads the preview again, and
+                  // the page leaves only if the preview itself is gone (BUG-350).
+                  onError: (error) => showError(error, false),
+                },
+              );
+            },
+            onError: (error) => {
+              finish();
+              showError(error);
+            },
+          },
+        );
+      })
+      // The form shows its own field errors.
+      .catch(() => undefined);
   }
 
   function handleSubmit(values: SolutionValues) {
@@ -86,13 +140,29 @@ export function SolutionFormModal({
         width={720}
         form={form}
         okText="Apply"
-        isSubmitting={fill.isPending}
+        isSubmitting={isBusy && !isPublishing}
+        isOkDisabled={isPublishing}
         onSubmit={handleSubmit}
         onCancel={() => {
           if (!isSending.current) onClose();
         }}
       >
-        {rowNo !== null ? <RowFields previewId={previewId} rowNo={rowNo} /> : <SolutionFields />}
+        {rowNo !== null ? (
+          <Flex vertical gap="middle">
+            <RowFields previewId={previewId} rowNo={rowNo} />
+            <Flex justify="end">
+              <Button
+                loading={isPublishing}
+                disabled={isBusy && !isPublishing}
+                onClick={() => saveAndPublish(rowNo)}
+              >
+                Apply &amp; publish
+              </Button>
+            </Flex>
+          </Flex>
+        ) : (
+          <SolutionFields />
+        )}
       </FormModal>
       <ConfirmDialog
         isOpen={pendingValues !== null}

@@ -2178,3 +2178,27 @@
 {"ts":"2026-11-18T10:51:46.183Z","type":"feature-status","module":"wiki","feature":"wiki-home-explorer","from":"pending","to":"in-progress"}
 {"ts":"2026-11-18T10:52:02.926Z","type":"feature-status","module":"wiki","feature":"wiki-home-explorer","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-18T10:24:11.805Z","type":"spec-approved","module":"chatbot","specHash":"ddff8da5c8e3e1f0d097065b9cee98f0d94614440dc80baf75aeedaa0d844b10"}
+{"ts":"2026-11-19T03:28:12.629Z","type":"spec-approved","module":"import-ticket-list","specHash":"3ecb20ecca3158384edc5faad0c847bf9c74c7053f42087b6779756c8cd2c35a"}
+{"ts":"2026-11-19T03:28:16.975Z","type":"module-status","module":"import-ticket-list","from":"completed","to":"planned"}
+{"ts":"2026-11-19T03:28:17.229Z","type":"feature-status","module":"import-ticket-list","feature":"publish-preview-row","from":null,"to":"pending"}
+{"ts":"2026-11-19T03:28:17.487Z","type":"feature-status","module":"import-ticket-list","feature":"apply-and-publish-popup","from":null,"to":"pending"}
+{"ts":"2026-11-19T03:28:23.778Z","type":"module-status","module":"import-ticket-list","from":"planned","to":"implementing"}
+{"ts":"2026-11-19T03:28:24.358Z","type":"feature-status","module":"import-ticket-list","feature":"publish-preview-row","from":"pending","to":"in-progress"}
+{"ts":"2026-11-19T03:54:42.288Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"80cece71598d797ce0189de9ffa11d27cccf034a"}
+{"ts":"2026-11-19T03:54:42.621Z","type":"feature-status","module":"import-ticket-list","feature":"publish-preview-row","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-19T03:55:07.890Z","type":"feature-status","module":"import-ticket-list","feature":"apply-and-publish-popup","from":"pending","to":"in-progress"}
+{"ts":"2026-11-19T03:55:48.172Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"fc506beaa49a3a35ffa4a759fc6c79513b54f935"}
+{"ts":"2026-11-19T03:55:48.481Z","type":"feature-status","module":"import-ticket-list","feature":"apply-and-publish-popup","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-19T04:39:50.454Z","type":"feature-status","module":"import-ticket-list","feature":"publish-preview-row","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-19T04:39:50.838Z","type":"feature-status","module":"import-ticket-list","feature":"apply-and-publish-popup","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-19T08:19:19.912Z","type":"commit-recorded","module":"import-ticket-list","repo":"default","sha":"720ef9d22a5ea3a54ce8d2f50575ad569ad41ea8"}
+{"ts":"2026-11-19T08:19:20.181Z","type":"feature-status","module":"import-ticket-list","feature":"publish-preview-row","from":"fixing","to":"evaluating"}
+{"ts":"2026-11-19T08:19:20.456Z","type":"feature-status","module":"import-ticket-list","feature":"apply-and-publish-popup","from":"fixing","to":"evaluating"}
+{"ts":"2026-11-19T08:29:24.693Z","type":"feature-status","module":"import-ticket-list","feature":"publish-preview-row","from":"evaluating","to":"passing"}
+{"ts":"2026-11-19T08:29:24.965Z","type":"feature-status","module":"import-ticket-list","feature":"apply-and-publish-popup","from":"evaluating","to":"passing"}
+{"ts":"2026-11-19T08:32:46.232Z","type":"module-status","module":"import-ticket-list","from":"implementing","to":"evaluating"}
+{"ts":"2026-11-19T08:32:46.511Z","type":"module-status","module":"import-ticket-list","from":"evaluating","to":"completed"}
+{"ts":"2026-11-20T04:04:06.311Z","type":"quick-opened","what":"PR 302 review: a Jira preview stays when only the published row is gone (BUG-350); Apply & publish refreshes the Drafts list (BUG-351); mock publish checks MSG40 first","files":["frontend/src/features/ticket-import/components/SolutionFormModal.tsx","frontend/src/features/ticket-import/hooks/useImportPreview.ts","frontend/src/features/ticket-import/mocks/handlers.ts","frontend/src/features/ticket-import/pages/JiraImportPreviewPage.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-11-20T07:10:16.550Z","type":"quick-closed","what":"PR 302 review: a Jira preview stays when only the published row is gone (BUG-350); Apply & publish refreshes the Drafts list (BUG-351); mock publish checks MSG40 first","files":["frontend/src/features/ticket-import/components/SolutionFormModal.tsx","frontend/src/features/ticket-import/hooks/useImportPreview.ts","frontend/src/features/ticket-import/mocks/handlers.ts","frontend/src/features/ticket-import/pages/JiraImportPreviewPage.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-11-20T07:28:49.572Z","type":"quick-opened","what":"PR 302 review: Import Preview steps back from a last page left empty by Apply & publish (BUG-352)","files":["frontend/src/features/ticket-import/components/ImportPreviewTable.tsx","frontend/src/features/ticket-import/pages/ImportPreviewPage.test.tsx","docs/bug-log.md"]}
+{"ts":"2026-11-20T07:45:41.989Z","type":"quick-closed","what":"PR 302 review: Import Preview steps back from a last page left empty by Apply & publish (BUG-352)","files":["frontend/src/features/ticket-import/components/ImportPreviewTable.tsx","frontend/src/features/ticket-import/pages/ImportPreviewPage.test.tsx","docs/bug-log.md"]}

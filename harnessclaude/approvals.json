@@ -77,8 +77,8 @@
     }
   },
   "import-ticket-list": {
-    "specHash": "8ff44b66546cf9e272878da4ad8a0d5eb1c458917aa88ff604c40151b7760a8b",
-    "approvedAt": "2026-11-14T03:02:33.598Z",
+    "specHash": "3ecb20ecca3158384edc5faad0c847bf9c74c7053f42087b6779756c8cd2c35a",
+    "approvedAt": "2026-11-19T03:28:12.626Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager uploads a file with the  extension that is valid UTF-8, at most 10 MB, has every required column and at least one data row, for a Project they manage, THE system SHALL create an Import Preview and return its counts and the first page of its rows.",
@@ -179,7 +179,17 @@
       "AC-015.5": "WHEN the Project Manager clicks Fill solution, THE web app SHALL open the popup with empty Solution sections for the selected rows; WHEN some selected rows already have a Solution, it SHALL ask MSG36 with their number before saving, and on refusal save nothing and keep the popup open.",
       "AC-015.6": "WHILE a preview of a file without Solutions has a Needs Solution or Error row, THE web app SHALL disable Confirm and show  with the number of those rows.",
       "AC-015.7": "THE web app SHALL show the number of Needs Solution rows in the Summary, and Needs Solution as a Result, for a preview of a file without Solutions.",
-      "AC-016.1": "WHILE a preview is of a file with Solutions, THE system SHALL keep its rows read-only and SHALL let Confirm skip Error rows, as STORY-002 to STORY-004 say."
+      "AC-016.1": "WHILE a preview is of a file with Solutions, THE system SHALL keep its rows read-only and SHALL let Confirm skip Error rows, as STORY-002 to STORY-004 say.",
+      "AC-017.1": "WHEN the Project Manager publishes a Valid row of a preview of a file without Solutions or of a Jira preview, THE system SHALL, in one transaction, save the row as a Ticket as AC-004.1 says (for a Jira preview: as  AC-003.1 says), record an approve decision by the caller for it, record one Import Batch of the preview's source with status Completed, 1 published, 0 skipped and 0 removed, link the Ticket to it, delete the row from the preview, and return MSG32 with created 1 and skipped 0.",
+      "AC-017.2": "WHEN a row is published, THE system SHALL keep the preview, its other rows and their Solutions, and SHALL leave a Draft a Draft.",
+      "AC-017.3": "WHEN a row is published, THE system SHALL publish a \"tickets published\" event with the UUID key of the new Ticket after the transaction commits.",
+      "AC-017.4": "IF the preview is a file with Solutions, or the row is not Valid, THEN THE system SHALL reject the request with HTTP 409 (MSG06), publish nothing and record no Import Batch.",
+      "AC-017.5": "IF the row's Ticket ID has become an existing Ticket since the preview was created, THEN THE system SHALL reject the request with HTTP 409 (MSG33), publish nothing, record no Import Batch and keep the row.",
+      "AC-017.6": "IF the preview's Project is no longer Active, THEN THE system SHALL reject the request with HTTP 409 (MSG40); IF the Project is Active but the caller no longer manages it, THEN THE system SHALL reject it with HTTP 403 (MSG08). In both cases it SHALL publish nothing and record no Import Batch.",
+      "AC-017.7": "IF the preview belongs to another user or no longer exists, or the row does not exist in it, THEN THE system SHALL reject the request with HTTP 404 and publish nothing.",
+      "AC-017.8": "WHEN the popup opens for a Needs Solution or Valid row of a preview of a file without Solutions or of a Jira preview, THE web app SHALL show Apply & publish next to Apply; WHEN Apply & publish is clicked, it SHALL save the Solution as AC-015.2 says and then publish the row.",
+      "AC-017.9": "WHEN Apply & publish succeeds, THE web app SHALL show MSG32, close the popup, and refresh the Summary and the rows.",
+      "AC-017.10": "IF saving the Solution or publishing the row is rejected, THEN THE web app SHALL show the message the backend returned and keep the popup open with what was written."
     }
   },
   "be-foundation": {

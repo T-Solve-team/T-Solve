@@ -450,3 +450,11 @@ frontend/src/features/ticket-import/
 ```
 
 The schema alignment plan (`artifacts/04-plans/platform/schema-ddl-alignment.md`, KAN-248) renames `import_preview` columns and rewrites the same entities. Whichever lands second adapts to the other: the new column and status carry over as they are.
+
+## Change 2026-11-19 — Apply & publish one row (STORY-017, KAN-373)
+
+- **Endpoint:** chosen: `POST /imports/previews/{previewId}/rows/{rowNo}/publish` with no body; the web app calls fill-solution first, then publish. Alternatives: one endpoint taking the Solution and publishing; rationale: fill-solution already holds the Solution rules (MSG01/MSG02), so publish only adds the import step, and a failed publish leaves the written Solution saved on the row.
+- **Where:** `ImportConfirmServiceImpl.publishRow`, beside Confirm, reusing `toTicket`, the approve decision, the audit event and `TicketsPublishedEvent`. It locks the preview as Confirm does, so a Confirm and a publish of the same preview never both import the row.
+- **Import Batch:** one Completed batch per published row (1 published, 0 error, 0 removed), with the preview's source, file name and Jira date range (user decision 2026-11-19, D21).
+- **Taken Ticket ID:** 409 MSG33, no Failed batch, the row stays (Decided in planning: nothing else was attempted, and the Project Manager can remove the row).
+- **The row** is deleted from the preview, so the Summary counts and Confirm/Finish no longer see it; the preview (or Draft) stays even when no row is left.

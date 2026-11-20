@@ -1053,6 +1053,93 @@ export const useConfirmImport = <TError = ErrorType<ProblemResponse>, TContext =
 > => {
   return useMutation(getConfirmImportMutationOptions(options), queryClient);
 };
+export const getPublishImportPreviewRowUrl = (previewId: number, rowNo: number) => {
+  return `/api/v1/imports/previews/${previewId}/rows/${rowNo}/publish`;
+};
+
+/**
+ * @summary Publishes one Valid row of a WITHOUT_SOLUTION preview (a file without Solutions or a Jira preview) at once, in an Import Batch of its own, and deletes the row from the preview (MSG32, STORY-017). A WITH_SOLUTION preview or a row that is not Valid = MSG06 (409); Ticket ID taken = MSG33 (409); Project no longer Active = MSG40 (409); Project not managed = MSG08 (403); preview or row not found = 404. A rejection publishes nothing.
+
+ */
+export const publishImportPreviewRow = async (
+  previewId: number,
+  rowNo: number,
+  options?: Parameters<typeof http>[1],
+): Promise<ImportResultResponse> => {
+  return http<ImportResultResponse>(getPublishImportPreviewRowUrl(previewId, rowNo), {
+    ...options,
+    method: 'POST',
+  });
+};
+
+export const getPublishImportPreviewRowMutationKey = () => ['publishImportPreviewRow'] as const;
+
+export const getPublishImportPreviewRowMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof publishImportPreviewRow>>,
+    TError,
+    PublishImportPreviewRowMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof publishImportPreviewRow>>,
+  TError,
+  PublishImportPreviewRowMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPublishImportPreviewRowMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof publishImportPreviewRow>>,
+    PublishImportPreviewRowMutationVariables
+  > = (props) => {
+    const { previewId, rowNo } = props ?? {};
+
+    return publishImportPreviewRow(previewId, rowNo, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PublishImportPreviewRowMutationResult = NonNullable<
+  Awaited<ReturnType<typeof publishImportPreviewRow>>
+>;
+
+export type PublishImportPreviewRowMutationError = ErrorType<ProblemResponse>;
+export type PublishImportPreviewRowMutationVariables = { previewId: number; rowNo: number };
+
+/**
+ * @summary Publishes one Valid row of a WITHOUT_SOLUTION preview (a file without Solutions or a Jira preview) at once, in an Import Batch of its own, and deletes the row from the preview (MSG32, STORY-017). A WITH_SOLUTION preview or a row that is not Valid = MSG06 (409); Ticket ID taken = MSG33 (409); Project no longer Active = MSG40 (409); Project not managed = MSG08 (403); preview or row not found = 404. A rejection publishes nothing.
+
+ */
+export const usePublishImportPreviewRow = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof publishImportPreviewRow>>,
+      TError,
+      PublishImportPreviewRowMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof publishImportPreviewRow>>,
+  TError,
+  PublishImportPreviewRowMutationVariables,
+  TContext
+> => {
+  return useMutation(getPublishImportPreviewRowMutationOptions(options), queryClient);
+};
 export const getPullJiraImportUrl = () => {
   return `/api/v1/imports/jira`;
 };

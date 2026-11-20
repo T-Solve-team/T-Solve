@@ -2567,6 +2567,38 @@ paths:
           $ref: '#/components/responses/Problem'
         '500':
           $ref: '#/components/responses/Problem'
+  /api/v1/imports/previews/{previewId}/rows/{rowNo}/publish:
+    post:
+      tags: [import]
+      operationId: publishImportPreviewRow
+      summary: >
+        Publishes one Valid row of a WITHOUT_SOLUTION preview (a file without Solutions or a Jira preview) at once, in
+        an Import Batch of its own, and deletes the row from the preview (MSG32, STORY-017). A WITH_SOLUTION preview or
+        a row that is not Valid = MSG06 (409); Ticket ID taken = MSG33 (409); Project no longer Active = MSG40 (409);
+        Project not managed = MSG08 (403); preview or row not found = 404. A rejection publishes nothing.
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+        - name: rowNo
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Published.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResultResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
   /api/v1/imports/jira:
     post:
       tags: [import]

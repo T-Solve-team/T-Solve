@@ -1,6 +1,7 @@
 import { Button, Flex, Typography } from 'antd';
 import { useState } from 'react';
 import type { ImportPreviewRowSummary } from '@/shared/api';
+import { PAGE_SIZE } from '@/shared/lib';
 import { cells, DataTable, type DataTableColumn } from '@/shared/ui';
 import { useImportPreviewRows } from '../hooks/useImportPreview';
 import { errorText, SECTIONS } from '../lib/import-row';
@@ -90,6 +91,10 @@ export function ImportPreviewTable({
   // Local: the page is reached only from Upload and its address carries only the preview id (D11).
   const [page, setPage] = useState(1);
   const rows = useImportPreviewRows(previewId, page);
+  // Apply & publish takes a row out of the preview: a last page left empty steps back (BUG-352).
+  const total = rows.data?.page.totalElements;
+  const lastPage = Math.max(1, Math.ceil((total ?? 0) / PAGE_SIZE));
+  if (total !== undefined && page > lastPage) setPage(lastPage);
 
   return (
     <DataTable<ImportPreviewRowSummary>
