@@ -52,9 +52,11 @@ export async function http<T>(url: string, init: RequestInit = {}): Promise<T> {
 
 async function readBody(response: Response): Promise<unknown> {
   if (response.status === 204) return undefined;
+  const type = response.headers.get('Content-Type') ?? '';
+  // A file (PDF, DOCX…) stays binary; reading it as text would corrupt it.
+  if (type !== '' && !type.includes('json') && !type.startsWith('text/')) return response.blob();
   const text = await response.text();
   if (!text) return undefined;
-  const type = response.headers.get('Content-Type') ?? '';
   if (!type.includes('json')) return text;
   try {
     return JSON.parse(text) as unknown;
