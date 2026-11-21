@@ -20,6 +20,7 @@ Covers UC-38 to UC-50, Wiki Space and Wiki Document Management (Jira epic KAN-91
 | 2026-11-15 | STORY-002, STORY-005 | AC-002.11 and AC-005.4 add `inTrash` to `WikiDocumentDetail`; new AC-005.18: a trashed document on 11.2 shows the "In trash" tag and no Download (its file answers 404 by AC-002.13) or Delete | PR #255 review, finding 1 (user decision: StatusTag preset IN_TRASH) |
 | 2026-11-17 | STORY-001 | New AC-001.12 (KAN-294): `WikiSources.nearestInProjectDepartment`, the Wiki passages the members of a Department may read, for the Jira App's Ask T-Solve page that has no T-Solve user | chatbot STORY-012, jira-app STORY-010 change (user, 17/11) |
 | 2026-11-17 | STORY-001 | AC-001.12 reworded: `WikiSources.nearestCompanyWide` returns Company-wide documents only, not the Department's own | KAN-294 risk review (user, 17/11): the MSG80 rule for a page without a T-Solve user |
+| 2026-11-21 | STORY-002, STORY-004, STORY-007 (new) | **Document type and document-type-aware chunking (KAN-374).** New STORY-007: every document has one of ten document types; the AI suggests it on the extract step and the Knowledge Manager confirms it before publishing; the indexing job converts the original file to Markdown with docling-serve and chunks it by type, each passage starting with `[type] Title > headings`; docling failing falls back to the plain splitter. Reworded: AC-002.10 (`documentType` on every document item), AC-002.14 and AC-002.24 (Type shown on 11.1), AC-002.19 (Type on 11.2), AC-004.1 (`documentType` suggestion), AC-004.6 and AC-004.10 (`documentType` per row, required), AC-004.12 (audit detail), AC-004.14 (the plain splitter now serves `OTHER` and the fallback, with the prefix), AC-004.20 (Type column on 11.3). Interface: `WikiDocumentSummary`, `WikiUploadPreview`, `WikiPublishMetadata`, new enum `WikiDocumentType`, error MSG06; Required from: ai `LlmClient.chat`, docling-serve. Existing documents get `OTHER` and keep their passages. Retrieval does not filter by type | User, 2026-11-21: type list and rules; AI suggests, Knowledge Manager confirms; docling-serve on the AI VPS; the type is written into the passage, no retrieval filter. Decisions: `artifacts/04-plans/wiki/doc-type-chunking-decisions.md` |
 | 2026-11-18 | STORY-002 | **11.1 Wiki Home as a three-pane explorer (KAN-372).** AC-002.14 to AC-002.17 reworded: a navigator ("Company-wide", the Spaces, the selected Space's folder tree), a list pane (search box on top, document rows) and a preview pane; selecting in the navigator drops the search. New AC-002.22 (Company-wide entry), AC-002.23 (search results in the list pane, "Clear search"), AC-002.24 (preview of the selected document, `?doc=`), AC-002.25 (preview of a document no longer available). No backend change | User (Hải Anh), 2026-11-18: 11.1 must match the approved preview `wiki-variant-b.html`; preview fetches the document detail; a navigator selection clears the search |
 
 ## Requirements
@@ -32,6 +33,7 @@ Covers UC-38 to UC-50, Wiki Space and Wiki Document Management (Jira epic KAN-91
 5. Uploaded PDF and DOCX files are stored as the original file plus their extracted text. A document is Published at once and indexed in the background for meaning-based retrieval (GBR-12).
 6. Wiki provides the Wiki sources of the Knowledge Chatbot (all documents the user can view) and of AI Solution Suggestion (Company-wide documents only, GBR-35), and answers whether a cited document is still available (MSG110).
 7. Every change to a folder, document or permission is recorded in the audit log.
+8. Every document has exactly one document type (`POLICY`, `RUNBOOK`, `GUIDE`, `FAQ`, `REFERENCE`, `SPEC`, `RECORD`, `ANNOUNCEMENT`, `FORM`, `OTHER`), chosen by the part that makes up most of its content. The AI suggests it on upload and the Knowledge Manager confirms it. The indexing job cuts the document into passages along the units of its type.
 
 ### Non-Functional
 1. The view rule (requirement 2 and 3) is evaluated on every request from the database; no cached permission decides access.
@@ -39,6 +41,7 @@ Covers UC-38 to UC-50, Wiki Space and Wiki Document Management (Jira epic KAN-91
 3. Uniqueness rules (folder names, document titles) hold in the database: two requests sent at the same moment cannot break them.
 4. Indexing runs outside the request, on the worker. An AI failure does not fail an upload; the document stays found by keyword.
 5. A Workspace's Wiki lives only in that Workspace's database (GBR-37, ADR-0002).
+6. Document text goes only to services on T-Solve's own servers: Ollama and docling-serve on the AI VPS (architecture, AI row).
 
 ### Interim limits
 These are known limits of the code this module builds on. They are not defects of this module.
@@ -79,21 +82,21 @@ These are known limits of the code this module builds on. They are not defects o
   - AC-002.7: WHEN a signed-in user calls `GET /api/v1/wiki/documents/search?q=` that is not blank and has at most 200 characters, THE system SHALL answer 200 with at most 50 documents the user can view that match the words of `q` in the title or text, or whose best passage has a similarity of at least the configured `tsolve.wiki.search.min-similarity`, ordered by keyword rank plus similarity, highest first.
   - AC-002.8: IF the AI module cannot embed the query, THEN THE system SHALL answer AC-002.7 from the keyword match alone.
   - AC-002.9: IF `q` is missing or blank, THEN THE system SHALL answer 400 with code MSG01 on field `q`; IF `q` is not blank and longer than 200 characters as received, THEN THE system SHALL answer 400 with code MSG02 and `max_length` 200 on field `q`.
-  - AC-002.10: WHEN a list of AC-002.2, AC-002.4 or AC-002.7 returns a document, THE item SHALL hold `documentId`, `title`, `spaceId`, `spaceName`, `folderId`, `folderName` (null at the top level), `visibility` (`DEPARTMENT` or `COMPANY_WIDE`), `owner` (full name) and `updatedAt`.
+  - AC-002.10: WHEN a list of AC-002.2, AC-002.4 or AC-002.7 returns a document, THE item SHALL hold `documentId`, `title`, `spaceId`, `spaceName`, `folderId`, `folderName` (null at the top level), `visibility` (`DEPARTMENT` or `COMPANY_WIDE`), `documentType` (AC-007.1), `owner` (full name) and `updatedAt`.
   - AC-002.11: WHEN a user who can view a document calls `GET /api/v1/wiki/documents/{documentId}`, THE system SHALL answer 200 with the fields of AC-002.10 plus `content` (the extracted text), `fileName`, `fileSize`, `canDelete` (true only for the Space's Knowledge Manager) and `inTrash` false.
   - AC-002.12: WHEN a user who can view a document calls `GET /api/v1/wiki/documents/{documentId}/file`, THE system SHALL answer 200 with the original file, its content type and `Content-Disposition: attachment` with the original file name.
   - AC-002.13: IF a document does not exist, was deleted permanently, or the user cannot view it, or it is in the trash and the caller is not the Space's Knowledge Manager calling AC-002.11 (AC-005.4), THEN THE endpoints of AC-002.11 and AC-002.12 SHALL answer 404 with code MSG110.
-  - AC-002.14: WHEN the user opens 11.1 Wiki Home, THE web app SHALL show three panes side by side: a navigator with the entry "Company-wide", then the viewable Spaces with their access level and, under the selected Space, its folder tree; a list pane with the search box on top and the documents of the selected entry, each row with its Title, Folder (or Space name when the row is not in the selected Space), Owner, Visibility and Updated; and a preview pane.
+  - AC-002.14: WHEN the user opens 11.1 Wiki Home, THE web app SHALL show three panes side by side: a navigator with the entry "Company-wide", then the viewable Spaces with their access level and, under the selected Space, its folder tree; a list pane with the search box on top and the documents of the selected entry, each row with its Title, Type, Folder (or Space name when the row is not in the selected Space), Owner, Visibility and Updated; and a preview pane.
   - AC-002.15: WHERE the user can view no Space, THE web app SHALL show only the "Company-wide" entry in the navigator, the search box, the Company-wide documents and the preview pane.
   - AC-002.16: WHERE the document list of the selected entry or the search result is empty, THE web app SHALL show MSG04 in its place, and MSG04 in the preview pane.
   - AC-002.17: WHEN the user selects a Space or a folder in the navigator, THE web app SHALL keep them in the URL as `?space=` and `?folder=`, remove `?q=` and `?doc=`, and show the documents of that folder.
   - AC-002.18: IF the search box holds more than 200 characters, THEN THE web app SHALL show MSG02 below it and send no request.
-  - AC-002.19: WHEN the user opens a document, THE web app SHALL show 11.2 Wiki Document with its header (title, Space, folder, visibility, Owner, last update), its content as plain text and a Download button.
+  - AC-002.19: WHEN the user opens a document, THE web app SHALL show 11.2 Wiki Document with its header (title, Space, folder, visibility, Type, Owner, last update), its content as plain text and a Download button.
   - AC-002.20: IF the document answers 404 MSG110, THEN THE web app SHALL show "This document is no longer available." in place of the document.
   - AC-002.21: WHERE the user is the Knowledge Manager of the selected Space, THE web app SHALL show the buttons "Upload documents", "New folder" and "Space Settings" on 11.1, and folder actions Rename, Move and Delete; for any other user it SHALL show none of them.
   - AC-002.22: WHILE the URL names no Space the user can view, THE web app SHALL mark "Company-wide" as the current navigator entry and list every Company-wide document of AC-002.2, in its order (Space name, then title), with the Space name on each row.
   - AC-002.23: WHEN the user submits a search, THE web app SHALL keep it in the URL as `?q=`, show "Search results for “<q>”" and the results of AC-002.7 in the list pane in place of the selected entry's documents, and a "Clear search" link that removes `?q=`.
-  - AC-002.24: WHEN the user selects a document row, THE web app SHALL keep it in the URL as `?doc=` and show in the preview pane the document of AC-002.11: its title, visibility, Space, Folder, Owner, Updated, File, Size, the first 420 characters of its content, an "Open" button to 11.2 and a Download button; WHILE `?doc=` names no row of the list, the first row SHALL be previewed.
+  - AC-002.24: WHEN the user selects a document row, THE web app SHALL keep it in the URL as `?doc=` and show in the preview pane the document of AC-002.11: its title, visibility, Type, Space, Folder, Owner, Updated, File, Size, the first 420 characters of its content, an "Open" button to 11.2 and a Download button; WHILE `?doc=` names no row of the list, the first row SHALL be previewed.
   - AC-002.25: IF the previewed document answers 404 MSG110, THEN THE web app SHALL show "This document is no longer available." in the preview pane.
 
 ### STORY-003: Manage the folders of a Space
@@ -120,29 +123,44 @@ These are known limits of the code this module builds on. They are not defects o
 ### STORY-004: Upload documents
 - As a Knowledge Manager, I want to upload up to ten PDF or DOCX files at once into a folder of my Space so that company guides become Wiki documents and Chatbot sources.
 - Acceptance:
-  - AC-004.1: WHEN the Space's Knowledge Manager calls `POST /api/v1/wiki/spaces/{spaceId}/uploads/extract` with 1 to 10 PDF or DOCX files, THE system SHALL answer 200 with one row per file in the order sent: `fileName`, `title` (the file name without its extension, stripped, cut to 200 characters), `excerpt` (the first 300 characters of the text), `wordCount` and `result` (`READY` or `UNREADABLE`), and store nothing.
+  - AC-004.1: WHEN the Space's Knowledge Manager calls `POST /api/v1/wiki/spaces/{spaceId}/uploads/extract` with 1 to 10 PDF or DOCX files, THE system SHALL answer 200 with one row per file in the order sent: `fileName`, `title` (the file name without its extension, stripped, cut to 200 characters), `excerpt` (the first 300 characters of the text), `wordCount`, `result` (`READY` or `UNREADABLE`) and `documentType` (the suggestion of AC-007.2), and store nothing.
   - AC-004.2: IF a file has no readable text (an error while reading it, an encrypted file, or text that is only whitespace), THEN THE system SHALL give its row `result` `UNREADABLE`, an empty `excerpt` and `wordCount` 0.
   - AC-004.3: IF a request holds more than 10 files, THEN THE system SHALL answer 400 with code MSG88; IF it holds no file, THEN THE system SHALL answer 400 with code MSG01 on field `files`.
   - AC-004.4: IF a file's name does not end in `.pdf` or `.docx` (ignoring letter case), or its content does not start like a PDF or a DOCX (ZIP) file, THEN THE system SHALL answer 400 with code MSG89 and `file_name`, and store nothing.
   - AC-004.5: IF a file is larger than 10 MB, THEN THE system SHALL answer 413 with code MSG28 and store nothing.
-  - AC-004.6: WHEN the Space's Knowledge Manager calls `POST /api/v1/wiki/spaces/{spaceId}/documents` with the files and a `metadata` part holding an optional `folderId` and, for each file in order, a `title` and a `visibility`, THE system SHALL create one Published document per file with the stripped title, the visibility, the folder, the caller as Owner, the original file, its extracted text and `indexStatus` `PENDING`, and answer 201 with their `documentId` and `title`.
+  - AC-004.6: WHEN the Space's Knowledge Manager calls `POST /api/v1/wiki/spaces/{spaceId}/documents` with the files and a `metadata` part holding an optional `folderId` and, for each file in order, a `title`, a `visibility` and a `documentType`, THE system SHALL create one Published document per file with the stripped title, the visibility, the document type, the folder, the caller as Owner, the original file, its extracted text and `indexStatus` `PENDING`, and answer 201 with their `documentId` and `title`.
   - AC-004.7: IF a title is blank, THEN THE system SHALL answer 400 with code MSG01 on field `documents[i].title`; IF it is longer than 200 characters, THEN THE system SHALL answer 400 with code MSG02 and `max_length` 200 on that field.
   - AC-004.8: IF a title equals, ignoring letter case, the title of a Published document of the target folder or of another file of the same request, THEN THE system SHALL answer 409 with code MSG84 on field `documents[i].title`.
   - AC-004.9: IF a file of the publish request has no readable text, THEN THE system SHALL answer 400 with code MSG90 and `file_name`.
-  - AC-004.10: IF the `metadata` part is missing or its number of rows differs from the number of files, THEN THE system SHALL answer 400 with code MSG01 on field `metadata`; the publish request SHALL also apply AC-004.3 to AC-004.5.
+  - AC-004.10: IF the `metadata` part is missing or its number of rows differs from the number of files, THEN THE system SHALL answer 400 with code MSG01 on field `metadata`; IF a row has no `documentType`, THEN THE system SHALL answer 400 with code MSG01 on field `documents[i].documentType`, and IF it is not a type of AC-007.1, with code MSG06 on that field; the publish request SHALL also apply AC-004.3 to AC-004.5.
   - AC-004.11: IF any check of the publish request fails, or storing any file or row fails, THEN THE system SHALL create no document and leave no stored file from that request.
-  - AC-004.12: WHEN documents are published, THE system SHALL write, in the same transaction, one audit entry per document with action `PUBLISH`, target type `WIKI_DOCUMENT`, target id the document id, and details `operation` `UPLOAD`, `title`, `spaceId`, `folderId` and `visibility`.
+  - AC-004.12: WHEN documents are published, THE system SHALL write, in the same transaction, one audit entry per document with action `PUBLISH`, target type `WIKI_DOCUMENT`, target id the document id, and details `operation` `UPLOAD`, `title`, `spaceId`, `folderId`, `visibility` and `documentType`.
   - AC-004.13: WHEN a document is published or restored without an index, THE system SHALL enqueue one indexing job for it after the transaction commits.
-  - AC-004.14: WHEN the indexing job runs for a Published document, THE system SHALL split its text into passages of at most 1,000 characters, cut at a paragraph break or whitespace where possible, keep at most the first 200 passages, store each passage with its bge-m3 vector, and set `indexStatus` `INDEXED`.
+  - AC-004.14: WHEN the indexing job runs for a Published document of type `OTHER`, or falls back by AC-007.8, THE system SHALL split its extracted text into pieces of at most 1,000 characters, cut at a paragraph break or whitespace where possible, keep at most the first 200, start each passage with the prefix of AC-007.6, store each passage with its bge-m3 vector, and set `indexStatus` `INDEXED`.
   - AC-004.15: IF embedding fails, THEN THE indexing job SHALL keep no passage of that run, set `indexStatus` `FAILED`, and leave the document Published.
   - AC-004.16: IF the document is no longer Published when the job runs, THEN THE job SHALL change nothing.
   - AC-004.17: IF anyone other than the Space's Knowledge Manager calls an endpoint of this story, THEN THE system SHALL answer 403 with code MSG08 and store nothing.
   - AC-004.18: WHEN the Knowledge Manager clicks "Upload documents", THE web app SHALL open 11.3 Upload Documents with a Folder tree selector (the selected folder by default), a Visibility choice (Department by default) and a file area.
   - AC-004.19: IF more than 10 files are added in total, THEN THE web app SHALL show MSG88 and add none of the extra files; IF a file is not PDF or DOCX or is larger than 10 MB, THEN THE web app SHALL show MSG89 with its name and not add it.
-  - AC-004.20: WHEN files are added, THE web app SHALL send them to the extract endpoint and show one row per file: File name, Visibility (editable), Title (editable), Extracted text, Words, and Result (Ready or MSG90), with a Remove button.
+  - AC-004.20: WHEN files are added, THE web app SHALL send them to the extract endpoint and show one row per file: File name, Visibility (editable), Title (editable), Type (editable, the suggested type of AC-004.1 selected), Extracted text, Words, and Result (Ready or MSG90), with a Remove button.
   - AC-004.21: WHILE a row is `UNREADABLE`, has a blank title or a title longer than 200 characters, or no row is left, THE web app SHALL disable Publish.
   - AC-004.22: WHEN Publish succeeds, THE web app SHALL show MSG95 with the count and return to 11.1 on the target folder; IF it answers MSG84, MSG01 or MSG02 on a row, THEN THE web app SHALL show the message on that row and keep every row.
   - AC-004.23: WHEN the user clicks Cancel, THE web app SHALL return to 11.1 and send no publish request.
+
+### STORY-007: Document type and document-type-aware chunking
+- As a Knowledge Manager, I want each document to get a document type and be cut into passages along the structure of that type, so that the Knowledge Chatbot and AI Solution Suggestion retrieve a whole clause, procedure or answer instead of a fixed-size piece.
+- Acceptance:
+  - AC-007.1: THE system SHALL know exactly these document types, with these labels on screen, in this order: `POLICY` Policy, `RUNBOOK` Runbook, `GUIDE` Guide, `FAQ` FAQ, `REFERENCE` Reference, `SPEC` Spec, `RECORD` Record, `ANNOUNCEMENT` Announcement, `FORM` Form, `OTHER` Other.
+  - AC-007.2: WHEN the extract endpoint (AC-004.1) reads a `READY` file, THE system SHALL ask the chat LLM (`LlmClient.chat` with a JSON schema whose `documentType` is one of AC-007.1) for one type, sending the type definitions and rules of the classification prompt, the row's `title` and the first 4,000 characters of the extracted text, and SHALL send the files of one request in parallel.
+  - AC-007.3: IF the row is `UNREADABLE`, or the LLM fails, answers outside the schema, or gives no answer within `tsolve.wiki.classify.timeout` (default 20 seconds), THEN THE system SHALL suggest `OTHER` for that row and still answer 200.
+  - AC-007.4: WHEN the indexing job runs for a Published document whose type is not `OTHER`, THE system SHALL send its original file to docling-serve (`POST {DOCLING_BASE_URL}/v1/convert/file`, output Markdown) and cut the Markdown into units of its type: `POLICY` one unit per section under its deepest heading, and inside a section a new unit at each line that starts with `Điều <n>` or `Article <n>`; `RUNBOOK`, `GUIDE`, `SPEC` and `RECORD` one unit per section under its deepest heading; `FAQ` a new unit at each heading, at each line that starts with `Q:`, `Hỏi:` or `Câu hỏi`, and at each line that ends with `?` and follows a line that does not; `REFERENCE` one unit per row of a table, written as `<header>: <cell>` pairs separated by `; `, and one unit per section for the rest; `ANNOUNCEMENT` and `FORM` the whole document as one unit.
+  - AC-007.5: WHEN a unit with its prefix is longer than 1,500 characters, THE system SHALL cut it into passages of at most 1,500 characters, each with the prefix, cutting between list items, else at a paragraph break, else at whitespace; a unit with no text besides headings SHALL give no passage.
+  - AC-007.6: THE indexing job SHALL start every passage with the prefix `[<type in lower case>] <document title>`, followed by ` > <heading>` for each heading above the passage from the top level down, then a line break, and SHALL keep at most the first 200 passages of a document.
+  - AC-007.7: WHEN the passages of AC-007.4 to AC-007.6 are made, THE job SHALL embed, store and index them as AC-004.14 does, and AC-004.15 and AC-004.16 SHALL apply.
+  - AC-007.8: IF `DOCLING_BASE_URL` is not set, or docling-serve answers an error, gives no answer within `tsolve.wiki.docling.timeout` (default 120 seconds), or returns Markdown that is only whitespace, THEN THE indexing job SHALL log at WARN the document id and the cause's class name and index the document by AC-004.14.
+  - AC-007.9: WHEN the changeset of this story applies to a database that holds documents, THE system SHALL give each of them the type `OTHER` and keep their passages and `indexStatus`.
+  - AC-007.10: WHEN a document is retrieved by AC-001.5, AC-001.7, AC-001.12 or AC-002.7, THE system SHALL neither filter nor rank by its type.
+  - AC-007.11: WHEN 11.3 shows the Type selector of a row, THE web app SHALL offer the labels of AC-007.1 in that order, with the suggested type of AC-004.1 selected until the Knowledge Manager changes it, and SHALL send the selected type in the publish request.
 
 ### STORY-005: Delete, trash, restore and permanently delete
 - As a Knowledge Manager, I want to move wrong documents to the trash and then restore them or remove them for good so that mistakes can be undone and outdated content goes away.
@@ -192,6 +210,7 @@ These are known limits of the code this module builds on. They are not defects o
 - File types other than PDF and DOCX (CR-09); text from images (OCR).
 - The `GET /api/v1/me/spaces` endpoint itself (identity AC-003.4); wiki provides only its lookup (AC-001.10).
 - Signed download URLs (platform Task 17); downloads stream through the backend (W19).
+- Changing a document's type after it is published (it would need a re-index); filtering or ranking retrieval by type (AC-007.10); a count of `OTHER` documents to review the type list (the user's rule: more than about 10% `OTHER`).
 
 ## Interface Contracts
 
@@ -228,10 +247,11 @@ Schemas:
 |--------|--------|
 | `WikiSpace` | `spaceId`, `name`, `departmentName`, `accessLevel` (`VIEW`, `KNOWLEDGE_MANAGER`) |
 | `WikiFolder` | `folderId`, `parentId` (nullable), `name`, `level` |
-| `WikiDocumentSummary` | `documentId`, `title`, `spaceId`, `spaceName`, `folderId` (nullable), `folderName` (nullable), `visibility` (`DEPARTMENT`, `COMPANY_WIDE`), `owner`, `updatedAt` |
+| `WikiDocumentSummary` | `documentId`, `title`, `spaceId`, `spaceName`, `folderId` (nullable), `folderName` (nullable), `visibility` (`DEPARTMENT`, `COMPANY_WIDE`), `documentType` (`WikiDocumentType`), `owner`, `updatedAt` |
 | `WikiDocumentDetail` | `WikiDocumentSummary` fields plus `content`, `fileName`, `fileSize`, `canDelete`, `inTrash` |
-| `WikiUploadPreview` | `fileName`, `title`, `excerpt`, `wordCount`, `result` (`READY`, `UNREADABLE`) |
-| `WikiPublishMetadata` (multipart part `metadata`, JSON) | `folderId` (nullable), `documents`: array of `{ title, visibility }` in file order |
+| `WikiUploadPreview` | `fileName`, `title`, `excerpt`, `wordCount`, `result` (`READY`, `UNREADABLE`), `documentType` (`WikiDocumentType`, the suggestion) |
+| `WikiDocumentType` (enum) | `POLICY`, `RUNBOOK`, `GUIDE`, `FAQ`, `REFERENCE`, `SPEC`, `RECORD`, `ANNOUNCEMENT`, `FORM`, `OTHER` |
+| `WikiPublishMetadata` (multipart part `metadata`, JSON) | `folderId` (nullable), `documents`: array of `{ title, visibility, documentType }` in file order |
 | `WikiDocumentRef` | `documentId`, `title` |
 | `WikiTrashItem` | `documentId`, `title`, `folderName` (nullable), `owner`, `deletedBy`, `deletedAt` |
 | `WikiRestoreResult` | `title`, `renamed` |
@@ -245,7 +265,8 @@ Error table:
 
 | Status | `code` | `params` | When |
 |--------|--------|----------|------|
-| 400 | MSG01 | `{field_name}` | Required field blank (`name`, `q`, `files`, `metadata`, `grantees`, `documents[i].title`) |
+| 400 | MSG01 | `{field_name}` | Required field blank (`name`, `q`, `files`, `metadata`, `grantees`, `documents[i].title`, `documents[i].documentType`) |
+| 400 | MSG06 | `{}` | `documents[i].documentType` is not a `WikiDocumentType` |
 | 400 | MSG02 | `{field_name, max_length}` | Over 100 (folder name) or 200 (title, `q`) characters |
 | 400 | MSG86 | `{}` | Folder too deep, or moved inside itself |
 | 400 | MSG88 | `{}` | More than 10 files |
@@ -272,7 +293,9 @@ Java ports implemented by wiki (their callers declared them):
 ### Required from other modules
 - workspace and identity: tables `space`, `space_manager`, `department`, `app_user`, `user_role`, `project_membership`, `project` (read only).
 - platform: `FileStorage` (KAN-96), `TenantJobService` and `TenantJobHandler` (worker).
-- ai: `EmbeddingClient.embed`, 1024 dimensions.
+- ai: `EmbeddingClient.embed`, 1024 dimensions; `LlmClient.chat` with a JSON schema (AC-007.2).
+- docling-serve on the AI VPS (architecture): `POST /v1/convert/file`, Markdown output, at `DOCLING_BASE_URL` (no default), called by wiki's own client.
+- Database: `wiki_document.document_type`, not null, added by a new changeset (AC-007.9).
 - common: `AuditService.record`, `BusinessRuleException`, `GlobalExceptionHandler` (413 MSG28), `TSolveUser`.
 - fe-foundation: route guards, `DataTable`, `FormModal`, confirmation dialog, message catalog, `features/wiki` route stubs.
 
