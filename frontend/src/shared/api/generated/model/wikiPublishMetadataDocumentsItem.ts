@@ -6,6 +6,7 @@
  *
  * OpenAPI spec version: 0.1.0-stub
  */
+import type { WikiDocumentType } from './wikiDocumentType';
 import type { WikiPublishMetadataDocumentsItemVisibility } from './wikiPublishMetadataDocumentsItemVisibility';
 
 export type WikiPublishMetadataDocumentsItem = {
@@ -15,4 +16,5 @@ export type WikiPublishMetadataDocumentsItem = {
    */
   title: string;
   visibility: WikiPublishMetadataDocumentsItemVisibility;
+  documentType: WikiDocumentType;
 };

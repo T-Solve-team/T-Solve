@@ -45,6 +45,7 @@ import vn.tsolve.wiki.dto.WikiTrashItem;
 import vn.tsolve.wiki.entity.WikiDocument;
 import vn.tsolve.wiki.entity.WikiDocument.IndexStatus;
 import vn.tsolve.wiki.entity.WikiDocument.Status;
+import vn.tsolve.wiki.entity.WikiDocumentType;
 import vn.tsolve.wiki.repository.AccessRepository;
 import vn.tsolve.wiki.repository.WikiDocumentRepository;
 import vn.tsolve.wiki.repository.WikiSearchRepository;
@@ -77,6 +78,7 @@ class WikiTrashServiceImplTest {
                 folder,
                 "Guide",
                 WikiDocument.Visibility.DEPARTMENT,
+                WikiDocumentType.OTHER,
                 "Text",
                 "wiki/file",
                 "guide.pdf",
@@ -108,6 +110,7 @@ class WikiTrashServiceImplTest {
                 folder,
                 "Guides",
                 "DEPARTMENT",
+                WikiDocumentType.OTHER,
                 "Owner",
                 Instant.EPOCH,
                 "Text",
