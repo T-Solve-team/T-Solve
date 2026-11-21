@@ -151,8 +151,9 @@ class WikiIndexIT extends WikiReadTestSupport {
                     ? "[guide] Guide > Instructions\nConverted text"
                     : "[guide] Guide\nStored plain text";
             when(embeddings.embed(List.of(expected))).thenReturn(List.of(vector(1, 0)));
-            var beans = new org.springframework.beans.factory.support.StaticListableBeanFactory(
-                    java.util.Map.of("storage", storage));
+            // StaticListableBeanFactory's provider rejects getObject() (BUG-354), so the handler fell back every time.
+            var beans = new org.springframework.beans.factory.support.DefaultListableBeanFactory();
+            beans.registerSingleton("storage", storage);
             var typedHandler = new WikiIndexJobHandler(
                     context.getBean(WikiDocumentRepository.class),
                     context.getBean(WikiChunkRepository.class),
