@@ -1,0 +1,7 @@
+# Data and generated files stay local: the dataset tickets are not ours to publish.
+*.jsonl
+*.npy
+*.csv
+borderline.txt
+local-run/
+__pycache__/

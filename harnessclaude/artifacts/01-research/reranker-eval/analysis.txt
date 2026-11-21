@@ -1,0 +1,82 @@
+
+===== queries.jsonl: 100 questions with an answer, 100 without
+
+cosine cut-off (today 0.70)
+   cut   right   wrong    none   | no-answer qs answered
+  0.50    0.70    0.30    0.00                      1.00
+  0.55    0.70    0.27    0.03                      0.97
+  0.60    0.68    0.21    0.11                      0.89
+  0.65    0.62    0.18    0.20                      0.81
+  0.70    0.50    0.14    0.36                      0.68
+
+reranker score cut-off
+   cut   right   wrong    none   | no-answer qs answered
+  0.01    0.64    0.31    0.05                      0.96
+  0.05    0.60    0.29    0.11                      0.90
+  0.10    0.58    0.29    0.13                      0.88
+  0.20    0.58    0.27    0.15                      0.87
+  0.30    0.54    0.25    0.21                      0.83
+  0.50    0.52    0.21    0.27                      0.78
+
+cosine top-1 misses: 57; top 1 is a near-duplicate of the gold (cos >= 0.9): 6
+  Q:    Chào anh/chị, dịch vụ quản lý trên AWS đang bị ngừng hoạt động và khách hàng không thể tru
+  gold: Problème Urgent : Déploiement dans le Cloud
+  top1: Urgente: Problema de inatividade do Serviço de Gerenciamento da AWS
+  Q:    Tại sao máy chủ của tôi thường xuyên hiện lỗi E1234 và mất kết nối khi sử dụng phần mềm qu
+  gold: Guidance Request: Efficient Server Administration Implementation
+  top1: Issue with Jira Software Dashboard Access
+  Q:    Tại sao Zoom 5.11.0 luôn đứt kết nối giữa các cuộc họp mà không báo lỗi?
+  gold: Urgente: Desconexiones de Zoom 5.11.0
+  top1: Urgent: Zoom 5.11.0 Disconnections
+
+rerank top-1 misses: 62; top 1 is a near-duplicate of the gold (cos >= 0.9): 10
+  Q:    Tại sao máy in HP DeskJet 3755 của tôi thường bị nghẽn giấy mỗi khi in nhiều trang?
+  gold: Frequent Paper Jam Issues: HP DeskJet 3755
+  top1: Paper Jam Issue with HP DeskJet 3755
+  Q:    Chào anh/chị, dịch vụ quản lý trên AWS đang bị ngừng hoạt động và khách hàng không thể tru
+  gold: Problème Urgent : Déploiement dans le Cloud
+  top1: Urgent: Major AWS Outage
+  Q:    Tại sao máy chủ của tôi thường xuyên hiện lỗi E1234 và mất kết nối khi sử dụng phần mềm qu
+  gold: Guidance Request: Efficient Server Administration Implementation
+  top1: Urgent: PostgreSQL Connection Issues
+
+===== queries_same.jsonl: 100 questions with an answer, 100 without
+
+cosine cut-off (today 0.70)
+   cut   right   wrong    none   | no-answer qs answered
+  0.50    0.77    0.23    0.00                      1.00
+  0.55    0.77    0.23    0.00                      0.97
+  0.60    0.76    0.22    0.02                      0.89
+  0.65    0.74    0.19    0.07                      0.81
+  0.70    0.65    0.15    0.20                      0.68
+
+reranker score cut-off
+   cut   right   wrong    none   | no-answer qs answered
+  0.01    0.77    0.22    0.01                      0.96
+  0.05    0.77    0.19    0.04                      0.90
+  0.10    0.77    0.18    0.05                      0.88
+  0.20    0.74    0.19    0.07                      0.87
+  0.30    0.74    0.19    0.07                      0.83
+  0.50    0.70    0.17    0.13                      0.78
+
+cosine top-1 misses: 43; top 1 is a near-duplicate of the gold (cos >= 0.9): 8
+  Q:    Chào anh/chị, service quản lý AWS của chúng ta đang bị gián đoạn, hiện tại không thể truy 
+  gold: Problème Urgent : Déploiement dans le Cloud
+  top1: Urgente: Problema de inatividade do Serviço de Gerenciamento da AWS
+  Q:    Có lỗi xảy ra khi truy cập server, hiển thị mã lỗi 503 và hệ thống không phản hồi sau vài 
+  gold: Guidance Request: Efficient Server Administration Implementation
+  top1: Immediate Assistance Needed with Server Outage
+  Q:    Zoom thường đứt quãng trong lúc đang họp, phiên bản 5.11.0. Không biết nguyên nhân là gì, 
+  gold: Urgente: Desconexiones de Zoom 5.11.0
+  top1: Urgent: Zoom 5.11.0 Disconnections
+
+rerank top-1 misses: 52; top 1 is a near-duplicate of the gold (cos >= 0.9): 10
+  Q:    Chào anh/chị, service quản lý AWS của chúng ta đang bị gián đoạn, hiện tại không thể truy 
+  gold: Problème Urgent : Déploiement dans le Cloud
+  top1: Urgent: Immediate resolution needed for AWS service downtime
+  Q:    Có lỗi xảy ra khi truy cập server, hiển thị mã lỗi 503 và hệ thống không phản hồi sau vài 
+  gold: Guidance Request: Efficient Server Administration Implementation
+  top1: Immediate Support Required
+  Q:    Zoom thường đứt quãng trong lúc đang họp, phiên bản 5.11.0. Không biết nguyên nhân là gì, 
+  gold: Urgente: Desconexiones de Zoom 5.11.0
+  top1: Urgent: Zoom 5.11.0 Disconnections

@@ -1,0 +1,54 @@
+300 questions, 2811 pairs to grade with qwen3:4b-instruct-2507-q4_K_M
+  200/2811
+  400/2811
+  600/2811
+  800/2811
+  1000/2811
+  1200/2811
+  1400/2811
+  1600/2811
+  1800/2811
+  2000/2811
+  2200/2811
+  2400/2811
+  2600/2811
+  2800/2811
+
+===== queries.jsonl: 100 questions, 91% have a grade-2 ticket in the pool
+method            good@1  good@5  nDCG@5
+cosine              0.85    0.88    0.96
+rerank              0.85    0.88    0.96
+hybrid              0.73    0.86    0.93
+mq_hyde             0.86    0.89    0.95
+
+===== queries_same.jsonl: 100 questions, 96% have a grade-2 ticket in the pool
+method            good@1  good@5  nDCG@5
+cosine              0.92    0.95    0.97
+rerank              0.92    0.95    0.97
+hybrid              0.82    0.93    0.94
+mq_hyde             0.92    0.96    0.97
+
+===== queries_neg.jsonl: 100 questions, 91% have a grade-2 ticket in the pool
+method            good@1  good@5  nDCG@5
+cosine              0.83    0.90    0.96
+rerank              0.82    0.91    0.96
+hybrid              0.74    0.86    0.90
+
+===== cut-offs over all questions (what the product would answer)
+
+cosine score cut-off
+   cut    good     bad  missed  refused
+  0.50    0.91    0.09    0.00     0.00
+  0.55    0.90    0.08    0.01     0.01
+  0.60    0.89    0.03    0.03     0.05
+  0.65    0.83    0.01    0.09     0.07
+  0.70    0.71    0.00    0.22     0.07
+
+rerank score cut-off
+   cut    good     bad  missed  refused
+  0.01    0.89    0.07    0.01     0.02
+  0.05    0.88    0.04    0.03     0.05
+  0.10    0.87    0.03    0.04     0.06
+  0.20    0.85    0.03    0.06     0.06
+  0.30    0.83    0.02    0.09     0.06
+  0.50    0.78    0.01    0.14     0.07
