@@ -33,6 +33,7 @@ const document: WikiDocumentSummary = {
   folderId: FOLDER,
   folderName: 'Guides',
   visibility: 'DEPARTMENT',
+  documentType: 'GUIDE',
   owner: 'Dang Nhat Minh',
   updatedAt: '2026-11-13T08:00:00Z',
 };
@@ -45,6 +46,7 @@ const handbook: WikiDocumentSummary = {
   folderId: null,
   folderName: null,
   visibility: 'COMPANY_WIDE',
+  documentType: 'POLICY',
   owner: 'Tran Hai Anh',
 };
 const detail = (summary: WikiDocumentSummary): WikiDocumentDetail => ({
@@ -115,6 +117,8 @@ describe('WikiHomePage', () => {
     const row = rowLink('VPN guide');
     expect(box.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(row).toHaveTextContent('Guides');
+    expect(within(row).getByText('Guide')).toBeInTheDocument();
+    expect(within(rowLink('Employee handbook')).getByText('Policy')).toBeInTheDocument();
     expect(row).toHaveTextContent('Dang Nhat Minh');
     expect(row).toHaveTextContent('Department');
     expect(row).toHaveTextContent('13/11/2026 15:00');
@@ -429,8 +433,8 @@ describe('WikiHomePage', () => {
     expect(screen.getByRole('heading', { name: 'Company-wide' })).toBeInTheDocument();
     const rows = screen.getAllByRole('listitem');
     expect(rows.map((row) => row.textContent)).toEqual([
-      expect.stringMatching(/^VPN guideIT Space/),
-      expect.stringMatching(/^Employee handbookHR Space/),
+      expect.stringMatching(/^VPN guideGuideIT Space/),
+      expect.stringMatching(/^Employee handbookPolicyHR Space/),
     ]);
   });
 
@@ -471,6 +475,7 @@ describe('WikiHomePage', () => {
       dt.nextElementSibling?.textContent,
     ]);
     expect(terms).toEqual([
+      ['Type', 'Policy'],
       ['Space', 'HR Space'],
       ['Folder', '—'],
       ['Owner', 'Tran Hai Anh'],
