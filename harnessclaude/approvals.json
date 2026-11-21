@@ -567,8 +567,8 @@
     }
   },
   "platform": {
-    "specHash": "f5bff144498c653f1a304a88390a8e1c1266cc1b4b2510125852a615f4d48d27",
-    "approvedAt": "2026-11-14T05:04:24.631Z",
+    "specHash": "72d7a40f909769eebad9ed9035b6ee0780b02268e3071336481bed1f3872730d",
+    "approvedAt": "2026-11-21T19:22:03.913Z",
     "by": "user",
     "acs": {
       "AC-001.15": "THE catalog database (the Platform / Tenant Registry of the HLA, named ) SHALL hold the table  with  (UUID, primary key),  (not null, unique),  ( or , not null),  (not null, unique),  (not null),  (not null, encrypted as AC-001.24 says),  (the tenant changelog version last applied to that database, not null),  (nullable),  (nullable, unique),  and  (, not null) (GBR-24, GBR-37).",
@@ -694,7 +694,7 @@
       "AC-010.10": "THE staging databases SHALL be reachable only on the private network of the stack, and each Workspace's runtime user, the catalog user and the Jobs database user SHALL each reach only their own database (KAN-11, AC-001.26, AC-001.33).",
       "AC-010.11": "THE staging stack SHALL run Redis as AC-008.10 says and Garage as AC-008.11 says, each with a memory and CPU limit and a health check, and the web process SHALL not start healthy while Redis is unreachable (KAN-12).",
       "AC-010.12": "IF anyone connects from the internet to the port of PostgreSQL, Redis or Garage of the application VPS, THEN THE server SHALL refuse the connection (NFR 6).",
-      "AC-011.1": "THE AI VPS SHALL run Ollama as a service with  and the chat model chosen by the benchmark (KAN-140), with a health check (D41).",
+      "AC-011.1": "THE AI VPS SHALL run Ollama as a service with  and the chat model chosen by the benchmark (KAN-140) on its GPU (24 GB VRAM), with a health check (D41).",
       "AC-011.2": "THE Ollama of the AI VPS SHALL be reachable only from the application VPS, over a private, encrypted link (D41, GBR-12).",
       "AC-011.3": "IF anyone connects from the internet to the Ollama port of the AI VPS, THEN THE AI VPS SHALL refuse the connection.",
       "AC-011.4": "WHEN the staging backend calls , THE AI VPS SHALL return an embedding of 1024 dimensions from  and a completion from the chat model.",

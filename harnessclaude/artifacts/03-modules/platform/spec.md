@@ -26,6 +26,7 @@ owner: BA
 | 2026-11-05 | STORY-001, STORY-009, STORY-013 | **Keycloak sign-in (ADR-0003, KAN-275; identity design, "Platform change requests").** New AC-001.34 (`tenant_workspace` gets `google_domain` and `keycloak_organization_id`; `WorkspaceSummary` carries both). AC-001.17 no longer says the Registry hosts `identity`'s sign-in states and hand-off codes (identity deletes them, K12). AC-009.4: `login.` goes to Keycloak, not to the backend. STORY-013: `create` takes the Google domain (AC-013.1, AC-013.13 reworded; steps renumbered, AC-013.14 and AC-013.19 follow); new AC-013.21 (Google domain refused if missing or invalid), AC-013.22 (provisioning port call at creation), AC-013.23 (undo calls `remove`), AC-013.24 (a Workspace is Active at creation; the sign-in test is a runbook step, `docs/runbooks/onboard-company.md`). Requirements 1, 3 and 4, Out of Scope, Interface Contracts, Required from other modules and Schema reworded: no state value, hand-off code or sign-in table is mentioned any more | Decisions K1–K14 of ADR-0003 (4/11, 5/11), Q4 revised: no `PENDING_SIGN_IN` status, no `activate` (AC-013.1 keeps Active at creation); Hiếu's request that identity's old sign-in text leave the platform spec |
 | 2026-11-14 | new STORY-015 | **Cross-module tenant-isolation tests and E2E smoke (KAN-186).** New STORY-015 with AC-015.1 – AC-015.12: backend tests on two Workspace databases (test routing until STORY-002) for the Ticket List, ticket detail and feedback, Search, Chatbot and the Review Queue; a Playwright suite under `e2e/` on the local stack (sign-in through Keycloak and the fake Google, the main pages, ACME's session refused on the BETA site); the run of 14/11 recorded. The Jira App case waits for STORY-006 (KAN-101) and is Out of Scope here. No other criterion changed | KAN-186 (Phạm Tùng Dương, 14/11): user decisions "do what can be done now", Change Mode on `platform`, Jira App left as a gap until KAN-101, E2E on the local Docker Compose stack; NFR 1 names KAN-186 as the end-to-end run |
 | 2026-11-14 | STORY-015 | AC-015.6 names the Review Queue path the backend serves, `GET /api/v1/review-queue` (ticket-review `ReviewReadController`), instead of `/api/v1/reviews/review-queue`. No behaviour changed | Found while building Task 23: the old path does not exist |
+| 2026-11-22 | STORY-011 | The AI VPS is a separate cloud server with a 24 GB VRAM GPU, not a CPU server: the story says the models run on a GPU, and AC-011.1 runs Ollama's models on that GPU | User, 22/11: AI is hosted on a separate cloud GPU server (24 GB VRAM); the CPU assumption made RAG options such as a reranker look too slow |
 
 ## Requirements
 
@@ -297,10 +298,10 @@ owner: BA
 
 ### STORY-011: AI VPS for Ollama (KAN-203)
 - Owner: Trần Trung Hiếu. Sprint S1 (may land after 30/10).
-- As the team, we want Ollama on its own VPS, reachable only privately from the application VPS, so that the models
-  get their own CPU and RAM and company content never leaves the servers the team operates.
+- As the team, we want Ollama on its own AI server, a cloud GPU server with 24 GB VRAM, reachable only privately from
+  the application VPS, so that the models run on a GPU and company content never leaves the servers the team operates.
 - Acceptance:
-  - AC-011.1: THE AI VPS SHALL run Ollama as a service with `bge-m3` and the chat model chosen by the benchmark (KAN-140), with a health check (D41).
+  - AC-011.1: THE AI VPS SHALL run Ollama as a service with `bge-m3` and the chat model chosen by the benchmark (KAN-140) on its GPU (24 GB VRAM), with a health check (D41).
   - AC-011.2: THE Ollama of the AI VPS SHALL be reachable only from the application VPS, over a private, encrypted link (D41, GBR-12).
   - AC-011.3: IF anyone connects from the internet to the Ollama port of the AI VPS, THEN THE AI VPS SHALL refuse the connection.
   - AC-011.4: WHEN the staging backend calls `OLLAMA_BASE_URL`, THE AI VPS SHALL return an embedding of 1024 dimensions from `bge-m3` and a completion from the chat model.

@@ -755,7 +755,7 @@ AC-006.12, AC-006.15, AC-006.16); `TenantIsolationIT` Jira App case (AC-006.14, 
 rebooting the AI VPS; see from the internet that port 11434 is closed.
 **Covers:** AC-011.1 – AC-011.6.
 **Design:** Infrastructure — Private link; Key Decisions P11, Q13.
-**Description:** Manual first (Hiếu): buy the AI VPS sized for the KAN-140 models. `bootstrap.sh --role ai` (ufw: 22,
+**Description:** Manual first (Hiếu): rent the AI server, a cloud GPU server with 24 GB VRAM, for the KAN-140 models. `bootstrap.sh --role ai` (ufw: 22,
 UDP 51820 only from the application VPS; no outgoing Internet except the setup downloads). `infra/scripts/wireguard-setup.sh
 app|ai` (keys generated on the host in `/etc/wireguard`, mode 600, never committed; `wg0` 10.66.0.1 / 10.66.0.2;
 `PersistentKeepalive`; `wg-quick@wg0` enabled). `infra/scripts/ollama-setup.sh` (pinned installer; `OLLAMA_HOST=10.66.0.2:11434`

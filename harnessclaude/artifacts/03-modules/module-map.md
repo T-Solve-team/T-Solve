@@ -240,7 +240,7 @@ Assignee = the Jira assignee (D40).
 | KAN-137 | Đặng Nhật Minh | Unify the ticket model in code | `ticket-repository` |
 | KAN-138 | Trần Hải Anh | **Cancelled** PII masking | — (cancelled) |
 | KAN-139 | Trần Hải Anh | LLM client + embedding client (Ollama) | `ai` |
-| KAN-140 | Đặng Nhật Minh | Benchmark of the AI models on CPU | `ai` |
+| KAN-140 | Đặng Nhật Minh | Benchmark of the AI models on the AI server's GPU (24 GB VRAM) | `ai` |
 | KAN-141 | Trần Hải Anh | Embedding pipeline for tickets | `search` |
 | KAN-142 | Trần Hải Anh | [UC-19] AI draft Solution API | `ai` |
 | KAN-143 | Trần Hải Anh | [UC-19] AI rewrite Solution API | `ai` |

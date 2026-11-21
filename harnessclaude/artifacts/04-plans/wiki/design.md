@@ -216,7 +216,7 @@ frontend/src/features/wiki/  pages (WikiHomePage, WikiDocumentPage, UploadDocume
 | 25 | Privacy | Citation of a document that was revoked | `unavailable` returns it (MSG110 in Chatbot) | AC-001.6 | High |
 | 26 | Privacy | AI Solution Suggestion must never see Department documents | Retrieval filters `COMPANY_WIDE` | AC-001.7 | Critical |
 | 27 | Performance | 10 × 10 MB upload sent twice | `max-request-size` 101 MB; memory bounded by the request | W21 | Low |
-| 28 | Performance | 200 passages × bge-m3 on CPU | Background job; batches of 16 | AC-004.14 | Medium |
+| 28 | Performance | 200 passages × bge-m3 on the AI server's GPU | Background job; batches of 16 | AC-004.14 | Medium |
 | 29 | Tenancy | Request bound to Workspace A | Only A's database (platform tenant layer) | Non-Functional 5, after Task 6 | Medium |
 | 30 | Concurrency | Restore races with an upload or another restore of the same title | The update hits `uq_wiki_document_published_title`; 409 MSG84, the document stays in the trash; no retry (W31) | AC-005.17 IT | Medium |
 | 31 | Input | DOCX zip bomb | POI `ZipSecureFile` defaults kept (inflate ratio, entry size); the extractor maps its exception to `UNREADABLE` | AC-004.2 | Medium |

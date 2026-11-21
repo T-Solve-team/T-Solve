@@ -31,7 +31,7 @@ callers (`search`, `wiki`, `triage`, `chatbot`) keep their own Workspace-scoped 
 - AI draft Solution and AI rewrite Solution as the Java `SolutionAiService` (UC-19; the writer reads and clicks
   Finish themselves) (KAN-142, KAN-143). `tracker` calls it from its FIT-secured Jira App endpoints (decision Q3,
   05/11); `ai` has no REST endpoint of its own.
-- The benchmark of the models on CPU; its result goes to the team notes (KAN-140, assignee Đặng Nhật Minh).
+- The benchmark of the models on the AI server's GPU (24 GB VRAM); its result goes to the team notes (KAN-140, assignee Đặng Nhật Minh).
 
 ## Interfaces
 

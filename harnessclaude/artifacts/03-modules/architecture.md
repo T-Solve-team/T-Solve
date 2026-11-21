@@ -30,7 +30,7 @@ Console and the Jira App), the background worker (profile `worker`, no web serve
 Jobs) and the ops script (profile `ops`, the hand-run form of the same provisioning service the Platform Console calls).
 Note (KAN-299 Q3, 9/11): identity AC-001.61 forbids a Workspace web process to hold the Keycloak provisioning and Google credentials, so the Platform Console needs its own process (its profile is decided in identity Task 29); it cannot share the Workspace web process.
 **Rationale:** one team, one deployable; module boundaries live in packages, not services. A three-person ops
-budget (one application VPS plus one AI VPS) cannot run one server per company, while a database per company keeps
+budget (one application VPS plus one AI server, a separate cloud GPU server) cannot run one server per company, while a database per company keeps
 each company's data behind a database boundary and lets it be backed up and restored on its own (ADR-0002, 29/10).
 This replaces the pool model of ADR-0001 (24/10) and the single-tenant model of Report 3 v3460.
 
@@ -138,9 +138,9 @@ per-Workspace cap.
 | Server | Runs |
 |--------|------|
 | Application VPS | Caddy with the wildcard certificate `*.tsolve.io.vn`, routing by host: `{site name}.` → web app + `/api`, `admin.` → Platform Console, `login.` → Keycloak (sign-in), `api.` → calls from the Jira App (Forge Remote); the web process; the worker; the ops script; Redis (one container with persistence, `noeviction`); Garage; PostgreSQL 16 + pgvector with the catalog database, the Jobs database and one database per Workspace |
-| AI VPS | Ollama with the chat LLM and bge-m3; reachable only from the application VPS over a private, encrypted link, never from the internet; no Internet egress and no prompt logging (D41, GBR-12) |
+| AI server ("AI VPS" in older documents): a separate cloud server with a 24 GB VRAM GPU | Ollama with the chat LLM and bge-m3 on the GPU; reachable only from the application VPS over a private, encrypted link, never from the internet; no Internet egress and no prompt logging (D41, GBR-12) |
 
-The two servers exist because the models need their own CPU and RAM (D41; Jira KAN-194, KAN-200, KAN-203). On a
+The two servers exist because the models need a GPU, which the application VPS does not have: the AI server is a cloud GPU server with 24 GB VRAM, enough for the chat LLM and bge-m3 together (D41; Jira KAN-194, KAN-200, KAN-203; user, 22/11). On a
 developer machine, Docker Compose also runs Redis, Garage and Ollama (every app-level HLA rule — registry, router, Redis sessions, site-bound sessions, row guard — works the same on Compose; the move to Kubernetes is a later step for infra); every environment points the backend at it with
 `OLLAMA_BASE_URL`. Demo data (two Workspaces, created through the provisioning service) is seeded from `infra/seed/` on dev and staging only, never from the
 production configuration (D42, GBR-24).
