@@ -17,6 +17,7 @@ import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.wiki.dto.WikiDocumentDetail;
 import vn.tsolve.wiki.dto.WikiFolder;
 import vn.tsolve.wiki.dto.WikiSpace;
+import vn.tsolve.wiki.entity.WikiDocumentType;
 import vn.tsolve.wiki.repository.WikiSearchRepository;
 import vn.tsolve.wiki.repository.WikiSearchRepository.SpaceAccess;
 
@@ -86,6 +87,7 @@ class WikiBrowseServiceImplTest {
                 null,
                 null,
                 "DEPARTMENT",
+                WikiDocumentType.OTHER,
                 "Owner",
                 Instant.EPOCH,
                 "Text",

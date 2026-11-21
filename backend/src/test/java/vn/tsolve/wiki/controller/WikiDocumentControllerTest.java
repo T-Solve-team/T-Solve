@@ -32,6 +32,7 @@ import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.common.security.WithTSolveUser;
 import vn.tsolve.wiki.dto.WikiDocumentDetail;
 import vn.tsolve.wiki.dto.WikiDocumentSummary;
+import vn.tsolve.wiki.entity.WikiDocumentType;
 import vn.tsolve.wiki.service.WikiBrowseService;
 import vn.tsolve.wiki.service.WikiSearchService;
 import vn.tsolve.wiki.service.WikiUploadService;
@@ -67,6 +68,7 @@ class WikiDocumentControllerTest {
                         null,
                         null,
                         "COMPANY_WIDE",
+                        WikiDocumentType.OTHER,
                         "Owner Name",
                         Instant.EPOCH)));
         mvc.perform(get("/api/v1/wiki/documents/search").param("q", "guide"))
@@ -116,6 +118,7 @@ class WikiDocumentControllerTest {
                         null,
                         null,
                         "DEPARTMENT",
+                        WikiDocumentType.OTHER,
                         "Owner",
                         Instant.EPOCH,
                         "<script>plain text</script>",

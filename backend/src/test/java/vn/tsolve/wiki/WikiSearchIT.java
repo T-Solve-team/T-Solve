@@ -12,6 +12,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 import vn.tsolve.ai.client.EmbeddingClient;
 import vn.tsolve.wiki.dto.WikiDocumentSummary;
+import vn.tsolve.wiki.entity.WikiDocumentType;
 import vn.tsolve.wiki.service.impl.WikiSearchServiceImpl;
 
 class WikiSearchIT extends WikiReadTestSupport {
@@ -23,11 +24,13 @@ class WikiSearchIT extends WikiReadTestSupport {
     }
 
     @Test
-    void combinesKeywordRankAndBestPassageSimilarityWithoutDuplicates_AC_002_7_AC_002_10() {
+    void combinesKeywordRankAndBestPassageSimilarityWithoutDuplicates_AC_002_7_AC_002_10_AC_007_10() {
         UUID both = document(space, null, "Guide", "DEPARTMENT", "INDEXED", "repair");
         UUID semantic = document(space, null, "Meaning", "DEPARTMENT", "INDEXED", "unrelated");
         UUID keyword = document(space, null, "Keyword", "DEPARTMENT", "PENDING", "repair");
         UUID below = document(space, null, "Below", "DEPARTMENT", "INDEXED", "unrelated");
+        jdbc.update("UPDATE wiki_document SET document_type = 'POLICY' WHERE wiki_document_id = ?", both);
+        jdbc.update("UPDATE wiki_document SET document_type = 'GUIDE' WHERE wiki_document_id = ?", semantic);
         chunk(both, 0, 0, 1);
         chunk(both, 1, 1, 0);
         chunk(semantic, 0, 0.8f, 0.6f);
@@ -36,7 +39,16 @@ class WikiSearchIT extends WikiReadTestSupport {
         assertThat(result).extracting(WikiDocumentSummary::documentId).containsExactly(both, semantic, keyword);
         assertThat(result.getFirst())
                 .isEqualTo(new WikiDocumentSummary(
-                        both, "Guide", spaceId, "Support Wiki", null, null, "DEPARTMENT", "Reader Name", UPDATED));
+                        both,
+                        "Guide",
+                        spaceId,
+                        "Support Wiki",
+                        null,
+                        null,
+                        "DEPARTMENT",
+                        WikiDocumentType.POLICY,
+                        "Reader Name",
+                        UPDATED));
         assertThat(search(false, 0.9).search(user, "repair"))
                 .extracting(WikiDocumentSummary::documentId)
                 .containsExactly(both, keyword);

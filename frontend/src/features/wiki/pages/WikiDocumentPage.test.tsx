@@ -19,6 +19,7 @@ const document: WikiDocumentDetail = {
   folderId: null,
   folderName: null,
   visibility: 'COMPANY_WIDE',
+  documentType: 'GUIDE',
   owner: 'Dang Nhat Minh',
   updatedAt: '2026-11-13T08:00:00Z',
   content: '<script>alert("test")</script>\nVPN instructions\n  Keep indentation.',
@@ -144,6 +145,8 @@ describe('WikiDocumentPage', () => {
       expect(screen.getByText(value)).toBeInTheDocument();
     }
     expect(screen.getByText('Folder')).toBeInTheDocument();
+    expect(screen.getByText('Type')).toBeInTheDocument();
+    expect(screen.getByText('Guide')).toBeInTheDocument();
     const content = screen.getByRole('region', { name: 'Content' });
     expect(content.textContent).toBe(document.content);
     expect(content.querySelector('script')).toBeNull();

@@ -37,25 +37,41 @@ import org.springframework.transaction.support.DefaultTransactionStatus;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import vn.tsolve.ai.client.EmbeddingClient;
 import vn.tsolve.ai.exception.AiUnavailableException;
+import vn.tsolve.platform.service.FileStorage;
 import vn.tsolve.wiki.entity.WikiDocument;
 import vn.tsolve.wiki.entity.WikiDocument.IndexStatus;
 import vn.tsolve.wiki.entity.WikiDocument.Status;
+import vn.tsolve.wiki.entity.WikiDocumentType;
 import vn.tsolve.wiki.repository.WikiChunkRepository;
 import vn.tsolve.wiki.repository.WikiDocumentRepository;
+import vn.tsolve.wiki.service.DoclingClient;
 import vn.tsolve.wiki.service.PassageSplitter;
+import vn.tsolve.wiki.service.TypedChunker;
 
 @ExtendWith(OutputCaptureExtension.class)
 class WikiIndexJobHandlerTest {
     private final WikiDocumentRepository documents = mock(WikiDocumentRepository.class);
     private final WikiChunkRepository chunks = mock(WikiChunkRepository.class);
     private final EmbeddingClient embeddings = mock(EmbeddingClient.class);
+    private final FileStorage storage = mock(FileStorage.class);
     private final Transactions transactions = new Transactions();
     private final UUID id = UUID.randomUUID();
     private WikiIndexJobHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new WikiIndexJobHandler(documents, chunks, new PassageSplitter(), embeddings, transactions, "bge-m3");
+        var beans = new org.springframework.beans.factory.support.StaticListableBeanFactory(
+                java.util.Map.of("storage", storage));
+        handler = new WikiIndexJobHandler(
+                documents,
+                chunks,
+                new PassageSplitter(),
+                new TypedChunker(),
+                new DoclingClient("", "120s"),
+                beans.getBeanProvider(FileStorage.class),
+                embeddings,
+                transactions,
+                "bge-m3");
     }
 
     @Test
@@ -77,7 +93,9 @@ class WikiIndexJobHandlerTest {
             List<String> batch = call.getArgument(0);
             batchSizes.add(batch.size());
             assertThat(batch)
-                    .containsExactlyElementsOf(passages.subList(embedded.get(), embedded.get() + batch.size()));
+                    .containsExactlyElementsOf(passages.subList(embedded.get(), embedded.get() + batch.size()).stream()
+                            .map(WikiIndexJobHandlerTest::plainPassage)
+                            .toList());
             return batch.stream()
                     .map(text -> vector(embedded.getAndIncrement() + 1))
                     .toList();
@@ -100,7 +118,7 @@ class WikiIndexJobHandlerTest {
 
         assertThat(batchSizes).containsExactly(16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 8);
         for (int i = 0; i < 200; i++) {
-            verify(chunks).insert(id, i, passages.get(i), Arrays.toString(vector(i + 1)), "bge-m3");
+            verify(chunks).insert(id, i, plainPassage(passages.get(i)), Arrays.toString(vector(i + 1)), "bge-m3");
         }
         var order = org.mockito.Mockito.inOrder(chunks, documents);
         order.verify(chunks).deleteByDocumentId(id);
@@ -110,13 +128,31 @@ class WikiIndexJobHandlerTest {
     }
 
     @Test
+    void fallsBackWithoutStorageCallWhenDoclingIsUnsetAndLogsOnlyIdAndCause_AC_007_8(CapturedOutput output) {
+        WikiDocument document = document("Private text");
+        ReflectionTestUtils.setField(document, "documentType", WikiDocumentType.GUIDE);
+        when(documents.findById(id)).thenReturn(Optional.of(document));
+        when(documents.findForIndexing(id)).thenReturn(Optional.of(document));
+        when(embeddings.embed(List.of("[guide] Guide\nPrivate text"))).thenReturn(List.of(vector(1)));
+
+        handler.execute(id);
+
+        verifyNoInteractions(storage);
+        verify(chunks).insert(id, 0, "[guide] Guide\nPrivate text", Arrays.toString(vector(1)), "bge-m3");
+        verify(documents).updateIndexStatus(id, IndexStatus.INDEXED);
+        assertThat(output)
+                .contains("document=" + id, "cause=IllegalStateException")
+                .doesNotContain("Private text", "wiki/file");
+    }
+
+    @Test
     void repeatedDeliveryReplacesChunks_AC_004_14() {
         published("Guide");
-        when(embeddings.embed(List.of("Guide"))).thenReturn(List.of(vector(1)));
+        when(embeddings.embed(List.of(plainPassage("Guide")))).thenReturn(List.of(vector(1)));
         handler.execute(id);
         handler.execute(id);
         verify(chunks, times(2)).deleteByDocumentId(id);
-        verify(chunks, times(2)).insert(id, 0, "Guide", Arrays.toString(vector(1)), "bge-m3");
+        verify(chunks, times(2)).insert(id, 0, plainPassage("Guide"), Arrays.toString(vector(1)), "bge-m3");
         verify(documents, times(2)).updateIndexStatus(id, IndexStatus.INDEXED);
     }
 
@@ -224,6 +260,7 @@ class WikiIndexJobHandlerTest {
                 null,
                 "Guide",
                 WikiDocument.Visibility.COMPANY_WIDE,
+                WikiDocumentType.OTHER,
                 content,
                 "wiki/file",
                 "guide.pdf",
@@ -232,6 +269,10 @@ class WikiIndexJobHandlerTest {
                 1,
                 UUID.randomUUID(),
                 Instant.now());
+    }
+
+    private static String plainPassage(String body) {
+        return "[other] Guide\n" + body;
     }
 
     private static float[] vector(int value) {

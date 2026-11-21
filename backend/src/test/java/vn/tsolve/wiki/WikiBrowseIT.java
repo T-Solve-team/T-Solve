@@ -12,6 +12,7 @@ import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.wiki.dto.WikiDocumentSummary;
 import vn.tsolve.wiki.dto.WikiFolder;
 import vn.tsolve.wiki.dto.WikiSpace;
+import vn.tsolve.wiki.entity.WikiDocumentType;
 
 class WikiBrowseIT extends WikiReadTestSupport {
     @Test
@@ -48,7 +49,16 @@ class WikiBrowseIT extends WikiReadTestSupport {
                 .containsExactly(a, z, b);
         assertThat(browse.listCompanyWide(user).getFirst())
                 .isEqualTo(new WikiDocumentSummary(
-                        a, "Alpha", publicId(other), "Alpha Wiki", null, null, "COMPANY_WIDE", "Reader Name", UPDATED));
+                        a,
+                        "Alpha",
+                        publicId(other),
+                        "Alpha Wiki",
+                        null,
+                        null,
+                        "COMPANY_WIDE",
+                        WikiDocumentType.OTHER,
+                        "Reader Name",
+                        UPDATED));
     }
 
     @ParameterizedTest
@@ -100,6 +110,7 @@ class WikiBrowseIT extends WikiReadTestSupport {
                         folder,
                         "Guides",
                         "DEPARTMENT",
+                        WikiDocumentType.OTHER,
                         "Reader Name",
                         UPDATED));
     }

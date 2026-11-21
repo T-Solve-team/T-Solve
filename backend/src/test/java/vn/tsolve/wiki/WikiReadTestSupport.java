@@ -38,6 +38,10 @@ abstract class WikiReadTestSupport {
         var source = new DriverManagerDataSource(
                 url.substring(0, url.lastIndexOf('/') + 1) + databaseName, server.getUsername(), server.getPassword());
         jdbc = new JdbcTemplate(source);
+        applyMigrations(source);
+    }
+
+    protected static void applyMigrations(javax.sql.DataSource source) throws Exception {
         try (Connection connection = source.getConnection();
                 var resources = new ClassLoaderResourceAccessor();
                 var liquibase = new Liquibase(
