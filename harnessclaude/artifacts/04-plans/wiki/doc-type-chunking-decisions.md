@@ -27,6 +27,7 @@ Labels: `policy`, `runbook`, `guide`, `faq`, `reference`, `spec`, `record`, `ann
 | C7 | Chunk size | keep 1,000 / raise | At most 1,500 characters per chunk, prefix included, cut at the type's unit boundary; a unit over the limit is split with the prefix repeated; still at most 200 chunks | A whole runbook procedure or policy clause often exceeds 1,000; bge-m3 accepts far more |
 | C8 | Who owns the docling client | `ai` module / `wiki` module | `wiki` (`DOCLING_BASE_URL`, no default) | One module changes; the `ai` module stays Ollama-only |
 | C9 | Rule 7 (`other` > 10%) monitoring | build now / later | Later | No screen asks for it yet |
+| C10 | Classify the files of one extract in parallel or one at a time (PR #303 review, BUG-355) | (a) parallel (b) bounded to `AI_MAX_CONCURRENT` (c) one at a time, timeout stops the call | (c) | Ollama has 2 slots and a 1 s permit wait: parallel calls fail as Busy and become `OTHER`. One at a time leaves a slot for chatbot and triage; stopping the call at the timeout frees its slot. Cost: up to 10 × 20 s in the worst case, a few seconds per file normally |
 
 ## Chunking unit per type
 

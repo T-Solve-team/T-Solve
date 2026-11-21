@@ -12,8 +12,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.convert.DurationStyle;
 import org.springframework.core.io.ClassPathResource;
@@ -62,13 +64,24 @@ public class DocumentTypeClassifier {
         }
     }
 
-    public CompletableFuture<WikiDocumentType> classify(String title, String text) {
-        if (text.isBlank()) return CompletableFuture.completedFuture(WikiDocumentType.OTHER);
+    /** Blocks the caller; a call past the timeout is interrupted so it frees its Ollama slot (AC-007.3, BUG-355). */
+    public WikiDocumentType classify(String title, String text) {
+        if (text.isBlank()) return WikiDocumentType.OTHER;
         String sample = text.substring(0, Math.min(MAX_SAMPLE_LENGTH, text.length()));
         var input = new ChatMessage(ChatMessage.Role.USER, "Title: " + title + "\n\nExtracted text:\n" + sample);
-        return CompletableFuture.supplyAsync(() -> classify(input), Thread::startVirtualThread)
-                .completeOnTimeout(WikiDocumentType.OTHER, timeout.toMillis(), TimeUnit.MILLISECONDS)
-                .exceptionally(failure -> WikiDocumentType.OTHER);
+        var call = new FutureTask<>(() -> classify(input));
+        // Socket reads on a virtual thread stop on interrupt, so cancel(true) ends the HTTP call and its slot.
+        Thread.startVirtualThread(call);
+        try {
+            return call.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            return WikiDocumentType.OTHER;
+        } catch (ExecutionException | TimeoutException failed) {
+            return WikiDocumentType.OTHER;
+        } finally {
+            call.cancel(true);
+        }
     }
 
     private WikiDocumentType classify(ChatMessage input) {

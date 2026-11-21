@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.hibernate.exception.ConstraintViolationException;
 import org.slf4j.Logger;
@@ -109,25 +108,21 @@ public class WikiUploadServiceImpl implements WikiUploadService {
     // No transaction: parsing up to 10 files must not hold a pooled connection (BUG-294).
     public List<WikiUploadPreview> extract(UUID userId, UUID spaceId, List<MultipartFile> files) {
         requireManager(userId, spaceId);
-        var previews = readFiles(files).stream()
+        // One file at a time: one extract holds at most one Ollama slot (AC-007.2, BUG-355).
+        return readFiles(files).stream()
                 .map(file -> {
                     String name = file.name();
                     String title = name.substring(0, name.lastIndexOf('.')).strip();
                     String previewTitle = title.substring(0, Math.min(200, title.length()));
-                    return classifier
-                            .classify(previewTitle, file.text())
-                            .thenApply(type -> new WikiUploadPreview(
-                                    name,
-                                    previewTitle,
-                                    file.text()
-                                            .substring(
-                                                    0, Math.min(300, file.text().length())),
-                                    file.words(),
-                                    file.text().isEmpty() ? "UNREADABLE" : "READY",
-                                    type));
+                    return new WikiUploadPreview(
+                            name,
+                            previewTitle,
+                            file.text().substring(0, Math.min(300, file.text().length())),
+                            file.words(),
+                            file.text().isEmpty() ? "UNREADABLE" : "READY",
+                            classifier.classify(previewTitle, file.text()));
                 })
                 .toList();
-        return previews.stream().map(CompletableFuture::join).toList();
     }
 
     @Override

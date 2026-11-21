@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -49,6 +50,7 @@ import vn.tsolve.platform.service.FileStorage;
 import vn.tsolve.wiki.InMemoryFileStorage;
 import vn.tsolve.wiki.dto.WikiDocumentRef;
 import vn.tsolve.wiki.dto.WikiPublishMetadata;
+import vn.tsolve.wiki.dto.WikiUploadPreview;
 import vn.tsolve.wiki.entity.WikiDocument;
 import vn.tsolve.wiki.entity.WikiDocument.Visibility;
 import vn.tsolve.wiki.entity.WikiDocumentType;
@@ -127,6 +129,24 @@ class WikiUploadServiceImplTest {
         });
         assertThat(storage.files).isEmpty();
         verifyNoInteractions(documents, audit, jobs);
+    }
+
+    @Test
+    void classifiesTheFilesOneAtATime_AC_007_2_BUG_355() throws IOException {
+        var running = new AtomicInteger();
+        var mostAtOnce = new AtomicInteger();
+        when(llm.chat(any(), any())).thenAnswer(call -> {
+            mostAtOnce.accumulateAndGet(running.incrementAndGet(), Math::max);
+            Thread.sleep(50);
+            running.decrementAndGet();
+            return "{\"documentType\":\"GUIDE\"}";
+        });
+        var result = service.extract(
+                user,
+                space,
+                List.of(file("guide.pdf", "one.pdf"), file("guide.pdf", "two.pdf"), file("guide.docx", "three.docx")));
+        assertThat(result).extracting(WikiUploadPreview::documentType).containsOnly(WikiDocumentType.GUIDE);
+        assertThat(mostAtOnce).hasValue(1);
     }
 
     @Test
