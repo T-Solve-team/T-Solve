@@ -1,0 +1,10 @@
+/* The original file fills the reading column; docx-preview draws its own page boxes. */
+.pdf {
+  width: 100%;
+  height: 80vh;
+  border: var(--ant-line-width) solid var(--ant-color-border-secondary);
+}
+
+.docx {
+  overflow-x: auto;
+}

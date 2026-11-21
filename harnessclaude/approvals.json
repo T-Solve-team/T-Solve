@@ -1589,8 +1589,8 @@
     }
   },
   "wiki": {
-    "specHash": "4a6687a179cc69ef52a955bd24f8d58cdd92537ebb8babd2fc4894bd7737fc65",
-    "approvedAt": "2026-11-21T16:02:08.561Z",
+    "specHash": "0f85916429c5aadfb60f3ab9f20e8deb51916ec5f1dd267e95a553cbf84d4a6e",
+    "approvedAt": "2026-11-21T19:53:21.260Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the view rule is evaluated for a user and a Space, THE system SHALL grant View only if the user is Active, the Space is Active, its Department is Active, and one of these holds: the user is the Space's Knowledge Manager (a  row and the role ); one of the user's Departments (AC-001.2) is the Space's Department; one of the user's Departments has a permission on the Space; the user has their own permission on the Space.",
@@ -1623,7 +1623,8 @@
       "AC-002.16": "WHERE the document list of the selected entry or the search result is empty, THE web app SHALL show MSG04 in its place, and MSG04 in the preview pane.",
       "AC-002.17": "WHEN the user selects a Space or a folder in the navigator, THE web app SHALL keep them in the URL as  and , remove  and , and show the documents of that folder.",
       "AC-002.18": "IF the search box holds more than 200 characters, THEN THE web app SHALL show MSG02 below it and send no request.",
-      "AC-002.19": "WHEN the user opens a document, THE web app SHALL show 11.2 Wiki Document with its header (title, Space, folder, visibility, Type, Owner, last update), its content as plain text and a Download button.",
+      "AC-002.19": "WHEN the user opens a document, THE web app SHALL show 11.2 Wiki Document with its header (title, Space, folder, visibility, Type, Owner, last update), its original file of AC-002.12 with its images and tables in place (a PDF in the browser's own PDF viewer, a DOCX rendered as pages) and a Download button.",
+      "AC-002.26": "IF the original file of a document cannot be loaded or rendered, or the document is in the trash, THEN THE web app SHALL show its content of AC-002.11 as plain text on 11.2 in place of the file.",
       "AC-002.20": "IF the document answers 404 MSG110, THEN THE web app SHALL show \"This document is no longer available.\" in place of the document.",
       "AC-002.21": "WHERE the user is the Knowledge Manager of the selected Space, THE web app SHALL show the buttons \"Upload documents\", \"New folder\" and \"Space Settings\" on 11.1, and folder actions Rename, Move and Delete; for any other user it SHALL show none of them.",
       "AC-002.22": "WHILE the URL names no Space the user can view, THE web app SHALL mark \"Company-wide\" as the current navigator entry and list every Company-wide document of AC-002.2, in its order (Space name, then title), with the Space name on each row.",
