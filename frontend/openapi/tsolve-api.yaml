@@ -5421,6 +5421,12 @@ components:
           description: In number order; empty unless ANSWERED.
           items:
             $ref: '#/components/schemas/ChatbotCitation'
+        title:
+          type: string
+          maxLength: 60
+          description: >-
+            A short AI-written name for a new conversation (chatbot AC-009.9); only on the answer to a first
+            question that the classifier named. The web app titles the conversation with it, else with the question.
     ChatbotCitation:
       description: A source of an answer. A ticket source carries only its Solution, never the ticket's details (GBR-36).
       oneOf:

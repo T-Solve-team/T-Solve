@@ -237,6 +237,25 @@ class ChatbotAnswerServiceImplTest {
     }
 
     @Test
+    void returnsTitleOnFirstQuestionOnly_AC_009_9() {
+        withSolution();
+        when(llm.chat(any(), notNull()))
+                .thenReturn("{\"category\":\"QUESTION\",\"query\":\"VPN\",\"title\":\"  Lỗi  VPN\n809 " + "x".repeat(80)
+                        + "\"}");
+        when(llm.chat(any(), isNull())).thenReturn("Answer [1]");
+
+        var first = service.ask(USER, new ChatbotQuestionRequest("lỗi VPN 809", List.of()));
+        var followUp = service.ask(
+                USER, new ChatbotQuestionRequest("còn lỗi 812?", List.of(new ChatbotTurnRequest("lỗi VPN 809", "a"))));
+
+        assertThat(first.title()).startsWith("Lỗi VPN 809 x").hasSize(60);
+        assertThat(followUp.title()).isNull();
+        assertThat(service.ask(USER, new ChatbotQuestionRequest("hello", List.of()))
+                        .title())
+                .isNull();
+    }
+
+    @Test
     void classifierCalledOnceBeforeEmbeddingWithSchema_AC_009_2() {
         withSolution();
         Thread requestThread = Thread.currentThread();
