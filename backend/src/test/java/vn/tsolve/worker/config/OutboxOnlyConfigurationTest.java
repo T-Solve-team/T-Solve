@@ -1,6 +1,7 @@
 package vn.tsolve.worker.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
@@ -8,15 +9,18 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import javax.sql.DataSource;
 import liquibase.integration.spring.SpringLiquibase;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import vn.tsolve.common.tenant.TenantContext;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.worker.dto.OutboundEmail;
 import vn.tsolve.worker.exception.InvalidOutboundEmailException;
 import vn.tsolve.worker.service.EmailOutboxService;
@@ -109,6 +113,30 @@ class OutboxOnlyConfigurationTest {
                 .run(context -> assertThat(
                                 context.getBean(OutboxWorkspace.class).current())
                         .contains(B));
+    }
+
+    @Test
+    @DisplayName(
+            "AC-002.16 the outbox Workspace is the request's bound Workspace, and on an unbound thread the single Active one, without throwing")
+    void followsTheHolderWhenBoundAndFallsBackWithoutThrowing_AC_002_16() {
+        var holder = new ThreadLocalTenantContext(Set.of(A, B)::contains);
+
+        staging.withBean(TenantContext.class, () -> holder)
+                .withPropertyValues(ENABLED, JOBS, "tsolve.worker.mock.active-workspaces=" + A)
+                .run(context -> {
+                    OutboxWorkspace outbox = context.getBean(OutboxWorkspace.class);
+                    assertThat(holder.runIn(B, () -> outbox.current())).contains(B);
+                    assertThat(outbox.current()).contains(A);
+                });
+        staging.withBean(TenantContext.class, () -> holder)
+                .withPropertyValues(ENABLED, JOBS, "tsolve.worker.mock.active-workspaces=" + A + "," + B)
+                .run(context -> {
+                    OutboxWorkspace outbox = context.getBean(OutboxWorkspace.class);
+                    assertThat(holder.runIn(A, () -> outbox.current())).contains(A);
+                    assertThatCode(outbox::current).doesNotThrowAnyException();
+                    assertThat(outbox.current()).isEmpty();
+                });
+        assertThat(holder.currentWorkspaceId()).isEmpty();
     }
 
     @Test

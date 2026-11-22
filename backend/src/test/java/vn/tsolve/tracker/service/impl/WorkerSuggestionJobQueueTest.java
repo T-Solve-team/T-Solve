@@ -11,16 +11,21 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.tracker.dto.SuggestionJobRequest;
 import vn.tsolve.worker.service.TenantJobService;
 import vn.tsolve.worker.service.WorkerTenantService;
+import vn.tsolve.worker.service.mock.MockWorkerTenantService;
 
 @ExtendWith({MockitoExtension.class, OutputCaptureExtension.class})
 class WorkerSuggestionJobQueueTest {
@@ -81,6 +86,28 @@ class WorkerSuggestionJobQueueTest {
         assertThatCode(() -> queue(DEV.toString()).enqueue(REQUEST)).doesNotThrowAnyException();
 
         assertThat(output).contains("ITSUP-1").contains("IllegalStateException");
+    }
+
+    @Test
+    @DisplayName(
+            "AC-002.13 inside a bound call the suggestion job is queued for the bound Workspace, not the dev Workspace")
+    void queuesForTheBoundWorkspaceNotTheDevOneInsideABoundCall_AC_002_13() {
+        var holder = new ThreadLocalTenantContext(Set.of(BOUND, DEV)::contains);
+        var realTenants = org.mockito.Mockito.spy(new MockWorkerTenantService(Set.of(BOUND, DEV), Set.of(), holder));
+        var recordingJobs = org.mockito.Mockito.mock(TenantJobService.class);
+        var boundWhenQueued = new AtomicReference<Optional<UUID>>();
+        given(recordingJobs.enqueue(SuggestionJobHandler.TYPE, JOB_REF)).willAnswer(call -> {
+            boundWhenQueued.set(holder.currentWorkspaceId());
+            return UUID.randomUUID();
+        });
+        var queue = new WorkerSuggestionJobQueue(recordingJobs, realTenants, DEV.toString());
+
+        holder.runIn(BOUND, () -> queue.enqueue(REQUEST));
+
+        verify(recordingJobs).enqueue(SuggestionJobHandler.TYPE, JOB_REF);
+        assertThat(boundWhenQueued.get()).contains(BOUND);
+        verify(realTenants, never()).runIn(any(), any());
+        assertThat(holder.currentWorkspaceId()).isEmpty();
     }
 
     private WorkerSuggestionJobQueue queue(String devWorkspaceId) {

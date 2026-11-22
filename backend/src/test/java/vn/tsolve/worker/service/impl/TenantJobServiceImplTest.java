@@ -6,7 +6,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -19,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.worker.dto.TenantJobRequest;
 import vn.tsolve.worker.service.TenantJobHandler;
 import vn.tsolve.worker.service.WorkerTenantService;
@@ -84,14 +84,15 @@ class TenantJobServiceImplTest {
     void enqueueFromRequestBindsTheEnqueueWorkspace_BUG_324() {
         storage.setJobMapper(mapper);
         UUID other = UUID.randomUUID();
-        // Two Workspaces, so only the request's TenantContext Workspace can be chosen.
-        var tenants = new MockWorkerTenantService(Set.of(workspace, other), Set.of(), () -> Optional.of(workspace));
+        // Two Workspaces, so only the request's bound Workspace can be chosen.
+        var holder = new ThreadLocalTenantContext(Set.of(workspace, other)::contains);
+        var tenants = new MockWorkerTenantService(Set.of(workspace, other), Set.of(), holder);
         var queue = new TenantJobServiceImpl(tenants, new JobRequestScheduler(storage), handler);
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest()));
         try {
             assertThatThrownBy(() -> queue.enqueue("test-record", recordId)).isInstanceOf(IllegalStateException.class);
 
-            UUID jobId = queue.enqueueFromRequest("test-record", recordId);
+            UUID jobId = holder.runIn(workspace, () -> queue.enqueueFromRequest("test-record", recordId));
 
             var request =
                     (TenantJobRequest) storage.getJobById(jobId).getJobDetails().getJobParameterValues()[0];

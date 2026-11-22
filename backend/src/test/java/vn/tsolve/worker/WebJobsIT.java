@@ -17,6 +17,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
+import vn.tsolve.common.tenant.AcceptingKnownWorkspaces;
 import vn.tsolve.worker.config.OutboxOnlyConfiguration;
 import vn.tsolve.worker.config.WebJobsConfiguration;
 import vn.tsolve.worker.config.WorkerConfiguration;
@@ -62,7 +63,11 @@ class WebJobsIT {
         // The staging worker container.
         new ApplicationContextRunner()
                 .withInitializer(new ConfigDataApplicationContextInitializer())
-                .withUserConfiguration(WorkerConfiguration.class, WorkerMockConfiguration.class, Handler.class)
+                .withUserConfiguration(
+                        WorkerConfiguration.class,
+                        WorkerMockConfiguration.class,
+                        AcceptingKnownWorkspaces.class,
+                        Handler.class)
                 .withPropertyValues(jobsDatabase())
                 .withPropertyValues(
                         "spring.profiles.active=worker,worker-mock", "tsolve.worker.mock.active-workspaces=" + A)
