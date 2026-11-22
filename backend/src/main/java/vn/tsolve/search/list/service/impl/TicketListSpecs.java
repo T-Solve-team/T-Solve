@@ -49,7 +49,14 @@ final class TicketListSpecs {
                         .replace("_", "\\_");
                 List<Predicate> matches = new ArrayList<>();
                 for (String field : List.of(
-                        "sourceTicketId", "title", "symptoms", "rootCause", "resolutionSteps", "workaround", "scope")) {
+                        "sourceTicketId",
+                        "title",
+                        "description",
+                        "symptoms",
+                        "rootCause",
+                        "resolutionSteps",
+                        "workaround",
+                        "scope")) {
                     matches.add(builder.like(builder.lower(ticket.get(field)), "%" + escaped + "%", '\\'));
                 }
                 filters.add(builder.or(matches.toArray(Predicate[]::new)));

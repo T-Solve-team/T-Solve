@@ -16,7 +16,7 @@ import org.hibernate.annotations.Synchronize;
 @Subselect("""
         select t.ticket_id as id, t.public_id, t.source_ticket_id as ticket_id, t.title, t.source, t.status, t.writer,
                t.writer_id,
-               t.resolved_date, t.updated_at, t.symptoms, t.root_cause, t.resolution_steps,
+               t.resolved_date, t.updated_at, t.description, t.symptoms, t.root_cause, t.resolution_steps,
                t.workaround, t.scope, p.project_id, p.public_id as project_public_id,
                p.jira_project_key as project_name, d.department_id,
                d.public_id as department_public_id, d.name as department_name,
@@ -50,6 +50,7 @@ public class SearchTicket {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    private String description;
     private String symptoms;
 
     @Column(name = "root_cause")
@@ -123,6 +124,10 @@ public class SearchTicket {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public String getDescription() {
+        return description;
     }
 
     public String getSymptoms() {

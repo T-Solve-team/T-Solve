@@ -181,6 +181,18 @@ class TicketRankingRepositoryIT {
     }
 
     @Test
+    void fallbackMatchesDescription_AC_007_2() {
+        when(embeddings.embed(any())).thenThrow(new AiUnavailableException());
+        jdbc.update("UPDATE ticket SET description = 'Printer jam on floor 3' WHERE title = 'BEST'");
+        var result = ranking.rank(
+                "unused", "PRINTER jam", new RankFilter(null, null, null, null), scope(), PageRequest.of(0, 20));
+        assertThat(result.isFallback()).isTrue();
+        assertThat(result.page().getContent())
+                .extracting(TicketSearchResultResponse::title)
+                .containsExactly("BEST");
+    }
+
+    @Test
     void appliesFiltersAndInclusiveDates_AC_007_3() {
         RankFilter filter =
                 new RankFilter(departmentPublicId, "CSV", LocalDate.parse("2026-10-01"), LocalDate.parse("2026-10-01"));

@@ -24,4 +24,13 @@ class EmbeddingTextTest {
         when(ticket.getWorkaround()).thenReturn("");
         assertThat(EmbeddingText.of(ticket)).isEqualTo("Title\nResolution steps");
     }
+
+    @Test
+    void addsDescriptionAfterTitle_AC_005_4() {
+        SearchTicket ticket = mock(SearchTicket.class);
+        when(ticket.getTitle()).thenReturn("Title");
+        when(ticket.getDescription()).thenReturn("Description");
+        when(ticket.getSymptoms()).thenReturn("Symptoms");
+        assertThat(EmbeddingText.of(ticket)).isEqualTo("Title\nDescription\nSymptoms");
+    }
 }
