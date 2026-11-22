@@ -2216,3 +2216,5 @@
 {"ts":"2026-11-22T03:15:57.109Z","type":"quick-opened","what":"Fix flaky ReviewQueueEventServiceImplTest fake with per-LISTEN notification queues (BUG-199, KAN-379)","files":["backend/src/test/java/vn/tsolve/review/service/impl/ReviewQueueEventServiceImplTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-22T03:22:10.243Z","type":"quick-closed","what":"Fix flaky ReviewQueueEventServiceImplTest fake with per-LISTEN notification queues (BUG-199, KAN-379)","files":["backend/src/test/java/vn/tsolve/review/service/impl/ReviewQueueEventServiceImplTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-22T05:13:11.462Z","type":"spec-approved","module":"wiki","specHash":"1ddb373a1b48ec8ce31385d9d5a31d5a3efad60f5f32b02edef85d388e31a8e0"}
+{"ts":"2026-11-22T05:38:36.523Z","type":"quick-opened","what":"Run docling-serve in the staging stack and point DOCLING_BASE_URL at it","files":["infra/compose.staging.yml","infra/staging.env.example","infra/README.md"]}
+{"ts":"2026-11-22T05:40:32.943Z","type":"quick-closed","what":"Run docling-serve in the staging stack and point DOCLING_BASE_URL at it","files":["infra/compose.staging.yml","infra/staging.env.example","infra/README.md"]}
