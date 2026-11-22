@@ -358,3 +358,26 @@ All three tasks are Jira KAN-243, so one branch `feat/KAN-243-chatbot-classify-q
 **Covers:** AC-001.6, AC-002.2, AC-002.3, AC-002.16, AC-002.17, AC-009.9, AC-013.1
 **Dependencies:** Task 21, Task 25
 **Estimated size:** medium
+
+---
+
+## Task 27: Match mockup C — Show / Hide, title bar, composer
+
+**Story:** STORY-001, STORY-002
+**Feature:** mockup-c-polish
+**Jira:** KAN-382 · branch `feat/KAN-382-chatbot-mockup-c` (from `main` after KAN-183; first pushed on `feat/KAN-382-chatbot-focus-layout` after #316 merged)
+**Description:**
+- `CitationList`: a ticket Solution citation is collapsed with a Show link button; Show expands its `TicketSolution`
+  under the line and becomes Hide (AC-001.10, AC-001.11), as before KAN-380.
+- A title bar above the thread with the open conversation's title on one line with "…", "New conversation" when it
+  has no question (AC-002.18).
+- Composer as mockup C: placeholder "Ask a question" / "Ask a follow-up question", the hint and "Send waits for the
+  current answer" while pending (AC-001.19), a rounded-square Send button, the count as "0 / 1,000".
+**Files:**
+- Modify: `frontend/src/features/chatbot/components/CitationList.tsx`, `…/components/Citations.module.css`,
+  `…/components/ConversationThread.tsx`, `…/components/Conversation.module.css`, `…/components/QuestionBox.tsx`,
+  `…/components/QuestionBox.module.css`, `…/pages/KnowledgeChatbotPage.tsx`
+- Test: `KnowledgeChatbotPage.test.tsx` (`AC-001.10 …`, `AC-001.11 …`, `AC-001.19 …`, `AC-002.18 …`)
+**Covers:** AC-001.10, AC-001.11, AC-001.19, AC-002.18
+**Dependencies:** Task 21, Task 26
+**Estimated size:** small

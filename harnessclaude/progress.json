@@ -388,7 +388,8 @@
         "conversation-api": "passing",
         "conversation-ui": "passing",
         "conversation-paging": "passing",
-        "merge-title-paging": "evaluating"
+        "merge-title-paging": "evaluating",
+        "mockup-c-polish": "pending"
       },
       "lastUpdated": "2026-11-22T20:09:35.119Z",
       "branch": "feat/chatbot",
