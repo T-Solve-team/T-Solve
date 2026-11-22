@@ -1,7 +1,7 @@
 # Staging deploy (one VPS, Docker Compose)
 
 One Compose project runs everything: Caddy (HTTPS), Postgres (pgvector), Redis, Keycloak, the backend (web), the
-worker, the web app and Ollama. Only Caddy faces the internet (80, 443). Files:
+worker, the web app, Ollama and Docling. Only Caddy faces the internet (80, 443). Files:
 
 | File | What |
 |---|---|
@@ -15,8 +15,9 @@ worker, the web app and Ollama. Only Caddy faces the internet (80, 443). Files:
 Hosts (all under `TSOLVE_DOMAIN`): `<slug>.<domain>` (company site and `/api`), `admin.<domain>` (Platform Console and
 `/api`), `login.<domain>` (Keycloak, `/admin` blocked), `api.<domain>` (Jira app and health only).
 
-Sizing: the memory limits add up to about 12.4 GB (db 2g, keycloak 1.5g, backend 1.5g, worker 1g, ollama 6g,
-redis 192m, caddy 128m, web 64m), meant for a 16 GB box. Change them in the env file (`*_MEM_LIMIT`).
+Sizing: the memory limits add up to about 15.4 GB (db 2g, keycloak 1.5g, backend 1.5g, worker 1g, ollama 6g,
+docling 3g, redis 192m, caddy 128m, web 64m), meant for a 16 GB box. Change them in the env file (`*_MEM_LIMIT`).
+If the box runs short, stop `docling` and empty `DOCLING_BASE_URL`: Wiki indexing then uses plain text.
 
 ## 1. Prerequisites
 
@@ -77,6 +78,10 @@ dc --profile models run --rm ollama-pull
 
 This downloads `OLLAMA_EMBED_MODEL` (default `bge-m3`) and `OLLAMA_CHAT_MODEL` into the `ollama-data` volume; it is
 not part of `up`. Run it again whenever you change a model name.
+
+Docling (Wiki document conversion) starts with `up`. `deploy.sh` restarts only backend, worker and web, so on a
+server set up before Docling was added, start it once with `dc up -d --wait docling` and set
+`DOCLING_BASE_URL=http://docling:5001` in the env file, then `dc up -d worker` so the worker reads it.
 
 ## 6. Create the first admin
 

@@ -272,6 +272,22 @@ services:
       start_period: 10s
     logging: *logging
 
+  # PDF / DOCX to Markdown for the Wiki indexing job (KAN-374), called by the worker at DOCLING_BASE_URL
+  # (http://docling:5001). No port is published: it has no auth, so only the tsolve network reaches it. When it is
+  # down or slow, the job falls back to plain text, so nothing waits on it.
+  docling:
+    image: quay.io/docling-project/docling-serve:v1.38.1
+    restart: unless-stopped
+    mem_limit: ${DOCLING_MEM_LIMIT:-3g}
+    networks: [tsolve]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5001/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    logging: *logging
+
   # One-off: pulls the two models into the ollama volume. Not part of `up`; run it with
   #   docker compose -f infra/compose.staging.yml --env-file <env> --profile models run --rm ollama-pull
   ollama-pull:
