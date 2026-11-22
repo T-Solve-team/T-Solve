@@ -135,7 +135,7 @@ tsolve:
     workspace-ready: ${TSOLVE_STUB_WORKSPACE_READY:false}
   triage:
     # Cosine similarity (0 to 1) a Solution or Wiki document needs to be a source of the AI Solution Suggestion.
-    min-similarity: ${SUGGESTION_MIN_SIMILARITY:0.7}
+    min-similarity: ${SUGGESTION_MIN_SIMILARITY:0.60}
 
 ---
 # Keycloak provisioning of a Workspace's sign-in (AC-001.58, .60, .61). This document is active only in the `ops`

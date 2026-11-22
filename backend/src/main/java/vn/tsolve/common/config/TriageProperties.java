@@ -8,7 +8,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * {@code SUGGESTION_MIN_SIMILARITY} (AC-005.11).
  */
 @ConfigurationProperties(prefix = "tsolve.triage")
-public record TriageProperties(@DefaultValue("0.7") double minSimilarity) {
+public record TriageProperties(@DefaultValue("0.60") double minSimilarity) {
 
     public TriageProperties {
         // Written so that NaN fails too; a failed binding stops the application starting.
