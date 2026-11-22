@@ -341,15 +341,15 @@
         "suggestion-generation": "passing",
         "jira-site": "passing",
         "managed-projects": "passing",
-        "suggestion-cut-off": "pending"
+        "suggestion-cut-off": "evaluating"
       },
-      "lastUpdated": "2026-11-22T03:20:15.142Z",
+      "lastUpdated": "2026-11-22T04:17:18.535Z",
       "branch": "feat/triage",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "55ac18a981b2d10c8feee4a6c0fcfca22dd41aa2"
+        "default": "10c3b7bc50b74acf24777edbf147518312083038"
       }
     },
     "chatbot": {

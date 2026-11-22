@@ -2215,3 +2215,6 @@
 {"ts":"2026-11-22T03:39:02.651Z","type":"feature-status","module":"chatbot","feature":"rag-cut-off","from":"pending","to":"in-progress"}
 {"ts":"2026-11-22T03:55:57.772Z","type":"feature-status","module":"chatbot","feature":"rag-cut-off","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-22T03:55:58.507Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"c9e8706b9470b92648148b70863267bf6d4dc08d"}
+{"ts":"2026-11-22T03:56:06.891Z","type":"feature-status","module":"triage","feature":"suggestion-cut-off","from":"pending","to":"in-progress"}
+{"ts":"2026-11-22T04:17:17.944Z","type":"feature-status","module":"triage","feature":"suggestion-cut-off","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-22T04:17:18.539Z","type":"commit-recorded","module":"triage","repo":"default","sha":"10c3b7bc50b74acf24777edbf147518312083038"}
