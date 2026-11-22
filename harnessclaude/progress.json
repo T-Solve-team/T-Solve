@@ -374,15 +374,15 @@
         "classify-outcome-schema": "evaluating",
         "classify-question": "passing",
         "classify-question-ui": "passing",
-        "rag-cut-off": "pending"
+        "rag-cut-off": "evaluating"
       },
-      "lastUpdated": "2026-11-22T03:20:14.852Z",
+      "lastUpdated": "2026-11-22T03:55:58.500Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "2a4ee7865dae626ee19cddc25badf9515d706f2c"
+        "default": "c9e8706b9470b92648148b70863267bf6d4dc08d"
       }
     },
     "jira-app": {
