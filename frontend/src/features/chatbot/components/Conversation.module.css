@@ -1,48 +1,181 @@
-/* Figma 12.1: the thread scrolls above the question box; question bubbles on the right, answers in a tinted block. */
+/* 12.1 Focus thread and composer (AC-001.6, AC-001.7, AC-001.16). */
+.conversation {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.empty {
+  grid-template-rows: auto;
+  align-content: center;
+}
+
 .thread {
-  flex: 1;
   overflow-y: auto;
+  scrollbar-gutter: stable both-edges;
+  padding-inline: var(--ant-padding-lg);
+}
+
+.column {
+  width: 100%;
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+.turns {
+  display: grid;
+  gap: 40px;
+  padding-block: 36px var(--ant-padding-lg);
+}
+
+.turn {
+  display: grid;
+  gap: var(--ant-margin-sm);
+  min-width: 0;
 }
 
 .question {
-  align-self: flex-end;
-  max-width: 70%;
-  margin: 0;
-  padding: var(--ant-padding-sm) var(--ant-padding);
-  border-radius: var(--ant-border-radius-lg);
-  background: var(--ant-color-primary-bg);
-  white-space: pre-wrap;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ant-margin-sm);
 }
 
-.answer {
-  padding: var(--ant-padding);
-  border-radius: var(--ant-border-radius-lg);
-  background: var(--ant-color-fill-quaternary);
+.avatar {
+  flex: none;
+  background: var(--ant-color-primary-bg);
+  color: var(--ant-color-primary);
+  font-weight: 600;
+}
+
+.question h2 {
+  margin: 0;
+  font-size: calc(var(--ant-font-size-heading-3) + 2px);
+  font-weight: 600;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.answer,
+.skeleton {
+  display: grid;
+  gap: var(--ant-margin);
+  min-width: 0;
+  padding-inline-start: 40px;
 }
 
 .text {
-  margin-bottom: 0;
+  margin: 0;
+  font-size: calc(var(--ant-font-size) + 1px);
+  line-height: 1.7;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
-/* Figma 12.1 "Card · Conversations": the list on the left; the card ends after its last entry. A title stays on one
-   line, cut with "…" (AC-002.13). */
+.answer .marker {
+  display: inline-flex;
+  height: auto;
+  padding-inline: var(--ant-padding-xs);
+  border-color: var(--ant-color-primary-border);
+  background: var(--ant-color-primary-bg);
+  color: var(--ant-color-primary-text);
+  font-size: var(--ant-font-size-sm);
+  font-weight: 600;
+  vertical-align: baseline;
+}
+
+.answer .marker[aria-pressed='true'] {
+  border-color: var(--ant-color-primary);
+}
+
+.answer .marker:disabled {
+  border-color: var(--ant-color-border-secondary);
+  background: var(--ant-color-fill-quaternary);
+  color: var(--ant-color-text-secondary);
+}
+
+.skeleton {
+  gap: var(--ant-margin-xs);
+}
+
+.skeleton span {
+  width: 92%;
+  height: 12px;
+  border-radius: var(--ant-border-radius);
+  background: var(--ant-color-fill-quaternary);
+}
+
+.skeleton span:nth-child(2) {
+  width: 84%;
+}
+
+.skeleton span:nth-child(3) {
+  width: 58%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton span {
+    background: linear-gradient(
+      90deg,
+      var(--ant-color-fill-quaternary) 25%,
+      var(--ant-color-fill-tertiary) 50%,
+      var(--ant-color-fill-quaternary) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s linear infinite;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -100% 0;
+  }
+}
+
+.composer {
+  width: calc(100% - 2 * var(--ant-padding-lg));
+  padding-block: var(--ant-padding-xs) var(--ant-padding-lg);
+}
+
+.intro {
+  margin-block-end: var(--ant-margin-lg);
+  text-align: center;
+}
+
+.intro h2 {
+  margin: 0 0 var(--ant-margin-xs);
+  font-size: var(--ant-font-size-heading-1);
+  font-weight: 600;
+}
+
+.intro p {
+  margin: 0;
+  color: var(--ant-color-text-secondary);
+}
+
+/* 12.1 sidebar and one-line titles (AC-002.13, AC-002.14). */
 .list {
-  align-self: start;
-  max-height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--ant-margin-sm);
   min-height: 0;
-  padding: var(--ant-padding-lg);
-  border-radius: var(--ant-border-radius-lg);
-  background: var(--ant-color-bg-container);
-  box-shadow: var(--ant-box-shadow-tertiary);
+  padding: var(--ant-padding) var(--ant-padding-sm);
+  border-inline-end: 1px solid var(--ant-color-border-secondary);
+  background: var(--ant-color-fill-quaternary);
+}
+
+.history {
+  overflow-y: auto;
 }
 
 .entries {
-  flex: 1;
-  min-height: 0;
   margin: 0;
   padding: 0;
-  overflow-y: auto;
   list-style: none;
 }
 
@@ -51,7 +184,6 @@
   height: auto;
   padding-block: var(--ant-padding-xs);
   text-align: left;
-  white-space: normal;
 }
 
 .title {
@@ -63,5 +195,9 @@
 
 .entry[aria-current='true'] {
   background: var(--ant-color-primary-bg);
-  color: var(--ant-color-primary);
+  color: var(--ant-color-primary-text);
+}
+
+.showMore {
+  margin-block-start: var(--ant-margin-xs);
 }
