@@ -43,6 +43,8 @@ public class PassageSplitter {
                 continue;
             }
             String prefix = prefixAt.apply(start);
+            // ponytail: the plain path keeps its 1,000-character body and adds the prefix on top (at most ~1,220
+            // characters, fine for bge-m3); the typed path counts the prefix in its 1,500.
             int budget = typed ? maxCharacters - prefix.length() : maxCharacters;
             if (budget <= 0) throw new IllegalArgumentException("Heading path exceeds the passage size");
             int end = Math.min(start + budget, content.length());

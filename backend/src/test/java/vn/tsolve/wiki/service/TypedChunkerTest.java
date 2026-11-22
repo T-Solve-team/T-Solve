@@ -54,6 +54,19 @@ class TypedChunkerTest {
     }
 
     @Test
+    void splitsBoldAndListPolicyArticles_AC_007_4() {
+        assertThat(chunker.split(WikiDocumentType.POLICY, "Policy", """
+                **Điều 1.** Access
+                Request access.
+                - Article 2: Removal
+                Revoke access.
+                """))
+                .containsExactly(
+                        "[policy] Policy\n**Điều 1.** Access\nRequest access.",
+                        "[policy] Policy\n- Article 2: Removal\nRevoke access.");
+    }
+
+    @Test
     void splitsFaqHeadingsAndQuestionMarkers_AC_007_4() {
         assertThat(chunker.split(WikiDocumentType.FAQ, "Help", """
                 # Access

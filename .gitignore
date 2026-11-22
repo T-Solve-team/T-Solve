@@ -34,6 +34,7 @@ Thumbs.db
 
 # ---- AI agents ----
 prompts/
+# Backend prompt files are ignored unless listed by name below: add a line for each new prompt file.
 !/backend/src/main/resources/prompts/
 /backend/src/main/resources/prompts/*
 !/backend/src/main/resources/prompts/wiki-document-type.txt

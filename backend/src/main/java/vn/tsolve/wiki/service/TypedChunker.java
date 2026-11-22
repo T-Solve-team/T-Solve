@@ -13,7 +13,8 @@ public class TypedChunker {
     private static final Pattern ATX_HEADING = Pattern.compile("^ {0,3}(#{1,6})(?:\\h+|$)(.*)");
     private static final Pattern SETEXT_HEADING = Pattern.compile("^ {0,3}(=+|-+)\\h*$");
     private static final Pattern FENCE = Pattern.compile("^ {0,3}(\\x60{3,}|~{3,})(.*)");
-    private static final Pattern POLICY_ARTICLE = Pattern.compile("^(?:Điều|Article)\\h+\\d+\\b");
+    private static final Pattern POLICY_ARTICLE =
+            Pattern.compile("^(?:[-*+]\\h+|#{1,6}\\h+)?(?:\\*\\*|__)?(?:Điều|Article)\\h+\\d+\\b");
     private static final Pattern FAQ_QUESTION = Pattern.compile("^(?:Q:|Hỏi:|Câu hỏi\\b)");
     private static final Pattern TABLE_SEPARATOR = Pattern.compile(":?-+:?");
 
