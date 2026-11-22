@@ -52,6 +52,7 @@ export function WikiDocumentPage() {
             plainText
           ) : (
             <WikiFileView
+              key={data.documentId}
               documentId={data.documentId}
               fileName={data.fileName}
               title={data.title}

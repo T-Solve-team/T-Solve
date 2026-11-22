@@ -180,6 +180,47 @@ describe('WikiDocumentPage', () => {
     ).toBe(document.content);
   });
 
+  it('AC-002.19 renders the next document after a failed DOCX on the previous one (BUG-356)', async () => {
+    URL.createObjectURL = vi.fn(() => 'blob:next');
+    URL.revokeObjectURL = vi.fn();
+    renderDocx.mockRejectedValue(new Error('bad docx'));
+    const NEXT = '00000000-0000-4000-8000-000000009002';
+    server.use(
+      http.get('*/api/v1/wiki/documents/:documentId', ({ params }) =>
+        HttpResponse.json(
+          params.documentId === NEXT
+            ? { ...document, documentId: NEXT, title: 'Next guide' }
+            : { ...document, fileName: 'vpn.docx' },
+        ),
+      ),
+      fileHandler('PK'),
+    );
+    const { router } = renderApp(paths.wikiDocument(ID), { role: 'EMPLOYEE' });
+    await screen.findByRole('region', { name: 'Content' }, { timeout: 5000 });
+    await router.navigate(paths.wikiDocument(NEXT));
+    expect(await screen.findByTitle('Next guide', {}, { timeout: 5000 })).toHaveAttribute(
+      'src',
+      'blob:next',
+    );
+  });
+
+  it('AC-002.19 removes script links from a rendered DOCX (BUG-357)', async () => {
+    renderDocx.mockImplementation((_blob: Blob, container: HTMLElement) => {
+      container.innerHTML =
+        '<a href="javascript:alert(1)">bad</a><a href="https://example.com">good</a>';
+      return Promise.resolve();
+    });
+    server.use(
+      getGetWikiDocumentMockHandler({ ...document, fileName: 'vpn.docx' }),
+      fileHandler('PK'),
+    );
+    renderApp(paths.wikiDocument(ID), { role: 'EMPLOYEE' });
+    await waitFor(() => expect(screen.getByText('bad')).not.toHaveAttribute('href'), {
+      timeout: 5000,
+    });
+    expect(screen.getByText('good')).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
   it('AC-002.19 AC-002.26 shows the header, literal plain text when the file fails, and Download (BUG-255)', async () => {
     server.use(
       getGetWikiDocumentMockHandler(document),

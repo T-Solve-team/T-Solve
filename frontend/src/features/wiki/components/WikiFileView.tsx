@@ -32,9 +32,16 @@ export function WikiFileView({ documentId, fileName, title, fallback }: WikiFile
     }
     const docx = docxRef.current;
     if (!docx) return;
-    renderAsync(blob, docx, undefined, { inWrapper: true, useBase64URL: true }).catch(() =>
-      setFailed(true),
-    );
+    renderAsync(blob, docx, undefined, { inWrapper: true, useBase64URL: true })
+      .then(() => {
+        // docx-preview copies link targets as is; drop any scheme that could run script.
+        for (const a of docx.querySelectorAll('a[href]')) {
+          if (/^(https?:|mailto:|#)/i.test(a.getAttribute('href') ?? '')) {
+            a.setAttribute('rel', 'noopener noreferrer');
+          } else a.removeAttribute('href');
+        }
+      })
+      .catch(() => setFailed(true));
     return () => docx.replaceChildren();
   }, [blob]);
 
