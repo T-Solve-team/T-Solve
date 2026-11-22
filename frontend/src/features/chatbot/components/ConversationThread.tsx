@@ -4,6 +4,7 @@ import { useUnavailableDocuments } from '../hooks/useUnavailableDocuments';
 import type { ChatTurn } from '../model';
 import { ChatAnswer } from './ChatAnswer';
 import styles from './Conversation.module.css';
+import { getConversationTitle } from './conversation-title';
 
 type ConversationThreadProps = {
   turns: readonly ChatTurn[];
@@ -29,6 +30,7 @@ export function ConversationThread({
   const [highlightedCitationId, setHighlightedCitationId] = useState<string>();
   const latestAnswer = turns.at(-1)?.answer;
   const isEmpty = turns.length === 0 && pendingQuestion === undefined;
+  const title = getConversationTitle(turns, pendingQuestion);
   const initials = askerName
     .trim()
     .split(/\s+/)
@@ -49,6 +51,9 @@ export function ConversationThread({
       aria-label="Conversation"
       className={isEmpty ? `${styles.conversation} ${styles.empty}` : styles.conversation}
     >
+      <header className={styles.topBar}>
+        <h2 className={styles.title}>{title}</h2>
+      </header>
       <div className={styles.thread} hidden={isEmpty}>
         <div className={`${styles.column} ${styles.turns}`}>
           {turns.map((turn, index) => (
@@ -81,7 +86,7 @@ export function ConversationThread({
       <div className={`${styles.column} ${styles.composer}`}>
         {isEmpty && (
           <header className={styles.intro}>
-            <h2>Ask the Knowledge Chatbot</h2>
+            <h3>Ask the Knowledge Chatbot</h3>
             <p>
               Ask in your own words. Answers come from the Solutions and Wiki documents you can
               view.
@@ -101,7 +106,7 @@ function QuestionHeading({ question, initials }: { question: string; initials: s
       <Avatar aria-hidden size={28} className={styles.avatar}>
         {initials}
       </Avatar>
-      <h2>{question}</h2>
+      <h3>{question}</h3>
     </header>
   );
 }

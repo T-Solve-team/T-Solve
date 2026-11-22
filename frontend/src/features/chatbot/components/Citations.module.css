@@ -1,4 +1,4 @@
-/* 12.1 Focus citation notes, open Solutions and the active note (AC-001.7, AC-001.11, AC-001.17). */
+/* 12.1 Focus citation notes, expandable Solutions and the active note (AC-001.7, AC-001.11, AC-001.17). */
 .list {
   display: grid;
   gap: var(--ant-margin-xs);
@@ -30,6 +30,21 @@
 }
 
 .link {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.item .toggle {
+  height: auto;
+  margin-inline-start: var(--ant-margin-xxs);
+  padding: 0 var(--ant-padding-xxs);
+  font-size: inherit;
+  font-weight: 500;
+  line-height: inherit;
+  vertical-align: baseline;
+}
+
+.item .toggle:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
 }

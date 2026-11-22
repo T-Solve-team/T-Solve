@@ -1,5 +1,7 @@
+import { DislikeOutlined, LikeOutlined } from '@ant-design/icons';
 import { Button, Flex } from 'antd';
 import type { ChatTurn } from '../model';
+import styles from './Conversation.module.css';
 
 type Rating = NonNullable<ChatTurn['rating']>;
 
@@ -11,27 +13,28 @@ type RatingButtonsProps = {
   onRate: (rating: ChatTurn['rating']) => void;
 };
 
-const BUTTONS: { rating: Rating; label: string }[] = [
-  { rating: 'HELPFUL', label: 'Helpful' },
-  { rating: 'NOT_HELPFUL', label: 'Not helpful' },
+const BUTTONS: { rating: Rating; label: string; Icon: typeof LikeOutlined }[] = [
+  { rating: 'HELPFUL', label: 'Helpful', Icon: LikeOutlined },
+  { rating: 'NOT_HELPFUL', label: 'Not helpful', Icon: DislikeOutlined },
 ];
 
 /** 12.1 (c) callout 5: Helpful / Not helpful; the rated one is highlighted and a click on it removes the rating. */
 export function RatingButtons({ rating, disabled, onRate }: RatingButtonsProps) {
   return (
-    <Flex gap="small">
-      {BUTTONS.map((button) => {
-        const isRated = rating === button.rating;
+    <Flex className={styles.ratings}>
+      {BUTTONS.map(({ rating: value, label, Icon }) => {
+        const isRated = rating === value;
         return (
           <Button
-            key={button.rating}
-            size="small"
-            type={isRated ? 'primary' : 'default'}
+            key={value}
+            type="text"
+            className={styles.ratingButton}
+            icon={<Icon aria-hidden />}
             aria-pressed={isRated}
             disabled={disabled}
-            onClick={() => onRate(isRated ? undefined : button.rating)}
+            onClick={() => onRate(isRated ? undefined : value)}
           >
-            {button.label}
+            {label}
           </Button>
         );
       })}

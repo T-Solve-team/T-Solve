@@ -1,6 +1,7 @@
-import { Typography } from 'antd';
+import { Button, Typography } from 'antd';
+import { useState } from 'react';
 import { Link } from 'react-router';
-import type { ChatbotCitation } from '@/shared/api';
+import type { ChatbotCitation, CitedSolution } from '@/shared/api';
 import { msg } from '@/shared/messages';
 import { paths } from '@/shared/routing';
 import styles from './Citations.module.css';
@@ -45,15 +46,35 @@ export function CitationList({
                   </Link>
                 )
               ) : (
-                <>
-                  <span>Solution from a ticket</span>
-                  <TicketSolution solution={citation.solution} />
-                </>
+                <TicketSolutionNote id={`${id}-solution`} solution={citation.solution} />
               )}
             </div>
           </li>
         );
       })}
     </ul>
+  );
+}
+
+function TicketSolutionNote({ id, solution }: { id: string; solution: CitedSolution }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <>
+      <span>Solution from a ticket</span>
+      <Button
+        type="link"
+        size="small"
+        className={styles.toggle}
+        aria-expanded={isExpanded}
+        aria-controls={id}
+        onClick={() => setIsExpanded((expanded) => !expanded)}
+      >
+        {isExpanded ? 'Hide' : 'Show'}
+      </Button>
+      <div id={id} hidden={!isExpanded}>
+        <TicketSolution solution={solution} />
+      </div>
+    </>
   );
 }

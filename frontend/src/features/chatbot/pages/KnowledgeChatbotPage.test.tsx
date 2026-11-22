@@ -189,10 +189,11 @@ describe('KnowledgeChatbotPage', () => {
   it('AC-001.5 counts up to 1,000 characters and shows MSG02, sending nothing, above it', async () => {
     const sent = recordQuestions();
     const { user, box } = await openChatbot();
-    expect(screen.getByText('0 / 1000')).toBeInTheDocument();
+    expect(screen.getByText('0 / 1,000')).toBeInTheDocument();
 
     await user.click(box);
     await user.paste('a'.repeat(1001));
+    expect(screen.getByText('1,001 / 1,000')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Send' }));
 
     expect(
@@ -229,7 +230,9 @@ describe('KnowledgeChatbotPage', () => {
 
     await enter(user, box, `${VPN_QUESTION}{Enter}`);
 
-    expect(await within(thread()).findByText(VPN_QUESTION)).toBeInTheDocument();
+    expect(
+      await within(thread()).findByRole('heading', { level: 3, name: VPN_QUESTION }),
+    ).toBeInTheDocument();
     expect(within(thread()).getByTestId('pending-answer')).toHaveAttribute('aria-busy', 'true');
     expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
 
@@ -384,22 +387,25 @@ describe('KnowledgeChatbotPage', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe(`/wiki/documents/${DOC_9001}`));
   });
 
-  it('AC-001.10 shows a ticket citation as "Solution from a ticket" with no ticket details', async () => {
+  it('AC-001.10 shows a collapsed ticket Solution with a Show button and no ticket details', async () => {
     const { user, box } = await openChatbot();
 
     await enter(user, box, `${VPN_QUESTION}{Enter}`);
 
     const citations = await within(thread()).findByRole('list', { name: 'Citations' });
-    const [, ticket] = within(citations).getAllByRole('listitem');
-    expect(ticket).toHaveTextContent(/^\[2\]\s*Solution from a ticket\s*Symptoms/);
-    expect(ticket?.querySelector('a')).toBeNull();
+    const ticket = within(citations).getByText('Solution from a ticket').closest('li');
+    if (!ticket) throw new Error('Expected a ticket citation');
+    expect(ticket).toHaveTextContent(/^\[2\]\s*Solution from a ticket/);
+    expect(within(ticket).getByRole('button', { name: 'Show', expanded: false })).toBeVisible();
+    expect(within(ticket).queryByRole('link')).not.toBeInTheDocument();
+    expect(within(ticket).queryByRole('term')).not.toBeInTheDocument();
   });
 
-  it('AC-001.11 shows the Solution open under its citation, with no Show or Hide button', async () => {
+  it('AC-001.11 expands a ticket Solution with Show and collapses it with Hide', async () => {
     const { user, box } = await openChatbot();
 
     await enter(user, box, `${VPN_QUESTION}{Enter}`);
-    await within(thread()).findByRole('list', { name: 'Citations' });
+    await user.click(await within(thread()).findByRole('button', { name: 'Show' }));
 
     for (const section of [
       'Symptoms',
@@ -407,23 +413,24 @@ describe('KnowledgeChatbotPage', () => {
       'Resolution steps',
       'Scope of applicability',
     ]) {
-      expect(within(thread()).getByText(section)).toBeInTheDocument();
+      expect(within(thread()).getByText(section)).toBeVisible();
     }
     expect(
       within(thread()).getByText('USB selective suspend turns off the network adapter.'),
     ).toBeInTheDocument();
     expect(within(thread()).queryByText('Workaround')).not.toBeInTheDocument();
-    expect(
-      within(thread()).queryByRole('button', { name: /^(Show|Hide)$/ }),
-    ).not.toBeInTheDocument();
+    await user.click(within(thread()).getByRole('button', { name: 'Hide', expanded: true }));
+    expect(within(thread()).getByRole('button', { name: 'Show', expanded: false })).toBeVisible();
+    expect(within(thread()).queryByText('Symptoms')).not.toBeVisible();
   });
 
-  it('AC-001.11 shows the Workaround section when the Solution has one', async () => {
+  it('AC-001.11 shows the Workaround section when opening a Solution that has one', async () => {
     const { user, box } = await openChatbot();
 
     await enter(user, box, 'Leave policy for public holidays{Enter}');
 
-    expect(await within(thread()).findByText('Workaround')).toBeInTheDocument();
+    await user.click(await within(thread()).findByRole('button', { name: 'Show' }));
+    expect(within(thread()).getByText('Workaround')).toBeVisible();
     expect(
       within(thread()).getByText('HR adds the day back to the balance by hand.'),
     ).toBeInTheDocument();
@@ -693,6 +700,32 @@ describe('KnowledgeChatbotPage', () => {
     expect(within(thread()).getByRole('textbox', { name: 'Question' })).toBe(box);
     expect(box).toHaveFocus();
   });
+
+  it('AC-001.19 updates the composer placeholder and hint as the first question is answered', async () => {
+    const release = holdAnswer({ text: 'Use GlobalProtect.' });
+    const { user, box } = await openChatbot();
+    const readyHint = 'Enter sends, Shift+Enter adds a line';
+    const pendingHint = 'Send waits for the current answer';
+
+    try {
+      expect(box).toHaveAttribute('placeholder', 'Ask a question');
+      expect(within(thread()).getByText(readyHint)).toBeVisible();
+
+      await enter(user, box, `${VPN_QUESTION}{Enter}`);
+      expect(await within(thread()).findByText(pendingHint)).toBeVisible();
+      expect(within(thread()).queryByText(readyHint)).not.toBeInTheDocument();
+      expect(box).toHaveAttribute('placeholder', 'Ask a follow-up question');
+    } finally {
+      release();
+    }
+
+    expect(await within(thread()).findByText(readyHint)).toBeVisible();
+    expect(within(thread()).queryByText(pendingHint)).not.toBeInTheDocument();
+    expect(box).toHaveAttribute('placeholder', 'Ask a follow-up question');
+
+    await user.click(newConversationButton());
+    expect(box).toHaveAttribute('placeholder', 'Ask a question');
+  });
 });
 
 const LEAVE_QUESTION = 'How is annual leave counted?';
@@ -784,6 +817,36 @@ describe('KnowledgeChatbotPage session conversations', () => {
     expect(listTitles()).toEqual(['VPN error 809']);
   });
 
+  it('AC-002.15 shows the open conversation title above the thread with a first-question fallback', async () => {
+    const title = 'VPN error 809';
+    const release = holdAnswer({ text: 'Restart the VPN client.', title });
+    const { user, box } = await openChatbot();
+    const heading = (name: string) => within(thread()).getByRole('heading', { level: 2, name });
+
+    try {
+      expect(heading('New conversation')).toBeVisible();
+
+      await enter(user, box, `${VPN_QUESTION}{Enter}`);
+      await within(thread()).findByTestId('pending-answer');
+      expect(heading(VPN_QUESTION)).toBeVisible();
+    } finally {
+      release();
+    }
+
+    await within(thread()).findByText('Restart the VPN client.');
+    expect(heading(title)).toBeVisible();
+    expect(listTitles()).toEqual([title]);
+
+    await user.click(newConversationButton());
+    expect(heading('New conversation')).toBeVisible();
+    answerWith({ text: 'Check the leave policy.' });
+    await ask(user, box, LEAVE_QUESTION);
+    expect(heading(LEAVE_QUESTION)).toBeVisible();
+
+    await user.click(within(conversationList()).getByRole('button', { name: title }));
+    expect(heading(title)).toBeVisible();
+  });
+
   it('AC-002.13 shows a title on one line and the whole title in a tooltip', async () => {
     const title = 'Cannot connect to the company VPN from home with error 809 on Windows';
     answerWith({ text: 'Restart the VPN client.', title });
@@ -869,13 +932,15 @@ describe('KnowledgeChatbotPage session conversations', () => {
 
     await user.click(screen.getByRole('button', { name: VPN_QUESTION }));
 
-    expect(within(thread()).getByText(VPN_QUESTION)).toBeInTheDocument();
+    expect(
+      within(thread()).getByRole('heading', { level: 3, name: VPN_QUESTION }),
+    ).toBeInTheDocument();
     expect(within(thread()).getByText(/Install GlobalProtect/)).toBeInTheDocument();
     expect(within(thread()).getByText('Solution from a ticket', { exact: false })).toBeVisible();
     expect(within(thread()).queryByText(LEAVE_QUESTION)).not.toBeInTheDocument();
   });
 
-  it('AC-001.17 scrolls to and highlights the clicked citation of its own answer', async () => {
+  it('AC-001.17 scrolls to and highlights the clicked citation even when its Solution is collapsed', async () => {
     const { user, box } = await openChatbot();
     await ask(user, box, VPN_QUESTION);
     await ask(user, box, VPN_QUESTION);
@@ -900,6 +965,10 @@ describe('KnowledgeChatbotPage session conversations', () => {
     expect(scrollIntoView.mock.contexts).toContain(secondSolution);
     expect(secondSolution).toHaveClass(highlighted);
     expect(secondNote).not.toHaveClass(highlighted);
+    if (!secondSolution) throw new Error('Expected a ticket citation');
+    expect(
+      within(secondSolution).getByRole('button', { name: 'Show', expanded: false }),
+    ).toBeVisible();
 
     await user.click(within(first).getByRole('button', { name: '[1]' }));
     expect(scrollIntoView.mock.contexts).toContain(firstNote);

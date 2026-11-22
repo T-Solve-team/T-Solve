@@ -3,6 +3,7 @@ import { Button, Tooltip } from 'antd';
 import { useState } from 'react';
 import type { Conversation } from '../model';
 import styles from './Conversation.module.css';
+import { getConversationTitle, NEW_CONVERSATION_TITLE } from './conversation-title';
 
 type ConversationListProps = {
   conversations: readonly Conversation[];
@@ -14,14 +15,7 @@ type ConversationListProps = {
   onNew: () => void;
 };
 
-const NEW_TITLE = 'New conversation';
 const PAGE_SIZE = 10;
-
-/** AC-002.2: the AI title of the first answer, else the first question. */
-function titleOf(conversation: Conversation): string {
-  const first = conversation.turns[0];
-  return first?.answer.title ?? first?.question ?? '';
-}
 
 /** 12.1 sidebar: New conversation, one-line titles, and the session history in batches (AC-002.3, AC-002.13, AC-002.14). */
 export function ConversationList({
@@ -41,7 +35,7 @@ export function ConversationList({
         disabled={disabled}
         onClick={onNew}
       >
-        {NEW_TITLE}
+        {NEW_CONVERSATION_TITLE}
       </Button>
       <div className={styles.history}>
         <ul aria-label="Conversations" className={styles.entries}>
@@ -55,12 +49,12 @@ export function ConversationList({
                 disabled={disabled}
                 className={styles.entry}
               >
-                {NEW_TITLE}
+                {NEW_CONVERSATION_TITLE}
               </Button>
             </li>
           )}
           {conversations.slice(0, visibleCount).map((conversation) => {
-            const title = titleOf(conversation);
+            const title = getConversationTitle(conversation.turns);
             return (
               <li key={conversation.id}>
                 <Tooltip title={title} placement="right" trigger={['hover', 'focus']}>

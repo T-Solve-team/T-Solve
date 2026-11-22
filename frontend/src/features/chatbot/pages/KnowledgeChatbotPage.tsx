@@ -27,6 +27,8 @@ function KnowledgeChatbot({ userId, fullName }: { userId: string; fullName: stri
     useConversations(userId);
   const ask = useAskQuestion();
   const rating = useRateAnswer(userId, setRating);
+  const pendingQuestion = ask.isPending ? ask.variables.data.question : undefined;
+  const hasQuestion = turns.length > 0 || pendingQuestion !== undefined;
   // Set at once, unlike ask.isPending: a second Enter before the next render must not send the question again.
   const isAsking = useRef(false);
 
@@ -69,14 +71,19 @@ function KnowledgeChatbot({ userId, fullName }: { userId: string; fullName: stri
       <ConversationThread
         turns={turns}
         askerName={fullName}
-        pendingQuestion={ask.isPending ? ask.variables.data.question : undefined}
+        pendingQuestion={pendingQuestion}
         isRating={rating.isPending}
         onRate={(answerId, next) => {
           // A thread with turns always belongs to an open conversation.
           if (openId !== null) rating.rate(openId, answerId, next);
         }}
       >
-        <QuestionBox form={form} isSending={ask.isPending} onAsk={handleAsk} />
+        <QuestionBox
+          form={form}
+          hasQuestion={hasQuestion}
+          isSending={ask.isPending}
+          onAsk={handleAsk}
+        />
       </ConversationThread>
     </div>
   );
