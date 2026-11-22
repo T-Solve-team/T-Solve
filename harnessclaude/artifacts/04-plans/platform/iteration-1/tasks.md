@@ -103,41 +103,95 @@ merge (Hiếu): mark frontend, backend, PR title and gitleaks as required checks
 
 ---
 
-## Task 3: Registry database: changelog, password cipher, `registryDataSource`
+## Task 3a: Registry schema, password cipher and `registryDataSource`
 
 **Story:** STORY-001
 **Feature:** registry-db
 **Assignee:** Trần Trung Hiếu (KAN-98); Jira sub-task KAN-251
-**After this task you can:** start the backend against the compose stack of Task 1 and see `workspaces` and
-`workspace_emails` created, empty, in `tsolve_<env>_registry` (`psql \dt`).
+**After this task you can:** start the backend against the compose stack of Task 1 with `REGISTRY_DB_URL` set and see
+`tenant_workspace` and `workspace_email` created, empty, in `tsolve_<env>_registry` (`psql \dt`).
 **Covers:** AC-001.15, AC-001.16, AC-001.17, AC-001.18 (Registry changelog), AC-001.19, AC-001.24, AC-001.25,
 AC-001.27 (Registry part), AC-001.33 (the Registry changelog creates nothing in the Jobs database), AC-008.4 (the
 Registry changelog applied at startup, the worker never runs Liquibase).
 **Design:** Data Model — Tenant Registry DB; Key Decisions R1, R8; Configuration.
-**Description:** `catalog/catalog-master.xml`, `C001-registry-workspaces.sql`, `C002-registry-workspace-emails.sql`;
-`PasswordCipher` (AES-256-GCM, 12-byte nonce, Workspace id as associated data, `v1:` prefix, key `CATALOG_SECRET_KEY`);
-`RegistryDataSourceConfig` (`registryDataSource`, `registryTransactionManager`, `JdbcClient`, Liquibase for the catalog
-changelog as the owner user at startup of the web process); `RegistryRepository` (insert, find, update status); a
-`PostgresTestBase` in test sources (Testcontainers `pgvector/pgvector:pg16` with `infra/postgres/init`, owner and
-runtime users). Adds `spring-boot-starter-jdbc` and the Testcontainers artifacts to `backend/pom.xml` if missing.
+**Description:** `catalog/catalog-master.xml`, `C001-registry-tenant-workspace.sql` (table `tenant_workspace`, key
+`workspace_id`), `C002-registry-workspace-email.sql` (table `workspace_email`); `PasswordCipher` (AES-256-GCM, 12-byte
+nonce, Workspace id as associated data, `v1:` prefix, key `CATALOG_SECRET_KEY`; a fixed failure message with no secret,
+no ciphertext and no cause chain); `RegistryDataSourceConfig` (`registryDataSource`, `registryTransactionManager`,
+`JdbcClient`, Liquibase for the catalog changelog as the Registry user at startup of the web process). Decided in
+planning: the Registry beans load only when `REGISTRY_DB_URL` is not blank (like `StorageConfig`); once it is set, a
+missing or invalid `CATALOG_SECRET_KEY` refuses startup and names the variable; Task 5 drops the gate when routing makes
+the Registry required. One Registry user, `REGISTRY_DB_USER`, owner of `tsolve_<env>_registry`, migrates and reads; a
+DML-only runtime user is split off in Task 1's role work. The beans must leave Boot's primary `DataSource` and the
+tenant `liquibase` bean in place (edge #72; see `EmailOutboxConfiguration`). `RegistryRepository` is Task 4's.
+`PostgresTestBase` is a new JVM-shared holder (Testcontainers `pgvector/pgvector:pg16` running the real
+`infra/postgres/init` script; the existing Jobs and tenant fixtures cannot be reused). Adds `spring-boot-starter-jdbc`
+and the Testcontainers artifacts to `backend/pom.xml` if missing.
 **Edge rows:** #13 (key missing → startup refuses; wrong key → only that Workspace fails), #14 (no password in any log
-line; the log-capture test is finished in Task 6).
-**Tests (about 12):** `PasswordCipherTest`: round trip, a ciphertext copied to another row does not decrypt, wrong key,
-missing key at startup names the variable (AC-001.24, AC-001.25, Edge #13); `RegistryChangelogIT`: tables and columns,
-`jira_cloud_id` and `db_name` unique, email stored lower-case only, both tables empty (AC-001.19), the Jobs database
-has no table from the Registry changelog (AC-001.33), the Registry holds no table other than the allowed set
-(AC-001.17).
+line; the log-capture test is finished in Task 6), #72 (the Registry beans leave the primary `DataSource` and the tenant
+Liquibase in place).
+**Tests (13):** `PasswordCipherTest` (4): round trip with a `v1:` value and no plaintext, a ciphertext copied to another
+row does not decrypt, wrong key or tampered or malformed value refuses with a message holding no secret, missing or
+invalid key names `CATALOG_SECRET_KEY` (AC-001.24, AC-001.25, Edge #13, #14); `RegistryChangelogIT` (9, through
+`PostgresTestBase`): `tenant_workspace` columns, types, keys, unique and status check (AC-001.15), `workspace_email`
+lower-case key and foreign key (AC-001.16), only the allowed tables (AC-001.17), empty tables and a second start changes
+nothing (AC-001.19), nothing created in the Jobs database (AC-001.33), the web process applies the catalog changelog as
+the owner at startup (AC-008.4, AC-001.18, AC-001.27), the Registry beans leave the primary `DataSource` and the tenant
+Liquibase in place (Edge #72), the worker never runs the catalog changelog (AC-008.4), and a blank `REGISTRY_DB_URL`
+leaves the Registry beans off (the gate).
 **Files:**
-- Create: `backend/src/main/resources/db/changelog/catalog/catalog-master.xml`, `C001-registry-workspaces.sql`,
-  `C002-registry-workspace-emails.sql`
-- Create: `backend/src/main/java/vn/tsolve/platform/registry/PasswordCipher.java`, `RegistryDataSourceConfig.java`,
-  `RegistryRepository.java`
+- Create: `backend/src/main/resources/db/changelog/catalog/catalog-master.xml`, `C001-registry-tenant-workspace.sql`,
+  `C002-registry-workspace-email.sql`
+- Create: `backend/src/main/java/vn/tsolve/platform/registry/PasswordCipher.java`, `RegistryDataSourceConfig.java`
 - Modify: `backend/pom.xml` (only if missing)
+- Modify: `infra/postgres/init/10-tsolve-dbs.sh` (the Registry part: the Registry database and its owner user, for local
+  and test)
+- Modify: `backend/src/main/resources/application.yml`, `.env.example` (`REGISTRY_DB_*` and `CATALOG_SECRET_KEY`)
 - Test: `backend/src/test/java/vn/tsolve/support/PostgresTestBase.java`
-- Test: `backend/src/test/java/vn/tsolve/platform/PasswordCipherTest.java`, `RegistryChangelogIT.java`
+- Test: `backend/src/test/java/vn/tsolve/platform/registry/PasswordCipherTest.java`, `RegistryChangelogIT.java` (same
+  package as the classes they test)
 **Dependencies:** Task 1 (init script)
-**Estimated size:** medium
-**Done when:** both test classes pass in `mvn verify` and the walkthrough above shows the two tables.
+**Estimated size:** medium (8 production files, 13 tests)
+**Done when:** the test classes pass in `mvn verify` and the walkthrough above shows the two tables; the web process
+applies the catalog changelog at startup and the worker never runs Liquibase; a missing `CATALOG_SECRET_KEY` fails
+startup naming the variable once `REGISTRY_DB_URL` is set.
+
+---
+
+## Task 3b: Registry database on the existing staging volume
+
+**Story:** STORY-001
+**Feature:** registry-staging-script
+**Assignee:** Trần Trung Hiếu (KAN-98); Jira sub-task: new, key to be added later
+**After this task you can:** run the staging script against the existing staging volume and see
+`tsolve_staging_registry` and its owner user created (`psql \l`, `\du`), with the other databases untouched; running it
+again changes nothing.
+**Covers:** AC-001.15 (the Registry database exists on a volume made before Task 3a), AC-001.32 (the Registry user has
+no superuser and no `BYPASSRLS`), AC-008.5 (the new variables are set where staging reads them).
+**Design:** Roles and grants; Configuration; Infrastructure.
+**Description:** `infra/scripts/registry-db-init.sh`, an idempotent one-off script: it refuses to run without
+`POSTGRES_USER` and `POSTGRES_PASSWORD` (the superuser variables), creates `REGISTRY_DB_NAME` (default
+`tsolve_staging_registry`) owned by `REGISTRY_DB_USER`, and that user (LOGIN, no superuser, no `BYPASSRLS`, no
+`CREATEDB`, no `CREATEROLE`), on the EXISTING volume, because the init script runs only on an empty one. A second run
+leaves an existing role as it is, never alters its password and never prints it. Local developers run the same script
+against the local `db` (a runbook line in `infra/README.md`; no new compose file).
+**Edge rows:** #73 (refuses without the superuser variables), #74 (creates the Registry on an existing volume with the
+same end state as the init script), #75 (a second run changes nothing), #14 (no password in the output).
+**Tests (4 checks, run by hand with Docker; the output goes into the PR):** `infra/tests/registry-db.test.sh`: S1 refuses
+without `POSTGRES_USER` or `POSTGRES_PASSWORD`, naming it, and creates nothing (edge #73); S2 creates the Registry
+database and user on an existing volume, the user has the right attributes and connects, the other databases are
+unchanged, no password in the output (edge #74); S3 a second run, even with another `REGISTRY_DB_PASSWORD`, leaves the
+database and role rows identical and the original password working (edge #75); S4 the end state equals that of the init
+script on a fresh volume (edge #74).
+**Files:**
+- Create: `infra/scripts/registry-db-init.sh`
+- Modify: `infra/compose.staging.yml`, `infra/staging.env.example` (`REGISTRY_DB_*` and `CATALOG_SECRET_KEY`)
+- Modify: `infra/README.md` (runbook line for the script, staging and local)
+- Test: `infra/tests/registry-db.test.sh`
+**Dependencies:** Task 3a (the init script's Registry part and the variable names)
+**Estimated size:** small (4 production files, 4 checks)
+**Done when:** `bash infra/tests/registry-db.test.sh` passes S1–S4 and its output is pasted in the PR; staging still
+starts after the script has run and the variables are set.
 
 ---
 
@@ -151,19 +205,20 @@ email rule in `WorkspaceCatalogIT`: one email in one Workspace, whatever the cas
 **Covers:** AC-004.17, AC-004.18, AC-004.25, AC-004.26, AC-004.27, AC-004.28 (no endpoint: asserted with Task 7's source scan).
 **Design:** Registry rules; Interface Contracts.
 **Description:** `WorkspaceCatalog` (`findById`, `findBySiteName` without case, `findByCloudId`, `claimEmail`; no connection
-data returned), `WorkspaceCatalogImpl` over `RegistryRepository` (`INSERT … ON CONFLICT (email) DO NOTHING`, then read
+data returned), `RegistryRepository` (insert, find, update status; `JdbcClient` on `registryDataSource`, moved here from Task 3), `WorkspaceCatalogImpl` over it (`INSERT … ON CONFLICT (email) DO NOTHING`, then read
 the row), `WorkspaceSummary`, `WorkspaceStatus`. `linkJiraSite` is Task 18.
 **Edge rows:** #26 (same email in another case or with spaces in two Workspaces at once → one row, the other `MSG155`).
-**Tests (about 10):** each lookup finds and returns empty for an unknown key; the summary holds no password or database
+**Tests (about 10; `RegistryRepository` is covered by `WorkspaceCatalogIT`):** each lookup finds and returns empty for an unknown key; the summary holds no password or database
 name (AC-004.18); claim: free email recorded lower-case, same Workspace succeeds with no change, another Workspace
 → `MSG155` on `email` and nothing recorded (AC-004.26); concurrent claim (Edge #26); `WorkspaceCatalog` never binds a Workspace
 (AC-004.27).
 **Files:**
+- Create: `backend/src/main/java/vn/tsolve/platform/registry/RegistryRepository.java`
 - Create: `backend/src/main/java/vn/tsolve/platform/service/WorkspaceCatalog.java`
 - Create: `backend/src/main/java/vn/tsolve/platform/service/impl/WorkspaceCatalogImpl.java`
 - Create: `backend/src/main/java/vn/tsolve/platform/dto/WorkspaceSummary.java`, `WorkspaceStatus.java`
 - Test: `backend/src/test/java/vn/tsolve/platform/WorkspaceCatalogImplTest.java`, `WorkspaceCatalogIT.java`
-**Dependencies:** Task 3; `be-foundation` Task 1 (`BusinessRuleException` with a code and a field)
+**Dependencies:** Task 3a; `be-foundation` Task 1 (`BusinessRuleException` with a code and a field)
 **Estimated size:** small
 **Done when:** `WorkspaceCatalogIT` passes with the race case.
 
