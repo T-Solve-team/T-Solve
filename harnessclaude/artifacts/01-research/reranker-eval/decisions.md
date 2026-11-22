@@ -21,6 +21,21 @@ Change any row by telling Claude; the spec and code follow the row.
 | D13 | The uncommitted "AI server has a GPU" doc edits | one commit / **split by branch** | KAN-374-only file (`doc-type-chunking-decisions.md`) committed alone on the KAN-376 branch (`e89a7627`); everything else committed alone on KAN-377 (`c53167aa`) | Keeps each commit on the branch whose files it touches; nothing mixed into a feature commit |
 | D14 | Features and commits | one commit for all / **one per feature** | `ai/chat-no-thinking`, `chatbot/rag-cut-off`, `triage/suggestion-cut-off`: each a code commit plus a harness commit | Project rule: one feature per commit |
 | D15 | Dataset files in git | commit / **ignore** | `.gitignore` keeps `*.jsonl`, `*.npy`, the CSV and `borderline.txt` local | They hold the public dataset's tickets; scripts and results are enough to re-run |
+| D16 | How staging reaches the GPU Ollama (vast.ai, until Task 22's WireGuard) | (a) public port + IP allow-list (b) public port + token (c) **SSH tunnel** | **(c)**, your choice | (a) cannot work: vast's port mapping hides the source IP (every request arrives from `172.17.0.1`), so tested and removed. (c) opens no new port, is encrypted and key-only, so AC-011.2/011.3 still hold; (b) would send prompts over plain HTTP and need a client change. Ollama listens on `127.0.0.1:11434` only; `/root/start-ollama.sh` in `onstart.sh` restarts it with the instance |
+
+## Deployed on staging (22/11/2026)
+
+- GPU: vast.ai RTX 3090 (`38.64.63.175`, SSH port `20837`), Ollama 0.40.17 on `127.0.0.1:11434`,
+  `OLLAMA_NUM_PARALLEL=4`, models `bge-m3` and `qwen3:4b-instruct-2507-q4_K_M`. The instance is rented: a new
+  instance has a new IP and port, so the tunnel and `known_hosts` below must follow it.
+- Tunnel (D16): container `tsolve-gpu-tunnel` on the network `tsolve-staging_tsolve`, alias `gpu-ollama.internal`
+  (Ollama refuses a Host name that is not loopback or `*.internal`), key in `/srv/tsolve/staging/gpu-tunnel/`. On the GPU
+  the key may only forward to `127.0.0.1:11434` (`restrict,port-forwarding,permitopen`). It is not in
+  `compose.staging.yml`; `docker compose down` removes the network, and the container must then be started again.
+- Staging `.env` (backup `.env.bak-20261122-gpu`): `OLLAMA_BASE_URL=http://gpu-ollama.internal:11434`,
+  `OLLAMA_CHAT_MODEL=qwen3:4b-instruct-2507-q4_K_M`, `CHATBOT_MIN_SIMILARITY=0.65`, `SUGGESTION_MIN_SIMILARITY=0.60`.
+  Before: an ngrok URL and `qwen3:4b`. Backend and worker recreated, healthy.
+- Checked from the backend container: embed answers; one chat 4.6 s with a cold model (3.2 s load, 0.4 s to generate).
 
 ## After deploy (step 6, needs the AI server of Task 22)
 
