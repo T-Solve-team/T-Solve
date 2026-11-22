@@ -1,5 +1,6 @@
-import { Button, Flex, Input, type FormInstance } from 'antd';
-import type { KeyboardEvent } from 'react';
+import { ArrowUpOutlined } from '@ant-design/icons';
+import { Button, Form, Input, type FormInstance } from 'antd';
+import type { ComponentProps, KeyboardEvent } from 'react';
 import type { ChatbotQuestion } from '@/shared/api';
 import { rules } from '@/shared/forms';
 import { AppForm, FormField } from '@/shared/ui';
@@ -15,41 +16,67 @@ type QuestionBoxProps = {
 };
 
 /**
- * 12.1 question box (callout 2) and Send: at most 1,000 characters (MSG01, MSG02); Enter sends, Shift+Enter adds a
- * line. The text is cleared by the page only when the answer arrives, so a failed question stays (UC-51).
+ * 12.1 composer (AC-001.2–AC-001.6): Enter sends, Shift+Enter adds a line, and MSG01/MSG02 validate the question.
  */
 export function QuestionBox({ form, isSending, onAsk }: QuestionBoxProps) {
+  const question = Form.useWatch('question', form) ?? '';
+
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
     event.preventDefault();
-    form.submit();
+    if (!isSending) form.submit();
   }
 
   return (
     <AppForm<QuestionFormValues>
+      className={styles.form}
       form={form}
       requiredMark={false}
       onFinish={(values) => onAsk(values.question)}
     >
-      <Flex gap="middle" align="end">
-        <FormField<QuestionFormValues>
-          name="question"
-          className={styles.field}
-          // BUG-007: the box is empty most of the time, so leaving it must not show MSG01; only typing or sending does.
-          validateTrigger="onChange"
-          rules={[rules.required('Question'), rules.maxLength('Question', QUESTION_MAX_LENGTH)]}
-        >
-          <Input.TextArea
-            aria-label="Question"
-            autoSize={{ minRows: 3, maxRows: 8 }}
-            count={{ show: true, max: QUESTION_MAX_LENGTH }}
-            onKeyDown={handleKeyDown}
-          />
-        </FormField>
-        <Button type="primary" htmlType="submit" loading={isSending} disabled={isSending}>
-          Send
-        </Button>
-      </Flex>
+      <FormField<QuestionFormValues>
+        name="question"
+        className={styles.field}
+        // BUG-007: the empty box only shows MSG01 on change or submit, never when it loses focus.
+        validateTrigger="onChange"
+        rules={[rules.required('Question'), rules.maxLength('Question', QUESTION_MAX_LENGTH)]}
+      >
+        <QuestionInput isSending={isSending} onKeyDown={handleKeyDown} />
+      </FormField>
+      <div className={styles.metadata}>
+        <span>Enter sends, Shift+Enter adds a line</span>
+        <span>
+          {question.length} / {QUESTION_MAX_LENGTH}
+        </span>
+      </div>
     </AppForm>
+  );
+}
+
+/** 12.1 input and Send share a row, with the FormField's validation below it (AC-001.4, AC-001.5, AC-001.14). */
+function QuestionInput({
+  isSending,
+  ...inputProps
+}: ComponentProps<typeof Input.TextArea> & { isSending: boolean }) {
+  return (
+    <div className={styles.row}>
+      <Input.TextArea
+        {...inputProps}
+        aria-label="Question"
+        autoSize={{ minRows: 1, maxRows: 8 }}
+        variant="borderless"
+        className={styles.input}
+      />
+      <Button
+        type="primary"
+        htmlType="submit"
+        shape="circle"
+        size="large"
+        icon={<ArrowUpOutlined aria-hidden />}
+        aria-label="Send"
+        disabled={isSending}
+        className={styles.send}
+      />
+    </div>
   );
 }

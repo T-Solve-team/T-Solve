@@ -243,8 +243,8 @@
     }
   },
   "chatbot": {
-    "specHash": "f7e324be4b202c3807244ea339ae8c5d801483486120cd87158afd282b8e8847",
-    "approvedAt": "2026-11-22T05:20:24.457Z",
+    "specHash": "de5bdf00ecfc10f1047e126efff5a993e6f1724ddb391b8ae04ac0cdafebd0b3",
+    "approvedAt": "2026-11-22T09:07:42.497Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",
@@ -260,8 +260,10 @@
       "AC-001.11": "THE web app SHALL show the Solution of a ticket Solution citation open under its \"[n] Solution from a",
       "AC-001.12": "WHEN the answer arrives with  , THE web app SHALL show MSG109 as the answer, with",
       "AC-001.13": "IF the request fails, not with a 401 or a field error on the question, THEN THE web app SHALL show",
-      "AC-001.14": "IF the answer request fails with field errors (400), THEN THE web app SHALL show the field's MSG under",
+      "AC-001.14": "IF the answer request fails with field errors (400), THEN THE web app SHALL put the question back in",
       "AC-001.15": "WHEN the answer arrives with  ,  or , THE web app SHALL show",
+      "AC-001.16": "WHILE the open conversation has no question, THE web app SHALL show the question box in the middle of",
+      "AC-001.17": "WHEN the user clicks a marker  in an answer, THE web app SHALL scroll citation n of that answer",
       "AC-002.1": "WHILE the session has no conversation, THE web app SHALL show an empty conversation, titled \"New",
       "AC-002.2": "WHEN the first answer of a conversation arrives, THE web app SHALL save the conversation with its",
       "AC-002.3": "THE conversation list SHALL show the conversations of the session newest first, by the time each was",
@@ -275,6 +277,7 @@
       "AC-002.11": "IF storage is blocked, THEN THE web app SHALL still answer questions and keep the conversations",
       "AC-002.12": "THE web app SHALL keep the user id and every Wiki document id as UUID strings, in memory, in",
       "AC-002.13": "THE conversation list SHALL show each conversation's title on one line, cut with \"…\" when it is wider",
+      "AC-002.14": "THE conversation list SHALL show the 10 newest conversations of the session, and WHEN the session has",
       "AC-003.1": "THE web app SHALL show Helpful and Not helpful buttons under every  and  answer",
       "AC-003.2": "WHEN the user clicks Helpful or Not helpful on an unrated answer, THE web app SHALL call",
       "AC-003.3": "WHEN the user clicks the other button of a rated answer, THE web app SHALL send the new rating, which",
