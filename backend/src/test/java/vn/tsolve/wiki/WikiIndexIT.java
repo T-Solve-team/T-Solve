@@ -1,5 +1,8 @@
 package vn.tsolve.wiki;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aMultipart;
+import static com.github.tomakehurst.wiremock.client.WireMock.binaryEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -33,11 +36,14 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.transaction.support.TransactionTemplate;
 import vn.tsolve.ai.client.EmbeddingClient;
 import vn.tsolve.ai.exception.AiUnavailableException;
+import vn.tsolve.platform.service.FileStorage;
 import vn.tsolve.wiki.dto.WikiDocumentSummary;
 import vn.tsolve.wiki.repository.AccessRepository;
 import vn.tsolve.wiki.repository.WikiChunkRepository;
 import vn.tsolve.wiki.repository.WikiDocumentRepository;
+import vn.tsolve.wiki.service.DoclingClient;
 import vn.tsolve.wiki.service.PassageSplitter;
+import vn.tsolve.wiki.service.TypedChunker;
 import vn.tsolve.wiki.service.impl.WikiIndexJobHandler;
 
 class WikiIndexIT extends WikiReadTestSupport {
@@ -91,7 +97,7 @@ class WikiIndexIT extends WikiReadTestSupport {
         for (int i = 0; i < rows.size(); i++) {
             assertThat(rows.get(i))
                     .containsEntry("position", i)
-                    .containsEntry("text", passages.get(i))
+                    .containsEntry("text", "[other] Guide\n" + passages.get(i))
                     .containsEntry("model", "bge-m3")
                     .containsEntry("dimensions", 1024)
                     .containsEntry("first_component", (float) (i + 1));
@@ -114,6 +120,63 @@ class WikiIndexIT extends WikiReadTestSupport {
                                 id)
                         .toInstant())
                 .isEqualTo(UPDATED);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"success", "error", "timeout", "blank", "headings"})
+    void sendsOriginalFileAndIndexesTypedOrFallbackPassages_AC_007_4_AC_007_7_AC_007_8(String result) throws Exception {
+        byte[] original = "original file bytes".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        var storage = new InMemoryFileStorage();
+        String key = storage.store(new java.io.ByteArrayInputStream(original)).key();
+        UUID id = document(space, null, "Guide", "COMPANY_WIDE", "PENDING", "Stored plain text");
+        jdbc.update(
+                "UPDATE wiki_document SET document_type = 'GUIDE', file_key = ? WHERE wiki_document_id = ?", key, id);
+        var server = new com.github.tomakehurst.wiremock.WireMockServer(0);
+        server.start();
+        try {
+            var request = com.github.tomakehurst.wiremock.client.WireMock.post("/v1/convert/file")
+                    .withMultipartRequestBody(aMultipart("files").withBody(binaryEqualTo(original)))
+                    .withMultipartRequestBody(aMultipart("to_formats").withBody(equalTo("md")));
+            var response = com.github.tomakehurst.wiremock.client.WireMock.aResponse()
+                    .withHeader("Content-Type", "application/json");
+            switch (result) {
+                case "error" -> response.withStatus(503);
+                case "timeout" -> response.withFixedDelay(2000).withBody("{}");
+                case "blank" -> response.withBody("{\"document\":{\"md_content\":\" \\n \"}}");
+                case "headings" -> response.withBody("{\"document\":{\"md_content\":\"# First\\n## Second\"}}");
+                default -> response.withBody("{\"document\":{\"md_content\":\"# Instructions\\nConverted text\"}}");
+            }
+            server.stubFor(request.willReturn(response));
+            String expected = result.equals("success")
+                    ? "[guide] Guide > Instructions\nConverted text"
+                    : "[guide] Guide\nStored plain text";
+            when(embeddings.embed(List.of(expected))).thenReturn(List.of(vector(1, 0)));
+            // StaticListableBeanFactory's provider rejects getObject() (BUG-354), so the handler fell back every time.
+            var beans = new org.springframework.beans.factory.support.DefaultListableBeanFactory();
+            beans.registerSingleton("storage", storage);
+            var typedHandler = new WikiIndexJobHandler(
+                    context.getBean(WikiDocumentRepository.class),
+                    context.getBean(WikiChunkRepository.class),
+                    new PassageSplitter(),
+                    new TypedChunker(),
+                    new DoclingClient(server.baseUrl(), result.equals("timeout") ? "1s" : "120s"),
+                    beans.getBeanProvider(FileStorage.class),
+                    embeddings,
+                    context.getBean(PlatformTransactionManager.class),
+                    "bge-m3");
+
+            typedHandler.execute(id);
+
+            assertState(id, "PUBLISHED", "INDEXED");
+            assertThat(jdbc.queryForMap(
+                            "SELECT text, model, vector_dims(embedding) AS dimensions FROM wiki_chunk WHERE wiki_document_id = ?",
+                            id))
+                    .containsEntry("text", expected)
+                    .containsEntry("model", "bge-m3")
+                    .containsEntry("dimensions", 1024);
+        } finally {
+            server.stop();
+        }
     }
 
     @Test
@@ -148,7 +211,7 @@ class WikiIndexIT extends WikiReadTestSupport {
     }
 
     @Test
-    void readsOnlyCompanyWideDocumentsForAJiraQuestion_AC_001_12() {
+    void readsOnlyCompanyWideDocumentsForAJiraQuestion_AC_001_12_AC_007_10() {
         long other = department("Finance");
         long otherSpace = space(other, "Finance Wiki");
         UUID departmentOnly = document(space, null, "Support only", "DEPARTMENT", "INDEXED", "own");
@@ -157,6 +220,7 @@ class WikiIndexIT extends WikiReadTestSupport {
         for (UUID id : List.of(departmentOnly, companyWide, foreign)) {
             chunk(id, 0, 1, 0);
         }
+        jdbc.update("UPDATE wiki_document SET document_type = 'REFERENCE' WHERE wiki_document_id = ?", companyWide);
         var sources = new vn.tsolve.wiki.service.impl.WikiSourcesImpl(context.getBean(AccessRepository.class));
         var read = new TransactionTemplate(context.getBean(PlatformTransactionManager.class));
         read.setReadOnly(true);
@@ -258,7 +322,16 @@ class WikiIndexIT extends WikiReadTestSupport {
                 EmbeddingClient embeddings,
                 PlatformTransactionManager transactions) {
             return new WikiIndexJobHandler(
-                    documents, chunks, new PassageSplitter(), embeddings, transactions, "bge-m3");
+                    documents,
+                    chunks,
+                    new PassageSplitter(),
+                    new TypedChunker(),
+                    new DoclingClient("", "120s"),
+                    new org.springframework.beans.factory.support.StaticListableBeanFactory()
+                            .getBeanProvider(FileStorage.class),
+                    embeddings,
+                    transactions,
+                    "bge-m3");
         }
     }
 }

@@ -240,15 +240,18 @@
         "wiki-trash-detail": "passing",
         "wiki-project-department-sources": "evaluating",
         "wiki-space-managers-list": "passing",
-        "wiki-home-explorer": "evaluating"
+        "wiki-home-explorer": "evaluating",
+        "wiki-document-type": "pending",
+        "wiki-typed-chunking": "pending",
+        "wiki-document-type-ui": "pending"
       },
-      "lastUpdated": "2026-11-18T10:52:02.922Z",
+      "lastUpdated": "2026-11-21T20:21:09.702Z",
       "branch": "feat/wiki",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "64c47ea6055b60efab6852df1c752facd95b82f1"
+        "default": "8cca30a62a9ae1bf0bc826a9f6db15a32d3291ef"
       }
     },
     "ticket-repository": {

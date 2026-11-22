@@ -17,6 +17,7 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.TextNode;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.Instant;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -39,6 +41,7 @@ import org.springframework.transaction.support.AbstractPlatformTransactionManage
 import org.springframework.transaction.support.DefaultTransactionStatus;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
+import vn.tsolve.ai.client.LlmClient;
 import vn.tsolve.common.audit.AuditAction;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.CodedException;
@@ -47,14 +50,17 @@ import vn.tsolve.platform.service.FileStorage;
 import vn.tsolve.wiki.InMemoryFileStorage;
 import vn.tsolve.wiki.dto.WikiDocumentRef;
 import vn.tsolve.wiki.dto.WikiPublishMetadata;
+import vn.tsolve.wiki.dto.WikiUploadPreview;
 import vn.tsolve.wiki.entity.WikiDocument;
 import vn.tsolve.wiki.entity.WikiDocument.Visibility;
+import vn.tsolve.wiki.entity.WikiDocumentType;
 import vn.tsolve.wiki.exception.WikiStorageUnavailableException;
 import vn.tsolve.wiki.mapper.WikiDocumentMapper;
 import vn.tsolve.wiki.repository.AccessRepository;
 import vn.tsolve.wiki.repository.FolderRepository;
 import vn.tsolve.wiki.repository.WikiDocumentRepository;
 import vn.tsolve.wiki.repository.WikiSearchRepository;
+import vn.tsolve.wiki.service.DocumentTypeClassifier;
 import vn.tsolve.wiki.service.TextExtractor;
 import vn.tsolve.worker.service.TenantJobService;
 
@@ -69,12 +75,15 @@ class WikiUploadServiceImplTest {
     private final TestTransactions transactions = new TestTransactions();
     private final UUID user = UUID.randomUUID();
     private final UUID space = UUID.randomUUID();
+    private final LlmClient llm = mock(LlmClient.class);
+    private final DocumentTypeClassifier classifier = new DocumentTypeClassifier(llm, new ObjectMapper(), "3s");
     private final WikiUploadServiceImpl service = new WikiUploadServiceImpl(
             documents,
             folders,
             access,
             spaces,
             new TextExtractor(),
+            classifier,
             provider(FileStorage.class, storage),
             audit,
             provider(TenantJobService.class, jobs),
@@ -102,6 +111,7 @@ class WikiUploadServiceImplTest {
                 file("guide.docx", "doc.docx"),
                 file("encrypted.pdf", "encrypted.pdf"),
                 file("image-only.pdf", "scan.pdf"));
+        when(llm.chat(any(), any())).thenReturn("{\"documentType\":\"GUIDE\"}");
         var result = service.extract(user, space, files);
         assertThat(result).hasSize(4);
         assertThat(result.getFirst().title()).isEqualTo("a".repeat(200));
@@ -109,13 +119,34 @@ class WikiUploadServiceImplTest {
         assertThat(result.getFirst().wordCount()).isEqualTo(5);
         assertThat(result.get(1).fileName()).isEqualTo("doc.docx");
         assertThat(result.get(1).result()).isEqualTo("READY");
+        assertThat(result.subList(0, 2))
+                .allSatisfy(row -> assertThat(row.documentType()).isEqualTo(WikiDocumentType.GUIDE));
         assertThat(result.subList(2, 4)).allSatisfy(row -> {
             assertThat(row.result()).isEqualTo("UNREADABLE");
             assertThat(row.excerpt()).isEmpty();
             assertThat(row.wordCount()).isZero();
+            assertThat(row.documentType()).isEqualTo(WikiDocumentType.OTHER);
         });
         assertThat(storage.files).isEmpty();
         verifyNoInteractions(documents, audit, jobs);
+    }
+
+    @Test
+    void classifiesTheFilesOneAtATime_AC_007_2_BUG_355() throws IOException {
+        var running = new AtomicInteger();
+        var mostAtOnce = new AtomicInteger();
+        when(llm.chat(any(), any())).thenAnswer(call -> {
+            mostAtOnce.accumulateAndGet(running.incrementAndGet(), Math::max);
+            Thread.sleep(50);
+            running.decrementAndGet();
+            return "{\"documentType\":\"GUIDE\"}";
+        });
+        var result = service.extract(
+                user,
+                space,
+                List.of(file("guide.pdf", "one.pdf"), file("guide.pdf", "two.pdf"), file("guide.docx", "three.docx")));
+        assertThat(result).extracting(WikiUploadPreview::documentType).containsOnly(WikiDocumentType.GUIDE);
+        assertThat(mostAtOnce).hasValue(1);
     }
 
     @Test
@@ -165,6 +196,7 @@ class WikiUploadServiceImplTest {
                 access,
                 spaces,
                 parser,
+                classifier,
                 provider(FileStorage.class, storage),
                 audit,
                 provider(TenantJobService.class, jobs),
@@ -245,11 +277,12 @@ class WikiUploadServiceImplTest {
                         eq(AuditAction.PUBLISH),
                         eq("WIKI_DOCUMENT"),
                         eq(document.getId()),
-                        argThat(details -> details.size() == 5
+                        argThat(details -> details.size() == 6
                                 && details.get("operation").equals("UPLOAD")
                                 && details.get("title").equals("Guide")
                                 && details.get("spaceId").equals(space)
                                 && details.containsKey("folderId")
+                                && details.get("documentType").equals("GUIDE")
                                 && details.get("visibility").equals("DEPARTMENT")));
         verify(jobs).enqueueFromRequest("wiki-index", document.getId());
     }
@@ -315,6 +348,23 @@ class WikiUploadServiceImplTest {
         assertThat(storage.files).isEmpty();
         verify(documents, never()).saveAndFlush(any());
         verifyNoInteractions(audit, jobs);
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+        "'', MSG01", "' , \"documentType\": null', MSG01",
+        "' , \"documentType\": \"\"', MSG01", "' , \"documentType\": \"guide\"', MSG06",
+        "' , \"documentType\": 1', MSG06", "' , \"documentType\": {}', MSG06"
+    })
+    void rejectsMissingOrInvalidTypeOnItsOwnField_AC_004_10(String typeField, String code) throws IOException {
+        List<MultipartFile> files = List.of(file("guide.pdf", "guide.pdf"), file("guide.pdf", "second.pdf"));
+        String metadata = """
+                {"documents":[{"title":"First","visibility":"DEPARTMENT","documentType":"POLICY"},
+                              {"title":"Second","visibility":"DEPARTMENT"%s}]}
+                """.formatted(typeField);
+        assertCode(() -> service.publish(user, space, files, metadata), code, "documents[1].documentType");
+        assertThat(storage.files).isEmpty();
+        verifyNoInteractions(documents, audit, jobs);
     }
 
     @Test
@@ -387,6 +437,7 @@ class WikiUploadServiceImplTest {
                 null,
                 "Guide",
                 Visibility.DEPARTMENT,
+                WikiDocumentType.OTHER,
                 "text",
                 stored.key(),
                 "guide.pdf",
@@ -423,6 +474,7 @@ class WikiUploadServiceImplTest {
                 access,
                 spaces,
                 new TextExtractor(),
+                classifier,
                 new StaticListableBeanFactory().getBeanProvider(FileStorage.class),
                 audit,
                 provider(TenantJobService.class, jobs),
@@ -448,6 +500,7 @@ class WikiUploadServiceImplTest {
                 access,
                 spaces,
                 new TextExtractor(),
+                classifier,
                 provider(FileStorage.class, storage),
                 audit,
                 new StaticListableBeanFactory().getBeanProvider(TenantJobService.class),
@@ -489,7 +542,7 @@ class WikiUploadServiceImplTest {
     }
 
     private WikiPublishMetadata.Document row(String title) {
-        return new WikiPublishMetadata.Document(title, Visibility.DEPARTMENT);
+        return new WikiPublishMetadata.Document(title, Visibility.DEPARTMENT, TextNode.valueOf("GUIDE"));
     }
 
     private MockMultipartFile file(String fixture, String name) throws IOException {

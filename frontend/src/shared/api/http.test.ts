@@ -37,6 +37,19 @@ describe('http (fetch wrapper)', () => {
     await expect(http<{ count: number }>(URL)).resolves.toEqual({ count: 3 });
   });
 
+  it('returns a binary file as an intact Blob (wiki AC-002.19)', async () => {
+    const bytes = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0xff, 0x00, 0x80]);
+    server.use(
+      mock.get(
+        `*${URL}`,
+        () => new HttpResponse(bytes, { headers: { 'Content-Type': 'application/pdf' } }),
+      ),
+    );
+    const body = await http<Blob>(URL);
+    // undici's Blob, not jsdom's: compare the bytes, not the class.
+    expect(new Uint8Array(await body.arrayBuffer())).toEqual(bytes);
+  });
+
   it('returns undefined for 204 No Content', async () => {
     server.use(mock.post(`*${URL}`, () => new HttpResponse(null, { status: 204 })));
     await expect(http<void>(URL, { method: 'POST' })).resolves.toBeUndefined();

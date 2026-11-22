@@ -303,7 +303,7 @@ paths:
             application/json:
               schema: { type: array, items: { $ref: '#/components/schemas/WikiDocumentRef' } }
         '400':
-          description: MSG01 for files, metadata or documents[i].title; MSG02 for titles over 200; MSG88 for over ten files; MSG89 for invalid type with file_name; MSG90 for unreadable text with file_name.
+          description: MSG01 for files, metadata, documents[i].title or documents[i].documentType; MSG02 for titles over 200; MSG06 for an invalid document type; MSG88 for over ten files; MSG89 for invalid file type with file_name; MSG90 for unreadable text with file_name.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ProblemDetail' }
@@ -3396,15 +3396,19 @@ components:
         name: { type: string }
         departmentName: { type: string }
         accessLevel: { type: string, enum: [VIEW, KNOWLEDGE_MANAGER] }
+    WikiDocumentType:
+      type: string
+      enum: [POLICY, RUNBOOK, GUIDE, FAQ, REFERENCE, SPEC, RECORD, ANNOUNCEMENT, FORM, OTHER]
     WikiUploadPreview:
       type: object
-      required: [fileName, title, excerpt, wordCount, result]
+      required: [fileName, title, excerpt, wordCount, result, documentType]
       properties:
         fileName: { type: string }
         title: { type: string, maxLength: 200 }
         excerpt: { type: string, maxLength: 300 }
         wordCount: { type: integer, minimum: 0 }
         result: { type: string, enum: [READY, UNREADABLE] }
+        documentType: { $ref: '#/components/schemas/WikiDocumentType' }
     WikiPublishMetadata:
       type: object
       required: [documents]
@@ -3416,10 +3420,11 @@ components:
           maxItems: 10
           items:
             type: object
-            required: [title, visibility]
+            required: [title, visibility, documentType]
             properties:
               title: { type: string, minLength: 1, maxLength: 200 }
               visibility: { type: string, enum: [DEPARTMENT, COMPANY_WIDE] }
+              documentType: { $ref: '#/components/schemas/WikiDocumentType' }
     WikiTrashItem:
       type: object
       required: [documentId, title, folderName, owner, deletedBy, deletedAt]
@@ -3475,7 +3480,7 @@ components:
         level: { type: integer, minimum: 1, maximum: 3 }
     WikiDocumentSummary:
       type: object
-      required: [documentId, title, spaceId, spaceName, folderId, folderName, visibility, owner, updatedAt]
+      required: [documentId, title, spaceId, spaceName, folderId, folderName, visibility, documentType, owner, updatedAt]
       properties:
         documentId: { type: string, format: uuid }
         title: { type: string }
@@ -3484,6 +3489,7 @@ components:
         folderId: { type: [string, 'null'], format: uuid }
         folderName: { type: [string, 'null'] }
         visibility: { type: string, enum: [DEPARTMENT, COMPANY_WIDE] }
+        documentType: { $ref: '#/components/schemas/WikiDocumentType' }
         owner: { type: string, description: Owner's full name. }
         updatedAt: { type: string, format: date-time }
     WikiDocumentDetail:

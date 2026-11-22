@@ -234,6 +234,7 @@ export * from './wikiDocumentDetail';
 export * from './wikiDocumentRef';
 export * from './wikiDocumentSummary';
 export * from './wikiDocumentSummaryVisibility';
+export * from './wikiDocumentType';
 export * from './wikiFolder';
 export * from './wikiPermissionCandidates';
 export * from './wikiPermissionCandidatesDepartmentsItem';

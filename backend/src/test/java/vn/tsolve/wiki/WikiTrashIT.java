@@ -58,6 +58,7 @@ import vn.tsolve.wiki.mapper.WikiDocumentMapper;
 import vn.tsolve.wiki.repository.AccessRepository;
 import vn.tsolve.wiki.repository.FolderRepository;
 import vn.tsolve.wiki.repository.WikiDocumentRepository;
+import vn.tsolve.wiki.service.DocumentTypeClassifier;
 import vn.tsolve.wiki.service.TextExtractor;
 import vn.tsolve.wiki.service.WikiTrashService;
 import vn.tsolve.wiki.service.WikiUploadService;
@@ -520,6 +521,7 @@ class WikiTrashIT extends WikiReadTestSupport {
                     new vn.tsolve.wiki.repository.WikiSearchRepository(
                             new org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate(jdbc)),
                     new TextExtractor(),
+                    mock(DocumentTypeClassifier.class),
                     storage,
                     audit,
                     jobs,

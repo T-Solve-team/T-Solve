@@ -1,6 +1,6 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
 import type { WikiDocumentDetail, WikiDocumentSummary, WikiSpace } from '@/shared/api';
 import {
@@ -33,6 +33,7 @@ const document: WikiDocumentSummary = {
   folderId: FOLDER,
   folderName: 'Guides',
   visibility: 'DEPARTMENT',
+  documentType: 'GUIDE',
   owner: 'Dang Nhat Minh',
   updatedAt: '2026-11-13T08:00:00Z',
 };
@@ -45,6 +46,7 @@ const handbook: WikiDocumentSummary = {
   folderId: null,
   folderName: null,
   visibility: 'COMPANY_WIDE',
+  documentType: 'POLICY',
   owner: 'Tran Hai Anh',
 };
 const detail = (summary: WikiDocumentSummary): WikiDocumentDetail => ({
@@ -115,6 +117,8 @@ describe('WikiHomePage', () => {
     const row = rowLink('VPN guide');
     expect(box.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(row).toHaveTextContent('Guides');
+    expect(within(row).getByText('Guide')).toBeInTheDocument();
+    expect(within(rowLink('Employee handbook')).getByText('Policy')).toBeInTheDocument();
     expect(row).toHaveTextContent('Dang Nhat Minh');
     expect(row).toHaveTextContent('Department');
     expect(row).toHaveTextContent('13/11/2026 15:00');
@@ -163,8 +167,17 @@ describe('WikiHomePage', () => {
     },
   );
 
-  it('AC-002.14 browses all three folder levels and opens a document through the feature mocks', async () => {
+  it('AC-002.14 AC-002.19 browses all three folder levels and opens a document through the feature mocks (BUG-358)', async () => {
+    URL.createObjectURL = vi.fn(() => 'blob:vpn');
+    URL.revokeObjectURL = vi.fn();
     server.resetHandlers();
+    // The generated file mock answers a jsdom Blob, which msw cannot stream.
+    server.use(
+      http.get(
+        '*/api/v1/wiki/documents/:documentId/file',
+        () => new HttpResponse(new TextEncoder().encode('%PDF-1.1')),
+      ),
+    );
     const { user, router, queryClient } = await openHome(`?space=${IT}`);
     const tree = await screen.findByRole('tree', { name: 'Folders' });
     expect(tree).toHaveTextContent('Guides');
@@ -172,8 +185,9 @@ describe('WikiHomePage', () => {
     await user.click(within(tree).getByText('VPN'));
     await user.click(await screen.findByRole('link', { name: /^VPN connection guide/ }));
     await user.click(await within(preview()).findByRole('button', { name: 'Open' }));
-    expect(await screen.findByRole('region', { name: 'Content' })).toHaveTextContent(
-      'Connect to the company VPN',
+    await waitFor(
+      () => expect(screen.getByTitle('VPN connection guide')).toHaveAttribute('src', 'blob:vpn'),
+      { timeout: 5000 },
     );
     expect(router.state.location.pathname).toBe(
       paths.wikiDocument('00000000-0000-4000-8000-000000009001'),
@@ -429,8 +443,8 @@ describe('WikiHomePage', () => {
     expect(screen.getByRole('heading', { name: 'Company-wide' })).toBeInTheDocument();
     const rows = screen.getAllByRole('listitem');
     expect(rows.map((row) => row.textContent)).toEqual([
-      expect.stringMatching(/^VPN guideIT Space/),
-      expect.stringMatching(/^Employee handbookHR Space/),
+      expect.stringMatching(/^VPN guideGuideIT Space/),
+      expect.stringMatching(/^Employee handbookPolicyHR Space/),
     ]);
   });
 
@@ -471,6 +485,7 @@ describe('WikiHomePage', () => {
       dt.nextElementSibling?.textContent,
     ]);
     expect(terms).toEqual([
+      ['Type', 'Policy'],
       ['Space', 'HR Space'],
       ['Folder', '—'],
       ['Owner', 'Tran Hai Anh'],

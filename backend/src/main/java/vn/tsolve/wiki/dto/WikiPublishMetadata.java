@@ -1,5 +1,6 @@
 package vn.tsolve.wiki.dto;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -14,5 +15,6 @@ public record WikiPublishMetadata(
             @NotBlank(message = "MSG01") @Size(max = 200, message = "MSG02")
             String title,
 
-            @NotNull(message = "MSG01") Visibility visibility) {}
+            @NotNull(message = "MSG01") Visibility visibility,
+            @NotNull(message = "MSG01") JsonNode documentType) {}
 }

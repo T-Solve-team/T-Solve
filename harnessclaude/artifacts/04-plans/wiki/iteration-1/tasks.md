@@ -229,3 +229,48 @@ Also: Delete folder popup disables Delete after a 409 MSG87 answer (AC-003.16 sh
 **Tests:** AC-002.14 to AC-002.17, AC-002.21 to AC-002.25, each test name prefixed with its id.
 **Estimated size:** medium
 **Verification:** frontend `format:check`, `lint`, `typecheck`, `test`, `build` (CI); `sdd.ts trace wiki`.
+
+## Task 17: Document type on upload (KAN-374)
+
+**Story:** STORY-007, STORY-004, STORY-002
+**Feature:** wiki-document-type
+**Decisions owned:** `artifacts/04-plans/wiki/doc-type-chunking-decisions.md` (U1, U2, C3 to C6)
+**Acceptance criteria:** AC-007.1 to AC-007.3, AC-007.9, AC-007.10, AC-004.1, AC-004.6, AC-004.10, AC-004.12, AC-002.10
+**Description:** Changeset `NNN-wiki-document-type.sql`: `wiki_document.document_type varchar(20) NOT NULL DEFAULT 'OTHER'` with a check on the ten values. Enum `WikiDocumentType`. `DocumentTypeClassifier` (concrete class) calls `LlmClient.chat` with the prompt file and a JSON schema enum, files in parallel, `tsolve.wiki.classify.timeout` 20 s, any failure → `OTHER`. Extract rows gain `documentType`; publish rows require it (MSG01 / MSG06); audit detail; summary and detail DTOs carry it. OpenAPI first, then `generate:api`.
+**Files:**
+- Create: `backend/src/main/resources/db/changelog/changes/NNN-wiki-document-type.sql`, `backend/src/main/java/vn/tsolve/wiki/entity/WikiDocumentType.java`, `backend/src/main/java/vn/tsolve/wiki/service/DocumentTypeClassifier.java`, `backend/src/main/resources/prompts/wiki-document-type.txt`
+- Modify: `frontend/openapi/tsolve-api.yaml`, `WikiDocument.java`, `WikiUploadServiceImpl.java`, upload DTOs, summary and detail DTOs and their queries
+- Test: `DocumentTypeClassifierTest.java`, `WikiUploadIT.java`, `WikiDocumentTypeMigrationIT.java`
+**Tests:** AC-007.1 to AC-007.3, AC-007.9, AC-007.10, AC-004.1, AC-004.6, AC-004.10, AC-004.12, AC-002.10 · edge cases 30, 31, 35.
+**Estimated size:** medium
+**Verification:** backend `mvn verify`; `generate:api` committed with no further diff; `sdd.ts trace wiki`.
+
+## Task 18: Document-type-aware chunking with docling-serve (KAN-374)
+
+**Story:** STORY-007, STORY-004
+**Feature:** wiki-typed-chunking
+**Decisions owned:** U3 to U5, C1, C2, C7, C8
+**Acceptance criteria:** AC-007.4 to AC-007.8, AC-004.14
+**Dependencies:** Task 17
+**Description:** `DoclingClient` (wiki, `DOCLING_BASE_URL` no default, `tsolve.wiki.docling.timeout` 120 s) posts the original file from `FileStorage` and returns Markdown. `TypedChunker` parses Markdown headings, list items and tables and cuts units per type, applies the 1,500-character limit and the prefix, at most 200. `PassageSplitter` gains the prefix. `WikiIndexJobHandler` picks the path: `OTHER` or any docling failure or zero typed passages → `PassageSplitter`. Docker Compose service `docling` (official image, pinned tag) for local dev; `.env.example` gains `DOCLING_BASE_URL`.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/wiki/service/DoclingClient.java`, `backend/src/main/java/vn/tsolve/wiki/service/TypedChunker.java`
+- Modify: `PassageSplitter.java`, `WikiIndexJobHandler.java`, `docker-compose.yml`, `backend/.env.example`
+- Test: `TypedChunkerTest.java` (one case per type, the limit, the prefix, heading-only units), `WikiIndexJobHandlerTest.java` (fallback causes), `WikiIndexIT.java` (stub docling server)
+**Tests:** AC-007.4 to AC-007.8, AC-004.14 · edge cases 32 to 34.
+**Estimated size:** medium
+**Verification:** backend `mvn verify`; `sdd.ts trace wiki`.
+
+## Task 19: Type on the Wiki screens (KAN-374)
+
+**Story:** STORY-007, STORY-002, STORY-004
+**Feature:** wiki-document-type-ui
+**Dependencies:** Task 17 (generated API)
+**Acceptance criteria:** AC-007.11, AC-002.14, AC-002.19, AC-002.24, AC-004.20
+**Description:** Type label (AC-007.1) on 11.1 rows and preview, on the 11.2 header, and an editable Type select on each 11.3 row with the suggestion selected; publish sends it. MSW handlers return `documentType`.
+**Files:**
+- Modify: `frontend/src/features/wiki/pages/WikiHomePage.tsx`, `WikiDocumentPage.tsx`, `UploadDocumentsPage.tsx`, `frontend/src/features/wiki/mocks/handlers.ts`
+- Test: `WikiHomePage.test.tsx`, `WikiDocumentPage.test.tsx`, `UploadDocumentsPage.test.tsx`
+**Tests:** AC-007.11, AC-002.14, AC-002.19, AC-002.24, AC-004.20, each test name prefixed with its id.
+**Estimated size:** small
+**Verification:** frontend `format:check`, `lint`, `typecheck`, `test`, `build`; `sdd.ts trace wiki`.

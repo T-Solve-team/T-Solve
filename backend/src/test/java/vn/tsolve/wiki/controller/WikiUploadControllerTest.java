@@ -41,6 +41,7 @@ import vn.tsolve.common.security.WithTSolveUser;
 import vn.tsolve.wiki.dto.WikiDocumentFile;
 import vn.tsolve.wiki.dto.WikiDocumentRef;
 import vn.tsolve.wiki.dto.WikiUploadPreview;
+import vn.tsolve.wiki.entity.WikiDocumentType;
 import vn.tsolve.wiki.service.WikiBrowseService;
 import vn.tsolve.wiki.service.WikiSearchService;
 import vn.tsolve.wiki.service.WikiUploadService;
@@ -73,13 +74,15 @@ class WikiUploadControllerTest {
     @WithTSolveUser(roles = Role.KNOWLEDGE_MANAGER)
     void serializesPreviewAndPublishMultipartInOrder_AC_004_1_AC_004_6() throws Exception {
         when(uploads.extract(any(), eq(space), any()))
-                .thenReturn(List.of(new WikiUploadPreview("guide.pdf", "guide", "Text", 1, "READY")));
+                .thenReturn(List.of(
+                        new WikiUploadPreview("guide.pdf", "guide", "Text", 1, "READY", WikiDocumentType.GUIDE)));
         mvc.perform(multipart("/api/v1/wiki/spaces/{id}/uploads/extract", space)
                         .file(file)
                         .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].fileName").value("guide.pdf"))
-                .andExpect(jsonPath("$[0].result").value("READY"));
+                .andExpect(jsonPath("$[0].result").value("READY"))
+                .andExpect(jsonPath("$[0].documentType").value("GUIDE"));
         UUID id = UUID.randomUUID();
         when(uploads.publish(any(), eq(space), any(), any())).thenReturn(List.of(new WikiDocumentRef(id, "Guide")));
         mvc.perform(multipart("/api/v1/wiki/spaces/{id}/documents", space)
@@ -88,7 +91,8 @@ class WikiUploadControllerTest {
                                 "metadata",
                                 "",
                                 "application/json",
-                                "{\"documents\":[{\"title\":\"Guide\",\"visibility\":\"DEPARTMENT\"}]}".getBytes()))
+                                "{\"documents\":[{\"title\":\"Guide\",\"visibility\":\"DEPARTMENT\",\"documentType\":\"GUIDE\"}]}"
+                                        .getBytes()))
                         .with(csrf()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$[0].documentId").value(id.toString()));
@@ -97,7 +101,8 @@ class WikiUploadControllerTest {
     @Test
     @WithTSolveUser(roles = Role.KNOWLEDGE_MANAGER)
     void acceptsJsonMetadataSentAsAFormStringByGeneratedClient_AC_004_6_BUG_272() throws Exception {
-        String metadata = "{\"documents\":[{\"title\":\"Guide\",\"visibility\":\"DEPARTMENT\"}]}";
+        String metadata =
+                "{\"documents\":[{\"title\":\"Guide\",\"visibility\":\"DEPARTMENT\",\"documentType\":\"GUIDE\"}]}";
         when(uploads.publish(any(), any(), any(), any()))
                 .thenReturn(List.of(new WikiDocumentRef(UUID.randomUUID(), "Guide")));
         for (String contentType : List.of("text/plain", "application/octet-stream")) {

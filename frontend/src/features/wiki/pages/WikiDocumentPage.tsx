@@ -12,6 +12,8 @@ import {
   SectionCard,
   StatusTag,
 } from '@/shared/ui';
+import { WikiFileView } from '../components/WikiFileView';
+import { documentTypeLabels } from '../documentTypes';
 import { useWikiDocument, wikiDocumentFileUrl } from '../hooks/useWikiDocument';
 import { useWikiTrashMutations } from '../hooks/useWikiTrashMutations';
 import styles from './WikiDocumentPage.module.css';
@@ -33,6 +35,11 @@ export function WikiDocumentPage() {
     return <ErrorState error={document.error} onRetry={() => void document.refetch()} />;
   }
   const data = document.data;
+  const plainText = (
+    <section aria-label="Content" className={styles.content}>
+      {data.content}
+    </section>
+  );
   return (
     <SectionCard>
       <div className={styles.layout}>
@@ -41,9 +48,17 @@ export function WikiDocumentPage() {
             <Typography.Title level={2}>{data.title}</Typography.Title>
             {data.inTrash && <StatusTag status="IN_TRASH" />}
           </Space>
-          <section aria-label="Content" className={styles.content}>
-            {data.content}
-          </section>
+          {data.inTrash ? (
+            plainText
+          ) : (
+            <WikiFileView
+              key={data.documentId}
+              documentId={data.documentId}
+              fileName={data.fileName}
+              title={data.title}
+              fallback={plainText}
+            />
+          )}
         </Flex>
         <Flex vertical gap="large" className={styles.rail}>
           <Descriptions
@@ -57,6 +72,7 @@ export function WikiDocumentPage() {
                 label: 'Visibility',
                 children: data.visibility === 'COMPANY_WIDE' ? 'Company-wide' : 'Department',
               },
+              { key: 'type', label: 'Type', children: documentTypeLabels[data.documentType] },
               { key: 'owner', label: 'Owner', children: data.owner },
               { key: 'updated', label: 'Updated', children: formatDateTime(data.updatedAt) },
             ]}

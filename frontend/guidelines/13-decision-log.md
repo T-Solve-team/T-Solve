@@ -327,6 +327,8 @@ without touching the Workspace guards.
 
 **FE-46 — Project filter on 10.1 Suggestion History (FE Lead review of PR #113, 2026-11-05, KAN-149).** 10.1 Suggestion History keeps a Project filter, an exception to the "never a Project filter" rule of 03 §5, because the approved spec AC-001.3 requires it. The filter offers only the Projects the signed-in Project Manager manages, and both the filter and the list show a Project only by its Jira project key; no table stores a Project name. *Options:* a sortable Project column only. *Why:* a Project Manager with several Projects reviews one Project's suggestion results at a time, and the server still checks each Project (403/MSG08).
 
+**FE-47 — 11.2 Wiki Document shows the original file (Minh, 2026-11-22, wiki AC-002.19, AC-002.26; awaiting FE Lead approval).** 11.2 shows the uploaded file itself so its images and tables are visible: a PDF in the browser's own PDF viewer (an iframe on a `blob:` URL; Caddy CSP gains `frame-src blob:`, `object-src` stays `'none'`), a DOCX rendered by the new dependency `docx-preview` 0.4.1 (Apache-2.0, needs `jszip`). Any failure, or a trashed document, falls back to the extracted plain text. `http()` now returns a `Blob` for a non-JSON, non-text response, so the generated `downloadWikiDocumentFile` gets the file intact. *Options:* pdf.js; `mammoth` (HTML only, loses layout); converting DOCX to PDF on the server; extracting the images at upload. *Why:* no backend change; the browser already has a PDF viewer; `docx-preview` keeps pages, images and tables.
+
 ## Working conventions (not code decisions)
 
 - Each change goes on its own short-lived branch; PR title and description follow the DevOps template.
