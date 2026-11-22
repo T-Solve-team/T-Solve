@@ -60,6 +60,8 @@ export function SearchFilters({
         aria-label="Search"
         className={styles.query}
         size="large"
+        placeholder="For example: VPN drops every few minutes"
+        enterButton="Search"
         value={text}
         onChange={(event) => setText(event.target.value)}
         maxLength={QUERY_MAX}
@@ -70,12 +72,14 @@ export function SearchFilters({
           if (text || info?.source === 'clear') onChange('q', text || null);
         }}
       />
-      <Flex align="end" gap="middle" wrap>
-        <Flex vertical gap="small">
+      <div className={styles.filters}>
+        <div className={styles.filter}>
           <label htmlFor="search-department">Department</label>
           <Select<string>
             id="search-department"
             className={styles.department}
+            size="small"
+            variant="borderless"
             value={departmentId ?? ALL}
             onChange={(value) => onChange('departmentId', fromOption(value))}
             options={[
@@ -83,22 +87,26 @@ export function SearchFilters({
               ...departments.map((d) => ({ value: d.departmentId, label: d.name })),
             ]}
           />
-        </Flex>
-        <Flex vertical gap="small">
+        </div>
+        <div className={styles.filter}>
           <label htmlFor="search-source">Source</label>
           <Select<string>
             id="search-source"
             className={styles.source}
+            size="small"
+            variant="borderless"
             value={source ?? ALL}
             onChange={(value) => onChange('source', fromOption(value))}
             options={SOURCE_OPTIONS}
           />
-        </Flex>
-        <Flex vertical gap="small">
+        </div>
+        <div className={styles.filter}>
           <label htmlFor="search-resolved">Resolved date</label>
           <DatePicker.RangePicker
             id={{ start: 'search-resolved' }}
             className={styles.resolved}
+            size="small"
+            variant="borderless"
             format="DD/MM/YYYY"
             value={[
               resolvedFrom ? dayjs(resolvedFrom) : null,
@@ -109,8 +117,8 @@ export function SearchFilters({
               onResolvedChange(from && to ? [from.format(API_DAY), to.format(API_DAY)] : null);
             }}
           />
-        </Flex>
-      </Flex>
+        </div>
+      </div>
     </Flex>
   );
 }

@@ -1,31 +1,75 @@
-/* Figma 6.1 filters and result cards. */
 .query {
-  max-width: 720px;
+  align-self: center;
+  max-width: var(--search-box-width, 100%);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: var(--search-filter-alignment, flex-start);
+  gap: var(--ant-margin-xs);
+}
+
+.filter {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  max-width: 100%;
+  padding-inline-start: var(--ant-padding-xs);
+  border: var(--ant-line-width) solid var(--ant-color-border);
+  border-radius: 999px;
+  background: var(--ant-color-bg-container);
+}
+
+.filter label {
+  color: var(--ant-color-text-secondary);
+  font-size: var(--ant-font-size-sm);
+  white-space: nowrap;
+}
+
+.filter:focus-within {
+  border-color: var(--ant-color-primary);
+  box-shadow: 0 0 0 var(--ant-control-outline-width) var(--ant-control-outline);
+}
+
+.department,
+.source,
+.resolved {
+  min-width: 0;
 }
 
 .department {
-  width: 200px;
+  width: 148px;
 }
 
 .source {
-  width: 180px;
+  width: 118px;
 }
 
 .resolved {
-  width: 280px;
+  width: 212px;
 }
 
-/* A result: white, radius 8, padding 24, shadow/card (same as the 6.2 table card). */
 .card {
-  padding: var(--ant-padding-lg);
-  border-radius: var(--ant-border-radius-lg);
+  display: grid;
+  justify-items: start;
+  gap: var(--ant-margin-xxs);
+  padding: 16px 18px;
+  border-radius: 12px;
+  overflow-wrap: anywhere;
+}
+
+.card:hover {
   background: var(--ant-color-bg-container);
-  box-shadow: var(--ant-box-shadow-tertiary);
 }
 
 .title {
   font-size: var(--ant-font-size-lg);
   font-weight: 600;
+}
+
+.helpful {
+  white-space: nowrap;
 }
 
 /* The excerpt is clamped to two lines by CSS, never cut or rendered as HTML (spec AC-002.14). */
