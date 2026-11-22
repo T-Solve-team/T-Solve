@@ -15,6 +15,7 @@ import vn.tsolve.wiki.dto.WikiDocumentSummary;
 import vn.tsolve.wiki.dto.WikiFolder;
 import vn.tsolve.wiki.dto.WikiSpace;
 import vn.tsolve.wiki.dto.WikiTrashItem;
+import vn.tsolve.wiki.entity.WikiDocumentType;
 import vn.tsolve.wiki.repository.AccessRepository.AccessSql;
 
 /** Read projections join identity names without loading or exposing entities from another module (W10). */
@@ -23,7 +24,7 @@ import vn.tsolve.wiki.repository.AccessRepository.AccessSql;
 public class WikiSearchRepository {
     private static final String SUMMARY_COLUMNS = """
             w.wiki_document_id, w.title, s.public_id AS space_public_id, s.name AS space_name,
-            w.folder_id, f.name AS folder_name, w.visibility, o.full_name AS owner, w.updated_at
+            w.folder_id, f.name AS folder_name, w.visibility, w.document_type, o.full_name AS owner, w.updated_at
             """;
     private static final String DOCUMENT_JOINS = """
             FROM wiki_document w JOIN space s ON s.space_id = w.space_id
@@ -154,6 +155,7 @@ public class WikiSearchRepository {
                                     item.folderId(),
                                     item.folderName(),
                                     item.visibility(),
+                                    item.documentType(),
                                     item.owner(),
                                     item.updatedAt(),
                                     row.getString("content"),
@@ -201,6 +203,7 @@ public class WikiSearchRepository {
                 row.getObject("folder_id", UUID.class),
                 row.getString("folder_name"),
                 row.getString("visibility"),
+                WikiDocumentType.valueOf(row.getString("document_type")),
                 row.getString("owner"),
                 row.getTimestamp("updated_at").toInstant());
     }

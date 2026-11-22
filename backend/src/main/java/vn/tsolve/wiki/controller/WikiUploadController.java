@@ -47,7 +47,9 @@ public class WikiUploadController {
 
     @PostMapping(value = "/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(operationId = "publishWikiDocuments", summary = "Publish PDF or DOCX documents in a managed Space")
-    @ApiResponse(responseCode = "400", description = "MSG01, MSG02: metadata or titles; MSG88, MSG89, MSG90: files")
+    @ApiResponse(
+            responseCode = "400",
+            description = "MSG01, MSG02: metadata; MSG06: invalid document type; MSG88, MSG89, MSG90: files")
     @ApiResponse(responseCode = "403", description = "MSG08: not the Space's Knowledge Manager")
     @ApiResponse(responseCode = "404", description = "MSG04: unknown or inactive Space or folder")
     @ApiResponse(responseCode = "409", description = "MSG84: title already used")

@@ -2,13 +2,16 @@ import { Button, Input, Select } from 'antd';
 import type { WikiPublishMetadata, WikiUploadPreview } from '@/shared/api';
 import { msg } from '@/shared/messages';
 import { DataTable, FormField, type DataTableColumn } from '@/shared/ui';
+import { documentTypeOptions } from '../documentTypes';
+
+export type WikiUploadField = 'title' | 'documentType';
 
 /** Editable upload draft; retain the original File until publish or cancel. */
 export type WikiUploadRow = WikiUploadPreview & {
   id: string;
   file: File;
   visibility: WikiPublishMetadata['documents'][number]['visibility'];
-  titleErrors?: string[];
+  fieldErrors?: Partial<Record<WikiUploadField, string[]>>;
 };
 
 const VISIBILITIES = [
@@ -19,7 +22,10 @@ const VISIBILITIES = [
 type WikiUploadTableProps = {
   rows: WikiUploadRow[];
   isBusy: boolean;
-  onChange: (id: string, change: Partial<Pick<WikiUploadRow, 'title' | 'visibility'>>) => void;
+  onChange: (
+    id: string,
+    change: Partial<Pick<WikiUploadRow, 'title' | 'visibility' | 'documentType'>>,
+  ) => void;
   onRemove: (id: string) => void;
 };
 
@@ -54,7 +60,7 @@ export function WikiUploadTable({ rows, isBusy, onChange, onRemove }: WikiUpload
           : row.title.length > 200
             ? msg('MSG02', { field_name: 'Title', max_length: 200 })
             : undefined;
-        const errors = localError ? [localError] : (row.titleErrors ?? []);
+        const errors = localError ? [localError] : (row.fieldErrors?.title ?? []);
         return (
           <FormField
             label="Title"
@@ -72,6 +78,36 @@ export function WikiUploadTable({ rows, isBusy, onChange, onRemove }: WikiUpload
               count={{ show: true, max: 200 }}
               disabled={isBusy}
               onChange={(event) => onChange(row.id, { title: event.target.value })}
+            />
+          </FormField>
+        );
+      },
+    },
+    {
+      key: 'documentType',
+      title: 'Type',
+      width: 180,
+      render: (_, row) => {
+        const errors = row.fieldErrors?.documentType ?? [];
+        return (
+          <FormField
+            label="Type"
+            htmlFor={`type-${row.id}`}
+            validateStatus={errors.length ? 'error' : undefined}
+            help={errors.map((error) => (
+              <div key={error}>{error}</div>
+            ))}
+          >
+            <Select
+              id={`type-${row.id}`}
+              aria-label={`Type for ${row.fileName}`}
+              value={row.documentType}
+              options={documentTypeOptions}
+              virtual={false}
+              disabled={isBusy}
+              onChange={(documentType: WikiUploadRow['documentType']) =>
+                onChange(row.id, { documentType })
+              }
             />
           </FormField>
         );
@@ -107,7 +143,7 @@ export function WikiUploadTable({ rows, isBusy, onChange, onRemove }: WikiUpload
       columns={columns}
       rows={rows}
       rowKey={(row) => row.id}
-      scrollX={1220}
+      scrollX={1400}
     />
   );
 }

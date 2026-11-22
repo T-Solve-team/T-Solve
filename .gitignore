@@ -34,4 +34,7 @@ Thumbs.db
 
 # ---- AI agents ----
 prompts/
+!/backend/src/main/resources/prompts/
+/backend/src/main/resources/prompts/*
+!/backend/src/main/resources/prompts/wiki-document-type.txt
 .claude/worktrees/
