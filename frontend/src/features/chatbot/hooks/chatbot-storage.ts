@@ -24,6 +24,7 @@ function isAnswer(value: unknown): value is ChatbotAnswer {
     answer !== null &&
     typeof answer.answerId === 'string' &&
     typeof answer.text === 'string' &&
+    (answer.title === undefined || typeof answer.title === 'string') &&
     Object.values<unknown>(ChatbotAnswerOutcome).includes(answer.outcome) &&
     Array.isArray(answer.citations) &&
     answer.citations.every(isCitation)

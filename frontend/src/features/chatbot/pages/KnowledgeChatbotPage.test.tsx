@@ -693,6 +693,30 @@ describe('KnowledgeChatbotPage session conversations', () => {
     expect(stored.conversations[0]?.turns[0]?.question).toBe(VPN_QUESTION);
   });
 
+  it('AC-002.2 titles the conversation with the title of the first answer when it has one', async () => {
+    answerWith({ text: 'Restart the VPN client.', title: 'VPN error 809' });
+    const { user, box } = await openChatbot();
+
+    await enter(user, box, `${VPN_QUESTION}{Enter}`);
+    await within(thread()).findByText('Restart the VPN client.');
+
+    expect(listTitles()).toEqual(['VPN error 809']);
+  });
+
+  it('AC-002.13 shows a title on one line and the whole title in a tooltip', async () => {
+    const title = 'Cannot connect to the company VPN from home with error 809 on Windows';
+    answerWith({ text: 'Restart the VPN client.', title });
+    const { user, box } = await openChatbot();
+    await enter(user, box, `${VPN_QUESTION}{Enter}`);
+    await within(thread()).findByText('Restart the VPN client.');
+
+    const entry = within(conversationList()).getByRole('button', { name: title });
+    expect(entry.querySelector('[data-title-line]')).not.toBeNull();
+    await user.hover(entry);
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(title);
+  });
+
   it('AC-002.3 lists the conversations newest first by start time and highlights the open one', async () => {
     const { user, box } = await openChatbot();
     await ask(user, box, VPN_QUESTION);
