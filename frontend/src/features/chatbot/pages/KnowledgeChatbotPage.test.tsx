@@ -331,9 +331,10 @@ describe('KnowledgeChatbotPage', () => {
     const { user, box } = await openChatbot();
 
     await enter(user, box, `${VPN_QUESTION}{Enter}`);
-    await user.click(await within(thread()).findByRole('button', { name: 'Show' }));
 
-    expect(within(thread()).getByRole('link', { name: /<b>VPN<\/b> guide/ })).toBeInTheDocument();
+    expect(
+      await within(thread()).findByRole('link', { name: /<b>VPN<\/b> guide/ }),
+    ).toBeInTheDocument();
     expect(within(thread()).getByText('<script>window.hacked = true</script>')).toBeInTheDocument();
     expect(thread().querySelector('b, script')).toBeNull();
   });
@@ -359,15 +360,15 @@ describe('KnowledgeChatbotPage', () => {
 
     const citations = await within(thread()).findByRole('list', { name: 'Citations' });
     const [, ticket] = within(citations).getAllByRole('listitem');
-    expect(ticket).toHaveTextContent(/^\[2\]\s*Solution from a ticket\s*Show$/);
+    expect(ticket).toHaveTextContent(/^\[2\]\s*Solution from a ticket\s*Symptoms/);
     expect(ticket?.querySelector('a')).toBeNull();
   });
 
-  it('AC-001.11 expands the Solution inline with Show and collapses it with Hide', async () => {
+  it('AC-001.11 shows the Solution open under its citation, with no Show or Hide button', async () => {
     const { user, box } = await openChatbot();
 
     await enter(user, box, `${VPN_QUESTION}{Enter}`);
-    await user.click(await within(thread()).findByRole('button', { name: 'Show' }));
+    await within(thread()).findByRole('list', { name: 'Citations' });
 
     for (const section of [
       'Symptoms',
@@ -381,19 +382,17 @@ describe('KnowledgeChatbotPage', () => {
       within(thread()).getByText('USB selective suspend turns off the network adapter.'),
     ).toBeInTheDocument();
     expect(within(thread()).queryByText('Workaround')).not.toBeInTheDocument();
-
-    await user.click(within(thread()).getByRole('button', { name: 'Hide' }));
-    expect(within(thread()).queryByText('Symptoms')).not.toBeInTheDocument();
-    expect(within(thread()).getByRole('button', { name: 'Show' })).toBeInTheDocument();
+    expect(
+      within(thread()).queryByRole('button', { name: /^(Show|Hide)$/ }),
+    ).not.toBeInTheDocument();
   });
 
   it('AC-001.11 shows the Workaround section when the Solution has one', async () => {
     const { user, box } = await openChatbot();
 
     await enter(user, box, 'Leave policy for public holidays{Enter}');
-    await user.click(await within(thread()).findByRole('button', { name: 'Show' }));
 
-    expect(within(thread()).getByText('Workaround')).toBeInTheDocument();
+    expect(await within(thread()).findByText('Workaround')).toBeInTheDocument();
     expect(
       within(thread()).getByText('HR adds the day back to the balance by hand.'),
     ).toBeInTheDocument();
