@@ -18,10 +18,12 @@ import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -42,7 +44,7 @@ class ReviewQueueEventServiceImplTest {
     private static final UUID WORKSPACE = new UUID(0, 1);
     private static final UUID PROJECT = new UUID(0, 2);
 
-    private final BlockingQueue<PGNotification> notifications = new LinkedBlockingQueue<>();
+    private final Map<Thread, BlockingQueue<PGNotification>> listening = new ConcurrentHashMap<>();
     private final CountDownLatch release = new CountDownLatch(1);
     private ReviewQueueEventServiceImpl service;
     private Connection connection;
@@ -115,7 +117,7 @@ class ReviewQueueEventServiceImplTest {
 
         service.subscribe(WORKSPACE, new UUID(0, 3), Set.of(PROJECT));
         service.subscribe(WORKSPACE, new UUID(0, 4), Set.of(PROJECT));
-        notifications.add(notification(PROJECT.toString()));
+        notifyListeners(PROJECT.toString());
 
         long deadline = System.currentTimeMillis() + 10_000;
         while (System.currentTimeMillis() < deadline
@@ -187,7 +189,7 @@ class ReviewQueueEventServiceImplTest {
                 .isInstanceOf(IllegalStateException.class);
         // The original stream still receives events and owns the listener.
         verify(connection, org.mockito.Mockito.never()).close();
-        notifications.add(notification(PROJECT.toString()));
+        notifyListeners(PROJECT.toString());
         awaitUntil(() -> original.sent.stream().anyMatch(s -> s.contains(PROJECT.toString())));
         original.completionCallback.run();
         verify(connection, timeout(10_000)).close();
@@ -207,8 +209,8 @@ class ReviewQueueEventServiceImplTest {
         int beats = heartbeatCount(emitter);
         managed.set(Set.of(PROJECT, second));
         awaitUntil(() -> heartbeatCount(emitter) >= beats + 2);
-        notifications.add(notification(second.toString()));
-        notifications.add(notification(PROJECT.toString()));
+        notifyListeners(second.toString());
+        notifyListeners(PROJECT.toString());
         awaitUntil(() -> emitter.sent.stream().anyMatch(s -> s.contains(second.toString()))
                 && emitter.sent.stream().anyMatch(s -> s.contains(PROJECT.toString())));
 
@@ -225,7 +227,7 @@ class ReviewQueueEventServiceImplTest {
         service.subscribe(WORKSPACE, new UUID(0, 3), Set.of(PROJECT));
         service.subscribe(WORKSPACE, new UUID(0, 4), Set.of(PROJECT));
         assertThat(broken.completed.await(10, TimeUnit.SECONDS)).isTrue();
-        notifications.add(notification(PROJECT.toString()));
+        notifyListeners(PROJECT.toString());
         awaitUntil(() -> healthy.sent.stream().anyMatch(s -> s.contains(PROJECT.toString())));
     }
 
@@ -254,7 +256,7 @@ class ReviewQueueEventServiceImplTest {
             assertThat(emitters.get(i).entered.await(1, TimeUnit.SECONDS)).isTrue();
         }
         service.subscribe(WORKSPACE, new UUID(0, 20), Set.of(PROJECT));
-        notifications.add(notification(PROJECT.toString()));
+        notifyListeners(PROJECT.toString());
         long started = System.nanoTime();
         // Its barrier is behind the project notification, proving listener dispatch also remained responsive.
         service.subscribe(WORKSPACE, new UUID(0, 21), Set.of(PROJECT));
@@ -294,6 +296,15 @@ class ReviewQueueEventServiceImplTest {
         var prepared = mock(PreparedStatement.class);
         AtomicReference<String> token = new AtomicReference<>();
         when(connection.createStatement()).thenReturn(statement);
+        when(statement.execute(anyString())).thenAnswer(call -> {
+            String sql = call.getArgument(0);
+            if (sql.startsWith("LISTEN")) {
+                listening.put(Thread.currentThread(), new LinkedBlockingQueue<>());
+            } else if (sql.startsWith("UNLISTEN")) {
+                listening.remove(Thread.currentThread());
+            }
+            return false;
+        });
         when(connection.prepareStatement(anyString())).thenReturn(prepared);
         when(connection.unwrap(PGConnection.class)).thenReturn(pg);
         doAnswer(call -> {
@@ -304,11 +315,16 @@ class ReviewQueueEventServiceImplTest {
                 .setString(eq(2), anyString());
         // the join barrier's own NOTIFY comes back through the LISTEN connection
         when(prepared.execute()).thenAnswer(call -> {
-            notifications.add(notification(token.get()));
+            notifyListeners(token.get());
             return true;
         });
         when(pg.getNotifications(anyInt())).thenAnswer(call -> {
-            PGNotification next = notifications.poll(50, TimeUnit.MILLISECONDS);
+            BlockingQueue<PGNotification> queue = listening.get(Thread.currentThread());
+            if (queue == null) {
+                Thread.sleep(50);
+                return null;
+            }
+            PGNotification next = queue.poll(50, TimeUnit.MILLISECONDS);
             return next == null ? null : new PGNotification[] {next};
         });
         dataSource = mock(DataSource.class);
@@ -327,6 +343,10 @@ class ReviewQueueEventServiceImplTest {
         var next = new java.util.concurrent.atomic.AtomicInteger();
         return new ReviewQueueEventServiceImpl(
                 dataSource, tenant, access, heartbeat, timeout -> emitters.get(next.getAndIncrement()));
+    }
+
+    private void notifyListeners(String parameter) {
+        listening.values().forEach(queue -> queue.add(notification(parameter)));
     }
 
     private static PGNotification notification(String parameter) {
