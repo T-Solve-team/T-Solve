@@ -321,9 +321,9 @@
         "solution-retrieval": "passing",
         "department-solution-retrieval": "passing",
         "membership-visible-scope": "evaluating",
-        "embed-description": "pending"
+        "embed-description": "in-progress"
       },
-      "lastUpdated": "2026-11-22T04:50:42.829Z",
+      "lastUpdated": "2026-11-22T05:30:29.610Z",
       "branch": "feat/search",
       "repos": [
         "default"

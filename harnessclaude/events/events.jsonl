@@ -2213,3 +2213,4 @@
 {"ts":"2026-11-22T05:20:24.461Z","type":"spec-approved","module":"chatbot","specHash":"f7e324be4b202c3807244ea339ae8c5d801483486120cd87158afd282b8e8847"}
 {"ts":"2026-11-22T05:20:48.184Z","type":"feature-status","module":"chatbot","feature":"conversation-title-api","from":null,"to":"pending"}
 {"ts":"2026-11-22T05:20:48.521Z","type":"feature-status","module":"chatbot","feature":"conversation-title-ui","from":null,"to":"pending"}
+{"ts":"2026-11-22T05:30:29.612Z","type":"feature-status","module":"search","feature":"embed-description","from":"pending","to":"in-progress"}
