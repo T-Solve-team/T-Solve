@@ -24,6 +24,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -41,8 +42,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.mock.env.MockEnvironment;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.SimpleTransactionStatus;
@@ -802,6 +805,19 @@ class ChatbotAnswerServiceImplTest {
 
     private static ChatbotQuestionRequest question() {
         return new ChatbotQuestionRequest("question", List.of());
+    }
+
+    @Test
+    void defaultCutOffIs065_AC_005_1() {
+        Value cutOff = Arrays.stream(ChatbotAnswerServiceImpl.class.getConstructors())
+                .flatMap(constructor -> Arrays.stream(constructor.getParameters()))
+                .map(parameter -> parameter.getAnnotation(Value.class))
+                .filter(value -> value != null && value.value().startsWith("${CHATBOT_MIN_SIMILARITY:"))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(new MockEnvironment().resolveRequiredPlaceholders(cutOff.value()))
+                .isEqualTo("0.65");
     }
 
     private static ChatbotQuestionRequest followUp() {
