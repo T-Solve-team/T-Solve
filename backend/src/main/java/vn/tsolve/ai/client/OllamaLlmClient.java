@@ -31,6 +31,8 @@ public class OllamaLlmClient implements LlmClient {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("model", model);
         body.put("stream", false);
+        // BUG-335: Qwen3 hybrid models think (~1,300 tokens) unless the request turns it off.
+        body.put("think", false);
         body.put(
                 "messages",
                 messages.stream()

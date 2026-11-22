@@ -63,20 +63,17 @@ class OllamaLlmClientTest {
     }
 
     @Test
-    @DisplayName("AC-001.1 sends the messages to /api/chat with the chat model, not streamed, and returns the answer")
-    void sendsMessagesAndReturnsAnswer() {
+    @DisplayName(
+            "AC-001.1 sends the messages to /api/chat with the chat model, not streamed, without thinking, and returns the answer")
+    void sendsMessagesAndReturnsAnswer_BUG_335() {
         answer("Xin chào");
 
         String text = client.chat(
                 List.of(new ChatMessage(Role.SYSTEM, "Be short"), new ChatMessage(Role.USER, "Hello")), null);
 
         assertThat(text).isEqualTo("Xin chào");
-        ollama.verify(
-                postRequestedFor(urlEqualTo("/api/chat"))
-                        .withRequestBody(
-                                equalToJson(
-                                        """
-                        {"model":"qwen-test","stream":false,
+        ollama.verify(postRequestedFor(urlEqualTo("/api/chat")).withRequestBody(equalToJson("""
+                        {"model":"qwen-test","stream":false,"think":false,
                          "messages":[{"role":"system","content":"Be short"},{"role":"user","content":"Hello"}]}
                         """)));
     }
@@ -91,13 +88,9 @@ class OllamaLlmClientTest {
         String text = client.chat(List.of(new ChatMessage(Role.USER, "Draft")), schema);
 
         assertThat(text).isEqualTo("{\"symptoms\":\"Login fails\"}");
-        ollama.verify(postRequestedFor(urlEqualTo("/api/chat"))
-                .withRequestBody(equalToJson(
-                        """
-                        {"format":{"type":"object","properties":{"symptoms":{"type":"string"}}}}
-                        """,
-                        true,
-                        true)));
+        ollama.verify(postRequestedFor(urlEqualTo("/api/chat")).withRequestBody(equalToJson("""
+                        {"think":false,"format":{"type":"object","properties":{"symptoms":{"type":"string"}}}}
+                        """, true, true)));
     }
 
     @Test
