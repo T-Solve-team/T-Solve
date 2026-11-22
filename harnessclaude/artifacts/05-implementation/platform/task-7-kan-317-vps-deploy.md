@@ -5,3 +5,9 @@
 3. Next: PR review + merge; platform Tasks 3–14 for real tenancy; KAN-317 subtasks to Done on merge.
 4. Branch: chore/KAN-317-platform-vps-deploy
 5. PR: https://github.com/T-Solve-team/T-Solve/pull/220
+
+1. Done: plan reordered into waves, Task 6a split into 6a-1 / 6a-2, commit 70a6bdd8
+2. Open: QA step 1 of 6a-1
+3. Next: QA step 2 and developer card for 6a-1
+4. Branch: refactor/KAN-384-platform-one-tenant-binding
+5. PR: none yet

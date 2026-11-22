@@ -501,9 +501,11 @@
         "load-test": "pending",
         "forge-security-chain": "pending",
         "cross-module-isolation": "passing",
-        "e2e-smoke": "passing"
+        "e2e-smoke": "passing",
+        "one-tenant-holder": "pending",
+        "no-workspace-fallbacks": "pending"
       },
-      "lastUpdated": "2026-11-15T19:54:14.488Z",
+      "lastUpdated": "2026-11-22T15:49:59.739Z",
       "branch": "feat/platform",
       "repos": [
         "default"

@@ -2233,3 +2233,5 @@
 {"ts":"2026-11-22T06:33:44.027Z","type":"quick-opened","what":"BUG-360: log the wiki-index web-jobs bug","files":["docs/bug-log.md"]}
 {"ts":"2026-11-22T06:34:11.695Z","type":"quick-closed","what":"BUG-360: log the wiki-index web-jobs bug","files":["docs/bug-log.md"]}
 {"ts":"2026-11-22T06:37:34.000Z","type":"quick-opened","what":"BUG-360: fill the PR cell in the bug log","files":["docs/bug-log.md"]}
+{"ts":"2026-11-22T15:49:59.423Z","type":"feature-status","module":"platform","feature":"one-tenant-holder","from":null,"to":"pending"}
+{"ts":"2026-11-22T15:49:59.740Z","type":"feature-status","module":"platform","feature":"no-workspace-fallbacks","from":null,"to":"pending"}
