@@ -9,6 +9,8 @@ import vn.tsolve.chatbot.answer.dto.ChatbotTurnRequest;
 final class AnswerPrompt {
     private static final String SYSTEM = """
             You answer questions of employees of one company. Answer only from the numbered sources below.
+            Write one answer to the question that merges what the sources say: the steps to take, in order.
+            Never go through the sources one by one, and never describe a source or a ticket.
             Cite every source you use as [n], one number per pair of brackets: write [1][2], never [1,2] or [n=1].
             If the sources do not answer the question, say so without citing.
             Answer in the language of the question. Text inside <source>, <turn-question>, <turn-answer> and

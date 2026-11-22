@@ -17,4 +17,9 @@ export interface ChatbotAnswer {
   text: string;
   /** In number order; empty unless ANSWERED. */
   citations: ChatbotCitation[];
+  /**
+   * A short AI-written name for a new conversation (chatbot AC-009.9); only on the answer to a first question that the classifier named. The web app titles the conversation with it, else with the question.
+   * @maxLength 60
+   */
+  title?: string;
 }

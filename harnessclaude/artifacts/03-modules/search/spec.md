@@ -20,6 +20,7 @@ owner: BA
 | 2026-11-08 | STORY-011 | AC-011.1, AC-011.3 and the Interface Contract: `projectId` is the Project's `public_id` (`UUID`), not its internal id; AC-011.4 also rejects a null `projectId` | Review of Task 20 (attempt 1): after main's changeset 019 (KAN-22), the only Project id `triage` holds is `suggestion_result.project_id`, a UUID referencing `project.public_id`, and no service maps it to the internal id; `backend/AGENTS.md` makes a reference a `UUID` (user, 08/11) |
 | 2026-11-17 | STORY-001 | AC-001.1, AC-001.3 and AC-001.8 reworded, Requirement 1 follows: the Ticket List table drops the Ticket ID column and starts with a "No." column (the row's position across pages, not sortable); the Title, not the Ticket ID, is the link to 5.5 Ticket Detail; Ticket ID is no longer a sortable column. The keyword still matches the Ticket ID (AC-001.4 unchanged) | KAN-360: ids are noise in the table, users open a ticket from its title (user, 17/11) |
 | 2026-11-17 | STORY-006, STORY-012 (new) | New STORY-012: `MembershipVisibleScope`, the real `VisibleScope` built from the Workspace database, replaces the fail-closed `NoVisibleScope`, which is removed. The user's Departments are the ACTIVE Departments identity's `ScopeAccessService` grants (a Project Manager's own Department and the Departments of the Projects the user is a member of); the managed Projects are the user's `PROJECT_MANAGER` memberships (`ProjectMembershipLookup`); the writer is the user's account id matched against `ticket.writer_id` instead of the `ticket.writer` name. AC-006.1, AC-006.2, AC-006.11 and AC-006.12 reworded; the Visible scope term, Out of Scope, Interface Contracts (`Scope.writerId` is a `UUID`), Required from other modules and Definition of Done follow | KAN-354: on staging the Ticket List was empty for every user because no module implemented `VisibleScope`. User decisions of 17/11: Departments are the union of `app_user.department_id` and the Departments of the user's Projects; match the writer by `writer_id` |
+| 2026-11-22 | STORY-005, STORY-006, STORY-007 | **Backend change.** AC-005.4: the embedded text adds the ticket's description, rows carry `text_version` 2. New AC-005.10: the catch-up job embeds again the rows of `text_version` 1 after the tickets with no row; the old vector serves until then; `ticket_embedding` gains `text_version`. AC-006.4 (Ticket List keyword) and AC-007.2 (search keyword fallback) also match the description. Interface Contracts follow | KAN-380 (the user, 22/11): find tickets by their description too, wherever `ticket_embedding` is used (chatbot, search, suggestions); re-embed without a gap in search (decision log of KAN-380) |
 
 ## Requirements
 
@@ -222,10 +223,10 @@ Used by STORY-005 to STORY-009:
     extension, which stays; the rollbacks of the changesets that drop data (`public_id`, `search_log`,
     `ticket_feedback`) are for development databases only.
   - AC-005.4: WHEN a `TicketsPublishedEvent` is committed, THE backend SHALL embed, after the commit and on a
-    background thread, each listed ticket that is still `PUBLISHED`, from the text "title, Symptoms, Root cause,
-    Resolution steps, Workaround" (the sections present, one per line), with the `ai` module's `EmbeddingClient`
-    (bge-m3, 1024 dimensions), and SHALL store one `ticket_embedding` row per ticket, replacing an older row of
-    that ticket.
+    background thread, each listed ticket that is still `PUBLISHED`, from the text "title, description, Symptoms,
+    Root cause, Resolution steps, Workaround" (the sections present, one per line; the description added by KAN-380),
+    with the `ai` module's `EmbeddingClient` (bge-m3, 1024 dimensions), and SHALL store one `ticket_embedding` row per
+    ticket with `text_version` 2, replacing an older row of that ticket.
   - AC-005.5: THE embedding SHALL never run inside a database transaction and SHALL never change the result or the
     response of the import that published the tickets.
   - AC-005.6: IF the `EmbeddingClient` fails or times out (`AiUnavailableException`), THEN THE backend SHALL write
@@ -241,6 +242,10 @@ Used by STORY-005 to STORY-009:
   - AC-005.9: IF the embedding of a ticket id fails 3 times in a row, THEN THE catch-up job SHALL skip that id until the
     backend restarts and SHALL log the skip with the id only; a success SHALL reset the count, and a later
     `TicketsPublishedEvent` for that id SHALL still embed it.
+  - AC-005.10: WHILE a `PUBLISHED` ticket's `ticket_embedding` row has `text_version` 1, THE catch-up job SHALL embed
+    it again as in AC-005.4 (now with the description), after every `PUBLISHED` ticket with no row, in the batches of
+    AC-005.7 and with the skip of AC-005.9, and SHALL leave its old row in use by the search, the suggestions and the
+    chatbot until the new one replaces it (KAN-380; the column comes from a new changeset, 1 for existing rows).
 
 ### STORY-006: Serve the Ticket List from the backend
 - As a Ticket Resolver or Project Manager, I want 6.2 Ticket List to show the real tickets I may see, so that I
@@ -257,8 +262,8 @@ Used by STORY-005 to STORY-009:
     asked direction, with the internal ticket id descending as the last tie-breaker.
   - AC-006.4: WHEN `keyword`, `departmentId`, `source` or `status` is given, THE backend SHALL combine them with AND
     inside the AC-006.1 scope: the trimmed keyword SHALL match, case-insensitively and with `%` and `_` taken
-    literally, a part of the Ticket ID, the title, or a Solution section (Symptoms, Root cause, Resolution steps,
-    Workaround, Scope); a blank keyword SHALL be ignored; a `departmentId` that is not one of the user's Departments
+    literally, a part of the Ticket ID, the title, the description (KAN-380) or a Solution section (Symptoms, Root
+    cause, Resolution steps, Workaround, Scope); a blank keyword SHALL be ignored; a `departmentId` that is not one of the user's Departments
     SHALL give an empty page.
   - AC-006.5: THE backend SHALL return each row's `ticketId`, `project.projectId` and `department.departmentId` as
     the `public_id` of the ticket, Project and Department; `sourceTicketId` as `ticket.ticket_id`; the Department's
@@ -295,7 +300,8 @@ Used by STORY-005 to STORY-009:
     least `SEARCH_MIN_SIMILARITY` (default 0.5), most similar first, the internal ticket id as the tie-breaker; page 0
     of 20 results when no page or size is given.
   - AC-007.2: IF the query embedding fails or times out (`AiUnavailableException`), THEN THE backend SHALL answer
-    200 from a keyword match instead: searchable tickets whose title, Symptoms or Resolution steps contain the trimmed
+    200 from a keyword match instead: searchable tickets whose title, description (KAN-380), Symptoms or Resolution
+    steps contain the trimmed
     `q` (case-insensitive, `%` and `_` taken literally), newest `resolved_date` first with tickets without one last,
     the internal ticket id descending as the tie-breaker, with the same filters and paging.
   - AC-007.3: WHEN `departmentId`, `source`, `resolvedFrom` or `resolvedTo` is given, THE backend SHALL combine them
@@ -542,6 +548,7 @@ ticket_embedding
   ticket_id           BIGINT NOT NULL UNIQUE  FK ticket(id) ON DELETE CASCADE
   embedding           vector(1024) NOT NULL
   model               VARCHAR(50) NOT NULL    -- e.g. bge-m3
+  text_version        SMALLINT NOT NULL       -- 1: title + Solution; 2: title + description + Solution (KAN-380)
   created_at, updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 
 search_log                                     -- append-only (baseline T-Solve_Database_Tables §search_log)

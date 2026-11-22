@@ -90,3 +90,81 @@ All three tasks are Jira KAN-243, so one branch `feat/KAN-243-chatbot-classify-q
 **Covers:** AC-001.15, AC-003.1, AC-004.7 (edge case Q7)
 **Dependencies:** Task 13 (generated enum)
 **Estimated size:** small
+
+---
+
+## Task 16: One combined answer from the sources
+
+**Story:** STORY-005
+**Feature:** combined-answer-prompt
+**Jira:** KAN-380 · branch `feature/KAN-380-chatbot-combined-answer`
+**Description:**
+- `AnswerPrompt.SYSTEM`: ask for one answer that merges what the sources say (the steps to take), never a walk
+  through the sources one by one; the citation rules stay as they are (AC-005.3, AC-006.8).
+**Files:**
+- Modify: `backend/src/main/java/vn/tsolve/chatbot/answer/service/impl/AnswerPrompt.java`
+- Test: `backend/src/test/java/vn/tsolve/chatbot/answer/service/impl/AnswerPromptTest.java`
+  (`asksForOneCombinedAnswer_AC_005_3`)
+**Covers:** AC-005.3
+**Dependencies:** none
+**Estimated size:** small
+
+---
+
+## Task 17: Show the cited Solutions open
+
+**Story:** STORY-001
+**Feature:** open-solution-citations
+**Jira:** KAN-380 · branch `feature/KAN-380-chatbot-combined-answer`
+**Description:**
+- `CitationList.tsx`: a ticket Solution citation shows "[n] Solution from a ticket" and its `TicketSolution` under
+  it, with no Show/Hide button (AC-001.10, AC-001.11). Wiki citations unchanged.
+- Frontend `verify` passes; `generate:api` leaves no diff (no contract change).
+**Files:**
+- Modify: `frontend/src/features/chatbot/components/CitationList.tsx`
+- Test: `frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx` (`AC-001.10 …`, `AC-001.11 …`)
+**Covers:** AC-001.10, AC-001.11
+**Dependencies:** none
+**Estimated size:** small
+
+---
+
+## Task 18: An AI title for a new conversation
+
+**Story:** STORY-009, STORY-002
+**Feature:** conversation-title-api
+**Jira:** KAN-380 · branch `feature/KAN-380-chatbot-combined-answer`
+**Description:**
+- Contract first: `ChatbotAnswer.title` (optional string) in `frontend/openapi/tsolve-api.yaml`; `generate:api`.
+- `ClassifierPrompt`: schema gains `title`; the system message asks for it when there are no earlier turns.
+- `QuestionClassifier.Classification` carries the title; `ChatbotAnswerServiceImpl` returns it for a first
+  `QUESTION` only, white space collapsed, at most 60 characters (`ChatbotAnswerResponse.title`, omitted when null).
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `backend/…/chatbot/answer/dto/ChatbotAnswerResponse.java`,
+  `…/service/impl/ClassifierPrompt.java`, `…/service/impl/QuestionClassifier.java`,
+  `…/service/impl/ChatbotAnswerServiceImpl.java`
+- Test: `ClassifierPromptTest` (`asksForTitleOnFirstQuestion_AC_009_9`), `QuestionClassifierTest`
+  (`readsTitle_AC_009_9`), `ChatbotAnswerServiceImplTest` (`returnsTitleOnFirstQuestionOnly_AC_009_9`)
+**Covers:** AC-009.9
+**Dependencies:** none
+**Estimated size:** small
+
+---
+
+## Task 19: Show the AI title on one line
+
+**Story:** STORY-002
+**Feature:** conversation-title-ui
+**Jira:** KAN-380 · branch `feature/KAN-380-chatbot-combined-answer`
+**Description:**
+- `Conversation` keeps `title` (from the first answer, else the first question), stored in session storage; an
+  older stored conversation without one falls back to its first question.
+- `ConversationList`: one line, CSS ellipsis, antd `Tooltip` with the whole title (hover and focus).
+- Mock answers carry a `title` on a first question.
+**Files:**
+- Modify: `frontend/src/features/chatbot/model.ts`, `…/hooks/useConversations.ts`, `…/hooks/chatbot-storage.ts`,
+  `…/components/ConversationList.tsx`, `…/components/Conversation.module.css`, `…/mocks/handlers.ts`
+- Test: `KnowledgeChatbotPage.test.tsx` (`AC-002.2 …`, `AC-002.13 …`), `chatbot-storage.test.ts`
+**Covers:** AC-002.2, AC-002.13
+**Dependencies:** Task 18 (generated type)
+**Estimated size:** small

@@ -132,14 +132,18 @@ class SearchSchemaIT {
                         "SELECT column_name FROM information_schema.columns WHERE table_name = 'ticket_embedding'",
                         String.class))
                 .containsExactlyInAnyOrder(
-                        "ticket_embedding_id", "ticket_id", "embedding", "model", "created_at", "updated_at");
-        assertThat(jdbc.queryForList(
-                        """
+                        "ticket_embedding_id",
+                        "ticket_id",
+                        "embedding",
+                        "model",
+                        "text_version",
+                        "created_at",
+                        "updated_at");
+        assertThat(jdbc.queryForList("""
                         SELECT data_type FROM information_schema.columns
                         WHERE table_name = 'ticket_embedding' AND column_name IN ('created_at', 'updated_at')
                           AND is_nullable = 'NO' AND column_default = 'now()'
-                        """,
-                        String.class))
+                        """, String.class))
                 .containsExactly("timestamp with time zone", "timestamp with time zone");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM pg_extension WHERE extname = 'vector'", Integer.class))
                 .isEqualTo(1);
@@ -204,29 +208,20 @@ class SearchSchemaIT {
                         "result_count",
                         "is_fallback",
                         "created_at");
-        assertThat(jdbc.queryForList(
-                        """
+        assertThat(jdbc.queryForList("""
                         SELECT column_name FROM information_schema.columns
                         WHERE table_name = 'search_log' AND is_nullable = 'YES'
-                        """,
-                        String.class))
-                .containsExactly("department_id");
-        assertThat(jdbc.queryForObject(
-                        """
+                        """, String.class)).containsExactly("department_id");
+        assertThat(jdbc.queryForObject("""
                         SELECT data_type FROM information_schema.columns
                         WHERE table_name = 'search_log' AND column_name = 'created_at'
                           AND is_nullable = 'NO' AND column_default = 'now()'
-                        """,
-                        String.class))
-                .isEqualTo("timestamp with time zone");
-        assertThat(jdbc.queryForObject(
-                        """
+                        """, String.class)).isEqualTo("timestamp with time zone");
+        assertThat(jdbc.queryForObject("""
                         SELECT indexdef FROM pg_indexes
                         WHERE schemaname = 'public' AND tablename = 'search_log'
                           AND indexname = 'idx_search_log_created_at'
-                        """,
-                        String.class))
-                .endsWith("USING btree (created_at)");
+                        """, String.class)).endsWith("USING btree (created_at)");
     }
 
     @Test
@@ -300,20 +295,15 @@ class SearchSchemaIT {
                         "channel",
                         "created_at",
                         "updated_at");
-        assertThat(jdbc.queryForList(
-                        """
+        assertThat(jdbc.queryForList("""
                         SELECT column_name FROM information_schema.columns
                         WHERE table_name = 'ticket_feedback' AND is_nullable = 'YES'
-                        """,
-                        String.class))
-                .containsExactly("comment");
-        assertThat(jdbc.queryForList(
-                        """
+                        """, String.class)).containsExactly("comment");
+        assertThat(jdbc.queryForList("""
                         SELECT data_type FROM information_schema.columns
                         WHERE table_name = 'ticket_feedback' AND column_name IN ('created_at', 'updated_at')
                           AND is_nullable = 'NO' AND column_default = 'now()'
-                        """,
-                        String.class))
+                        """, String.class))
                 .containsExactly("timestamp with time zone", "timestamp with time zone");
     }
 
@@ -412,31 +402,17 @@ class SearchSchemaIT {
     }
 
     private UUID insertSearchLog(UUID userId, Long departmentId, String channel, int resultCount, boolean isFallback) {
-        return jdbc.queryForObject(
-                """
+        return jdbc.queryForObject("""
                 INSERT INTO search_log (user_id, department_id, query, channel, result_count, is_fallback)
                 VALUES (?, ?, 'Search query', ?, ?, ?) RETURNING search_log_id
-                """,
-                UUID.class,
-                userId,
-                departmentId,
-                channel,
-                resultCount,
-                isFallback);
+                """, UUID.class, userId, departmentId, channel, resultCount, isFallback);
     }
 
     private UUID insertFeedback(Object ticketId, UUID userId, String rating, String comment, String channel) {
-        return jdbc.queryForObject(
-                """
+        return jdbc.queryForObject("""
                 INSERT INTO ticket_feedback (ticket_id, user_id, rating, comment, channel)
                 VALUES (?, ?, ?, ?, ?) RETURNING ticket_feedback_id
-                """,
-                UUID.class,
-                ticketId,
-                userId,
-                rating,
-                comment,
-                channel);
+                """, UUID.class, ticketId, userId, rating, comment, channel);
     }
 
     private void insertEmbedding(String sourceId, String vector) {
@@ -477,8 +453,7 @@ class SearchSchemaIT {
                     INSERT INTO ticket (%s, project_id, source, status, title,
                                         symptoms, root_cause, resolution_steps, scope)
                     VALUES (?, ?, 'CSV', 'PUBLISHED', ?, 'Symptoms', 'Root cause', 'Resolution', 'Scope')
-                    """
-                            .formatted(canonical ? "source_ticket_id" : "ticket_id"),
+                    """.formatted(canonical ? "source_ticket_id" : "ticket_id"),
                     "SEARCH-" + index,
                     ticketProjectId,
                     "Ticket " + index);

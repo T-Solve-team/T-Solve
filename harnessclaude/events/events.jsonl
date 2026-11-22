@@ -2215,8 +2215,20 @@
 {"ts":"2026-11-21T20:21:09.707Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"8cca30a62a9ae1bf0bc826a9f6db15a32d3291ef"}
 {"ts":"2026-11-22T03:15:57.109Z","type":"quick-opened","what":"Fix flaky ReviewQueueEventServiceImplTest fake with per-LISTEN notification queues (BUG-199, KAN-379)","files":["backend/src/test/java/vn/tsolve/review/service/impl/ReviewQueueEventServiceImplTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-22T03:22:10.243Z","type":"quick-closed","what":"Fix flaky ReviewQueueEventServiceImplTest fake with per-LISTEN notification queues (BUG-199, KAN-379)","files":["backend/src/test/java/vn/tsolve/review/service/impl/ReviewQueueEventServiceImplTest.java","docs/bug-log.md"]}
+{"ts":"2026-11-22T04:50:03.719Z","type":"spec-approved","module":"chatbot","specHash":"30323a9753723a7c0e8817022cbbaef870d2cba3585ec9052b61ccb6c7706f2d"}
+{"ts":"2026-11-22T04:50:06.184Z","type":"spec-approved","module":"search","specHash":"e273f3e90de0fb2b82d43a283b79e539aadc442af53a4f321ff848feff75f4ff"}
+{"ts":"2026-11-22T04:50:42.208Z","type":"feature-status","module":"chatbot","feature":"combined-answer-prompt","from":null,"to":"pending"}
+{"ts":"2026-11-22T04:50:42.515Z","type":"feature-status","module":"chatbot","feature":"open-solution-citations","from":null,"to":"pending"}
+{"ts":"2026-11-22T04:50:42.830Z","type":"feature-status","module":"search","feature":"embed-description","from":null,"to":"pending"}
+{"ts":"2026-11-22T04:50:47.169Z","type":"feature-status","module":"chatbot","feature":"combined-answer-prompt","from":"pending","to":"in-progress"}
+{"ts":"2026-11-22T05:20:24.461Z","type":"spec-approved","module":"chatbot","specHash":"f7e324be4b202c3807244ea339ae8c5d801483486120cd87158afd282b8e8847"}
+{"ts":"2026-11-22T05:20:48.184Z","type":"feature-status","module":"chatbot","feature":"conversation-title-api","from":null,"to":"pending"}
+{"ts":"2026-11-22T05:20:48.521Z","type":"feature-status","module":"chatbot","feature":"conversation-title-ui","from":null,"to":"pending"}
+{"ts":"2026-11-22T05:30:29.612Z","type":"feature-status","module":"search","feature":"embed-description","from":"pending","to":"in-progress"}
 {"ts":"2026-11-22T05:13:11.462Z","type":"spec-approved","module":"wiki","specHash":"1ddb373a1b48ec8ce31385d9d5a31d5a3efad60f5f32b02edef85d388e31a8e0"}
 {"ts":"2026-11-22T05:38:36.523Z","type":"quick-opened","what":"Run docling-serve in the staging stack and point DOCLING_BASE_URL at it","files":["infra/compose.staging.yml","infra/staging.env.example","infra/README.md"]}
 {"ts":"2026-11-22T05:40:32.943Z","type":"quick-closed","what":"Run docling-serve in the staging stack and point DOCLING_BASE_URL at it","files":["infra/compose.staging.yml","infra/staging.env.example","infra/README.md"]}
 {"ts":"2026-11-22T05:56:13.580Z","type":"quick-opened","what":"Run Docling on the GPU server through an SSH tunnel service in the staging compose, not on the staging CPU","files":["infra/compose.staging.yml","infra/staging.env.example","infra/README.md"]}
 {"ts":"2026-11-22T05:59:12.015Z","type":"quick-closed","what":"Run Docling on the GPU server through an SSH tunnel service in the staging compose, not on the staging CPU","files":["infra/compose.staging.yml","infra/staging.env.example","infra/README.md"]}
+{"ts":"2026-11-22T05:55:32.155Z","type":"feature-status","module":"search","feature":"embed-description","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-22T05:55:32.497Z","type":"feature-status","module":"search","feature":"embed-description","from":"evaluating","to":"passing"}

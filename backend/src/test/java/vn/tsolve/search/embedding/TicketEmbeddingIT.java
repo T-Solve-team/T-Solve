@@ -201,6 +201,27 @@ class TicketEmbeddingIT {
     }
 
     @Test
+    void reEmbedsOldVersionAfterMissing_AC_005_10() {
+        confirms.confirm("pm", upload("EMBED-1", "EMBED-2", "EMBED-3"));
+        await().atMost(Duration.ofSeconds(10))
+                .untilAsserted(() -> assertThat(embeddingCount()).isEqualTo(3));
+        List<UUID> ids = jdbc.queryForList("SELECT ticket_id FROM ticket ORDER BY ticket_id", UUID.class);
+        assertThat(jdbc.queryForList("SELECT text_version FROM ticket_embedding", Integer.class))
+                .containsOnly(2);
+
+        jdbc.update("UPDATE ticket_embedding SET text_version = 1 WHERE ticket_id = ?", ids.getFirst());
+        jdbc.update("DELETE FROM ticket_embedding WHERE ticket_id = ?", ids.get(2));
+
+        assertThat(repository.findPublishedWithoutEmbedding(4, new UUID[0]))
+                .containsExactly(ids.get(2), ids.getFirst());
+        service.embed(repository.findPublishedWithoutEmbedding(4, new UUID[0]));
+        assertThat(jdbc.queryForList("SELECT text_version FROM ticket_embedding", Integer.class))
+                .hasSize(3)
+                .containsOnly(2);
+        assertThat(repository.findPublishedWithoutEmbedding(4, new UUID[0])).isEmpty();
+    }
+
+    @Test
     void importSucceedsWhenOllamaIsDown_AC_005_5() throws Exception {
         client.fail = true;
         assertThat(confirms.confirm("pm", upload("EMBED-1")).created()).isEqualTo(1);

@@ -70,6 +70,10 @@ export const getAskChatbotResponseMock = (
         { ...getAskChatbotResponseTicketSolutionCitationMock() },
       ]),
   ),
+  title: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 60 } }),
+    undefined,
+  ]),
   ...overrideResponse,
 });
 

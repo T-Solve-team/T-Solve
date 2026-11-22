@@ -1,5 +1,5 @@
 import { MessageOutlined } from '@ant-design/icons';
-import { Button, Flex } from 'antd';
+import { Button, Flex, Tooltip } from 'antd';
 import type { Conversation } from '../model';
 import styles from './Conversation.module.css';
 
@@ -14,6 +14,12 @@ type ConversationListProps = {
 };
 
 const NEW_TITLE = 'New conversation';
+
+/** AC-002.2: the AI title of the first answer, else the first question. */
+function titleOf(conversation: Conversation): string {
+  const first = conversation.turns[0];
+  return first?.answer.title ?? first?.question ?? '';
+}
 
 /** 12.1 conversation list: New conversation, then the session's conversations newest first (UC-52). */
 export function ConversationList({
@@ -45,17 +51,22 @@ export function ConversationList({
         )}
         {conversations.map((conversation) => (
           <li key={conversation.id}>
-            <Button
-              type="text"
-              block
-              icon={<MessageOutlined aria-hidden />}
-              disabled={disabled}
-              aria-current={conversation.id === openId ? 'true' : undefined}
-              className={styles.entry}
-              onClick={() => onOpen(conversation.id)}
-            >
-              {conversation.turns[0]?.question}
-            </Button>
+            {/* AC-002.13: one line cut with "…"; the tooltip shows the whole title on hover and focus. */}
+            <Tooltip title={titleOf(conversation)} placement="right">
+              <Button
+                type="text"
+                block
+                icon={<MessageOutlined aria-hidden />}
+                disabled={disabled}
+                aria-current={conversation.id === openId ? 'true' : undefined}
+                className={styles.entry}
+                onClick={() => onOpen(conversation.id)}
+              >
+                <span data-title-line className={styles.title}>
+                  {titleOf(conversation)}
+                </span>
+              </Button>
+            </Tooltip>
           </li>
         ))}
       </ul>

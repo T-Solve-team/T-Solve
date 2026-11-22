@@ -12,8 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.tsolve.search.scope.entity.SearchTicket;
 
 public interface TicketRankingRepository extends JpaRepository<SearchTicket, UUID> {
-    String COLUMNS =
-            """
+    String COLUMNS = """
             SELECT t.public_id AS "ticketId", t.title AS "title",
                 p.public_id AS "projectId", p.jira_project_key AS "projectName",
                 d.public_id AS "departmentId", d.name AS "departmentName",
@@ -21,23 +20,20 @@ public interface TicketRankingRepository extends JpaRepository<SearchTicket, UUI
                 t.resolved_date AS "resolvedDate",
                 CAST(round(100.0 * f.helpful / f.total) AS integer) AS "helpfulRate"
             """;
-    String TABLES =
-            """
+    String TABLES = """
             FROM ticket t
             JOIN project p ON (p.public_id = t.project_id
                 OR lpad(to_hex(p.project_id), 32, '0')::uuid = t.project_id)
             JOIN department d ON d.department_id = p.department_id
             """;
-    String FEEDBACK =
-            """
+    String FEEDBACK = """
             LEFT JOIN (
                 SELECT ticket_id, count(*) AS total,
                     count(*) FILTER (WHERE rating = 'HELPFUL') AS helpful
                 FROM ticket_feedback GROUP BY ticket_id
             ) f ON f.ticket_id = t.ticket_id
             """;
-    String FILTERS =
-            """
+    String FILTERS = """
             WHERE t.status = 'PUBLISHED' AND d.status = 'ACTIVE'
                 AND p.department_id IN (:departmentIds)
                 AND (CAST(:departmentId AS text) IS NULL OR d.public_id = CAST(:departmentId AS uuid))
@@ -46,9 +42,9 @@ public interface TicketRankingRepository extends JpaRepository<SearchTicket, UUI
                 AND (CAST(:resolvedTo AS text) IS NULL OR t.resolved_date <= CAST(:resolvedTo AS date))
             """;
     String SIMILARITY = " AND 1 - (e.embedding <=> CAST(:query AS vector)) >= :minSimilarity ";
-    String KEYWORD =
-            """
+    String KEYWORD = """
              AND (t.title ILIKE :keyword ESCAPE '\\'
+                OR t.description ILIKE :keyword ESCAPE '\'
                 OR t.symptoms ILIKE :keyword ESCAPE '\\'
                 OR t.resolution_steps ILIKE :keyword ESCAPE '\\')
             """;

@@ -127,8 +127,10 @@ class ChatbotSchemaIT {
     void rollsBackToTwoOutcomes_AC_009_8() throws Exception {
         try (Liquibase liquibase = liquibase()) {
             List<ChangeSet> changesets = liquibase.getDatabaseChangeLog().getChangeSets();
-            assertThat(changesets.getLast().getId()).isEqualTo("046-chatbot-answer-outcomes");
-            liquibase.rollback(1, "");
+            assertThat(changesets.subList(changesets.size() - 2, changesets.size()))
+                    .extracting(ChangeSet::getId)
+                    .containsExactly("046-chatbot-answer-outcomes", "050-search-embedding-text-version");
+            liquibase.rollback(2, "");
             UUID user = insertUser();
             assertThatThrownBy(() -> insertAnswer(user, "GREETING", ""))
                     .isInstanceOf(DataIntegrityViolationException.class)
