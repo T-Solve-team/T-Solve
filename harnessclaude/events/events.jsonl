@@ -2233,3 +2233,9 @@
 {"ts":"2026-11-22T06:33:44.027Z","type":"quick-opened","what":"BUG-360: log the wiki-index web-jobs bug","files":["docs/bug-log.md"]}
 {"ts":"2026-11-22T06:34:11.695Z","type":"quick-closed","what":"BUG-360: log the wiki-index web-jobs bug","files":["docs/bug-log.md"]}
 {"ts":"2026-11-22T06:37:34.000Z","type":"quick-opened","what":"BUG-360: fill the PR cell in the bug log","files":["docs/bug-log.md"]}
+{"ts":"2026-11-22T08:49:32.471Z","type":"spec-approved","module":"chatbot","specHash":"d49145324f34803b32e57479bcfa7b7d3112ee5dd0572083f980a13f533014c4"}
+{"ts":"2026-11-22T08:51:09.452Z","type":"feature-status","module":"chatbot","feature":"clear-box-on-send","from":null,"to":"pending"}
+{"ts":"2026-11-22T08:51:10.601Z","type":"feature-status","module":"chatbot","feature":"sources-panel","from":null,"to":"pending"}
+{"ts":"2026-11-22T09:07:14.461Z","type":"feature-status","module":"chatbot","feature":"clear-box-on-send","from":null,"to":"pending"}
+{"ts":"2026-11-22T09:07:14.738Z","type":"feature-status","module":"chatbot","feature":"focus-layout","from":null,"to":"pending"}
+{"ts":"2026-11-22T09:07:42.499Z","type":"spec-approved","module":"chatbot","specHash":"de5bdf00ecfc10f1047e126efff5a993e6f1724ddb391b8ae04ac0cdafebd0b3"}
