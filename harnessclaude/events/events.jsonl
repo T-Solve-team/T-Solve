@@ -2218,3 +2218,5 @@
 {"ts":"2026-11-22T03:56:06.891Z","type":"feature-status","module":"triage","feature":"suggestion-cut-off","from":"pending","to":"in-progress"}
 {"ts":"2026-11-22T04:17:17.944Z","type":"feature-status","module":"triage","feature":"suggestion-cut-off","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-22T04:17:18.539Z","type":"commit-recorded","module":"triage","repo":"default","sha":"10c3b7bc50b74acf24777edbf147518312083038"}
+{"ts":"2026-11-22T03:15:57.109Z","type":"quick-opened","what":"Fix flaky ReviewQueueEventServiceImplTest fake with per-LISTEN notification queues (BUG-199, KAN-379)","files":["backend/src/test/java/vn/tsolve/review/service/impl/ReviewQueueEventServiceImplTest.java","docs/bug-log.md"]}
+{"ts":"2026-11-22T03:22:10.243Z","type":"quick-closed","what":"Fix flaky ReviewQueueEventServiceImplTest fake with per-LISTEN notification queues (BUG-199, KAN-379)","files":["backend/src/test/java/vn/tsolve/review/service/impl/ReviewQueueEventServiceImplTest.java","docs/bug-log.md"]}
