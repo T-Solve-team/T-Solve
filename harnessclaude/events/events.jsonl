@@ -2213,3 +2213,4 @@
 {"ts":"2026-11-21T16:02:08.564Z","type":"spec-approved","module":"wiki","specHash":"4a6687a179cc69ef52a955bd24f8d58cdd92537ebb8babd2fc4894bd7737fc65"}
 {"ts":"2026-11-22T03:15:57.109Z","type":"quick-opened","what":"Fix flaky ReviewQueueEventServiceImplTest fake with per-LISTEN notification queues (BUG-199, KAN-379)","files":["backend/src/test/java/vn/tsolve/review/service/impl/ReviewQueueEventServiceImplTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-22T03:22:10.243Z","type":"quick-closed","what":"Fix flaky ReviewQueueEventServiceImplTest fake with per-LISTEN notification queues (BUG-199, KAN-379)","files":["backend/src/test/java/vn/tsolve/review/service/impl/ReviewQueueEventServiceImplTest.java","docs/bug-log.md"]}
+{"ts":"2026-11-22T04:52:11.902Z","type":"spec-approved","module":"wiki","specHash":"eb4cf47050bb9177aad7645ea8440ed22f12466a9ca5a0ead3590c27a3cbe8c7"}
