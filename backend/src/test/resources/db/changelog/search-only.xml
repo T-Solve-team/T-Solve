@@ -22,6 +22,6 @@
     <include file="changes/012-search-ticket-feedback.sql" relativeToChangelogFile="true"/>
     <include file="changes/013-chatbot-answer.sql" relativeToChangelogFile="true"/>
     <include file="changes/046-chatbot-answer-outcomes.sql" relativeToChangelogFile="true"/>
-    <include file="changes/049-search-embedding-text-version.sql" relativeToChangelogFile="true"/>
+    <include file="changes/050-search-embedding-text-version.sql" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>
