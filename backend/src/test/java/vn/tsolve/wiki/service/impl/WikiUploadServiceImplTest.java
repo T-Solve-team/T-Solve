@@ -63,6 +63,7 @@ import vn.tsolve.wiki.repository.WikiSearchRepository;
 import vn.tsolve.wiki.service.DocumentTypeClassifier;
 import vn.tsolve.wiki.service.TextExtractor;
 import vn.tsolve.worker.service.TenantJobService;
+import vn.tsolve.worker.service.WebJobQueue;
 
 class WikiUploadServiceImplTest {
     private final WikiDocumentRepository documents = mock(WikiDocumentRepository.class);
@@ -87,6 +88,7 @@ class WikiUploadServiceImplTest {
             provider(FileStorage.class, storage),
             audit,
             provider(TenantJobService.class, jobs),
+            new StaticListableBeanFactory().getBeanProvider(WebJobQueue.class),
             transactions,
             new StaticListableBeanFactory().getBeanProvider(TenantContext.class),
             Mappers.getMapper(WikiDocumentMapper.class),
@@ -200,6 +202,7 @@ class WikiUploadServiceImplTest {
                 provider(FileStorage.class, storage),
                 audit,
                 provider(TenantJobService.class, jobs),
+                new StaticListableBeanFactory().getBeanProvider(WebJobQueue.class),
                 transactions,
                 new StaticListableBeanFactory().getBeanProvider(TenantContext.class),
                 Mappers.getMapper(WikiDocumentMapper.class),
@@ -478,6 +481,7 @@ class WikiUploadServiceImplTest {
                 new StaticListableBeanFactory().getBeanProvider(FileStorage.class),
                 audit,
                 provider(TenantJobService.class, jobs),
+                new StaticListableBeanFactory().getBeanProvider(WebJobQueue.class),
                 transactions,
                 new StaticListableBeanFactory().getBeanProvider(TenantContext.class),
                 Mappers.getMapper(WikiDocumentMapper.class),
@@ -504,6 +508,7 @@ class WikiUploadServiceImplTest {
                 provider(FileStorage.class, storage),
                 audit,
                 new StaticListableBeanFactory().getBeanProvider(TenantJobService.class),
+                new StaticListableBeanFactory().getBeanProvider(WebJobQueue.class),
                 transactions,
                 new StaticListableBeanFactory().getBeanProvider(TenantContext.class),
                 Mappers.getMapper(WikiDocumentMapper.class),
@@ -514,6 +519,34 @@ class WikiUploadServiceImplTest {
                 List.of(file("guide.pdf", "guide.pdf")),
                 new ObjectMapper().writeValueAsString(metadata("Guide")));
         assertThat(result).extracting(WikiDocumentRef::title).containsExactly("Guide");
+    }
+
+    @Test
+    void publishQueuesTheIndexForTheWorkerProcessFromTheWebProcess_BUG_360() throws IOException {
+        WebJobQueue webJobs = mock(WebJobQueue.class);
+        var web = new WikiUploadServiceImpl(
+                documents,
+                folders,
+                access,
+                spaces,
+                new TextExtractor(),
+                classifier,
+                provider(FileStorage.class, storage),
+                audit,
+                new StaticListableBeanFactory().getBeanProvider(TenantJobService.class),
+                provider(WebJobQueue.class, webJobs),
+                transactions,
+                new StaticListableBeanFactory().getBeanProvider(TenantContext.class),
+                Mappers.getMapper(WikiDocumentMapper.class),
+                new ObjectMapper());
+        web.publish(
+                user,
+                space,
+                List.of(file("guide.pdf", "guide.pdf")),
+                new ObjectMapper().writeValueAsString(metadata("Guide")));
+        var captor = org.mockito.ArgumentCaptor.forClass(WikiDocument.class);
+        verify(documents).saveAndFlush(captor.capture());
+        verify(webJobs).enqueue("wiki-index", captor.getValue().getId());
     }
 
     private static <T> org.springframework.beans.factory.ObjectProvider<T> provider(Class<T> type, T bean) {
