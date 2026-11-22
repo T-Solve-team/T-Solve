@@ -30,6 +30,7 @@ owner: BA
 | 2026-11-22 | STORY-001, STORY-005, Requirement 3 | **Backend and frontend change.** AC-005.3: the prompt asks for one answer that merges the sources (the steps to take), never a walk through them one by one. AC-001.10 and AC-001.11 reworded: a ticket Solution citation shows its Solution open, with no Show or Hide button. Requirement 3 follows | KAN-380 (the user, 22/11): the answer read as a list of tickets; the user wants the AI's answer first and the Solutions under it. The Jira App page (jira-app) is not changed here |
 | 2026-11-22 | STORY-002, STORY-009 | **Backend and frontend change.** New AC-009.9: the classifier call of a first question also writes a short `title`, returned as the optional `title` of the answer (60 characters at most, not stored). AC-002.2 reworded: the conversation takes that title, or its first question. New AC-002.13: one line with "…" and a tooltip with the whole title. Interface Contracts: `ChatbotAnswer.title`, classifier schema gains `title` | KAN-380 (the user, 22/11): the AI names the conversation from the first question; the title stays on one line. No extra AI call: the title rides on the classifier call that already runs |
 | 2026-11-22 | STORY-001, STORY-002 | **Frontend change (KAN-382).** AC-001.6: the question box is emptied when the question is sent, not when the answer arrives; AC-001.13 and AC-001.14: a failed question goes back into the box when it is still empty; AC-001.15 points to AC-001.6. New AC-001.16 (an empty conversation shows the box in the middle under a heading and one line), AC-001.17 (a marker scrolls to its citation and highlights it), AC-002.14 (10 conversations, then "Show more") | The user, 22/11: screen 12.1 redesigned as option C "Focus" (questions as headings, answers read as text, citations as notes under each answer) with the conversation list kept as a sidebar, "Show more" in the list, and an empty conversation that opens like the Search start page; the box kept the question after Enter or Send, so it is now emptied on send |
+| 2026-11-22 | STORY-001, STORY-002, Requirement 3 | **Frontend change (KAN-382), second pass.** AC-001.10 and AC-001.11: a ticket Solution citation is collapsed again and opens with Show / Hide (reverses KAN-380's "shown open"). New AC-001.19 (placeholders "Ask a question" / "Ask a follow-up question", the Enter hint, "Send waits for the current answer" while pending) and AC-002.15 (the open conversation's title in a bar above the thread). Requirement 3 follows | The user, 22/11, comparing the build with mockup C: the composer, the Show button and the title bar should match the mockup; the sidebar and the centred empty conversation stay |
 | 2026-11-17 | STORY-009, STORY-012, Requirement 11 | Merge of main into KAN-243: the KAN-243 requirement is now Requirement 11 (Requirement 10 is KAN-241's); AC-012.1 answers a Jira App question as STORY-009 too, so `askForProject` classifies before its search; the outcome changeset is `046-chatbot-answer-outcomes` (043 to 045 are taken on main) | KAN-241 and KAN-294 merged into main on 17/11; user, 17/11: classify on both paths (one pipeline), the Jira App page keeps MSG109 for the new outcomes until a jira-app change |
 
 ## Requirements
@@ -42,7 +43,8 @@ owner: BA
    conversation, answer or rating ever crosses Workspaces (GBR-37).
 3. Every answer cites its sources with numbered citations. A ticket source shows only its Solution, never the
    ticket's details, and cannot be opened (GBR-36, Permission Matrix note ⁹). The answer is one text written from the
-   sources, not a walk through them one by one; the Solutions it used are shown under it, open (KAN-380).
+   sources, not a walk through them one by one; the Solutions it used are listed under it, each opened with Show
+   (KAN-380, KAN-382).
 4. With no source the Chatbot says so (MSG109) instead of answering and records a knowledge gap; if the AI module
    fails, MSG06 and the question is kept (UC-51 alternative flows). A knowledge gap is only a Knowledge Chatbot
    question for which no source was found: a Not helpful rating, a Complex triage result and a failed answer are not
@@ -112,11 +114,11 @@ owner: BA
   - AC-001.8: THE web app SHALL show the answer text and every citation field as plain text, never as HTML.
   - AC-001.9: WHEN a citation is a Wiki document, THE web app SHALL show "[n]", the document title and "· Wiki document"
     as a link that opens 11.2 Wiki Document of that document in the same tab.
-  - AC-001.10: WHEN a citation is a ticket Solution, THE web app SHALL show "[n] Solution from a ticket", and SHALL
-    show no ticket ID, link, title, Project, writer, snapshot or Evidence.
-  - AC-001.11: THE web app SHALL show the Solution of a ticket Solution citation open under its "[n] Solution from a
-    ticket" line — Symptoms, Root cause, Resolution steps, Workaround (only when it has one) and Scope of
-    applicability — with no Show or Hide button (KAN-380).
+  - AC-001.10: WHEN a citation is a ticket Solution, THE web app SHALL show "[n] Solution from a ticket" with a Show
+    button, and SHALL show no ticket ID, link, title, Project, writer, snapshot or Evidence.
+  - AC-001.11: WHEN the user clicks Show on a ticket Solution citation, THE web app SHALL expand the Solution under
+    its "[n] Solution from a ticket" line — Symptoms, Root cause, Resolution steps, Workaround (only when it has one)
+    and Scope of applicability — and the button SHALL become Hide; Hide SHALL collapse it again (KAN-382).
   - AC-001.12: WHEN the answer arrives with `outcome` `NO_SOURCE`, THE web app SHALL show MSG109 as the answer, with
     `{tracker_name}` filled as "Jira", and no citations.
   - AC-001.13: IF the request fails, not with a 401 or a field error on the question, THEN THE web app SHALL show
@@ -135,6 +137,10 @@ owner: BA
     at the bottom of the thread (KAN-382).
   - AC-001.17: WHEN the user clicks a marker `[n]` in an answer, THE web app SHALL scroll citation n of that answer
     into view and highlight it (KAN-382).
+  - AC-001.19: THE question box SHALL show the placeholder "Ask a question" in an empty conversation and "Ask a
+    follow-up question" once it has a question, and under the box the hint "Enter sends, Shift+Enter adds a line";
+    WHILE an answer is pending, THE web app SHALL show the hint "Send waits for the current answer" instead
+    (KAN-382).
 
 ### STORY-002: Session conversations
 - As an Employee, I want to see and continue my earlier conversations of this session so that I do not have to ask
@@ -176,6 +182,8 @@ owner: BA
   - AC-002.14: THE conversation list SHALL show the 10 newest conversations of the session, and WHEN the session has
     more, THE web app SHALL show a "Show more" button under them that adds the next 10 each time it is clicked
     (KAN-382).
+  - AC-002.15: THE web app SHALL show the title of the open conversation in a bar above the thread, on one line cut
+    with "…", and "New conversation" while it has no question (KAN-382).
 ### STORY-003: Rate an answer
 - As an Employee, I want to say whether an answer helped me so that weak answers and missing knowledge can be
   found. Built in KAN-75.

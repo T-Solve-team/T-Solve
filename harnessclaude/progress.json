@@ -382,9 +382,10 @@
         "conversation-title-api": "pending",
         "conversation-title-ui": "pending",
         "clear-box-on-send": "pending",
-        "focus-layout": "pending"
+        "focus-layout": "pending",
+        "mockup-c-polish": "pending"
       },
-      "lastUpdated": "2026-11-22T09:07:14.736Z",
+      "lastUpdated": "2026-11-22T16:03:52.049Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"

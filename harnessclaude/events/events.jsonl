@@ -2239,3 +2239,5 @@
 {"ts":"2026-11-22T09:07:14.461Z","type":"feature-status","module":"chatbot","feature":"clear-box-on-send","from":null,"to":"pending"}
 {"ts":"2026-11-22T09:07:14.738Z","type":"feature-status","module":"chatbot","feature":"focus-layout","from":null,"to":"pending"}
 {"ts":"2026-11-22T09:07:42.499Z","type":"spec-approved","module":"chatbot","specHash":"de5bdf00ecfc10f1047e126efff5a993e6f1724ddb391b8ae04ac0cdafebd0b3"}
+{"ts":"2026-11-22T16:03:43.232Z","type":"spec-approved","module":"chatbot","specHash":"511abd4ef18be8fecb3a7719e224768ee7b92172cd89019534ca430090c9546d"}
+{"ts":"2026-11-22T16:03:52.054Z","type":"feature-status","module":"chatbot","feature":"mockup-c-polish","from":null,"to":"pending"}
