@@ -2218,3 +2218,5 @@
 {"ts":"2026-11-22T05:13:11.462Z","type":"spec-approved","module":"wiki","specHash":"1ddb373a1b48ec8ce31385d9d5a31d5a3efad60f5f32b02edef85d388e31a8e0"}
 {"ts":"2026-11-22T05:38:36.523Z","type":"quick-opened","what":"Run docling-serve in the staging stack and point DOCLING_BASE_URL at it","files":["infra/compose.staging.yml","infra/staging.env.example","infra/README.md"]}
 {"ts":"2026-11-22T05:40:32.943Z","type":"quick-closed","what":"Run docling-serve in the staging stack and point DOCLING_BASE_URL at it","files":["infra/compose.staging.yml","infra/staging.env.example","infra/README.md"]}
+{"ts":"2026-11-22T05:56:13.580Z","type":"quick-opened","what":"Run Docling on the GPU server through an SSH tunnel service in the staging compose, not on the staging CPU","files":["infra/compose.staging.yml","infra/staging.env.example","infra/README.md"]}
+{"ts":"2026-11-22T05:59:12.015Z","type":"quick-closed","what":"Run Docling on the GPU server through an SSH tunnel service in the staging compose, not on the staging CPU","files":["infra/compose.staging.yml","infra/staging.env.example","infra/README.md"]}
