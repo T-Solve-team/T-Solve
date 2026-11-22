@@ -2215,5 +2215,18 @@
 {"ts":"2026-11-21T20:21:09.707Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"8cca30a62a9ae1bf0bc826a9f6db15a32d3291ef"}
 {"ts":"2026-11-22T03:15:57.109Z","type":"quick-opened","what":"Fix flaky ReviewQueueEventServiceImplTest fake with per-LISTEN notification queues (BUG-199, KAN-379)","files":["backend/src/test/java/vn/tsolve/review/service/impl/ReviewQueueEventServiceImplTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-22T03:22:10.243Z","type":"quick-closed","what":"Fix flaky ReviewQueueEventServiceImplTest fake with per-LISTEN notification queues (BUG-199, KAN-379)","files":["backend/src/test/java/vn/tsolve/review/service/impl/ReviewQueueEventServiceImplTest.java","docs/bug-log.md"]}
+{"ts":"2026-11-22T04:50:03.719Z","type":"spec-approved","module":"chatbot","specHash":"30323a9753723a7c0e8817022cbbaef870d2cba3585ec9052b61ccb6c7706f2d"}
+{"ts":"2026-11-22T04:50:06.184Z","type":"spec-approved","module":"search","specHash":"e273f3e90de0fb2b82d43a283b79e539aadc442af53a4f321ff848feff75f4ff"}
+{"ts":"2026-11-22T04:50:42.208Z","type":"feature-status","module":"chatbot","feature":"combined-answer-prompt","from":null,"to":"pending"}
+{"ts":"2026-11-22T04:50:42.515Z","type":"feature-status","module":"chatbot","feature":"open-solution-citations","from":null,"to":"pending"}
+{"ts":"2026-11-22T04:50:42.830Z","type":"feature-status","module":"search","feature":"embed-description","from":null,"to":"pending"}
+{"ts":"2026-11-22T04:50:47.169Z","type":"feature-status","module":"chatbot","feature":"combined-answer-prompt","from":"pending","to":"in-progress"}
+{"ts":"2026-11-22T05:20:24.461Z","type":"spec-approved","module":"chatbot","specHash":"f7e324be4b202c3807244ea339ae8c5d801483486120cd87158afd282b8e8847"}
+{"ts":"2026-11-22T05:20:48.184Z","type":"feature-status","module":"chatbot","feature":"conversation-title-api","from":null,"to":"pending"}
+{"ts":"2026-11-22T05:20:48.521Z","type":"feature-status","module":"chatbot","feature":"conversation-title-ui","from":null,"to":"pending"}
+{"ts":"2026-11-22T05:30:29.612Z","type":"feature-status","module":"search","feature":"embed-description","from":"pending","to":"in-progress"}
 {"ts":"2026-11-22T05:13:11.462Z","type":"spec-approved","module":"wiki","specHash":"1ddb373a1b48ec8ce31385d9d5a31d5a3efad60f5f32b02edef85d388e31a8e0"}
 {"ts":"2026-11-22T06:10:03.055Z","type":"spec-approved","module":"wiki","specHash":"de47a1d75406a6020660071fd6bd2d68059a105676f0698a2aa4388fe07e4048"}
+{"ts":"2026-11-22T05:55:32.155Z","type":"feature-status","module":"search","feature":"embed-description","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-22T05:55:32.497Z","type":"feature-status","module":"search","feature":"embed-description","from":"evaluating","to":"passing"}
+{"ts":"2026-11-22T06:15:40.011Z","type":"spec-approved","module":"wiki","specHash":"ebea1a9a9b5dffbcbc0aac17f81a3b05f2d445ef7ef35a36030c1eee7858c8b8"}

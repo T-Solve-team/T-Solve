@@ -331,9 +331,10 @@ describe('KnowledgeChatbotPage', () => {
     const { user, box } = await openChatbot();
 
     await enter(user, box, `${VPN_QUESTION}{Enter}`);
-    await user.click(await within(thread()).findByRole('button', { name: 'Show' }));
 
-    expect(within(thread()).getByRole('link', { name: /<b>VPN<\/b> guide/ })).toBeInTheDocument();
+    expect(
+      await within(thread()).findByRole('link', { name: /<b>VPN<\/b> guide/ }),
+    ).toBeInTheDocument();
     expect(within(thread()).getByText('<script>window.hacked = true</script>')).toBeInTheDocument();
     expect(thread().querySelector('b, script')).toBeNull();
   });
@@ -359,15 +360,15 @@ describe('KnowledgeChatbotPage', () => {
 
     const citations = await within(thread()).findByRole('list', { name: 'Citations' });
     const [, ticket] = within(citations).getAllByRole('listitem');
-    expect(ticket).toHaveTextContent(/^\[2\]\s*Solution from a ticket\s*Show$/);
+    expect(ticket).toHaveTextContent(/^\[2\]\s*Solution from a ticket\s*Symptoms/);
     expect(ticket?.querySelector('a')).toBeNull();
   });
 
-  it('AC-001.11 expands the Solution inline with Show and collapses it with Hide', async () => {
+  it('AC-001.11 shows the Solution open under its citation, with no Show or Hide button', async () => {
     const { user, box } = await openChatbot();
 
     await enter(user, box, `${VPN_QUESTION}{Enter}`);
-    await user.click(await within(thread()).findByRole('button', { name: 'Show' }));
+    await within(thread()).findByRole('list', { name: 'Citations' });
 
     for (const section of [
       'Symptoms',
@@ -381,19 +382,17 @@ describe('KnowledgeChatbotPage', () => {
       within(thread()).getByText('USB selective suspend turns off the network adapter.'),
     ).toBeInTheDocument();
     expect(within(thread()).queryByText('Workaround')).not.toBeInTheDocument();
-
-    await user.click(within(thread()).getByRole('button', { name: 'Hide' }));
-    expect(within(thread()).queryByText('Symptoms')).not.toBeInTheDocument();
-    expect(within(thread()).getByRole('button', { name: 'Show' })).toBeInTheDocument();
+    expect(
+      within(thread()).queryByRole('button', { name: /^(Show|Hide)$/ }),
+    ).not.toBeInTheDocument();
   });
 
   it('AC-001.11 shows the Workaround section when the Solution has one', async () => {
     const { user, box } = await openChatbot();
 
     await enter(user, box, 'Leave policy for public holidays{Enter}');
-    await user.click(await within(thread()).findByRole('button', { name: 'Show' }));
 
-    expect(within(thread()).getByText('Workaround')).toBeInTheDocument();
+    expect(await within(thread()).findByText('Workaround')).toBeInTheDocument();
     expect(
       within(thread()).getByText('HR adds the day back to the balance by hand.'),
     ).toBeInTheDocument();
@@ -692,6 +691,30 @@ describe('KnowledgeChatbotPage session conversations', () => {
     };
     expect(stored.conversations).toHaveLength(1);
     expect(stored.conversations[0]?.turns[0]?.question).toBe(VPN_QUESTION);
+  });
+
+  it('AC-002.2 titles the conversation with the title of the first answer when it has one', async () => {
+    answerWith({ text: 'Restart the VPN client.', title: 'VPN error 809' });
+    const { user, box } = await openChatbot();
+
+    await enter(user, box, `${VPN_QUESTION}{Enter}`);
+    await within(thread()).findByText('Restart the VPN client.');
+
+    expect(listTitles()).toEqual(['VPN error 809']);
+  });
+
+  it('AC-002.13 shows a title on one line and the whole title in a tooltip', async () => {
+    const title = 'Cannot connect to the company VPN from home with error 809 on Windows';
+    answerWith({ text: 'Restart the VPN client.', title });
+    const { user, box } = await openChatbot();
+    await enter(user, box, `${VPN_QUESTION}{Enter}`);
+    await within(thread()).findByText('Restart the VPN client.');
+
+    const entry = within(conversationList()).getByRole('button', { name: title });
+    expect(entry.querySelector('[data-title-line]')).not.toBeNull();
+    await user.hover(entry);
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(title);
   });
 
   it('AC-002.3 lists the conversations newest first by start time and highlights the open one', async () => {

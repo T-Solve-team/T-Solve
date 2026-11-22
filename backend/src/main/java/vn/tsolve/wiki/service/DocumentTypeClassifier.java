@@ -70,7 +70,7 @@ public class DocumentTypeClassifier {
         }
     }
 
-    /** The end of one extract request's classification budget, from now (AC-007.3, BUG-359). */
+    /** The end of one extract request's classification budget, from now (AC-007.3, BUG-360). */
     public Instant deadline() {
         return Instant.now().plus(totalTimeout);
     }
@@ -81,7 +81,7 @@ public class DocumentTypeClassifier {
 
     /**
      * Blocks the caller until the per-file timeout or the deadline, whichever comes first; a late call is interrupted
-     * so it frees its Ollama slot (AC-007.3, BUG-355, BUG-359).
+     * so it frees its Ollama slot (AC-007.3, BUG-355, BUG-360).
      */
     public WikiDocumentType classify(String title, String text, Instant deadline) {
         if (text.isBlank()) return WikiDocumentType.OTHER;

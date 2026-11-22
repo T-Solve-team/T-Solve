@@ -53,6 +53,16 @@ class AnswerPromptTest {
     }
 
     @Test
+    void asksForOneCombinedAnswer_AC_005_3() {
+        var source = ChatbotSource.of(new RetrievedSolution("symptoms", "cause", "steps", null, "scope", 0.9))
+                .numbered(1);
+        var messages = AnswerPrompt.messages("question", List.of(), List.of(source));
+
+        assertThat(messages.getFirst().content())
+                .contains("one answer", "steps to take", "Never go through the sources one by one");
+    }
+
+    @Test
     void sendsHistoryAsContextNeverAsSource_AC_007_2() {
         var source = ChatbotSource.of(new RetrievedSolution("symptoms", "cause", "steps", null, "scope", 0.9))
                 .numbered(1);

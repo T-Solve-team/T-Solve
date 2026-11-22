@@ -109,7 +109,7 @@ public class WikiUploadServiceImpl implements WikiUploadService {
     public List<WikiUploadPreview> extract(UUID userId, UUID spaceId, List<MultipartFile> files) {
         requireManager(userId, spaceId);
         // One file at a time: one extract holds at most one Ollama slot (AC-007.2, BUG-355),
-        // and all of them share one time budget so the request ends before a proxy timeout (AC-007.3, BUG-359).
+        // and all of them share one time budget so the request ends before a proxy timeout (AC-007.3, BUG-360).
         var uploads = readFiles(files);
         var deadline = classifier.deadline();
         return uploads.stream()

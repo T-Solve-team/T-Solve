@@ -15,6 +15,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -49,6 +50,8 @@ import vn.tsolve.ticket.service.ProjectAccess;
 public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
     // The classifier may use at most 1/3 of the remaining ask budget (BUG-329).
     private static final long CLASSIFIER_SHARE = 3;
+    private static final int TITLE_LIMIT = 60;
+    private static final Pattern WHITESPACE = Pattern.compile("\\s+", Pattern.UNICODE_CHARACTER_CLASS);
     private final EmbeddingClient embeddings;
     private final LlmClient llm;
     private final SolutionRetrieval solutions;
@@ -218,7 +221,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         long deadline = System.nanoTime() + timeoutNanos;
         String question = request.question().trim();
         if (QuestionClassifier.isGreeting(question)) {
-            return save(row.of(question, Outcome.GREETING.name(), ""), Outcome.GREETING, List.of(), deadline);
+            return save(row.of(question, Outcome.GREETING.name(), ""), Outcome.GREETING, List.of(), null, deadline);
         }
         var classification =
                 classifier.parse(classify(ClassifierPrompt.messages(question, request.history()), deadline));
@@ -231,8 +234,9 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
                     case QUESTION -> null;
                 };
         if (refused != null) {
-            return save(row.of(question, refused.name(), ""), refused, List.of(), deadline);
+            return save(row.of(question, refused.name(), ""), refused, List.of(), null, deadline);
         }
+        String title = request.history().isEmpty() ? title(classification.title()) : null;
         // BUG-331: a first question is embedded as asked, so a lossy rewrite cannot drop an error code from it.
         // The private rewrite only resolves a follow-up against the history; without one the old fallback stays.
         String retrievalText;
@@ -263,21 +267,36 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         remaining(deadline);
 
         if (kept.isEmpty()) {
-            return save(row.of(question, Outcome.NO_SOURCE.name(), ""), Outcome.NO_SOURCE, List.of(), deadline);
+            return save(row.of(question, Outcome.NO_SOURCE.name(), ""), Outcome.NO_SOURCE, List.of(), title, deadline);
         }
         var messages = AnswerPrompt.messages(question, request.history(), kept);
         String text = callAi(() -> llm.chat(messages, null), deadline);
         remaining(deadline);
         var cited = Citations.of(text, kept);
         if (cited.citations().isEmpty()) {
-            return save(row.of(question, Outcome.NO_SOURCE.name(), ""), Outcome.NO_SOURCE, List.of(), deadline);
+            return save(row.of(question, Outcome.NO_SOURCE.name(), ""), Outcome.NO_SOURCE, List.of(), title, deadline);
         }
         return save(
-                row.of(question, Outcome.ANSWERED.name(), cited.text()), Outcome.ANSWERED, cited.citations(), deadline);
+                row.of(question, Outcome.ANSWERED.name(), cited.text()),
+                Outcome.ANSWERED,
+                cited.citations(),
+                title,
+                deadline);
+    }
+
+    /** AC-009.9: one line of at most 60 characters, or null when the classifier wrote none. */
+    private static String title(String title) {
+        String line = WHITESPACE.matcher(title).replaceAll(" ").trim();
+        if (line.isEmpty()) {
+            return null;
+        }
+        return line.codePointCount(0, line.length()) <= TITLE_LIMIT
+                ? line
+                : line.substring(0, line.offsetByCodePoints(0, TITLE_LIMIT));
     }
 
     private ChatbotAnswerResponse save(
-            ChatbotAnswer answer, Outcome outcome, List<ChatbotCitation> citations, long deadline) {
+            ChatbotAnswer answer, Outcome outcome, List<ChatbotCitation> citations, String title, long deadline) {
         return transaction.execute(status -> {
             remaining(deadline);
             ChatbotAnswer saved = answers.save(answer);
@@ -286,7 +305,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
             answers.flush();
             // This check covers the insert and flush; COMMIT itself is not bounded by the ask deadline.
             remaining(deadline);
-            return new ChatbotAnswerResponse(saved.getId(), outcome, answer.getAnswerText(), citations);
+            return new ChatbotAnswerResponse(saved.getId(), outcome, answer.getAnswerText(), citations, title);
         });
     }
 

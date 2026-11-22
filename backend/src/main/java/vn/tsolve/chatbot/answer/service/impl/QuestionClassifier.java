@@ -32,7 +32,7 @@ final class QuestionClassifier {
     private static final Pattern PUNCTUATION_AND_EMOJI =
             Pattern.compile("[\\p{P}\\p{So}\\p{Sk}\\p{Cf}\\x{FE00}-\\x{FE0F}]");
     private static final Pattern WHITESPACE = Pattern.compile("\\s+", Pattern.UNICODE_CHARACTER_CLASS);
-    private static final Classification FALLBACK = new Classification(Category.QUESTION, "");
+    private static final Classification FALLBACK = new Classification(Category.QUESTION, "", "");
     private final ObjectMapper json;
 
     QuestionClassifier(ObjectMapper json) {
@@ -59,13 +59,17 @@ final class QuestionClassifier {
             Category category =
                     Category.valueOf(data.get("category").textValue().trim().toUpperCase(Locale.ROOT));
             if (category != Category.QUESTION) {
-                return new Classification(category, "");
+                return new Classification(category, "", "");
             }
             JsonNode query = data.path("query");
             if (!query.isTextual() || query.textValue().isBlank()) {
                 return FALLBACK;
             }
-            return new Classification(category, query.textValue().trim());
+            JsonNode title = data.path("title");
+            return new Classification(
+                    category,
+                    query.textValue().trim(),
+                    title.isTextual() ? title.textValue().trim() : "");
         } catch (JsonProcessingException | IllegalArgumentException failure) {
             // A malformed classifier reply must not prevent a search or expose the reply in a log.
             return FALLBACK;
@@ -79,5 +83,6 @@ final class QuestionClassifier {
         QUESTION
     }
 
-    record Classification(Category category, String query) {}
+    /** {@code title} names a new conversation (AC-009.9); empty unless the reply is a usable QUESTION. */
+    record Classification(Category category, String query, String title) {}
 }

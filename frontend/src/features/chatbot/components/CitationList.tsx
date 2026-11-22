@@ -1,6 +1,5 @@
 import { FileTextOutlined, ReadOutlined } from '@ant-design/icons';
-import { Button, Typography } from 'antd';
-import { useState } from 'react';
+import { Typography } from 'antd';
 import { Link } from 'react-router';
 import type { ChatbotCitation, TicketSolutionCitation } from '@/shared/api';
 import { msg } from '@/shared/messages';
@@ -16,7 +15,7 @@ type CitationListProps = {
 
 /**
  * 12.1 citations (callout 4), in number order. A Wiki document opens 11.2 Wiki Document; a ticket shows only "Solution
- * from a ticket" and its Solution — never its id, link, Project, writer or Evidence (GBR-36).
+ * from a ticket" and its Solution, open (KAN-380) — never its id, link, Project, writer or Evidence (GBR-36).
  */
 export function CitationList({ citations, unavailableIds }: CitationListProps) {
   const ordered = [...citations].sort((a, b) => a.number - b.number);
@@ -46,15 +45,11 @@ export function CitationList({ citations, unavailableIds }: CitationListProps) {
 }
 
 function TicketCitation({ citation }: { citation: TicketSolutionCitation }) {
-  const [isOpen, setIsOpen] = useState(false);
   return (
     <>
       <ReadOutlined className={styles.icon} />
       <span>Solution from a ticket</span>
-      <Button type="link" size="small" aria-expanded={isOpen} onClick={() => setIsOpen(!isOpen)}>
-        {isOpen ? 'Hide' : 'Show'}
-      </Button>
-      {isOpen && <TicketSolution solution={citation.solution} />}
+      <TicketSolution solution={citation.solution} />
     </>
   );
 }

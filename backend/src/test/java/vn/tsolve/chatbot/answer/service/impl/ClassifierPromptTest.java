@@ -51,6 +51,15 @@ class ClassifierPromptTest {
                         "properties",
                         Map.of(
                                 "category", Map.of("enum", List.of("GREETING", "OFF_TOPIC", "INJECTION", "QUESTION")),
-                                "query", Map.of("type", "string"))));
+                                "query", Map.of("type", "string"),
+                                "title", Map.of("type", "string"))));
+    }
+
+    @Test
+    void asksForTitleOnFirstQuestion_AC_009_9() {
+        var messages = ClassifierPrompt.messages("question", List.of());
+
+        assertThat(messages.getFirst().content())
+                .contains("no earlier turns", "title", "short name for the conversation", "one line");
     }
 }
