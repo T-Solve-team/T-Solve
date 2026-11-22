@@ -1,4 +1,9 @@
 services:
+  docling:
+    image: quay.io/docling-project/docling-serve:v1.38.1
+    ports:
+      - "127.0.0.1:5001:5001"
+
   db:
     image: pgvector/pgvector:pg16      # PostgreSQL + pgvector (needed later for semantic search)
     container_name: tsolve-db

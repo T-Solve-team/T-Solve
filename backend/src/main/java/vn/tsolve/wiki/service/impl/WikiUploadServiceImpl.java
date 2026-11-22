@@ -42,12 +42,14 @@ import vn.tsolve.wiki.dto.WikiDocumentRef;
 import vn.tsolve.wiki.dto.WikiPublishMetadata;
 import vn.tsolve.wiki.dto.WikiUploadPreview;
 import vn.tsolve.wiki.entity.WikiDocument;
+import vn.tsolve.wiki.entity.WikiDocumentType;
 import vn.tsolve.wiki.exception.WikiStorageUnavailableException;
 import vn.tsolve.wiki.mapper.WikiDocumentMapper;
 import vn.tsolve.wiki.repository.AccessRepository;
 import vn.tsolve.wiki.repository.FolderRepository;
 import vn.tsolve.wiki.repository.WikiDocumentRepository;
 import vn.tsolve.wiki.repository.WikiSearchRepository;
+import vn.tsolve.wiki.service.DocumentTypeClassifier;
 import vn.tsolve.wiki.service.TextExtractor;
 import vn.tsolve.wiki.service.WikiUploadService;
 import vn.tsolve.worker.service.TenantJobService;
@@ -61,6 +63,7 @@ public class WikiUploadServiceImpl implements WikiUploadService {
     private final AccessRepository access;
     private final WikiSearchRepository spaces;
     private final TextExtractor extractor;
+    private final DocumentTypeClassifier classifier;
     // Optional like every FileStorage user while storage is not in every setup (StorageConfig, BUG-296).
     private final ObjectProvider<FileStorage> storage;
     private final AuditService audit;
@@ -77,6 +80,7 @@ public class WikiUploadServiceImpl implements WikiUploadService {
             AccessRepository access,
             WikiSearchRepository spaces,
             TextExtractor extractor,
+            DocumentTypeClassifier classifier,
             ObjectProvider<FileStorage> storage,
             AuditService audit,
             ObjectProvider<TenantJobService> jobs,
@@ -89,6 +93,7 @@ public class WikiUploadServiceImpl implements WikiUploadService {
         this.access = access;
         this.spaces = spaces;
         this.extractor = extractor;
+        this.classifier = classifier;
         this.storage = storage;
         this.audit = audit;
         this.jobs = jobs;
@@ -103,16 +108,19 @@ public class WikiUploadServiceImpl implements WikiUploadService {
     // No transaction: parsing up to 10 files must not hold a pooled connection (BUG-294).
     public List<WikiUploadPreview> extract(UUID userId, UUID spaceId, List<MultipartFile> files) {
         requireManager(userId, spaceId);
+        // One file at a time: one extract holds at most one Ollama slot (AC-007.2, BUG-355).
         return readFiles(files).stream()
                 .map(file -> {
                     String name = file.name();
                     String title = name.substring(0, name.lastIndexOf('.')).strip();
+                    String previewTitle = title.substring(0, Math.min(200, title.length()));
                     return new WikiUploadPreview(
                             name,
-                            title.substring(0, Math.min(200, title.length())),
+                            previewTitle,
                             file.text().substring(0, Math.min(300, file.text().length())),
                             file.words(),
-                            file.text().isEmpty() ? "UNREADABLE" : "READY");
+                            file.text().isEmpty() ? "UNREADABLE" : "READY",
+                            classifier.classify(previewTitle, file.text()));
                 })
                 .toList();
     }
@@ -122,7 +130,7 @@ public class WikiUploadServiceImpl implements WikiUploadService {
         long internalId = requireManager(userId, spaceId);
         List<Upload> uploads = readFiles(files);
         WikiPublishMetadata metadata = parseMetadata(metadataJson);
-        validateMetadata(metadata, uploads.size());
+        var documentTypes = validateMetadata(metadata, uploads.size());
         validateFolder(internalId, metadata.folderId());
         validateTitles(internalId, metadata);
         for (Upload upload : uploads) {
@@ -153,6 +161,7 @@ public class WikiUploadServiceImpl implements WikiUploadService {
                             metadata.folderId(),
                             row.title().strip(),
                             row.visibility(),
+                            documentTypes.get(i),
                             upload.text(),
                             stored.get(i),
                             upload.name(),
@@ -283,10 +292,11 @@ public class WikiUploadServiceImpl implements WikiUploadService {
         }
     }
 
-    private void validateMetadata(WikiPublishMetadata metadata, int size) {
+    private List<WikiDocumentType> validateMetadata(WikiPublishMetadata metadata, int size) {
         if (metadata == null
                 || metadata.documents() == null
                 || metadata.documents().size() != size) throw required("metadata");
+        var types = new ArrayList<WikiDocumentType>(size);
         for (int i = 0; i < size; i++) {
             var row = metadata.documents().get(i);
             if (row == null) throw required("metadata");
@@ -294,7 +304,21 @@ public class WikiUploadServiceImpl implements WikiUploadService {
             if (row.title() == null || row.title().isBlank()) throw required(field);
             if (row.title().length() > 200) throw error("MSG02", Map.of("field_name", field, "max_length", 200), field);
             if (row.visibility() == null) throw required("documents[" + i + "].visibility");
+            String typeField = "documents[" + i + "].documentType";
+            var type = row.documentType();
+            if (type == null
+                    || type.isNull()
+                    || (type.isTextual() && type.textValue().isBlank())) {
+                throw required(typeField);
+            }
+            if (!type.isTextual()) throw error("MSG06", Map.of(), typeField);
+            try {
+                types.add(WikiDocumentType.valueOf(type.textValue()));
+            } catch (IllegalArgumentException invalid) {
+                throw error("MSG06", Map.of(), typeField);
+            }
         }
+        return types;
     }
 
     private void validateFolder(long spaceId, UUID folderId) {
@@ -342,6 +366,7 @@ public class WikiUploadServiceImpl implements WikiUploadService {
         details.put("spaceId", spaceId);
         details.put("folderId", document.getFolderId());
         details.put("visibility", document.getVisibility().name());
+        details.put("documentType", document.getDocumentType().name());
         audit.record(AuditAction.PUBLISH, "WIKI_DOCUMENT", document.getId(), details);
     }
 

@@ -33,6 +33,10 @@ public class WikiDocument {
     private Visibility visibility;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "document_type", nullable = false, length = 20)
+    private WikiDocumentType documentType;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private Status status;
 
@@ -80,6 +84,7 @@ public class WikiDocument {
             UUID folderId,
             String title,
             Visibility visibility,
+            WikiDocumentType documentType,
             String content,
             String fileKey,
             String fileName,
@@ -92,6 +97,7 @@ public class WikiDocument {
         this.folderId = folderId;
         this.title = title;
         this.visibility = visibility;
+        this.documentType = documentType;
         this.status = Status.PUBLISHED;
         this.content = content;
         this.fileKey = fileKey;
@@ -138,6 +144,10 @@ public class WikiDocument {
 
     public Visibility getVisibility() {
         return visibility;
+    }
+
+    public WikiDocumentType getDocumentType() {
+        return documentType;
     }
 
     public Status getStatus() {

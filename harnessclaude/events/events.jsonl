@@ -2218,5 +2218,14 @@
 {"ts":"2026-11-22T03:56:06.891Z","type":"feature-status","module":"triage","feature":"suggestion-cut-off","from":"pending","to":"in-progress"}
 {"ts":"2026-11-22T04:17:17.944Z","type":"feature-status","module":"triage","feature":"suggestion-cut-off","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-22T04:17:18.539Z","type":"commit-recorded","module":"triage","repo":"default","sha":"10c3b7bc50b74acf24777edbf147518312083038"}
+{"ts":"2026-11-21T13:19:56.240Z","type":"spec-approved","module":"wiki","specHash":"95a0df4fddc9050b64d10d30048da6654f43268d7e18bbc2103cb8239ff0c914"}
+{"ts":"2026-11-21T13:19:59.358Z","type":"feature-status","module":"wiki","feature":"wiki-document-type","from":null,"to":"pending"}
+{"ts":"2026-11-21T13:19:59.649Z","type":"feature-status","module":"wiki","feature":"wiki-typed-chunking","from":null,"to":"pending"}
+{"ts":"2026-11-21T13:19:59.934Z","type":"feature-status","module":"wiki","feature":"wiki-document-type-ui","from":null,"to":"pending"}
+{"ts":"2026-11-21T14:49:42.843Z","type":"quick-opened","what":"Add missing --rollback to wiki migration 049 (BUG-353, PR #303 CI)","files":["backend/src/main/resources/db/changelog/changes/049-wiki-document-type.sql","docs/bug-log.md"]}
+{"ts":"2026-11-21T14:51:41.068Z","type":"quick-closed","what":"Add missing --rollback to wiki migration 049 (BUG-353, PR #303 CI)","files":["backend/src/main/resources/db/changelog/changes/049-wiki-document-type.sql","docs/bug-log.md"]}
+{"ts":"2026-11-21T15:16:31.748Z","type":"quick-opened","what":"Fix WikiIndexIT FileStorage provider so the docling success case runs (BUG-354, PR #303 CI)","files":["backend/src/test/java/vn/tsolve/wiki/WikiIndexIT.java","docs/bug-log.md"]}
+{"ts":"2026-11-21T15:19:07.708Z","type":"quick-closed","what":"Fix WikiIndexIT FileStorage provider so the docling success case runs (BUG-354, PR #303 CI)","files":["backend/src/test/java/vn/tsolve/wiki/WikiIndexIT.java","docs/bug-log.md"]}
+{"ts":"2026-11-21T16:02:08.564Z","type":"spec-approved","module":"wiki","specHash":"4a6687a179cc69ef52a955bd24f8d58cdd92537ebb8babd2fc4894bd7737fc65"}
 {"ts":"2026-11-22T03:15:57.109Z","type":"quick-opened","what":"Fix flaky ReviewQueueEventServiceImplTest fake with per-LISTEN notification queues (BUG-199, KAN-379)","files":["backend/src/test/java/vn/tsolve/review/service/impl/ReviewQueueEventServiceImplTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-22T03:22:10.243Z","type":"quick-closed","what":"Fix flaky ReviewQueueEventServiceImplTest fake with per-LISTEN notification queues (BUG-199, KAN-379)","files":["backend/src/test/java/vn/tsolve/review/service/impl/ReviewQueueEventServiceImplTest.java","docs/bug-log.md"]}

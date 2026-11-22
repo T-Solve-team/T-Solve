@@ -27,6 +27,7 @@ const preview: WikiUploadPreview = {
   excerpt: 'Connect to the company VPN.',
   wordCount: 5,
   result: 'READY',
+  documentType: 'GUIDE',
 };
 
 function file(name = 'guide.PDF', content = '%PDF-1.7\nReadable text') {
@@ -146,7 +147,15 @@ describe('UploadDocumentsPage', () => {
     expect(names).toEqual(['guide.PDF', 'handbook.DoCx']);
     expect(title).toHaveValue('guide');
     const table = screen.getByRole('table', { name: 'Documents to publish' });
-    for (const name of ['File name', 'Visibility', 'Title', 'Extracted text', 'Words', 'Result'])
+    for (const name of [
+      'File name',
+      'Visibility',
+      'Title',
+      'Type',
+      'Extracted text',
+      'Words',
+      'Result',
+    ])
       expect(within(table).getByRole('columnheader', { name })).toBeInTheDocument();
     expect(within(table).getAllByText(preview.excerpt)).toHaveLength(2);
     expect(within(table).getAllByText(String(preview.wordCount))).toHaveLength(2);
@@ -213,6 +222,55 @@ describe('UploadDocumentsPage', () => {
     expect(title).toHaveValue('Keep my title');
   });
 
+  it('AC-007.11 selects the suggested type per row, offers contract labels in order, and publishes the chosen types', async () => {
+    let body: FormData | undefined;
+    server.use(
+      getPublishWikiDocumentsMockHandler(async ({ request }) => {
+        body = await request.formData();
+        return [{ documentId: crypto.randomUUID(), title: 'guide' }];
+      }),
+    );
+    const { user } = await addReadyFile([
+      preview,
+      { ...preview, fileName: 'reference.pdf', title: 'reference', documentType: 'REFERENCE' },
+    ]);
+    const guide = screen.getByRole('combobox', { name: 'Type for guide.PDF' });
+    const reference = screen.getByRole('combobox', { name: 'Type for reference.pdf' });
+    expect(guide.closest('.ant-select')).toHaveTextContent('Guide');
+    expect(reference.closest('.ant-select')).toHaveTextContent('Reference');
+
+    await user.click(guide);
+    const options = await screen.findAllByRole('option');
+    expect(options.map((option) => option.textContent)).toEqual([
+      'Policy',
+      'Runbook',
+      'Guide',
+      'FAQ',
+      'Reference',
+      'Spec',
+      'Record',
+      'Announcement',
+      'Form',
+      'Other',
+    ]);
+    await user.click(screen.getByRole('option', { name: 'Runbook' }));
+    expect(guide.closest('.ant-select')).toHaveTextContent('Runbook');
+    expect(reference.closest('.ant-select')).toHaveTextContent('Reference');
+
+    await user.click(screen.getByRole('button', { name: 'Publish' }));
+    await waitFor(() =>
+      expect(body?.get('metadata')).toBe(
+        JSON.stringify({
+          folderId: GUIDES,
+          documents: [
+            { title: 'guide', visibility: 'DEPARTMENT', documentType: 'RUNBOOK' },
+            { title: 'reference', visibility: 'DEPARTMENT', documentType: 'REFERENCE' },
+          ],
+        }),
+      ),
+    );
+  });
+
   it('AC-004.22 publishes the edited metadata and originals, refreshes lists and returns to the target folder', async () => {
     let body: FormData | undefined;
     server.use(
@@ -238,7 +296,7 @@ describe('UploadDocumentsPage', () => {
     expect(body?.get('metadata')).toBe(
       JSON.stringify({
         folderId: GUIDES,
-        documents: [{ title: 'Edited title', visibility: 'COMPANY_WIDE' }],
+        documents: [{ title: 'Edited title', visibility: 'COMPANY_WIDE', documentType: 'GUIDE' }],
       }),
     );
     const original = body?.get('files');

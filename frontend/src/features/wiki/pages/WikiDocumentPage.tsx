@@ -12,6 +12,7 @@ import {
   SectionCard,
   StatusTag,
 } from '@/shared/ui';
+import { documentTypeLabels } from '../documentTypes';
 import { useWikiDocument, wikiDocumentFileUrl } from '../hooks/useWikiDocument';
 import { useWikiTrashMutations } from '../hooks/useWikiTrashMutations';
 import styles from './WikiDocumentPage.module.css';
@@ -57,6 +58,7 @@ export function WikiDocumentPage() {
                 label: 'Visibility',
                 children: data.visibility === 'COMPANY_WIDE' ? 'Company-wide' : 'Department',
               },
+              { key: 'type', label: 'Type', children: documentTypeLabels[data.documentType] },
               { key: 'owner', label: 'Owner', children: data.owner },
               { key: 'updated', label: 'Updated', children: formatDateTime(data.updatedAt) },
             ]}
