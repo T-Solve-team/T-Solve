@@ -529,3 +529,32 @@ keyword fallback: the chatbot embeds the question once and shares the vector wit
 | Managed Projects | `ProjectMembershipLookup.findProjects` rows with `PROJECT_MANAGER`, mapped from `public_id` to `project_id` in `ScopeTicketRepository` | `canAccessProject` per Project plus the PM role | One query, the same counted memberships as `/me` |
 | Writer | `Optional<UUID> writerId` = `TSolveUser.id`, compared with `ticket.writer_id` (`SearchTicket.writerId`) | Keep the `ticket.writer` name | Two people with the same name would see each other's drafts (user, 17/11) |
 | Cache | None (AC-012.5) | Per-request or TTL cache | A membership change must apply at the next request; the queries are small |
+
+## Change 2026-11-22: start state and two layouts of 6.1 Search (KAN-383)
+
+Design option C "Search first" (artifact https://claude.ai/artifact/ErL8o7ZQ1nUYw1PrutZZQS), chosen by the user on 22/11.
+Spec: AC-002.2 and AC-002.4 reworded, new AC-002.16.
+
+- **Two layouts, one form.** `SearchPage` renders the start state (icon tile, heading "Find a Solution" as an `h2`, the
+  line of AC-002.2) only while `q` is empty, and wraps `SearchFilters` in a container whose class is `start` (centred,
+  Search box 680px wide, 56px tall) or `top` (left-aligned, 860px wide). The same `SearchFilters` element stays mounted
+  in both, so the input keeps its focus after Enter (BUG-059, AC-002.16). Chosen: one tree with a class switch;
+  alternatives: two trees (remounts the input, loses the focus) or a CSS-only `:has()` switch (hides the heading from
+  tests but not from the DOM). Rationale: the smallest change that keeps the focus.
+- **Results area.** Rendered only with a query (`<section aria-label="Results">`); before it the start state takes its
+  place (AC-002.2). Results are a reading column of at most 860px: flat rows (`article`) with no border or shadow, the
+  container background on hover, title, then the line of AC-002.7 with the helpful rate on the same line, then the
+  excerpt clamped to two lines. Pagination left-aligned under the rows.
+- **Filters as compact controls.** Each filter is a pill (`border-radius` 999px, 36px tall) holding its visible
+  `<label>` (secondary text) and a borderless antd control (`variant="borderless"`), so the label, `htmlFor` and the
+  accessible names of AC-002.1 and AC-002.5 do not change; `:focus-within` draws the brand focus ring. Centred under the
+  box in the start state, left-aligned in the top layout; they wrap at phone width.
+- **Search box.** `Input.Search` keeps `allowClear`, `maxLength` 200 and Enter; it gains the placeholder of AC-002.4 and
+  `enterButton="Search"` (the primary button joined to the box). Size: large in both layouts, taller in the start state
+  by CSS.
+- **Styling.** CSS Modules with antd CSS variables only (`--ant-color-primary-bg`, `--ant-color-bg-container`,
+  `--ant-box-shadow-tertiary`, …); no literal colour, no `style={{…}}` for layout (guideline 07). Loading, error and
+  MSG04 keep the shared `LoadingState`, `ErrorState` and `EmptyState`.
+- **Edge cases.** A link with filters and no query shows the start state with the filters' values (AC-002.6, AC-002.10);
+  clearing the query or going back returns to the start state with an empty box (AC-002.16); a white-space query is the
+  start state (AC-002.2).
