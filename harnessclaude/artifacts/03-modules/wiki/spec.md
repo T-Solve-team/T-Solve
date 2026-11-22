@@ -94,13 +94,13 @@ These are known limits of the code this module builds on. They are not defects o
   - AC-002.17: WHEN the user selects a Space or a folder in the navigator, THE web app SHALL keep them in the URL as `?space=` and `?folder=`, remove `?q=` and `?doc=`, and show the documents of that folder.
   - AC-002.18: IF the search box holds more than 200 characters, THEN THE web app SHALL show MSG02 below it and send no request.
   - AC-002.19: WHEN the user opens a document, THE web app SHALL show 11.2 Wiki Document with its header (title, Space, folder, visibility, Type, Owner, last update), its original file of AC-002.12 with its images and tables in place (a PDF in the browser's own PDF viewer, a DOCX rendered as pages) and a Download button.
-- AC-002.26: IF the original file of a document cannot be loaded or rendered, or the document is in the trash, THEN THE web app SHALL show its content of AC-002.11 as plain text on 11.2 in place of the file.
   - AC-002.20: IF the document answers 404 MSG110, THEN THE web app SHALL show "This document is no longer available." in place of the document.
   - AC-002.21: WHERE the user is the Knowledge Manager of the selected Space, THE web app SHALL show the buttons "Upload documents", "New folder" and "Space Settings" on 11.1, and folder actions Rename, Move and Delete; for any other user it SHALL show none of them.
   - AC-002.22: WHILE the URL names no Space the user can view, THE web app SHALL mark "Company-wide" as the current navigator entry and list every Company-wide document of AC-002.2, in its order (Space name, then title), with the Space name on each row.
   - AC-002.23: WHEN the user submits a search, THE web app SHALL keep it in the URL as `?q=`, show "Search results for “<q>”" and the results of AC-002.7 in the list pane in place of the selected entry's documents, and a "Clear search" link that removes `?q=`.
   - AC-002.24: WHEN the user selects a document row, THE web app SHALL keep it in the URL as `?doc=` and show in the preview pane the document of AC-002.11: its title, visibility, Type, Space, Folder, Owner, Updated, File, Size, the first 420 characters of its content, an "Open" button to 11.2 and a Download button; WHILE `?doc=` names no row of the list, the first row SHALL be previewed.
   - AC-002.25: IF the previewed document answers 404 MSG110, THEN THE web app SHALL show "This document is no longer available." in the preview pane.
+  - AC-002.26: IF the original file of a document cannot be loaded or rendered, or the document is in the trash, THEN THE web app SHALL show its content of AC-002.11 as plain text on 11.2 in place of the file.
 
 ### STORY-003: Manage the folders of a Space
 - As a Knowledge Manager, I want to create, rename, move and delete folders of my Space so that documents are grouped clearly.
