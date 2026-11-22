@@ -6,7 +6,11 @@ import { ApiError, useListWikiFolders, useListWikiSpaces } from '@/shared/api';
 import { msg } from '@/shared/messages';
 import { paths } from '@/shared/routing';
 import { AppForm, ErrorState, FileDropzone, FormField, LoadingState } from '@/shared/ui';
-import { WikiUploadTable, type WikiUploadRow } from '../components/WikiUploadTable';
+import {
+  WikiUploadTable,
+  type WikiUploadField,
+  type WikiUploadRow,
+} from '../components/WikiUploadTable';
 import { useWikiUpload } from '../hooks/useWikiUpload';
 
 const MAX_FILES = 10;
@@ -73,7 +77,7 @@ export function UploadDocumentsPage() {
     if (busy.current || !canPublish) return;
     busy.current = true;
     setErrors([]);
-    setRows((current) => current.map((row) => ({ ...row, titleErrors: undefined })));
+    setRows((current) => current.map((row) => ({ ...row, fieldErrors: undefined })));
     publish.mutate(
       {
         spaceId,
@@ -81,7 +85,11 @@ export function UploadDocumentsPage() {
           files: rows.map((row) => row.file),
           metadata: {
             folderId,
-            documents: rows.map(({ title, visibility }) => ({ title, visibility })),
+            documents: rows.map(({ title, visibility, documentType }) => ({
+              title,
+              visibility,
+              documentType,
+            })),
           },
         },
       },
@@ -89,13 +97,17 @@ export function UploadDocumentsPage() {
         onSuccess: returnHome,
         onError: (error) => {
           const mapped = error.fieldErrors.flatMap((fieldError) => {
-            const match = /^documents\[(\d+)\]\.title$/.exec(fieldError.field);
+            const match = /^documents\[(\d+)\]\.(title|documentType)$/.exec(fieldError.field);
+            const field: WikiUploadField = match?.[2] === 'title' ? 'title' : 'documentType';
             return match?.[1] && rows[Number(match[1])]
               ? [
                   {
                     index: Number(match[1]),
-                    // The server names the field by its path (documents[0].title); show the label.
-                    text: msg(fieldError.code, { ...fieldError.params, field_name: 'Title' }),
+                    field,
+                    text: msg(fieldError.code, {
+                      ...fieldError.params,
+                      field_name: field === 'title' ? 'Title' : 'Type',
+                    }),
                   },
                 ]
               : [];
@@ -103,7 +115,14 @@ export function UploadDocumentsPage() {
           setRows((current) =>
             current.map((row, index) => ({
               ...row,
-              titleErrors: mapped.filter((item) => item.index === index).map((item) => item.text),
+              fieldErrors: {
+                title: mapped
+                  .filter((item) => item.index === index && item.field === 'title')
+                  .map((item) => item.text),
+                documentType: mapped
+                  .filter((item) => item.index === index && item.field === 'documentType')
+                  .map((item) => item.text),
+              },
             })),
           );
           if (!mapped.length) setErrors([msg(error.code, error.params)]);
@@ -187,7 +206,7 @@ export function UploadDocumentsPage() {
           onChange={(id, change) =>
             setRows((current) =>
               current.map((row) =>
-                row.id === id ? { ...row, ...change, titleErrors: undefined } : row,
+                row.id === id ? { ...row, ...change, fieldErrors: undefined } : row,
               ),
             )
           }

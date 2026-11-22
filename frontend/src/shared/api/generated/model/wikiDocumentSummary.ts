@@ -7,6 +7,7 @@
  * OpenAPI spec version: 0.1.0-stub
  */
 import type { WikiDocumentSummaryVisibility } from './wikiDocumentSummaryVisibility';
+import type { WikiDocumentType } from './wikiDocumentType';
 
 export interface WikiDocumentSummary {
   documentId: string;
@@ -18,6 +19,7 @@ export interface WikiDocumentSummary {
   /** @nullable */
   folderName: string | null;
   visibility: WikiDocumentSummaryVisibility;
+  documentType: WikiDocumentType;
   /** Owner's full name. */
   owner: string;
   updatedAt: string;

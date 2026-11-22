@@ -11,6 +11,7 @@ import { faker } from '@faker-js/faker';
 import { HttpResponse, http } from 'msw';
 import type { HttpResponseResolver, RequestHandlerOptions } from 'msw';
 
+import { WikiDocumentType } from '../model';
 import type {
   CreateWikiFolderRequest,
   ExtractWikiUploadsBody,
@@ -110,6 +111,7 @@ export const getListCompanyWideDocumentsResponseMock = (): WikiDocumentSummary[]
       null,
     ]),
     visibility: faker.helpers.arrayElement(['DEPARTMENT', 'COMPANY_WIDE'] as const),
+    documentType: faker.helpers.arrayElement(Object.values(WikiDocumentType)),
     owner: faker.string.alpha({ length: { min: 10, max: 20 } }),
     updatedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
   }));
@@ -160,6 +162,7 @@ export const getListWikiDocumentsResponseMock = (): WikiDocumentSummary[] =>
       null,
     ]),
     visibility: faker.helpers.arrayElement(['DEPARTMENT', 'COMPANY_WIDE'] as const),
+    documentType: faker.helpers.arrayElement(Object.values(WikiDocumentType)),
     owner: faker.string.alpha({ length: { min: 10, max: 20 } }),
     updatedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
   }));
@@ -171,6 +174,7 @@ export const getExtractWikiUploadsResponseMock = (): WikiUploadPreview[] =>
     excerpt: faker.string.alpha({ length: { min: 10, max: 300 } }),
     wordCount: faker.number.int({ min: 0 }),
     result: faker.helpers.arrayElement(['READY', 'UNREADABLE'] as const),
+    documentType: faker.helpers.arrayElement(Object.values(WikiDocumentType)),
   }));
 
 export const getDownloadWikiDocumentFileResponseMock = (): Blob =>
@@ -191,6 +195,7 @@ export const getSearchWikiDocumentsResponseMock = (): WikiDocumentSummary[] =>
       null,
     ]),
     visibility: faker.helpers.arrayElement(['DEPARTMENT', 'COMPANY_WIDE'] as const),
+    documentType: faker.helpers.arrayElement(Object.values(WikiDocumentType)),
     owner: faker.string.alpha({ length: { min: 10, max: 20 } }),
     updatedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
   }));
@@ -207,6 +212,7 @@ export const getGetWikiDocumentResponseMock = (): WikiDocumentDetail => ({
       null,
     ]),
     visibility: faker.helpers.arrayElement(['DEPARTMENT', 'COMPANY_WIDE'] as const),
+    documentType: faker.helpers.arrayElement(Object.values(WikiDocumentType)),
     owner: faker.string.alpha({ length: { min: 10, max: 20 } }),
     updatedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
   },

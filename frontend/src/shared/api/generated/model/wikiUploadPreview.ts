@@ -6,6 +6,7 @@
  *
  * OpenAPI spec version: 0.1.0-stub
  */
+import type { WikiDocumentType } from './wikiDocumentType';
 import type { WikiUploadPreviewResult } from './wikiUploadPreviewResult';
 
 export interface WikiUploadPreview {
@@ -17,4 +18,5 @@ export interface WikiUploadPreview {
   /** @minimum 0 */
   wordCount: number;
   result: WikiUploadPreviewResult;
+  documentType: WikiDocumentType;
 }

@@ -17,6 +17,7 @@ import { EmptyState, ErrorState, FormField, LoadingState } from '@/shared/ui';
 import { FolderModal } from '../components/FolderModal';
 import { FolderTree } from '../components/FolderTree';
 import { WikiPreview } from '../components/WikiPreview';
+import { documentTypeLabels } from '../documentTypes';
 import { useWikiHome, WIKI_QUERY_MAX } from '../hooks/useWikiHome';
 import styles from './WikiHomePage.module.css';
 
@@ -188,6 +189,7 @@ export function WikiHomePage() {
                         {row.title}
                       </span>
                       <span id={`wiki-row-sub-${row.documentId}`} className={styles.rowSub}>
+                        <span>{documentTypeLabels[row.documentType]}</span>
                         <span>
                           {row.spaceId === space?.spaceId
                             ? (row.folderName ?? 'Top level')
