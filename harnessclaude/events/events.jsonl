@@ -2228,3 +2228,6 @@
 {"ts":"2026-11-22T05:13:11.462Z","type":"spec-approved","module":"wiki","specHash":"1ddb373a1b48ec8ce31385d9d5a31d5a3efad60f5f32b02edef85d388e31a8e0"}
 {"ts":"2026-11-22T05:55:32.155Z","type":"feature-status","module":"search","feature":"embed-description","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-22T05:55:32.497Z","type":"feature-status","module":"search","feature":"embed-description","from":"evaluating","to":"passing"}
+{"ts":"2026-11-22T06:25:35.592Z","type":"quick-opened","what":"BUG-360: wiki upload/restore queue wiki-index through WebJobQueue on the web process","files":["backend/src/main/java/vn/tsolve/wiki/service/impl/WikiUploadServiceImpl.java","backend/src/main/java/vn/tsolve/wiki/service/impl/WikiTrashServiceImpl.java","backend/src/test/java/vn/tsolve/wiki/service/impl/WikiUploadServiceImplTest.java","backend/src/test/java/vn/tsolve/wiki/service/impl/WikiTrashServiceImplTest.java","docs/bug-log.md"]}
+{"ts":"2026-11-22T06:29:17.354Z","type":"quick-opened","what":"BUG-360: pass the WebJobQueue provider in the wiki ITs","files":["backend/src/test/java/vn/tsolve/wiki/WikiTrashIT.java","backend/src/test/java/vn/tsolve/wiki/WikiUploadIT.java"]}
+{"ts":"2026-11-22T06:33:44.027Z","type":"quick-opened","what":"BUG-360: log the wiki-index web-jobs bug","files":["docs/bug-log.md"]}
