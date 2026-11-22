@@ -691,3 +691,29 @@ Spec: STORY-005 to STORY-009 · Design: master section "Backend". Rules: `backen
 **Covers:** AC-012.1 – AC-012.6, AC-006.1, AC-006.2, AC-006.11, AC-006.12
 **Dependencies:** identity `ScopeAccessService`, `ProjectMembershipLookup` (on `main`)
 **Estimated size:** small
+
+---
+
+## Task 22: Embed and match the ticket's description
+
+**Story:** STORY-005, STORY-006, STORY-007
+**Feature:** embed-description
+**Jira:** KAN-380 · branch `feature/KAN-380-chatbot-combined-answer`
+**Description:**
+- `SearchTicket` maps `description`; `EmbeddingText` adds it after the title (AC-005.4).
+- New changeset `0NN-search-embedding-text-version.sql` (next free number): `text_version SMALLINT NOT NULL DEFAULT 1`
+  on `ticket_embedding`, with a rollback. The upsert writes version 2 (`TicketEmbeddingServiceImpl.TEXT_VERSION`).
+- Catch-up query: published tickets with no row first, then rows of an older version, each by ticket id
+  (AC-005.10); the skip of AC-005.9 applies to both.
+- Keyword: the Ticket List spec adds `description` (AC-006.4); the ranking fallback adds `t.description` (AC-007.2).
+**Files:**
+- Modify: `backend/src/main/java/vn/tsolve/search/scope/entity/SearchTicket.java`,
+  `…/search/embedding/service/impl/EmbeddingText.java`, `…/search/embedding/service/impl/TicketEmbeddingServiceImpl.java`,
+  `…/search/embedding/repository/TicketEmbeddingRepository.java`, `…/search/list/service/impl/TicketListSpecs.java`,
+  `…/search/query/repository/TicketRankingRepository.java`, `db/changelog/db.changelog-master.xml`
+- Create: `backend/src/main/resources/db/changelog/changes/0NN-search-embedding-text-version.sql`
+- Test: `EmbeddingTextTest` (`addsDescription_AC_005_4`), the catch-up IT (`reEmbedsOldVersionAfterMissing_AC_005_10`),
+  the Ticket List IT (`keywordMatchesDescription_AC_006_4`), the search IT (`fallbackMatchesDescription_AC_007_2`)
+**Covers:** AC-005.4, AC-005.10, AC-006.4, AC-007.2
+**Dependencies:** none
+**Estimated size:** medium

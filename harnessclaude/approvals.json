@@ -243,8 +243,8 @@
     }
   },
   "chatbot": {
-    "specHash": "ddff8da5c8e3e1f0d097065b9cee98f0d94614440dc80baf75aeedaa0d844b10",
-    "approvedAt": "2026-11-18T10:24:11.801Z",
+    "specHash": "f7e324be4b202c3807244ea339ae8c5d801483486120cd87158afd282b8e8847",
+    "approvedAt": "2026-11-22T05:20:24.457Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",
@@ -256,8 +256,8 @@
       "AC-001.7": "WHEN the answer arrives with  , THE web app SHALL show its text under the question,",
       "AC-001.8": "THE web app SHALL show the answer text and every citation field as plain text, never as HTML.",
       "AC-001.9": "WHEN a citation is a Wiki document, THE web app SHALL show \"[n]\", the document title and \"· Wiki document\"",
-      "AC-001.10": "WHEN a citation is a ticket Solution, THE web app SHALL show \"[n] Solution from a ticket\" with a Show",
-      "AC-001.11": "WHEN the user clicks Show on a ticket Solution citation, THE web app SHALL expand the Solution inline",
+      "AC-001.10": "WHEN a citation is a ticket Solution, THE web app SHALL show \"[n] Solution from a ticket\", and SHALL",
+      "AC-001.11": "THE web app SHALL show the Solution of a ticket Solution citation open under its \"[n] Solution from a",
       "AC-001.12": "WHEN the answer arrives with  , THE web app SHALL show MSG109 as the answer, with",
       "AC-001.13": "IF the request fails, not with a 401 or a field error on the question, THEN THE web app SHALL show",
       "AC-001.14": "IF the answer request fails with field errors (400), THEN THE web app SHALL show the field's MSG under",
@@ -274,6 +274,7 @@
       "AC-002.10": "IF that availability request fails, THEN THE web app SHALL show the Wiki citations as links.",
       "AC-002.11": "IF storage is blocked, THEN THE web app SHALL still answer questions and keep the conversations",
       "AC-002.12": "THE web app SHALL keep the user id and every Wiki document id as UUID strings, in memory, in",
+      "AC-002.13": "THE conversation list SHALL show each conversation's title on one line, cut with \"…\" when it is wider",
       "AC-003.1": "THE web app SHALL show Helpful and Not helpful buttons under every  and  answer",
       "AC-003.2": "WHEN the user clicks Helpful or Not helpful on an unrated answer, THE web app SHALL call",
       "AC-003.3": "WHEN the user clicks the other button of a rated answer, THE web app SHALL send the new rating, which",
@@ -324,6 +325,7 @@
       "AC-009.6": "IF the classifier gives no usable answer, THEN THE backend SHALL continue as for a question with the",
       "AC-009.7": "IF the ask times out, THEN THE backend SHALL answer 503 with MSG06 as in AC-005.7 and store no row",
       "AC-009.8": "THE chatbot changeset SHALL widen the  check to , ,",
+      "AC-009.9": "WHEN the classifier of AC-009.2 runs for a question with an empty , THE backend SHALL also ask",
       "AC-010.1": "WHEN a signed-in user sends  () for an  or  answer of their own, THE backend SHALL answer 200  with , ,  (the suggested Department, or null) and .",
       "AC-010.2": "THE backend SHALL offer as  exactly the  Departments whose default Project is an",
       "AC-010.3": "WHEN at least one Department is offered, THE backend SHALL call the  module's",
@@ -761,8 +763,8 @@
     }
   },
   "search": {
-    "specHash": "a728f2565506ddf147f332ad52505dc64ededf15d556a07cbc2e199b1a1a25aa",
-    "approvedAt": "2026-11-17T14:57:43.664Z",
+    "specHash": "e273f3e90de0fb2b82d43a283b79e539aadc442af53a4f321ff848feff75f4ff",
+    "approvedAt": "2026-11-22T04:50:06.181Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Ticket Resolver or Project Manager opens , THE web app SHALL show 6.2 Ticket List",
@@ -818,6 +820,7 @@
       "AC-005.7": "WHILE a  ticket has no  row, THE catch-up job SHALL embed it, at most",
       "AC-005.8": "IF an id of the event names no ticket, or a ticket that is no longer , THEN THE backend SHALL",
       "AC-005.9": "IF the embedding of a ticket id fails 3 times in a row, THEN THE catch-up job SHALL skip that id until the",
+      "AC-005.10": "WHILE a  ticket's  row has  1, THE catch-up job SHALL embed",
       "AC-006.1": "WHEN a user holding TICKET_RESOLVER or PROJECT_MANAGER calls , THE backend SHALL",
       "AC-006.2": "THE backend SHALL take the user's Departments, managed Projects and writer id only from the port",
       "AC-006.3": "WHEN no page, size or sort is given, THE backend SHALL return page 0 of 20 rows sorted by",
