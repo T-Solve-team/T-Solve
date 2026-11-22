@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router';
 import { formatDateTime } from '@/shared/lib';
 import { paths } from '@/shared/routing';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/ui';
+import { documentTypeLabels } from '../documentTypes';
 import { useWikiDocument, wikiDocumentFileUrl } from '../hooks/useWikiDocument';
 import styles from '../pages/WikiHomePage.module.css';
 
@@ -37,6 +38,8 @@ export function WikiPreview({ documentId, isListPending }: WikiPreviewProps) {
         </Typography.Text>
       </Flex>
       <dl className={styles.details}>
+        <dt>Type</dt>
+        <dd>{documentTypeLabels[data.documentType]}</dd>
         <dt>Space</dt>
         <dd>{data.spaceName}</dd>
         <dt>Folder</dt>
