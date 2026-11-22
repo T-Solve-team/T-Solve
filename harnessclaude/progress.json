@@ -540,14 +540,16 @@
         "solution-draft": "passing",
         "solution-rewrite": "passing",
         "solution-review-fixes": "passing",
-        "chat-no-thinking": "pending"
+        "chat-no-thinking": "evaluating"
       },
-      "lastUpdated": "2026-11-22T03:20:14.548Z",
+      "lastUpdated": "2026-11-22T03:38:54.908Z",
       "branch": "feat/ai",
       "repos": [
         "default"
       ],
-      "lastCommit": {}
+      "lastCommit": {
+        "default": "8289a6b3bfec66867e813400f81590c07319cebc"
+      }
     },
     "tracker": {
       "status": "implementing",
