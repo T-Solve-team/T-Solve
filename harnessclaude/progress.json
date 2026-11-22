@@ -380,9 +380,11 @@
         "combined-answer-prompt": "in-progress",
         "open-solution-citations": "pending",
         "conversation-title-api": "pending",
-        "conversation-title-ui": "pending"
+        "conversation-title-ui": "pending",
+        "clear-box-on-send": "pending",
+        "focus-layout": "pending"
       },
-      "lastUpdated": "2026-11-22T05:20:48.520Z",
+      "lastUpdated": "2026-11-22T09:07:14.736Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
