@@ -12,10 +12,15 @@ Covers UC-38 to UC-50, Wiki Space and Wiki Document Management (Jira epic KAN-91
 
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
+| 2026-11-17 | STORY-006 | **Several Knowledge Managers per Space (KAN-362).** A Space has one to three Knowledge Managers (identity AC-005.13, AC-007.14). Requirement 4: "the Space's Knowledge Manager" means any of them, so every Knowledge Manager of the Space manages it. AC-006.11 reworded: the Space header lists all Active Knowledge Managers. Interface: `WikiSpaceSettings.knowledgeManager` (one nullable name) becomes `knowledgeManagers` (a list of names). No criterion added or removed | User (Dương), 2026-11-17: several Knowledge Managers per Space; Space Settings shows them as a list |
 | 2026-11-13 | STORY-001 to STORY-006 | Initial spec: UC-38 to UC-50 | KAN-91 |
 | 2026-11-13 | STORY-002 to STORY-004 | Builder check: AC-002.13 leaves the trash read to AC-005.4; `q` limits as received (AC-002.7, AC-002.9); AC-003.7 covers an unknown `folderId`; AC-004.10 names its code; AC-004.12 in the same transaction | Inline builder check |
 | 2026-11-14 | STORY-005 | AC-005.2 excepts the Knowledge Manager's read of AC-005.4; new AC-005.17: a restore that loses its title to a concurrent request answers 409 MSG84; pull request numbers replaced by Jira keys | Review of #223 (findings 1, 4, 8) |
 | 2026-11-14 | STORY-001 | AC-001.1: the Space's own Department grants View to every user whose Departments (AC-001.2) include it, so a Ticket Resolver in a Project of that Department views the Space; matches Functional 2 and identity AC-011.5 | Task 1 review (KAN-170), user decision |
+| 2026-11-15 | STORY-002, STORY-005 | AC-002.11 and AC-005.4 add `inTrash` to `WikiDocumentDetail`; new AC-005.18: a trashed document on 11.2 shows the "In trash" tag and no Download (its file answers 404 by AC-002.13) or Delete | PR #255 review, finding 1 (user decision: StatusTag preset IN_TRASH) |
+| 2026-11-17 | STORY-001 | New AC-001.12 (KAN-294): `WikiSources.nearestInProjectDepartment`, the Wiki passages the members of a Department may read, for the Jira App's Ask T-Solve page that has no T-Solve user | chatbot STORY-012, jira-app STORY-010 change (user, 17/11) |
+| 2026-11-17 | STORY-001 | AC-001.12 reworded: `WikiSources.nearestCompanyWide` returns Company-wide documents only, not the Department's own | KAN-294 risk review (user, 17/11): the MSG80 rule for a page without a T-Solve user |
+| 2026-11-18 | STORY-002 | **11.1 Wiki Home as a three-pane explorer (KAN-372).** AC-002.14 to AC-002.17 reworded: a navigator ("Company-wide", the Spaces, the selected Space's folder tree), a list pane (search box on top, document rows) and a preview pane; selecting in the navigator drops the search. New AC-002.22 (Company-wide entry), AC-002.23 (search results in the list pane, "Clear search"), AC-002.24 (preview of the selected document, `?doc=`), AC-002.25 (preview of a document no longer available). No backend change | User (Hải Anh), 2026-11-18: 11.1 must match the approved preview `wiki-variant-b.html`; preview fetches the document detail; a navigator selection clears the search |
 
 ## Requirements
 
@@ -23,7 +28,7 @@ Covers UC-38 to UC-50, Wiki Space and Wiki Document Management (Jira epic KAN-91
 1. Every Department has exactly one Space (workspace, GBR-29). Wiki adds folders (at most three levels), Wiki documents, their trash and the View permissions of the Space.
 2. A user can view a Space when they are its Knowledge Manager, when one of their Departments has View on it, or when they have their own View permission on it (GBR-30). The Space's own Department always has View; it is shown, not stored, and cannot be removed.
 3. A user can view a Wiki document when it is Published and either Company-wide or in a Space the user can view (GBR-31). The Spaces and documents of a Hidden Space or a Deleted Department are not shown to anyone (GBR-17).
-4. Only the Knowledge Manager of a Space manages its folders, documents, trash and permissions (GBR-32).
+4. Only a Knowledge Manager of a Space manages its folders, documents, trash and permissions (GBR-32). A Space has one to three Knowledge Managers (identity, KAN-362); "the Space's Knowledge Manager" in this spec means any of them.
 5. Uploaded PDF and DOCX files are stored as the original file plus their extracted text. A document is Published at once and indexed in the background for meaning-based retrieval (GBR-12).
 6. Wiki provides the Wiki sources of the Knowledge Chatbot (all documents the user can view) and of AI Solution Suggestion (Company-wide documents only, GBR-35), and answers whether a cited document is still available (MSG110).
 7. Every change to a folder, document or permission is recorded in the audit log.
@@ -60,6 +65,7 @@ These are known limits of the code this module builds on. They are not defects o
   - AC-001.9: WHEN identity calls `ManagedSpaceLookup.findManagedSpaces(userId)`, THE system SHALL return the Active Spaces of Active Departments that the user manages, only when the user has the role `KNOWLEDGE_MANAGER`, sorted by name.
   - AC-001.10: WHEN identity calls `ViewableSpaceLookup.findViewableSpaces(userId)`, THE system SHALL return every Space the user can view by AC-001.1, sorted by name.
   - AC-001.11: WHILE a document is not yet indexed, or its indexing failed, THE system SHALL leave it out of AC-001.5 and AC-001.7 and keep it in every list and keyword search.
+  - AC-001.12: WHEN the Knowledge Chatbot calls `WikiSources.nearestCompanyWide(vector, minSimilarity, limit)` for a question asked in Jira (chatbot STORY-012), THE system SHALL return, as AC-001.7 does, only the best passage of each Published Company-wide document of an Active Space of an Active Department.
 
 ### STORY-002: Browse, search and read Wiki documents
 - As an Employee, I want to browse the Spaces I can view, the Company-wide documents of every Department and a search box so that I find and read the right document.
@@ -74,17 +80,21 @@ These are known limits of the code this module builds on. They are not defects o
   - AC-002.8: IF the AI module cannot embed the query, THEN THE system SHALL answer AC-002.7 from the keyword match alone.
   - AC-002.9: IF `q` is missing or blank, THEN THE system SHALL answer 400 with code MSG01 on field `q`; IF `q` is not blank and longer than 200 characters as received, THEN THE system SHALL answer 400 with code MSG02 and `max_length` 200 on field `q`.
   - AC-002.10: WHEN a list of AC-002.2, AC-002.4 or AC-002.7 returns a document, THE item SHALL hold `documentId`, `title`, `spaceId`, `spaceName`, `folderId`, `folderName` (null at the top level), `visibility` (`DEPARTMENT` or `COMPANY_WIDE`), `owner` (full name) and `updatedAt`.
-  - AC-002.11: WHEN a user who can view a document calls `GET /api/v1/wiki/documents/{documentId}`, THE system SHALL answer 200 with the fields of AC-002.10 plus `content` (the extracted text), `fileName`, `fileSize` and `canDelete` (true only for the Space's Knowledge Manager).
+  - AC-002.11: WHEN a user who can view a document calls `GET /api/v1/wiki/documents/{documentId}`, THE system SHALL answer 200 with the fields of AC-002.10 plus `content` (the extracted text), `fileName`, `fileSize`, `canDelete` (true only for the Space's Knowledge Manager) and `inTrash` false.
   - AC-002.12: WHEN a user who can view a document calls `GET /api/v1/wiki/documents/{documentId}/file`, THE system SHALL answer 200 with the original file, its content type and `Content-Disposition: attachment` with the original file name.
   - AC-002.13: IF a document does not exist, was deleted permanently, or the user cannot view it, or it is in the trash and the caller is not the Space's Knowledge Manager calling AC-002.11 (AC-005.4), THEN THE endpoints of AC-002.11 and AC-002.12 SHALL answer 404 with code MSG110.
-  - AC-002.14: WHEN the user opens 11.1 Wiki Home, THE web app SHALL show the Company-wide view first, grouped by Space name, then the list of viewable Spaces with their access level, a search box, and, for the selected Space, its folder tree and the documents table with the columns Title, Folder, Visibility, Owner and Updated.
-  - AC-002.15: WHERE the user can view no Space, THE web app SHALL show only the Company-wide view and the search box.
-  - AC-002.16: WHERE a documents table, the Company-wide view or the search result is empty, THE web app SHALL show MSG04 in its place.
-  - AC-002.17: WHEN the user selects a Space or a folder, THE web app SHALL keep them in the URL as `?space=` and `?folder=` and show the documents of that folder.
+  - AC-002.14: WHEN the user opens 11.1 Wiki Home, THE web app SHALL show three panes side by side: a navigator with the entry "Company-wide", then the viewable Spaces with their access level and, under the selected Space, its folder tree; a list pane with the search box on top and the documents of the selected entry, each row with its Title, Folder (or Space name when the row is not in the selected Space), Owner, Visibility and Updated; and a preview pane.
+  - AC-002.15: WHERE the user can view no Space, THE web app SHALL show only the "Company-wide" entry in the navigator, the search box, the Company-wide documents and the preview pane.
+  - AC-002.16: WHERE the document list of the selected entry or the search result is empty, THE web app SHALL show MSG04 in its place, and MSG04 in the preview pane.
+  - AC-002.17: WHEN the user selects a Space or a folder in the navigator, THE web app SHALL keep them in the URL as `?space=` and `?folder=`, remove `?q=` and `?doc=`, and show the documents of that folder.
   - AC-002.18: IF the search box holds more than 200 characters, THEN THE web app SHALL show MSG02 below it and send no request.
   - AC-002.19: WHEN the user opens a document, THE web app SHALL show 11.2 Wiki Document with its header (title, Space, folder, visibility, Owner, last update), its content as plain text and a Download button.
   - AC-002.20: IF the document answers 404 MSG110, THEN THE web app SHALL show "This document is no longer available." in place of the document.
   - AC-002.21: WHERE the user is the Knowledge Manager of the selected Space, THE web app SHALL show the buttons "Upload documents", "New folder" and "Space Settings" on 11.1, and folder actions Rename, Move and Delete; for any other user it SHALL show none of them.
+  - AC-002.22: WHILE the URL names no Space the user can view, THE web app SHALL mark "Company-wide" as the current navigator entry and list every Company-wide document of AC-002.2, in its order (Space name, then title), with the Space name on each row.
+  - AC-002.23: WHEN the user submits a search, THE web app SHALL keep it in the URL as `?q=`, show "Search results for “<q>”" and the results of AC-002.7 in the list pane in place of the selected entry's documents, and a "Clear search" link that removes `?q=`.
+  - AC-002.24: WHEN the user selects a document row, THE web app SHALL keep it in the URL as `?doc=` and show in the preview pane the document of AC-002.11: its title, visibility, Space, Folder, Owner, Updated, File, Size, the first 420 characters of its content, an "Open" button to 11.2 and a Download button; WHILE `?doc=` names no row of the list, the first row SHALL be previewed.
+  - AC-002.25: IF the previewed document answers 404 MSG110, THEN THE web app SHALL show "This document is no longer available." in the preview pane.
 
 ### STORY-003: Manage the folders of a Space
 - As a Knowledge Manager, I want to create, rename, move and delete folders of my Space so that documents are grouped clearly.
@@ -140,7 +150,7 @@ These are known limits of the code this module builds on. They are not defects o
   - AC-005.1: WHEN the Space's Knowledge Manager calls `DELETE /api/v1/wiki/documents/{documentId}` for a Published document, THE system SHALL set its status `DELETED` with `deletedBy` the caller and `deletedAt` now, and answer 204.
   - AC-005.2: WHEN a document is in the trash, THE system SHALL leave it out of every endpoint of STORY-002, except the Knowledge Manager's read of AC-005.4, and every port of STORY-001 from that request on.
   - AC-005.3: WHEN the Space's Knowledge Manager calls `GET /api/v1/wiki/spaces/{spaceId}/trash`, THE system SHALL answer 200 with the documents in its trash, newest `deletedAt` first, each with `documentId`, `title`, `folderName`, `owner`, `deletedBy` (full name) and `deletedAt`.
-  - AC-005.4: WHEN the Space's Knowledge Manager calls `GET /api/v1/wiki/documents/{documentId}` for a document in the trash of their Space, THE system SHALL answer 200 with the document read-only and `canDelete` false.
+  - AC-005.4: WHEN the Space's Knowledge Manager calls `GET /api/v1/wiki/documents/{documentId}` for a document in the trash of their Space, THE system SHALL answer 200 with the document read-only, `canDelete` false and `inTrash` true.
   - AC-005.5: WHEN the Space's Knowledge Manager calls `POST /api/v1/wiki/documents/{documentId}/restore` for a document in the trash, THE system SHALL set it Published in its folder, clear `deletedBy` and `deletedAt`, and answer 200 with `title` and `renamed`.
   - AC-005.6: IF the restored title is already used, ignoring letter case, by a Published document of the folder, THEN THE system SHALL append " (restored)", or " (restored 2)", " (restored 3)" and so on until the title is free, shorten the original title so that the result has at most 200 characters, and answer `renamed` true.
   - AC-005.7: WHEN a restored document has `indexStatus` other than `INDEXED`, THE system SHALL enqueue its indexing job (AC-004.13); an indexed document SHALL be found again by meaning at once.
@@ -149,6 +159,7 @@ These are known limits of the code this module builds on. They are not defects o
   - AC-005.10: IF anyone other than the Space's Knowledge Manager calls an endpoint of this story, THEN THE system SHALL answer 403 with code MSG08 for a document they can view, otherwise 404 with code MSG110, and change nothing.
   - AC-005.11: WHEN a document is moved to the trash, restored or permanently deleted, THE system SHALL write one audit entry in the same transaction with target type `WIKI_DOCUMENT`, target id the document id, action `DELETE` with `operation` `TRASH` or `PERMANENT`, or action `PUBLISH` with `operation` `RESTORE`, and details `title` and `spaceId`.
   - AC-005.12: IF deleting the original file from storage fails after a permanent delete, THEN THE system SHALL keep the delete, log the file key at WARN and answer 204.
+  - AC-005.18: WHERE the document on 11.2 has `inTrash` true, THE web app SHALL show the status tag "In trash" next to the title and SHALL show neither Download nor Delete.
   - AC-005.17: IF the free title chosen by AC-005.6 is taken by another request (an upload or a restore) before the restore commits, THEN THE system SHALL answer 409 with code MSG84 and leave the document in the trash.
   - AC-005.13: WHEN the Knowledge Manager clicks Delete on 11.2, THE web app SHALL ask MSG100 with the title; on confirm it SHALL show MSG101 and return to 11.1.
   - AC-005.14: WHEN the Knowledge Manager opens the Trash tab of 11.5, THE web app SHALL show the trash table (Title, Folder, Owner, Deleted by, Deleted on) with Restore and "Delete permanently" on each row, or MSG04 when it is empty.
@@ -168,7 +179,7 @@ These are known limits of the code this module builds on. They are not defects o
   - AC-006.8: IF anyone other than the Space's Knowledge Manager calls an endpoint of this story, THEN THE system SHALL answer 403 with code MSG08 and change nothing.
   - AC-006.9: WHEN a permission is granted or revoked, THE system SHALL write one audit entry per permission in the same transaction with action `PERMISSION_CHANGE`, target type `WIKI_SPACE`, target id the Space id, and details `operation` (`GRANT` or `REVOKE`), `granteeType` (`DEPARTMENT` or `USER`) and `granteeId`.
   - AC-006.10: WHEN a permission is granted or revoked, THE view rule of AC-001.1 SHALL reflect it from the next request on.
-  - AC-006.11: WHEN the Knowledge Manager opens 11.5 Space Settings, THE web app SHALL show the Space header and the Permissions tab with a Departments table (Department, Granted by, Date, Remove) whose first row is the own Department without Remove and with the MSG107 tooltip, and a Users table (Full name, Email, Home Department, Granted by, Date, Remove) with deactivated users greyed out, or MSG04 when it has no row.
+  - AC-006.11: WHEN the Knowledge Manager opens 11.5 Space Settings, THE web app SHALL show the Space header (name, Department, and the full names of the Space's Active Knowledge Managers in name order, separated by commas, or "—" when it has none) and the Permissions tab with a Departments table (Department, Granted by, Date, Remove) whose first row is the own Department without Remove and with the MSG107 tooltip, and a Users table (Full name, Email, Home Department, Granted by, Date, Remove) with deactivated users greyed out, or MSG04 when it has no row.
   - AC-006.12: WHEN the Knowledge Manager clicks "Grant access", THE web app SHALL show a selector of the candidates of AC-006.2, or MSG04 when there is none, and after Save show MSG05 and refresh the tables.
   - AC-006.13: WHEN the Knowledge Manager clicks Remove, THE web app SHALL ask MSG106 with the grantee and Space name; on confirm it SHALL show MSG05 and refresh the tables.
   - AC-006.14: IF a user who is not the Knowledge Manager of the Space opens 11.5, THEN THE web app SHALL show the no-permission page with MSG08.
@@ -218,13 +229,13 @@ Schemas:
 | `WikiSpace` | `spaceId`, `name`, `departmentName`, `accessLevel` (`VIEW`, `KNOWLEDGE_MANAGER`) |
 | `WikiFolder` | `folderId`, `parentId` (nullable), `name`, `level` |
 | `WikiDocumentSummary` | `documentId`, `title`, `spaceId`, `spaceName`, `folderId` (nullable), `folderName` (nullable), `visibility` (`DEPARTMENT`, `COMPANY_WIDE`), `owner`, `updatedAt` |
-| `WikiDocumentDetail` | `WikiDocumentSummary` fields plus `content`, `fileName`, `fileSize`, `canDelete` |
+| `WikiDocumentDetail` | `WikiDocumentSummary` fields plus `content`, `fileName`, `fileSize`, `canDelete`, `inTrash` |
 | `WikiUploadPreview` | `fileName`, `title`, `excerpt`, `wordCount`, `result` (`READY`, `UNREADABLE`) |
 | `WikiPublishMetadata` (multipart part `metadata`, JSON) | `folderId` (nullable), `documents`: array of `{ title, visibility }` in file order |
 | `WikiDocumentRef` | `documentId`, `title` |
 | `WikiTrashItem` | `documentId`, `title`, `folderName` (nullable), `owner`, `deletedBy`, `deletedAt` |
 | `WikiRestoreResult` | `title`, `renamed` |
-| `WikiSpaceSettings` | `spaceId`, `name`, `departmentName`, `knowledgeManager` (nullable), `ownDepartment` `{ departmentId, name, locked: true }`, `departments`: `{ permissionId, departmentId, name, grantedBy, grantedAt }[]`, `users`: `{ permissionId, userId, fullName, email, homeDepartment, active, grantedBy, grantedAt }[]` |
+| `WikiSpaceSettings` | `spaceId`, `name`, `departmentName`, `knowledgeManagers` (full names of the Space's Active Knowledge Managers, ordered by name ignoring case; empty when none), `ownDepartment` `{ departmentId, name, locked: true }`, `departments`: `{ permissionId, departmentId, name, grantedBy, grantedAt }[]`, `users`: `{ permissionId, userId, fullName, email, homeDepartment, active, grantedBy, grantedAt }[]` |
 | `WikiPermissionCandidates` | `departments`: `{ departmentId, name }[]`, `users`: `{ userId, fullName, email, homeDepartment }[]` |
 | `GrantWikiPermissionsRequest` | `departmentIds`, `userIds` |
 | `CreateWikiFolderRequest` | `name`, `parentId` (nullable) |

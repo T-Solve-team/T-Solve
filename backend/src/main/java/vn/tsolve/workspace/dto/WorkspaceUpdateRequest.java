@@ -6,24 +6,13 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.media.SchemaProperties;
 import io.swagger.v3.oas.annotations.media.SchemaProperty;
 
-/** Keeps JSON field types for ordered service validation; never prints the request's token. */
+/** Keeps JSON field types for ordered service validation; never prints the request. */
 @Schema(
         name = "WorkspaceUpdateRequest",
         type = "object",
-        requiredProperties = {"companyName", "serviceAccountEmail"})
+        requiredProperties = {"companyName"})
 @SchemaProperties({
-    @SchemaProperty(name = "companyName", schema = @Schema(type = "string", minLength = 1, maxLength = 100)),
-    @SchemaProperty(
-            name = "serviceAccountEmail",
-            schema = @Schema(type = "string", format = "email", minLength = 1, maxLength = 100)),
-    @SchemaProperty(
-            name = "serviceAccountToken",
-            schema =
-                    @Schema(
-                            type = "string",
-                            format = "password",
-                            accessMode = Schema.AccessMode.WRITE_ONLY,
-                            description = "Absent or blank keeps the stored token."))
+    @SchemaProperty(name = "companyName", schema = @Schema(type = "string", minLength = 1, maxLength = 100))
 })
 public record WorkspaceUpdateRequest(@Schema(hidden = true) JsonNode body) {
     public static WorkspaceUpdateRequest parse(String json, ObjectMapper mapper) {

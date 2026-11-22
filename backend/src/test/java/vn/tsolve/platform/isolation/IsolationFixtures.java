@@ -124,7 +124,7 @@ final class IsolationFixtures {
     }
 
     /**
-     * Search's production VisibleScope currently fails closed pending identity integration. Supply that seam only:
+     * Pins the isolation tests to their own VisibleScope instead of MembershipVisibleScope. Supply that seam only:
      * discover projects in the bound database, then validate membership through the real ScopeAccessService.
      */
     @TestConfiguration(proxyBeanMethods = false)

@@ -1,7 +1,8 @@
-import { Form, Typography } from 'antd';
+import { Alert, Form, Typography } from 'antd';
 import { useRef } from 'react';
 import type { WikiFolder } from '@/shared/api';
-import { ErrorState, FormModal } from '@/shared/ui';
+import { msg } from '@/shared/messages';
+import { FormModal } from '@/shared/ui';
 import { useWikiFolderMutations } from '../hooks/useWikiFolderMutations';
 
 type DeleteFolderModalProps = {
@@ -23,6 +24,8 @@ export function DeleteFolderModal({ spaceId, folder, onClose, onDeleted }: Delet
       form={form}
       okText="Delete"
       isOkDanger
+      // AC-003.16: MSG87 means the folder is not empty; Delete cannot succeed until the popup reopens.
+      isOkDisabled={remove.error?.code === 'MSG87'}
       isSubmitting={remove.isPending}
       onCancel={() => {
         if (!submitting.current) onClose();
@@ -45,7 +48,9 @@ export function DeleteFolderModal({ spaceId, folder, onClose, onDeleted }: Delet
       }}
     >
       <Typography.Text>{folder.name}</Typography.Text>
-      {remove.error && <ErrorState error={remove.error} />}
+      {remove.error && (
+        <Alert type="error" showIcon title={msg(remove.error.code, remove.error.params)} />
+      )}
     </FormModal>
   );
 }

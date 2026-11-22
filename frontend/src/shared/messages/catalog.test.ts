@@ -1,4 +1,5 @@
 import { MESSAGES, type MsgCode } from './catalog';
+import { msg } from './msg';
 import report3Raw from './report3-messages.json?raw';
 
 type Report3Message = { type: string; context: string; text: string };
@@ -63,8 +64,17 @@ describe('message catalog', () => {
     expect(Object.keys(report3)).toHaveLength(143);
   });
 
-  it.each(webMessages)('AC-006.1 holds %s with the exact Report3 text', (code, { text }) => {
-    expect(entry(code)?.text).toBe(text);
+  it.each(webMessages.filter(([code]) => code !== 'MSG117'))(
+    'AC-006.1 holds %s with the exact Report3 text',
+    (code, { text }) => {
+      expect(entry(code)?.text).toBe(text);
+    },
+  );
+
+  it('AC-006.1 holds MSG117 with the KAN-362 text instead of Report3', () => {
+    expect(entry('MSG117')?.text).toBe(
+      '{space_name} already has the maximum of 3 Knowledge Managers.',
+    );
   });
 
   it('AC-006.1 leaves out the Jira App messages, the Retired codes, the Platform Console codes and the codes of D2 and D3', () => {
@@ -168,13 +178,28 @@ describe('message catalog', () => {
     expect(entry('MSG143')).toEqual({ type: 'inline', text: 'Not a member of any Project.' });
   });
 
-  it('AC-006.7 holds no code other than the Report3 web codes, MSG_NEW_2, MSG_NEW_3, MSG_NEW_4, MSG142 and MSG143', () => {
+  it('AC-013.10 holds MSG157 as a field message with the Messages-file text (K121-D41)', () => {
+    expect(entry('MSG157')).toEqual({
+      type: 'field',
+      text: '{project_name} cannot receive Chatbot issues: it has no issue type Task or requires other fields. Choose another Project.',
+    });
+    expect(msg('MSG157', { project_name: 'SUP' })).toBe(
+      'SUP cannot receive Chatbot issues: it has no issue type Task or requires other fields. Choose another Project.',
+    );
+  });
+
+  it('AC-006.7 holds no code other than the Report3 web codes, MSG_NEW_2 to MSG_NEW_7, MSG142, MSG143 and MSG157', () => {
     const expected: string[] = [
       ...webMessages.map(([code]) => code),
       'MSG_NEW_2',
       'MSG_NEW_3',
       'MSG_NEW_4',
+      'MSG_NEW_5',
+      'MSG_NEW_6',
+      'MSG_NEW_7',
       ...NOT_IN_REPORT3,
+      // K121-D41: numbered in the Messages file, not yet in report3-messages.json.
+      'MSG157',
     ];
     expect(Object.keys(MESSAGES).sort()).toEqual(expected.sort());
     expectTypeOf<'MSG20'>().not.toMatchTypeOf<MsgCode>();

@@ -3,12 +3,12 @@ package vn.tsolve.jiraapp.service.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.util.Optional;
 import java.util.Set;
@@ -19,7 +19,6 @@ import vn.tsolve.common.security.JiraAppPrincipal;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.jiraapp.dto.IssuePanelResponse;
 import vn.tsolve.jiraapp.dto.JiraIssueContext;
-import vn.tsolve.jiraapp.dto.SolutionFormDraft;
 import vn.tsolve.jiraapp.dto.SolutionFormRequest;
 import vn.tsolve.jiraapp.dto.SolutionFormResponse;
 import vn.tsolve.jiraapp.dto.SolutionFormResponse.Origin;
@@ -52,7 +51,8 @@ class JiraAppSolutionServiceImplTest {
     private final SolutionFormTicketService tickets = mock(SolutionFormTicketService.class);
     private final SolutionDraftService drafts = mock(SolutionDraftService.class);
     private final SolutionFormAi ai = mock(SolutionFormAi.class);
-    private final JiraAppSolutionServiceImpl service = new JiraAppSolutionServiceImpl(access, tickets, drafts, ai);
+    private final JiraAppSolutionServiceImpl service =
+            new JiraAppSolutionServiceImpl(access, tickets, drafts, ai, mock(RedisAskJobStore.class));
 
     @Test
     void opensWithTheUsersDraftFirst_AC_005_2() {
@@ -62,33 +62,20 @@ class JiraAppSolutionServiceImplTest {
         SolutionFormResponse form = service.openForm(CALLER, ISSUE, ISSUE_TEXT);
 
         assertThat(form).isEqualTo(new SolutionFormResponse(true, Origin.DRAFT, SECTIONS, null));
-        verify(ai, never()).draft(anyString(), anyString());
+        verifyNoInteractions(ai);
     }
 
     @Test
-    void opensWithTheAiDraftWithoutADraft_AC_002_1() {
+    void opensWithTheIssueTextWithoutADraftAndCallsNoAi_AC_002_1() {
         givenContext(member());
         given(drafts.find(USER.id(), PROJECT, ISSUE)).willReturn(Optional.empty());
-        given(ai.draft("VPN drops", "After sleep")).willReturn(new SolutionFormDraft(SECTIONS, true));
 
         SolutionFormResponse form = service.openForm(CALLER, ISSUE, ISSUE_TEXT);
 
-        assertThat(form.origin()).isEqualTo(Origin.AI_DRAFT);
-        assertThat(form.message()).isNull();
-    }
-
-    @Test
-    void opensWithTheIssueTextAndMsg67WhenTheAiIsUnavailable_AC_002_2() {
-        givenContext(member());
-        given(drafts.find(USER.id(), PROJECT, ISSUE)).willReturn(Optional.empty());
-        SolutionSections issueText = new SolutionSections("VPN drops\n\nAfter sleep", "", "", "", "");
-        given(ai.draft("VPN drops", "After sleep")).willReturn(new SolutionFormDraft(issueText, false));
-
-        SolutionFormResponse form = service.openForm(CALLER, ISSUE, ISSUE_TEXT);
-
-        assertThat(form.origin()).isEqualTo(Origin.ISSUE);
-        assertThat(form.sections()).isEqualTo(issueText);
-        assertThat(form.message().code()).isEqualTo("MSG67");
+        assertThat(form)
+                .isEqualTo(new SolutionFormResponse(
+                        true, Origin.ISSUE, new SolutionSections("VPN drops\n\nAfter sleep", "", "", "", ""), null));
+        verifyNoInteractions(ai);
     }
 
     @Test
@@ -99,7 +86,7 @@ class JiraAppSolutionServiceImplTest {
         givenContext(member());
         given(tickets.findStatus(ISSUE)).willReturn(Optional.of(TicketStatus.PUBLISHED));
         assertThat(service.openForm(CALLER, ISSUE, ISSUE_TEXT).mayOpen()).isFalse();
-        verify(ai, never()).draft(anyString(), anyString());
+        verifyNoInteractions(ai);
     }
 
     @Test
@@ -171,10 +158,9 @@ class JiraAppSolutionServiceImplTest {
             Function<TSolveUser, Object> work = call.getArgument(1);
             return work.apply(USER);
         });
-        SolutionSections rewritten = new SolutionSections("Drops.", "Old.", "Update.", "", "Laptops.");
-        given(ai.rewrite(SECTIONS)).willReturn(rewritten);
 
-        assertThat(service.rewrite(CALLER, SECTIONS)).isEqualTo(rewritten);
+        assertThat(service.startRewrite(CALLER, SECTIONS).jobId()).isNotNull();
+        verify(ai).startRewrite(eq(SECTIONS), any());
     }
 
     @Test
@@ -186,7 +172,7 @@ class JiraAppSolutionServiceImplTest {
         SolutionFormResponse form = service.openForm(CALLER, ISSUE, RESUBMIT);
 
         assertThat(form).isEqualTo(new SolutionFormResponse(true, Origin.TICKET, SECTIONS, null));
-        verify(ai, never()).draft(anyString(), anyString());
+        verifyNoInteractions(ai);
     }
 
     @Test

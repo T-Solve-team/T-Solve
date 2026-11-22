@@ -3,6 +3,9 @@ package vn.tsolve.tracker.client;
 import java.util.List;
 import java.util.Optional;
 import vn.tsolve.tracker.dto.JiraAccount;
+import vn.tsolve.tracker.dto.TrackerCreateField;
+import vn.tsolve.tracker.dto.TrackerRole;
+import vn.tsolve.tracker.dto.TrackerRoleActors;
 import vn.tsolve.tracker.dto.TrackerStatus;
 
 /**
@@ -10,9 +13,6 @@ import vn.tsolve.tracker.dto.TrackerStatus;
  * may help) or {@code JiraRejectedException} (it will not); neither carries the tracker's body.
  */
 public interface TicketTrackerClient {
-
-    /** Checks that the account authenticates and has Browse projects, Create Issues and Modify Reporter. */
-    void checkServiceAccount(JiraAccount account);
 
     /** Adds a comment made of these paragraphs to the issue and returns the new comment's id. */
     String addComment(JiraAccount account, String issueKey, List<String> paragraphs);
@@ -28,4 +28,19 @@ public interface TicketTrackerClient {
 
     /** Returns statuses across the project's issue types in encounter order, including duplicates. */
     List<TrackerStatus> projectStatuses(JiraAccount account, String projectKey);
+
+    /** True when the account has every one of these project permissions in the project. */
+    boolean hasProjectPermissions(JiraAccount account, String projectKey, List<String> permissions);
+
+    /** The project's roles in the tracker's order (project-integration STORY-011). */
+    List<TrackerRole> projectRoles(JiraAccount account, String projectKey);
+
+    /** The user and group actors of one project role (project-integration STORY-011). */
+    TrackerRoleActors roleActors(JiraAccount account, String projectKey, long roleId);
+
+    /**
+     * The create-screen fields of the project's first non-sub-task issue type with this name (ignoring case), or
+     * empty when the project has no such type.
+     */
+    Optional<List<TrackerCreateField>> createFields(JiraAccount account, String projectKey, String issueTypeName);
 }

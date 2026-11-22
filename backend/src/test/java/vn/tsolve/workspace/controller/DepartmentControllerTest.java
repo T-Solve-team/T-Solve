@@ -1,6 +1,7 @@
 package vn.tsolve.workspace.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -11,10 +12,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -22,10 +27,12 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import vn.tsolve.common.exception.BusinessRuleException;
+import vn.tsolve.common.exception.FieldMessageCodeException;
 import vn.tsolve.common.exception.GlobalExceptionHandler;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.common.security.Role;
@@ -33,6 +40,8 @@ import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.common.security.WithTSolveUser;
 import vn.tsolve.identity.dto.DepartmentRefResponse;
 import vn.tsolve.workspace.dto.CreateDepartmentRequest;
+import vn.tsolve.workspace.dto.DepartmentDetailResponse;
+import vn.tsolve.workspace.dto.DepartmentProjectOptionResponse;
 import vn.tsolve.workspace.dto.UpdateDepartmentRequest;
 import vn.tsolve.workspace.service.DepartmentService;
 
@@ -155,11 +164,100 @@ class DepartmentControllerTest {
     @Test
     @WithTSolveUser(roles = Role.ADMIN)
     void readsDepartment_AC_003_1() throws Exception {
-        when(service.get(ID)).thenReturn(new DepartmentRefResponse(ID, "IT"));
+        when(service.get(ID)).thenReturn(detail("IT"));
         mvc.perform(get(PATH))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.departmentId").value(ID.toString()))
                 .andExpect(jsonPath("$.name").value("IT"));
+    }
+
+    private static final UUID OPS = UUID.fromString("00000000-0000-4000-8000-0000000000e1");
+    private static final UUID SUP = UUID.fromString("00000000-0000-4000-8000-0000000000e2");
+
+    private static DepartmentDetailResponse detail(String name) {
+        return new DepartmentDetailResponse(ID, name, null, List.of());
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.ADMIN)
+    void readsDefaultProjectAndProjects_AC_012_1() throws Exception {
+        var ops = new DepartmentProjectOptionResponse(OPS, "OPS");
+        when(service.get(ID))
+                .thenReturn(new DepartmentDetailResponse(
+                        ID, "IT", ops, List.of(ops, new DepartmentProjectOptionResponse(SUP, "SUP"))));
+        mvc.perform(get(PATH))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.defaultProject.projectId").value(OPS.toString()))
+                .andExpect(jsonPath("$.defaultProject.jiraProjectKey").value("OPS"))
+                .andExpect(jsonPath("$.projects[1].projectId").value(SUP.toString()))
+                .andExpect(jsonPath("$.projects[1].jiraProjectKey").value("SUP"));
+        when(service.get(ID)).thenReturn(detail("IT"));
+        mvc.perform(get(PATH))
+                .andExpect(jsonPath("$.defaultProject").isEmpty())
+                .andExpect(jsonPath("$.projects").isEmpty());
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.ADMIN)
+    void passesDefaultProjectIdToTheService_AC_012_4_AC_012_6() throws Exception {
+        when(service.update(any(), any())).thenReturn(detail("IT"));
+        mvc.perform(rename(PATH, "{\"name\":\"IT\",\"defaultProjectId\":\"" + OPS + "\"}"))
+                .andExpect(status().isOk());
+        verify(service).update(ID, new UpdateDepartmentRequest("IT", OPS));
+        mvc.perform(rename(PATH, "{\"name\":\"IT\",\"defaultProjectId\":null}")).andExpect(status().isOk());
+        mvc.perform(rename(PATH, "{\"name\":\"IT\"}")).andExpect(status().isOk());
+        verify(service, times(2)).update(ID, new UpdateDepartmentRequest("IT", null));
+    }
+
+    static Stream<Arguments> projectErrors() {
+        return Stream.of(
+                Arguments.of("MSG04", Map.of(), "$.params"),
+                Arguments.of("MSG156", Map.of("tracker_name", "Jira"), "$.params.tracker_name"),
+                Arguments.of("MSG157", Map.of("project_name", "OPS"), "$.params.project_name"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("projectErrors")
+    @WithTSolveUser(roles = Role.ADMIN)
+    void rendersProjectErrorsOnTheField_AC_012_5_AC_012_8_AC_012_9(
+            String code, Map<String, Object> params, String paramPath) throws Exception {
+        when(service.update(any(), any()))
+                .thenThrow(new FieldMessageCodeException(HttpStatus.BAD_REQUEST, code, params, "defaultProjectId"));
+        var result = mvc.perform(rename(PATH, "{\"name\":\"IT\",\"defaultProjectId\":\"" + OPS + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(code))
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("defaultProjectId"))
+                .andExpect(jsonPath("$.fieldErrors[0].code").value(code));
+        if (params.isEmpty()) {
+            result.andExpect(jsonPath("$.fieldErrors[0].params").isEmpty());
+        } else {
+            result.andExpect(
+                    jsonPath(paramPath).value(params.values().iterator().next()));
+        }
+    }
+
+    @Test
+    @WithTSolveUser
+    void nonAdminWithDefaultProjectNeverReachesTheService_AC_012_14() throws Exception {
+        mvc.perform(rename(PATH, "{\"name\":\"IT\",\"defaultProjectId\":\"" + OPS + "\"}"))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void anonymousWithDefaultProjectNeverReachesTheService_AC_012_14() throws Exception {
+        mvc.perform(rename(PATH, "{\"name\":\"IT\",\"defaultProjectId\":\"" + OPS + "\"}"))
+                .andExpect(status().isUnauthorized());
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    @WithTSolveUser(roles = Role.ADMIN)
+    void blankNameWithDefaultProjectNeverReachesTheService_AC_012_14() throws Exception {
+        mvc.perform(rename(PATH, "{\"name\":\" \",\"defaultProjectId\":\"" + OPS + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MSG01"));
+        verifyNoInteractions(service);
     }
 
     @ParameterizedTest
@@ -192,12 +290,12 @@ class DepartmentControllerTest {
     @WithTSolveUser(roles = Role.ADMIN)
     void renamesWithFiftyCharacterName_AC_003_3() throws Exception {
         String name = "a".repeat(50);
-        when(service.update(ID, new UpdateDepartmentRequest(name))).thenReturn(new DepartmentRefResponse(ID, name));
+        when(service.update(ID, new UpdateDepartmentRequest(name, null))).thenReturn(detail(name));
         mvc.perform(rename(PATH, "{\"name\":\"" + name + "\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.departmentId").value(ID.toString()))
                 .andExpect(jsonPath("$.name").value(name));
-        verify(service).update(ID, new UpdateDepartmentRequest(name));
+        verify(service).update(ID, new UpdateDepartmentRequest(name, null));
     }
 
     @ParameterizedTest

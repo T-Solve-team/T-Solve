@@ -199,7 +199,7 @@ export const MESSAGES = {
     type: 'confirm',
     text: 'Remove the Ticket Resolver role from {user_name}? They will be removed from {count} Project(s). Their tickets are kept.',
   },
-  MSG117: { type: 'field', text: '{space_name} already has a Knowledge Manager.' },
+  MSG117: { type: 'field', text: '{space_name} already has the maximum of 3 Knowledge Managers.' },
   MSG118: {
     type: 'inline',
     text: 'No other active Knowledge Manager is available. Add a Knowledge Manager first.',
@@ -272,6 +272,23 @@ export const MESSAGES = {
   MSG156: {
     type: 'field',
     text: 'The service account could not connect to {tracker_name} or lacks the required permissions.',
+  },
+  MSG_NEW_5: {
+    type: 'inline',
+    text: "Hi! Ask me about your team's Solutions or Wiki.",
+  },
+  MSG_NEW_6: {
+    type: 'inline',
+    text: "I can only answer questions about your team's knowledge.",
+  },
+  MSG_NEW_7: {
+    type: 'inline',
+    text: "I can't change how I work. Ask a question about your team's knowledge.",
+  },
+  // KAN-121 K121-D41: the Messages-file text; not yet in report3-messages.json.
+  MSG157: {
+    type: 'field',
+    text: '{project_name} cannot receive Chatbot issues: it has no issue type Task or requires other fields. Choose another Project.',
   },
   /** Provisional key (decision D3) until System_Messages numbers it: the intro of 1.3.3 Hand Over Responsibilities. */
   MSG_NEW_2: {

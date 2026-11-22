@@ -6,6 +6,12 @@ import {
   type WikiDocumentDetail,
   type WikiFolder,
   type WikiSpace,
+  type WikiPublishMetadata,
+  type WikiUploadPreview,
+  type WikiTrashItem,
+  type WikiSpaceSettings,
+  type WikiPermissionCandidates,
+  type GrantWikiPermissionsRequest,
 } from '@/shared/api';
 import {
   getGetWikiDocumentMockHandler,
@@ -17,6 +23,16 @@ import {
   getCreateWikiFolderMockHandler,
   getUpdateWikiFolderMockHandler,
   getDeleteWikiFolderMockHandler,
+  getExtractWikiUploadsMockHandler,
+  getPublishWikiDocumentsMockHandler,
+  getTrashWikiDocumentMockHandler,
+  getListWikiTrashMockHandler,
+  getRestoreWikiDocumentMockHandler,
+  getDeleteWikiDocumentPermanentlyMockHandler,
+  getGetWikiSpaceSettingsMockHandler,
+  getListWikiPermissionCandidatesMockHandler,
+  getGrantWikiPermissionsMockHandler,
+  getRevokeWikiPermissionMockHandler,
 } from '@/shared/api/generated/wiki/wiki.msw';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
 import { getDevUser } from '@/shared/auth';
@@ -36,7 +52,7 @@ const folders: WikiFolder[] = [
   { folderId: VPN, parentId: NETWORK, name: 'VPN', level: 3 },
 ];
 const folderState = new Map<string, WikiFolder[]>();
-const documents: WikiDocumentDetail[] = [
+const initialDocuments: WikiDocumentDetail[] = [
   {
     documentId: '00000000-0000-4000-8000-000000009001',
     title: 'VPN connection guide',
@@ -52,6 +68,7 @@ const documents: WikiDocumentDetail[] = [
     fileName: 'vpn-guide.pdf',
     fileSize: 24680,
     canDelete: false,
+    inTrash: false,
   },
   {
     documentId: '00000000-0000-4000-8000-000000009002',
@@ -67,6 +84,7 @@ const documents: WikiDocumentDetail[] = [
     fileName: 'employee-handbook.docx',
     fileSize: 18200,
     canDelete: false,
+    inTrash: false,
   },
   {
     documentId: '00000000-0000-4000-8000-000000009003',
@@ -83,8 +101,108 @@ const documents: WikiDocumentDetail[] = [
     fileName: 'support-procedures.pdf',
     fileSize: 12900,
     canDelete: false,
+    inTrash: false,
   },
 ];
+let documents = initialDocuments.map((document) => ({ ...document }));
+const trashState = new Map<string, Pick<WikiTrashItem, 'deletedBy' | 'deletedAt'>>();
+const permissionState = new Map<string, Pick<WikiSpaceSettings, 'departments' | 'users'>>();
+const permissionDepartments = [
+  { departmentId: '00000000-0000-4000-8000-0000000000d1', name: 'IT' },
+  { departmentId: '00000000-0000-4000-8000-0000000000d2', name: 'HR' },
+];
+const permissionUsers: WikiPermissionCandidates['users'] = [
+  {
+    userId: '00000000-0000-4000-8000-000000000002',
+    fullName: 'Trần Thị Lan',
+    email: 'lan.tran@company.example',
+    homeDepartment: null,
+  },
+];
+
+function publishedDocuments() {
+  return documents.filter((document) => !trashState.has(document.documentId));
+}
+
+async function documentManagerError(document: WikiDocumentDetail) {
+  const space = (await viewableSpaces()).find((space) => space.spaceId === document.spaceId);
+  if (space?.accessLevel === 'KNOWLEDGE_MANAGER') return null;
+  return !trashState.has(document.documentId) && (document.visibility === 'COMPANY_WIDE' || space)
+    ? problem(403, 'MSG08')
+    : problem(404, 'MSG110');
+}
+
+async function uploadFiles(request: Request): Promise<File[] | Response> {
+  const parts = (await request.clone().formData()).getAll('files');
+  if (!parts.length)
+    return problem(400, 'MSG01', {
+      fieldErrors: [{ field: 'files', code: 'MSG01', params: { field_name: 'Files' } }],
+    });
+  if (parts.length > 10) return problem(400, 'MSG88');
+  const files: File[] = [];
+  for (const part of parts) {
+    if (typeof part === 'string') return problem(400, 'MSG89', { params: { file_name: part } });
+    if (part.size > 10 * 1024 * 1024) return problem(413, 'MSG28');
+    const start = await part.slice(0, 5).text();
+    const isPdf = /\.pdf$/i.test(part.name) && start.startsWith('%PDF-');
+    const isDocx = /\.docx$/i.test(part.name) && start.startsWith('PK\u0003\u0004');
+    if (!isPdf && !isDocx) return problem(400, 'MSG89', { params: { file_name: part.name } });
+    files.push(part);
+  }
+  return files;
+}
+
+/** Mock mode uses a fixed excerpt; named scanned/encrypted fixtures exercise UNREADABLE without a browser PDF parser. */
+function uploadPreview(file: File): WikiUploadPreview {
+  const isUnreadable = /scanned|encrypted|unreadable/i.test(file.name);
+  const excerpt = isUnreadable ? '' : 'Connect to the company VPN before opening internal tools.';
+  return {
+    fileName: file.name,
+    title: file.name.replace(/\.(pdf|docx)$/i, '').slice(0, 200),
+    excerpt,
+    wordCount: isUnreadable ? 0 : excerpt.split(/\s+/).length,
+    result: isUnreadable ? 'UNREADABLE' : 'READY',
+  };
+}
+
+async function uploadMetadata(request: Request): Promise<WikiPublishMetadata | Response> {
+  const part = (await request.clone().formData()).get('metadata');
+  const missing = () =>
+    problem(400, 'MSG01', {
+      fieldErrors: [{ field: 'metadata', code: 'MSG01', params: { field_name: 'Metadata' } }],
+    });
+  if (!part) return missing();
+  let value: unknown;
+  try {
+    value = JSON.parse(typeof part === 'string' ? part : await part.text());
+  } catch {
+    return missing();
+  }
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    !('documents' in value) ||
+    !Array.isArray(value.documents)
+  )
+    return missing();
+  const rows: WikiPublishMetadata['documents'] = [];
+  const entries: unknown[] = value.documents;
+  for (const row of entries) {
+    if (
+      typeof row !== 'object' ||
+      row === null ||
+      !('title' in row) ||
+      typeof row.title !== 'string' ||
+      !('visibility' in row) ||
+      (row.visibility !== 'DEPARTMENT' && row.visibility !== 'COMPANY_WIDE')
+    )
+      return missing();
+    rows.push({ title: row.title, visibility: row.visibility });
+  }
+  const folderId = 'folderId' in value ? value.folderId : null;
+  if (folderId !== null && typeof folderId !== 'string') return missing();
+  return { folderId, documents: rows };
+}
 
 /** The same /me projection used by the guards, including role and manager changes in mock mode. */
 async function viewableSpaces(): Promise<WikiSpace[]> {
@@ -96,7 +214,13 @@ async function viewableSpaces(): Promise<WikiSpace[]> {
     const isDepartment = me.departments.some(
       (department) => department.name === space.departmentName,
     );
-    return isManager || isDepartment
+    const permissions = permissionState.get(space.spaceId);
+    const hasPermission =
+      permissions?.users.some((user) => user.active && user.userId === me.user.id) ||
+      permissions?.departments.some((grant) =>
+        me.departments.some((department) => department.departmentId === grant.departmentId),
+      );
+    return isManager || isDepartment || hasPermission
       ? [{ ...space, accessLevel: isManager ? 'KNOWLEDGE_MANAGER' : 'VIEW' }]
       : [];
   });
@@ -190,13 +314,133 @@ export const handlers: HttpHandler[] = [
   http.all('*/api/v1/wiki/*', () => {
     if (!getDevUser()) return problem(401, 'MSG07');
   }),
+  http.get('*/api/v1/wiki/spaces/:spaceId/settings', async ({ params, request }) => {
+    await delay(MOCK_DELAY_MS);
+    const spaceId = String(params.spaceId);
+    const error = await managerError(spaceId);
+    if (error) return error;
+    const space = spaces.find((item) => item.spaceId === spaceId);
+    const ownDepartment = permissionDepartments.find(
+      (department) => department.name === space?.departmentName,
+    );
+    if (!space || !ownDepartment) return problem(404, 'MSG04');
+    const me = await getMe();
+    return getResponse(
+      [
+        getGetWikiSpaceSettingsMockHandler({
+          ...space,
+          knowledgeManagers: [me.user.fullName],
+          ownDepartment: { ...ownDepartment, locked: true },
+          departments: [...(permissionState.get(spaceId)?.departments ?? [])].sort((a, b) =>
+            a.name.localeCompare(b.name),
+          ),
+          users: [...(permissionState.get(spaceId)?.users ?? [])].sort((a, b) =>
+            a.fullName.localeCompare(b.fullName),
+          ),
+        }),
+      ],
+      request,
+    );
+  }),
+  http.get('*/api/v1/wiki/spaces/:spaceId/permission-candidates', async ({ params, request }) => {
+    await delay(MOCK_DELAY_MS);
+    const spaceId = String(params.spaceId);
+    const error = await managerError(spaceId);
+    if (error) return error;
+    const space = spaces.find((item) => item.spaceId === spaceId);
+    const permissions = permissionState.get(spaceId);
+    return getResponse(
+      [
+        getListWikiPermissionCandidatesMockHandler({
+          departments: permissionDepartments.filter(
+            (department) =>
+              department.name !== space?.departmentName &&
+              !permissions?.departments.some(
+                (grant) => grant.departmentId === department.departmentId,
+              ),
+          ),
+          users: permissionUsers.filter(
+            (user) => !permissions?.users.some((grant) => grant.userId === user.userId),
+          ),
+        }),
+      ],
+      request,
+    );
+  }),
+  http.post<{ spaceId: string }, GrantWikiPermissionsRequest>(
+    '*/api/v1/wiki/spaces/:spaceId/permissions',
+    async ({ params, request }) => {
+      await delay(MOCK_DELAY_MS);
+      const error = await managerError(params.spaceId);
+      if (error) return error;
+      const data = await request.json();
+      if (!data.departmentIds.length && !data.userIds.length)
+        return problem(400, 'MSG01', {
+          fieldErrors: [{ field: 'grantees', code: 'MSG01', params: { field_name: 'Grantees' } }],
+        });
+      const space = spaces.find((item) => item.spaceId === params.spaceId);
+      if (
+        data.departmentIds.some(
+          (id) =>
+            !permissionDepartments.some(
+              (department) =>
+                department.departmentId === id && department.name !== space?.departmentName,
+            ),
+        ) ||
+        data.userIds.some((id) => !permissionUsers.some((user) => user.userId === id))
+      )
+        return problem(404, 'MSG04');
+      const permissions = permissionState.get(params.spaceId) ?? { departments: [], users: [] };
+      const me = await getMe();
+      const granted = () => ({
+        permissionId: crypto.randomUUID(),
+        grantedBy: me.user.fullName,
+        grantedAt: new Date().toISOString(),
+      });
+      for (const department of permissionDepartments) {
+        if (
+          data.departmentIds.includes(department.departmentId) &&
+          !permissions.departments.some((item) => item.departmentId === department.departmentId)
+        )
+          permissions.departments.push({ ...department, ...granted() });
+      }
+      for (const user of permissionUsers) {
+        if (
+          data.userIds.includes(user.userId) &&
+          !permissions.users.some((item) => item.userId === user.userId)
+        )
+          permissions.users.push({ ...user, active: true, ...granted() });
+      }
+      permissionState.set(params.spaceId, permissions);
+      return getResponse([getGrantWikiPermissionsMockHandler()], request);
+    },
+  ),
+  http.delete('*/api/v1/wiki/permissions/:permissionId', async ({ params, request }) => {
+    await delay(MOCK_DELAY_MS);
+    const found = [...permissionState].find(([, permissions]) =>
+      [...permissions.departments, ...permissions.users].some(
+        (permission) => permission.permissionId === params.permissionId,
+      ),
+    );
+    if (!found) return problem(404, 'MSG04');
+    const [spaceId, permissions] = found;
+    const error = await managerError(spaceId);
+    if (error) return error;
+    permissions.departments = permissions.departments.filter(
+      (permission) => permission.permissionId !== params.permissionId,
+    );
+    permissions.users = permissions.users.filter(
+      (permission) => permission.permissionId !== params.permissionId,
+    );
+    return getResponse([getRevokeWikiPermissionMockHandler()], request);
+  }),
   getListWikiSpacesMockHandler(async () => {
     await delay(MOCK_DELAY_MS);
     return viewableSpaces();
   }),
   getListCompanyWideDocumentsMockHandler(async () => {
     await delay(MOCK_DELAY_MS);
-    return documents
+    return publishedDocuments()
       .filter((document) => document.visibility === 'COMPANY_WIDE')
       .sort((a, b) => a.spaceName.localeCompare(b.spaceName) || a.title.localeCompare(b.title));
   }),
@@ -264,9 +508,96 @@ export const handlers: HttpHandler[] = [
     return getResponse(
       [
         getListWikiDocumentsMockHandler(
-          documents.filter(
+          publishedDocuments().filter(
             (document) => document.spaceId === spaceId && document.folderId === folderId,
           ),
+        ),
+      ],
+      request,
+    );
+  }),
+  http.post('*/api/v1/wiki/spaces/:spaceId/uploads/extract', async ({ params, request }) => {
+    await delay(MOCK_DELAY_MS);
+    const error = await managerError(String(params.spaceId));
+    if (error) return error;
+    const files = await uploadFiles(request);
+    if (files instanceof Response) return files;
+    return getResponse([getExtractWikiUploadsMockHandler(files.map(uploadPreview))], request);
+  }),
+  http.post('*/api/v1/wiki/spaces/:spaceId/documents', async ({ params, request }) => {
+    await delay(MOCK_DELAY_MS);
+    const spaceId = String(params.spaceId);
+    const error = await managerError(spaceId);
+    if (error) return error;
+    const files = await uploadFiles(request);
+    if (files instanceof Response) return files;
+    const metadata = await uploadMetadata(request);
+    if (metadata instanceof Response) return metadata;
+    if (metadata.documents.length !== files.length)
+      return problem(400, 'MSG01', {
+        fieldErrors: [{ field: 'metadata', code: 'MSG01', params: { field_name: 'Metadata' } }],
+      });
+    const folderId = metadata.folderId ?? null;
+    const folder = folderState.get(spaceId)?.find((item) => item.folderId === folderId);
+    if (folderId && !folder) return problem(404, 'MSG04');
+    const titles = new Set(
+      publishedDocuments()
+        .filter((document) => document.spaceId === spaceId && document.folderId === folderId)
+        .map((document) => document.title.toLowerCase()),
+    );
+    for (const [index, row] of metadata.documents.entries()) {
+      const title = row.title.trim();
+      const code = !title
+        ? 'MSG01'
+        : title.length > 200
+          ? 'MSG02'
+          : titles.has(title.toLowerCase())
+            ? 'MSG84'
+            : null;
+      if (code)
+        return problem(code === 'MSG84' ? 409 : 400, code, {
+          fieldErrors: [
+            {
+              field: `documents[${index}].title`,
+              code,
+              params: { field_name: 'Title', max_length: 200 },
+            },
+          ],
+        });
+      titles.add(title.toLowerCase());
+    }
+    const previews = files.map(uploadPreview);
+    const unreadable = previews.find((preview) => preview.result === 'UNREADABLE');
+    if (unreadable) return problem(400, 'MSG90', { params: { file_name: unreadable.fileName } });
+    const me = await getMe();
+    const created = files.flatMap((file, index): WikiDocumentDetail[] => {
+      const row = metadata.documents[index];
+      const preview = previews[index];
+      if (!row || !preview) return [];
+      return [
+        {
+          documentId: crypto.randomUUID(),
+          title: row.title.trim(),
+          visibility: row.visibility,
+          spaceId,
+          spaceName: spaces.find((space) => space.spaceId === spaceId)?.name ?? '',
+          folderId,
+          folderName: folder?.name ?? null,
+          owner: me.user.fullName,
+          updatedAt: new Date().toISOString(),
+          content: preview.excerpt,
+          fileName: file.name,
+          fileSize: file.size,
+          canDelete: true,
+          inTrash: false,
+        },
+      ];
+    });
+    documents.push(...created);
+    return getResponse(
+      [
+        getPublishWikiDocumentsMockHandler(
+          created.map(({ documentId, title }) => ({ documentId, title })),
         ),
       ],
       request,
@@ -286,7 +617,7 @@ export const handlers: HttpHandler[] = [
         ],
       });
     const viewable = await viewableSpaces();
-    const results = documents.filter(
+    const results = publishedDocuments().filter(
       (document) =>
         (document.visibility === 'COMPANY_WIDE' ||
           viewable.some((space) => space.spaceId === document.spaceId)) &&
@@ -300,20 +631,116 @@ export const handlers: HttpHandler[] = [
     if (!document) return problem(404, 'MSG110');
     const viewable = await viewableSpaces();
     const space = viewable.find((item) => item.spaceId === document.spaceId);
+    const isTrashed = trashState.has(document.documentId);
+    if (isTrashed && space?.accessLevel !== 'KNOWLEDGE_MANAGER') return problem(404, 'MSG110');
     if (document.visibility !== 'COMPANY_WIDE' && !space) return problem(404, 'MSG110');
     return getResponse(
       [
         getGetWikiDocumentMockHandler({
           ...document,
-          canDelete: space?.accessLevel === 'KNOWLEDGE_MANAGER',
+          canDelete: !isTrashed && space?.accessLevel === 'KNOWLEDGE_MANAGER',
+          inTrash: isTrashed,
         }),
       ],
       request,
     );
   }),
+  http.delete('*/api/v1/wiki/documents/:documentId', async ({ params, request }) => {
+    await delay(MOCK_DELAY_MS);
+    const document = publishedDocuments().find((item) => item.documentId === params.documentId);
+    if (!document) return problem(404, 'MSG110');
+    const error = await documentManagerError(document);
+    if (error) return error;
+    const me = await getMe();
+    trashState.set(document.documentId, {
+      deletedBy: me.user.fullName,
+      deletedAt: new Date().toISOString(),
+    });
+    return getResponse([getTrashWikiDocumentMockHandler()], request);
+  }),
+  http.get('*/api/v1/wiki/spaces/:spaceId/trash', async ({ params, request }) => {
+    await delay(MOCK_DELAY_MS);
+    const spaceId = String(params.spaceId);
+    const error = await managerError(spaceId);
+    if (error) return error;
+    const rows: WikiTrashItem[] = documents
+      .flatMap((document) => {
+        const deleted = trashState.get(document.documentId);
+        return document.spaceId === spaceId && deleted
+          ? [
+              {
+                documentId: document.documentId,
+                title: document.title,
+                folderName: document.folderName,
+                owner: document.owner,
+                ...deleted,
+              },
+            ]
+          : [];
+      })
+      .sort((a, b) => b.deletedAt.localeCompare(a.deletedAt));
+    return getResponse([getListWikiTrashMockHandler(rows)], request);
+  }),
+  http.post('*/api/v1/wiki/documents/:documentId/restore', async ({ params, request }) => {
+    await delay(MOCK_DELAY_MS);
+    const document = documents.find(
+      (item) => item.documentId === params.documentId && trashState.has(item.documentId),
+    );
+    if (!document) return problem(404, 'MSG110');
+    const error = await documentManagerError(document);
+    if (error) return error;
+    const titles = new Set(
+      publishedDocuments()
+        .filter((item) => item.spaceId === document.spaceId && item.folderId === document.folderId)
+        .map((item) => item.title.toLowerCase()),
+    );
+    const original = document.title;
+    let title = original;
+    for (let number = 1; titles.has(title.toLowerCase()); number++) {
+      const suffix = number === 1 ? ' (restored)' : ` (restored ${number})`;
+      title = original.slice(0, 200 - suffix.length) + suffix;
+    }
+    document.title = title;
+    document.updatedAt = new Date().toISOString();
+    trashState.delete(document.documentId);
+    return getResponse(
+      [getRestoreWikiDocumentMockHandler({ title, renamed: title !== original })],
+      request,
+    );
+  }),
+  http.delete('*/api/v1/wiki/documents/:documentId/permanent', async ({ params, request }) => {
+    await delay(MOCK_DELAY_MS);
+    const document = documents.find(
+      (item) => item.documentId === params.documentId && trashState.has(item.documentId),
+    );
+    if (!document) return problem(404, 'MSG110');
+    const error = await documentManagerError(document);
+    if (error) return error;
+    documents = documents.filter((item) => item.documentId !== document.documentId);
+    trashState.delete(document.documentId);
+    return getResponse([getDeleteWikiDocumentPermanentlyMockHandler()], request);
+  }),
 ];
 
 export function resetMockData(): void {
+  permissionState.clear();
+  permissionState.set(IT, {
+    departments: [],
+    users: [
+      {
+        permissionId: '00000000-0000-4000-8000-000000000503',
+        userId: '00000000-0000-4000-8000-000000000009',
+        fullName: 'Nguyễn Văn Bình',
+        email: 'binh.nguyen@company.example',
+        homeDepartment: 'HR',
+        active: false,
+        grantedBy: 'Lê Thu Hương',
+        grantedAt: '2026-11-13T08:00:00Z',
+      },
+    ],
+  });
+  trashState.clear();
+  documents = initialDocuments.map((document) => ({ ...document }));
   folderState.clear();
   folderState.set(
     IT,

@@ -1,7 +1,13 @@
 package vn.tsolve.identity.jiralink;
 
 import java.sql.Timestamp;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -26,5 +32,37 @@ public class JiraAccountLinkRepository {
                 link.trackerAccountId(),
                 link.accountId(),
                 Timestamp.from(link.linkedAt()));
+    }
+
+    /** The account each of these tracker accounts is linked to, whatever its status; unlinked ones are absent. */
+    public Map<String, UUID> accountIds(Collection<String> trackerAccountIds) {
+        Map<String, UUID> linked = new HashMap<>();
+        if (trackerAccountIds.isEmpty()) {
+            return linked;
+        }
+        new NamedParameterJdbcTemplate(jdbc)
+                .query(
+                        "SELECT tracker_account_id, account_id FROM jira_account_links "
+                                + "WHERE tracker_account_id IN (:ids)",
+                        Map.of("ids", trackerAccountIds),
+                        row -> {
+                            linked.put(row.getString("tracker_account_id"), row.getObject("account_id", UUID.class));
+                        });
+        return linked;
+    }
+
+    /** The link of the tracker account, whatever the status of its Account (AC-001.77). */
+    public Optional<JiraAccountLink> find(String trackerAccountId) {
+        return jdbc
+                .query(
+                        "SELECT tracker_account_id, account_id, linked_at FROM jira_account_links "
+                                + "WHERE tracker_account_id = ?",
+                        (row, index) -> new JiraAccountLink(
+                                row.getString("tracker_account_id"),
+                                row.getObject("account_id", UUID.class),
+                                row.getTimestamp("linked_at").toInstant()),
+                        trackerAccountId)
+                .stream()
+                .findFirst();
     }
 }

@@ -265,3 +265,35 @@ Dependency before Project Task 6: **tracker Task 19**, `jira-project-read`, modu
 **Verify:** FE; at final handoff BE, `sdd.ts check project-integration`, `sdd.ts check tracker`, and each module's trace with its own paths. Review declared Basic/Bearer, GBR-04, CSRF/binding and DDL-owner follow-ups; no status/approval/push is implied by those checks.
 **Dependencies:** Task 10; D47 catalog quick change remains a prerequisite.
 **Estimated size:** medium.
+
+---
+
+## Task 12: Jira role suggestions — contract and backend (KAN-367)
+
+**Story:** STORY-011
+**Feature:** jira-role-suggestions-backend
+**Description:** Design "KAN-367: Suggest members from Jira project roles". Contract first: `GET
+/api/v1/projects/{projectId}/jira-roles`, `GET …/jira-roles/{roleId}/people` in `frontend/openapi/tsolve-api.yaml`, then
+`npm run generate:api`. Tracker client and service reads, `ProjectMemberService` methods, `ProjectMemberRepository`
+classification read, controller endpoints. AC-011.1 to AC-011.5.
+**Files:** Modify `tracker/client/{TicketTrackerClient,JiraClient}.java`, `tracker/service/{TrackerProjectService,impl/TrackerProjectServiceImpl}.java`,
+create `tracker/dto/{TrackerRole,TrackerRoleActors}.java`; modify `project/service/{ProjectMemberService,impl/ProjectMemberServiceImpl}.java`,
+`project/repository/ProjectMemberRepository.java`, `project/controller/ProjectMemberController.java`, create
+`project/dto/{JiraProjectRoleResponse,JiraRolePeopleResponse,JiraRolePersonResponse}.java`; tests `JiraClientTest`,
+`TrackerProjectServiceImplTest`, `ProjectMemberServiceImplTest`, `ProjectMemberControllerTest`, the repository read
+in its IT.
+**Dependencies:** identity Task 40
+**Estimated size:** medium
+
+---
+
+## Task 13: "From Jira" tab in Add member (KAN-367)
+
+**Story:** STORY-011
+**Feature:** jira-role-suggestions-ui
+**Description:** `AddMemberModal` with two tabs and one shared selection; `JiraRolePeople` component; MSW handlers.
+AC-011.6 to AC-011.11; AC-002.10 keeps working on the Search tab.
+**Files:** Modify `frontend/src/features/jira-integration/components/AddMemberModal.tsx`, create
+`components/JiraRolePeople.tsx`, modify `mocks/handlers.ts`; tests `AddMemberModal.test.tsx`, `JiraRolePeople.test.tsx`.
+**Dependencies:** Task 12
+**Estimated size:** medium

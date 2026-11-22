@@ -148,6 +148,7 @@ describe('ProjectDetailPage', () => {
     const table = await screen.findByRole('table', { name: 'Members' }, { timeout: 5000 });
     await user.click(screen.getByRole('button', { name: 'Add member' }));
     const popup = await screen.findByRole('dialog', { name: 'Add member' });
+    await user.click(within(popup).getByRole('tab', { name: 'Search' })); // opens on From Jira (AC-011.6)
     await within(popup).findByRole('row', { name: /Phạm Quốc Bảo/ });
     expect(within(popup).queryByRole('row', { name: /Trần Thị Lan/ })).not.toBeInTheDocument();
     await user.click(within(popup).getByRole('button', { name: 'Cancel' }));
@@ -162,6 +163,7 @@ describe('ProjectDetailPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Add member' }));
     // The closed confirm dialog stays mounted and shares the dialog name id, so find the popup by its table.
+    await user.click(await screen.findByRole('tab', { name: 'Search' })); // opens on From Jira (AC-011.6)
     const candidates = await screen.findByRole('table', { name: 'Member candidates' });
     expect(
       await within(candidates).findByRole('row', { name: /Trần Thị Lan/ }, { timeout: 3000 }),

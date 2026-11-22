@@ -16,6 +16,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -71,6 +72,13 @@ class UserStatusUpdateServiceImplTest {
         when(write.lockTarget(target)).thenReturn(true);
         account(AccountStatus.ACTIVE, Role.EMPLOYEE);
         when(read.handoverOptions(target)).thenReturn(new UserHandoverOptionsResponse(List.of(), List.of()));
+        when(write.soleManagedSpaces(eq(target), any())).thenAnswer(call -> {
+            Collection<UUID> candidates = call.getArgument(1);
+            return read.handoverOptions(target).spaces().stream()
+                    .map(item -> item.space().spaceId())
+                    .filter(candidates::contains)
+                    .toList();
+        });
     }
 
     private void account(AccountStatus status, Role... roles) {
@@ -268,25 +276,27 @@ class UserStatusUpdateServiceImplTest {
         switch (invalid) {
             case "missingProject" -> body.remove("projectHandovers");
             case "missingSpace" -> body.remove("spaceHandovers");
-            case "duplicateProject" -> body.withArray("projectHandovers")
-                    .add(body.withArray("projectHandovers").get(0).deepCopy());
-            case "duplicateSpace" -> body.withArray("spaceHandovers")
-                    .add(body.withArray("spaceHandovers").get(0).deepCopy());
-            case "extraProject" -> body.withArray("projectHandovers")
-                    .addObject()
-                    .put("projectId", UUID.randomUUID().toString())
-                    .put("recipientId", recipientId.toString());
-            case "extraSpace" -> body.withArray("spaceHandovers")
-                    .addObject()
-                    .put("spaceId", UUID.randomUUID().toString())
-                    .put("recipientId", recipientId.toString());
-            case "badProject" -> ((ObjectNode)
-                            body.withArray("projectHandovers").get(0))
-                    .put("projectId", "bad");
+            case "duplicateProject" ->
+                body.withArray("projectHandovers")
+                        .add(body.withArray("projectHandovers").get(0).deepCopy());
+            case "duplicateSpace" ->
+                body.withArray("spaceHandovers")
+                        .add(body.withArray("spaceHandovers").get(0).deepCopy());
+            case "extraProject" ->
+                body.withArray("projectHandovers")
+                        .addObject()
+                        .put("projectId", UUID.randomUUID().toString())
+                        .put("recipientId", recipientId.toString());
+            case "extraSpace" ->
+                body.withArray("spaceHandovers")
+                        .addObject()
+                        .put("spaceId", UUID.randomUUID().toString())
+                        .put("recipientId", recipientId.toString());
+            case "badProject" ->
+                ((ObjectNode) body.withArray("projectHandovers").get(0)).put("projectId", "bad");
             case "badSpace" -> ((ObjectNode) body.withArray("spaceHandovers").get(0)).put("spaceId", "bad");
-            case "badRecipient" -> ((ObjectNode)
-                            body.withArray("spaceHandovers").get(0))
-                    .put("recipientId", "bad");
+            case "badRecipient" ->
+                ((ObjectNode) body.withArray("spaceHandovers").get(0)).put("recipientId", "bad");
             default -> throw new AssertionError(invalid);
         }
         failure(body, "MSG01", Map.of("field_name", "Hand Over Responsibilities"), caller);
@@ -398,5 +408,19 @@ class UserStatusUpdateServiceImplTest {
         assertThatThrownBy(() -> service.update(target, body("DEACTIVATED"), caller))
                 .isSameAs(failure);
         verifyNoInteractions(audit, detail);
+    }
+
+    @Test
+    void deactivatesCoManagerWithoutHandoverAndRemovesAllRows_AC_006_14_AC_006_15() {
+        when(read.handoverOptions(target))
+                .thenReturn(new UserHandoverOptionsResponse(
+                        List.of(),
+                        List.of(new UserHandoverOptionsResponse.SpaceOption(
+                                new SpaceRefResponse(spaceId, "Wiki"), List.of()))));
+        org.mockito.Mockito.doReturn(List.of()).when(write).soleManagedSpaces(eq(target), any());
+        service.update(target, body("DEACTIVATED"), caller);
+        verify(write).removeSpaceAssignments(target);
+        verify(write).updateStatus(target, AccountStatus.DEACTIVATED);
+        verify(write, never()).transferSpace(any(), any());
     }
 }

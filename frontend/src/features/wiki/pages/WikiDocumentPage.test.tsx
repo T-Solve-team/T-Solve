@@ -1,6 +1,6 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
 import type { WikiDocumentDetail } from '@/shared/api';
 import { getGetWikiDocumentMockHandler } from '@/shared/api/generated/wiki/wiki.msw';
@@ -25,9 +25,110 @@ const document: WikiDocumentDetail = {
   fileName: 'vpn.pdf',
   fileSize: 1024,
   canDelete: false,
+  inTrash: false,
 };
 
 describe('WikiDocumentPage', () => {
+  it('AC-005.13 asks MSG100, cancels without deleting, then shows MSG101 and returns home (BUG-281)', async () => {
+    server.use(getGetWikiDocumentMockHandler({ ...document, canDelete: true }));
+    const remove = vi.fn();
+    let release = () => {};
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.delete('*/api/v1/wiki/documents/:documentId', async ({ params }) => {
+        remove(params.documentId);
+        await pending;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    const user = userEvent.setup();
+    const view = renderApp(paths.wikiDocument(ID), { role: 'KNOWLEDGE_MANAGER' });
+    await user.click(await screen.findByRole('button', { name: 'Delete' }, { timeout: 5000 }));
+    const confirm = await screen.findByRole('dialog');
+    expect(confirm).toHaveTextContent(msg('MSG100', { title: document.title }));
+    expect(remove).not.toHaveBeenCalled();
+    await user.click(within(confirm).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(remove).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.dblClick(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'OK' }),
+    );
+    await waitFor(() => expect(remove).toHaveBeenCalledExactlyOnceWith(ID));
+    expect(view.router.state.location.pathname).toBe(paths.wikiDocument(ID));
+    release();
+    expect(await screen.findByText(msg('MSG101'))).toBeInTheDocument();
+    await waitFor(() => expect(view.router.state.location.pathname).toBe(paths.wikiHome));
+    expect(view.router.state.location.search).toBe(`?space=${document.spaceId}`);
+    await waitFor(() => expect(view.queryClient.isFetching()).toBe(0));
+  });
+
+  it('AC-005.13 returns to 11.1 without refetching the trashed document first (BUG-305)', async () => {
+    const read = vi.fn();
+    server.use(
+      // Other GET routes of the same shape (Wiki Home's lists) fall through to the default mocks.
+      http.get('*/api/v1/wiki/documents/:documentId', ({ params }) => {
+        if (params.documentId !== ID) return undefined;
+        read();
+        return HttpResponse.json({ ...document, canDelete: true });
+      }),
+      http.delete(
+        '*/api/v1/wiki/documents/:documentId',
+        () => new HttpResponse(null, { status: 204 }),
+      ),
+    );
+    const user = userEvent.setup();
+    const view = renderApp(paths.wikiDocument(ID), { role: 'KNOWLEDGE_MANAGER' });
+    await user.click(await screen.findByRole('button', { name: 'Delete' }, { timeout: 5000 }));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'OK' }));
+    await waitFor(() => expect(view.router.state.location.pathname).toBe(paths.wikiHome));
+    await waitFor(() => expect(view.queryClient.isFetching()).toBe(0));
+    expect(read).toHaveBeenCalledOnce();
+  });
+
+  it('AC-005.18 shows the In trash tag and neither Download nor Delete for a trashed document', async () => {
+    server.use(getGetWikiDocumentMockHandler({ ...document, inTrash: true }));
+    renderApp(paths.wikiDocument(ID), { role: 'KNOWLEDGE_MANAGER' });
+    await screen.findByRole('heading', { name: document.title }, { timeout: 5000 });
+    expect(screen.getByText('In trash')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Download' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Content' }).textContent).toBe(document.content);
+  });
+
+  it('AC-005.13 keeps the document and confirmation after a failed delete and allows retry', async () => {
+    server.use(getGetWikiDocumentMockHandler({ ...document, canDelete: true }));
+    server.use(http.delete('*/api/v1/wiki/documents/:documentId', () => problem(500)));
+    const user = userEvent.setup();
+    const view = renderApp(paths.wikiDocument(ID), { role: 'KNOWLEDGE_MANAGER' });
+    await user.click(await screen.findByRole('button', { name: 'Delete' }, { timeout: 5000 }));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'OK' }));
+    expect(await screen.findByText(msg('MSG06'))).toBeInTheDocument();
+    expect(view.router.state.location.pathname).toBe(paths.wikiDocument(ID));
+    expect(screen.queryByText(msg('MSG101'))).not.toBeInTheDocument();
+    server.use(
+      http.delete(
+        '*/api/v1/wiki/documents/:documentId',
+        () => new HttpResponse(null, { status: 204 }),
+      ),
+    );
+    const retry = within(screen.getByRole('dialog')).getByRole('button', { name: 'OK' });
+    await waitFor(() => expect(retry).toBeEnabled());
+    await user.click(retry);
+    expect(await screen.findByText(msg('MSG101'))).toBeInTheDocument();
+    await waitFor(() => expect(view.router.state.location.pathname).toBe(paths.wikiHome));
+    await waitFor(() => expect(view.queryClient.isFetching()).toBe(0));
+  });
+
+  it('AC-005.13 hides Delete when canDelete is false even for a Knowledge Manager', async () => {
+    server.use(getGetWikiDocumentMockHandler(document));
+    renderApp(paths.wikiDocument(ID), { role: 'KNOWLEDGE_MANAGER' });
+    await screen.findByRole('heading', { name: document.title }, { timeout: 5000 });
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+  });
+
   it('AC-002.19 shows the complete header, literal plain text and original-file Download (BUG-255)', async () => {
     server.use(getGetWikiDocumentMockHandler(document));
     const view = renderApp(paths.wikiDocument(ID), { role: 'EMPLOYEE' });

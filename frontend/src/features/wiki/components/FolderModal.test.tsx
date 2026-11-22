@@ -40,6 +40,27 @@ beforeEach(() => {
   );
 });
 
+/** Folder actions live in the per-folder "⋯" menu (AC-002.21). */
+async function clickFolderAction(
+  user: ReturnType<typeof userEvent.setup>,
+  name: string,
+  action: string,
+) {
+  // A save refetches the tree, which can re-render the "⋯" menu between the two clicks; retry until a popup opens.
+  await waitFor(
+    async () => {
+      if (!screen.queryByRole('dialog')) {
+        await user.click(screen.getByRole('button', { name: `Actions for ${name}` }));
+        const items = await screen.findAllByRole('menuitem', { name: action });
+        const item = items.at(-1);
+        if (item) await user.click(item);
+      }
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    },
+    { timeout: 5000 },
+  );
+}
+
 async function openFolder(action = 'New folder', name = 'Guides') {
   const user = userEvent.setup();
   const view = renderApp(`${paths.wikiHome}?space=${SPACE}`, { role: 'KNOWLEDGE_MANAGER' });
@@ -47,9 +68,8 @@ async function openFolder(action = 'New folder', name = 'Guides') {
   if (action === 'New folder') {
     await user.click(screen.getByRole('button', { name: action }));
   } else {
-    const row = within(tree).getByText(name).closest('[role="treeitem"]');
-    if (!(row instanceof HTMLElement)) throw new Error('Folder row missing');
-    await user.click(within(row).getByRole('button', { name: `${action} ${name}` }));
+    expect(within(tree).getByText(name)).toBeInTheDocument();
+    await clickFolderAction(user, name, action);
   }
   const dialog = await screen.findByRole('dialog', { name: 'Folder' });
   return { ...view, user, dialog, name: within(dialog).getByRole('textbox', { name: 'Name' }) };
@@ -182,16 +202,9 @@ describe('FolderModal', () => {
         name: action === 'Rename' ? 'Connections' : 'Network',
         parentId: action === 'Move' ? null : ROOT,
       });
-      const row = await within(screen.getByRole('tree', { name: 'Folders' })).findByText(
-        action === 'Rename' ? 'Connections' : 'Network',
-      );
-      const item = row.closest('[role="treeitem"]');
-      if (!(item instanceof HTMLElement)) throw new Error('Folder row missing');
-      await user.click(
-        within(item).getByRole('button', {
-          name: `Move ${action === 'Rename' ? 'Connections' : 'Network'}`,
-        }),
-      );
+      const renamed = action === 'Rename' ? 'Connections' : 'Network';
+      await within(screen.getByRole('tree', { name: 'Folders' })).findByText(renamed);
+      await clickFolderAction(user, renamed, 'Move');
       const reopened = await screen.findByRole('dialog', { name: 'Folder' });
       expect(within(reopened).getByRole('textbox', { name: 'Name' })).toHaveValue(
         action === 'Rename' ? 'Connections' : 'Network',
@@ -260,9 +273,8 @@ describe('FolderModal', () => {
     server.use(http.delete('*/api/v1/wiki/folders/:folderId', submitted));
     renderApp(`${paths.wikiHome}?space=${SPACE}`, { role: 'KNOWLEDGE_MANAGER' });
     const tree = await screen.findByRole('tree', { name: 'Folders' }, { timeout: 5000 });
-    const row = within(tree).getByText('Guides').closest('[role="treeitem"]');
-    if (!(row instanceof HTMLElement)) throw new Error('Folder row missing');
-    await user.click(within(row).getByRole('button', { name: 'Delete Guides' }));
+    expect(within(tree).getByText('Guides')).toBeInTheDocument();
+    await clickFolderAction(user, 'Guides', 'Delete');
     const dialog = await screen.findByRole('dialog', { name: 'Delete' });
     expect(within(dialog).getByText('Guides')).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
@@ -303,20 +315,21 @@ describe('FolderModal', () => {
     expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
   });
 
-  it('AC-003.15 persists create, rename and move through the feature mocks and AC-003.16 deletes the refreshed folder (BUG-264)', async () => {
+  it('AC-003.15 persists create, rename and move through the feature mocks and AC-003.16 deletes the refreshed folder (BUG-264, BUG-316)', async () => {
     server.resetHandlers();
-    const { user, dialog, name } = await openFolder();
+    const { user, dialog, name, queryClient } = await openFolder();
     await user.click(name);
     await user.paste('Operations');
     await user.click(within(dialog).getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     async function openAction(label: string, action: string) {
+      // The "⋯" menu takes two clicks: let the refreshed tree settle so the menu is not unmounted in between.
+      await waitFor(() => expect(queryClient.isFetching()).toBe(0));
       const tree = screen.getByRole('tree', { name: 'Folders' });
-      const text = await within(tree).findByText(label);
-      const row = text.closest('[role="treeitem"]');
-      if (!(row instanceof HTMLElement)) throw new Error('Folder row missing');
-      await user.click(within(row).getByRole('button', { name: `${action} ${label}` }));
-      return screen.findByRole('dialog', { name: action === 'Delete' ? 'Delete' : 'Folder' });
+      await within(tree).findByText(label);
+      await clickFolderAction(user, label, action);
+      // In tests antd gives every popup the id "test-id", so the open "⋯" menu can take the dialog's name; find it by role.
+      return screen.findByRole('dialog');
     }
     const rename = await openAction('Operations', 'Rename');
     const renamedName = within(rename).getByRole('textbox', { name: 'Name' });
@@ -336,7 +349,9 @@ describe('FolderModal', () => {
     const deletion = await openAction('Support', 'Delete');
     await user.click(within(deletion).getByRole('button', { name: 'Delete' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(screen.getByRole('tree', { name: 'Folders' })).not.toHaveTextContent('Support');
+    await waitFor(() =>
+      expect(screen.getByRole('tree', { name: 'Folders' })).not.toHaveTextContent('Support'),
+    );
     expect(screen.getAllByText(msg('MSG05')).length).toBeGreaterThan(0);
   });
 });

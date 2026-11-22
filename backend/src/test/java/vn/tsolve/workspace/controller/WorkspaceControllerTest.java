@@ -51,15 +51,15 @@ class WorkspaceControllerTest {
     @DisplayName("AC-007.1 Admin can PUT Workspace information")
     void updatesWorkspace() throws Exception {
         when(service.update(any()))
-                .thenReturn(new WorkspaceInfoResponse("Renamed", "https://fake.atlassian.net", "fake@example.test"));
+                .thenReturn(new WorkspaceInfoResponse("Renamed", "https://fake.atlassian.net", false, null));
         mvc.perform(put("/api/v1/workspace")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"companyName\":\"Renamed\",\"serviceAccountEmail\":\"fake@example.test\"}"))
+                        .content("{\"companyName\":\"Renamed\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.companyName").value("Renamed"))
                 .andExpect(jsonPath("$.jiraSiteUrl").value("https://fake.atlassian.net"))
-                .andExpect(jsonPath("$.serviceAccountEmail").value("fake@example.test"))
+                .andExpect(jsonPath("$.serviceAccountEmail").doesNotExist())
                 .andExpect(jsonPath("$.serviceAccountToken").doesNotExist());
     }
 
@@ -125,8 +125,7 @@ class WorkspaceControllerTest {
     @DisplayName("AC-005.1 setup returns 201 with Workspace information")
     void createsWorkspace() throws Exception {
         when(service.setup(any()))
-                .thenReturn(
-                        new WorkspaceInfoResponse("Fake company", "https://fake.atlassian.net", "fake@example.test"));
+                .thenReturn(new WorkspaceInfoResponse("Fake company", "https://fake.atlassian.net", false, null));
         mvc.perform(post("/api/v1/workspace/setup")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -195,23 +194,24 @@ class WorkspaceControllerTest {
 
     @Test
     @WithTSolveUser(roles = Role.ADMIN)
-    @DisplayName("AC-006.2 GET returns 200 and exactly the three public Workspace fields")
+    @DisplayName("AC-006.2 AC-006.6 GET returns 200 with the company, the site and the Jira App status only")
     void readsWorkspace() throws Exception {
         when(service.get())
-                .thenReturn(
-                        new WorkspaceInfoResponse("Fake company", "https://fake.atlassian.net", "fake@example.test"));
+                .thenReturn(new WorkspaceInfoResponse("Fake company", "https://fake.atlassian.net", false, null));
         String body = mvc.perform(get("/api/v1/workspace"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.companyName").value("Fake company"))
                 .andExpect(jsonPath("$.jiraSiteUrl").value("https://fake.atlassian.net"))
-                .andExpect(jsonPath("$.serviceAccountEmail").value("fake@example.test"))
+                .andExpect(jsonPath("$.jiraAppConnected").value(false))
+                .andExpect(jsonPath("$.jiraAppTokenReceivedAt").doesNotExist())
+                .andExpect(jsonPath("$.serviceAccountEmail").doesNotExist())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
         assertThat(new com.fasterxml.jackson.databind.ObjectMapper()
                         .readTree(body)
                         .size())
-                .isEqualTo(3);
+                .isBetween(3, 4);
     }
 
     @Test

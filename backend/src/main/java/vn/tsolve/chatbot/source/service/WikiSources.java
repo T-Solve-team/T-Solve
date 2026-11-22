@@ -9,6 +9,12 @@ public interface WikiSources {
     /** Passages the user may view, nearest to the shared 1024-dimensional bge-m3 vector, most similar first. */
     List<WikiPassage> nearest(TSolveUser user, float[] queryVector, double minSimilarity, int limit);
 
+    /**
+     * Passages of Company-wide Wiki documents only, for a question asked in Jira without a T-Solve user (chatbot
+     * STORY-012, the MSG80 rule).
+     */
+    List<WikiPassage> nearestCompanyWide(float[] queryVector, double minSimilarity, int limit);
+
     /** Given ids the user cannot view: unknown, deleted, unpublished or inaccessible documents. */
     Set<UUID> unavailable(TSolveUser user, Set<UUID> wikiDocumentIds);
 

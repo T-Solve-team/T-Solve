@@ -41,6 +41,92 @@ tags:
   - name: dashboard
     description: Knowledge Dashboard figures, screen 9.1.
 paths:
+  /api/v1/wiki/spaces/{spaceId}/settings:
+    get:
+      tags: [wiki]
+      operationId: getWikiSpaceSettings
+      summary: Read a managed Space's header and View permissions.
+      description: The computed own Department is locked; stored Departments and users are sorted by name.
+      parameters:
+        - { name: spaceId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Space settings.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WikiSpaceSettings' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/wiki/spaces/{spaceId}/permission-candidates:
+    get:
+      tags: [wiki]
+      operationId: listWikiPermissionCandidates
+      summary: List Active Departments and users without a stored permission on a managed Space.
+      description: Excludes the own Department; each list is sorted by name.
+      parameters:
+        - { name: spaceId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Eligible grantees.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WikiPermissionCandidates' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/wiki/spaces/{spaceId}/permissions:
+    post:
+      tags: [wiki]
+      operationId: grantWikiPermissions
+      summary: Grant View on a managed Space to Departments and users.
+      description: >
+        Validate every id before storing anything. Skip already granted ids, including concurrent grants.
+        Record one audit entry per newly stored permission. An empty selection is 400 MSG01 on grantees;
+        an unknown or inactive grantee, or the own Department, is 404 MSG04.
+      parameters:
+        - { name: spaceId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GrantWikiPermissionsRequest' }
+      responses:
+        '201':
+          description: Permissions granted; no response body.
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/wiki/permissions/{permissionId}:
+    delete:
+      tags: [wiki]
+      operationId: revokeWikiPermission
+      summary: Revoke a stored permission of a managed Space.
+      description: >
+        Returns 404 MSG04 for an unknown permission or one outside the caller's managed Spaces.
+        The computed own Department permission cannot be removed. Other sources of View remain effective.
+      parameters:
+        - { name: permissionId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204':
+          description: Permission revoked; no response body.
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
   /api/v1/wiki/spaces:
     get:
       tags: [wiki]
@@ -186,6 +272,57 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ProblemDetail' }
   /api/v1/wiki/spaces/{spaceId}/documents:
+    post:
+      tags: [wiki]
+      operationId: publishWikiDocuments
+      summary: Publish one to ten readable PDF or DOCX files in a managed Space.
+      parameters:
+        - { name: spaceId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [files, metadata]
+              properties:
+                files:
+                  type: array
+                  minItems: 1
+                  maxItems: 10
+                  items: { type: string, format: binary }
+                metadata:
+                  $ref: '#/components/schemas/WikiPublishMetadata'
+                  description: JSON metadata; also accepts the JSON string part sent by the generated client.
+            encoding:
+              metadata: { contentType: application/json }
+      responses:
+        '201':
+          description: Published documents in file order; indexing queued after commit.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/WikiDocumentRef' } }
+        '400':
+          description: MSG01 for files, metadata or documents[i].title; MSG02 for titles over 200; MSG88 for over ten files; MSG89 for invalid type with file_name; MSG90 for unreadable text with file_name.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          description: MSG04 for an inactive or unknown Space or a folder outside the Space.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '409':
+          description: MSG84 on documents[i].title for a duplicate Published title in the folder or this request. Nothing stored.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '413':
+          $ref: '#/components/responses/Problem'
     get:
       tags: [wiki]
       operationId: listWikiDocuments
@@ -211,6 +348,70 @@ paths:
               schema: { $ref: '#/components/schemas/ProblemDetail' }
         '404':
           description: Unknown or Hidden Space, Deleted Department, or folder outside the Space (MSG04).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+  /api/v1/wiki/spaces/{spaceId}/uploads/extract:
+    post:
+      tags: [wiki]
+      operationId: extractWikiUploads
+      summary: Preview one to ten PDF or DOCX files without storing them.
+      parameters:
+        - { name: spaceId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [files]
+              properties:
+                files:
+                  type: array
+                  minItems: 1
+                  maxItems: 10
+                  items: { type: string, format: binary }
+      responses:
+        '200':
+          description: Preview rows in file order; unreadable files have empty excerpts and zero words.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/WikiUploadPreview' } }
+        '400':
+          description: MSG01 on files when absent; MSG88 for over ten; MSG89 with file_name for invalid extension or magic bytes.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '413':
+          $ref: '#/components/responses/Problem'
+  /api/v1/wiki/documents/{documentId}/file:
+    get:
+      tags: [wiki]
+      operationId: downloadWikiDocumentFile
+      summary: Download the original file after checking current document access.
+      parameters:
+        - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Original bytes and content type, with an attachment filename and nosniff.
+          headers:
+            Content-Disposition: { schema: { type: string } }
+            X-Content-Type-Options: { schema: { type: string, const: nosniff } }
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema: { type: string, format: binary }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '404':
+          description: MSG110 for unknown, trashed or non-viewable documents.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ProblemDetail' }
@@ -243,10 +444,32 @@ paths:
         '401':
           $ref: '#/components/responses/Problem'
   /api/v1/wiki/documents/{documentId}:
+    delete:
+      tags: [wiki]
+      operationId: trashWikiDocument
+      summary: Move a Published document to its Space's trash.
+      parameters:
+        - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204':
+          description: Moved to trash; excluded from browsing, download and retrieval immediately.
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: MSG08 when the caller can view the document but is not its Space's Knowledge Manager.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '404':
+          description: MSG110 for unknown, non-viewable or non-Published documents.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
     get:
       tags: [wiki]
       operationId: getWikiDocument
       summary: Read a viewable Wiki document as extracted plain text.
+      description: The Space's Knowledge Manager may also read trashed documents, with canDelete false.
       parameters:
         - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
       responses:
@@ -258,7 +481,78 @@ paths:
         '401':
           $ref: '#/components/responses/Problem'
         '404':
-          description: Unknown, deleted or non-viewable document (MSG110).
+          description: Unknown or non-viewable document, including trash outside the caller's managed Space (MSG110).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+  /api/v1/wiki/spaces/{spaceId}/trash:
+    get:
+      tags: [wiki]
+      operationId: listWikiTrash
+      summary: List a managed Space's trashed documents, newest deletedAt first.
+      parameters:
+        - { name: spaceId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Trashed documents; an empty array when none exist.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/WikiTrashItem' } }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          description: MSG04 for an unknown, Hidden or Deleted-Department Space.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+  /api/v1/wiki/documents/{documentId}/restore:
+    post:
+      tags: [wiki]
+      operationId: restoreWikiDocument
+      summary: Restore a trashed document to Published in its original folder.
+      description: >
+        A title conflict appends " (restored)", " (restored 2)" and so on, shortening the
+        original title to keep at most 200 characters. Re-index after commit unless already INDEXED.
+      parameters:
+        - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Final title and whether it was renamed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WikiRestoreResult' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          description: MSG110 for unknown, non-viewable or non-trashed documents.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '409':
+          description: MSG84 if another upload or restore takes the chosen title; document stays in trash.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+  /api/v1/wiki/documents/{documentId}/permanent:
+    delete:
+      tags: [wiki]
+      operationId: deleteWikiDocumentPermanently
+      summary: Permanently delete a trashed document and its passages.
+      parameters:
+        - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204':
+          description: Deleted; original file cleanup runs after commit, with failures logged at WARN.
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          description: MSG110 for unknown, non-viewable or non-trashed documents.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ProblemDetail' }
@@ -380,7 +674,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/WorkspaceInfo' }
         '400':
-          description: Field error MSG01, MSG02, MSG03, MSG61, MSG153 or MSG156.
+          description: Field error MSG01, MSG02, MSG61 or MSG153 (MSG03 for a malformed body).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ProblemDetail' }
@@ -561,7 +855,7 @@ paths:
           description: The Department.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/DepartmentRef' }
+              schema: { $ref: '#/components/schemas/DepartmentDetail' }
         '401':
           $ref: '#/components/responses/Problem'
         '403':
@@ -571,7 +865,7 @@ paths:
     put:
       tags: [departments]
       operationId: updateDepartment
-      summary: Rename a Department and its Space
+      summary: Rename a Department and its Space, and set its default Project
       parameters:
         - { name: departmentId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -581,10 +875,10 @@ paths:
             schema: { $ref: '#/components/schemas/UpdateDepartmentRequest' }
       responses:
         '200':
-          description: Department renamed (or already had that name).
+          description: Department saved (or already had that name and default Project).
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/DepartmentRef' }
+              schema: { $ref: '#/components/schemas/DepartmentDetail' }
         '400':
           $ref: '#/components/responses/Problem'
         '401':
@@ -714,6 +1008,59 @@ paths:
         '403':
           $ref: '#/components/responses/Problem'
         '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/projects/{projectId}/jira-roles:
+    get:
+      tags: [projects]
+      operationId: listProjectJiraRoles
+      summary: The roles of the Project's Jira project, for the Add member "From Jira" tab (STORY-011, AC-011.1)
+      description: >
+        Read with the Workspace's T-Solve Jira App token; the role `atlassian-addons-project-access` is left out.
+        Project Manager of the Project only (403; 404 for an unknown Project), checked before any Jira call. No token,
+        a Jira error or no answer within 10 s → 503 MSG06 (AC-011.4).
+      parameters:
+        - { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Roles by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/JiraProjectRoleResponse' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
+  /api/v1/projects/{projectId}/jira-roles/{roleId}/people:
+    get:
+      tags: [projects]
+      operationId: listProjectJiraRolePeople
+      summary: The people of a Jira project role and whether each can be added (STORY-011, AC-011.2)
+      description: >
+        User actors of the role, each with a status; ADDABLE carries the T-Solve user id, full name and email. Group
+        actors are named in `groups`, never expanded (AC-011.3). Nothing is added. Same refusals as the roles (403,
+        404, 503 MSG06; an unknown role is 503 MSG06).
+      parameters:
+        - { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: roleId, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: The role's people by Jira display name, and its group names.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JiraRolePeopleResponse' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '503':
           $ref: '#/components/responses/Problem'
   /api/v1/users:
     post:
@@ -1529,19 +1876,115 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
-  /api/v1/jira-app/questions/eligibility:
+  /api/v1/jira-app/events/issue-updated:
+    post:
+      tags: [jira-app]
+      operationId: receiveIssueUpdated
+      summary: >
+        Forge trigger avi:jira:updated:issue — records whether the issue is in Done and, on a move into Done, creates
+        the Solution Form Draft of the assignee or the mover (jira-app STORY-005, AC-005.6 to AC-005.10).
+      security:
+        - forgeInvocationToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueUpdatedPayload'
+      responses:
+        '202':
+          description: >
+            Accepted — also when the event has no status change, cannot be read, or the issue belongs to no T-Solve
+            Project (nothing changes then).
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/app-token:
+    post:
+      tags: [jira-app]
+      operationId: receiveJiraAppToken
+      summary: Forge scheduled and install/upgrade triggers hand the app system token to the backend (workspace STORY-014, KAN-349).
+      security:
+        - forgeInvocationToken: []
+      parameters:
+        - name: x-forge-oauth-system
+          in: header
+          required: true
+          description: The app system token; kept encrypted until it expires, never returned or logged.
+          schema: { type: string }
+      responses:
+        '204':
+          description: Token held for the Workspace of the site.
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/account-link:
     get:
       tags: [jira-app]
-      operationId: getJiraAskerEligibility
-      summary: Whether the Jira user may ask T-Solve on the "Ask T-Solve" page (STORY-010, AC-010.2).
+      operationId: getJiraAccountLink
+      summary: Whether the Jira user is linked to a T-Solve Account (STORY-014, AC-014.2).
       description: >
-        The user comes only from the verified FIT principal. Linked means the Jira account is linked to an active
-        T-Solve user; a FIT without a principal is not linked. Calls no AI.
+        The site and the Jira account come only from the verified FIT (`context.cloudId`, `principal`). LINKED carries
+        the linked Active Account's full name and email and the link time; NOT_LINKED when there is no link or the
+        Account is not Active; SITE_NOT_CONNECTED when the site belongs to no Workspace. A FIT without a Jira user →
+        403 MSG08. Calls no AI and stores nothing.
       security:
         - forgeInvocationToken: []
       responses:
         '200':
-          description: Whether the user is linked.
+          description: LINKED, NOT_LINKED or SITE_NOT_CONNECTED.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JiraAccountLinkStatus'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags: [jira-app]
+      operationId: startJiraAccountLink
+      summary: Starts linking the Jira user to a T-Solve Account (STORY-014, AC-014.6).
+      description: >
+        No body. The site and the Jira account come only from the verified FIT (AC-014.10). The server reads the Jira
+        display name with the Workspace's app token and asks identity for a single-use link request (10 minutes,
+        identity AC-001.69); the answer is the `/jira-link?request=<id>` link on the Workspace's site. A site of no
+        Workspace → 403 MSG124; no Jira user → 403 MSG08; Jira, the app token or the link request store unavailable,
+        or no display name → 503 MSG06; no link request is created in these cases (AC-014.9).
+      security:
+        - forgeInvocationToken: []
+      responses:
+        '200':
+          description: The link to open in a new tab.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JiraAccountLinkStart'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/questions/eligibility:
+    get:
+      tags: [jira-app]
+      operationId: getJiraAskerEligibility
+      summary: Whether the "Ask T-Solve" page can answer in this Jira project (STORY-010, AC-010.2, AC-010.14).
+      description: >
+        The site and the project come only from the verified FIT (`context.cloudId`,
+        `context.extension.project.key`). No T-Solve sign-in is needed. Calls no AI.
+      security:
+        - forgeInvocationToken: []
+      responses:
+        '200':
+          description: CONNECTED, SITE_NOT_CONNECTED or PROJECT_NOT_CONNECTED.
           content:
             application/json:
               schema:
@@ -1554,14 +1997,16 @@ paths:
     post:
       tags: [jira-app]
       operationId: askJiraAppQuestion
-      summary: Answers a question from the "Ask T-Solve" page with the Knowledge Chatbot (STORY-010).
+      summary: Starts a question job from the "Ask T-Solve" page (STORY-010).
       description: >
-        The user comes only from the verified FIT principal. The answer is the Knowledge Chatbot's, with the same
-        sources, citations and outcomes as on the web (AC-010.4); NO_SOURCE is shown as MSG109 by the Jira App.
-        A blank question → 400 MSG01, longer than 1,000 characters or more than 10 history turns →
-        400 MSG02 (AC-010.5). A Jira account not linked to an active T-Solve user, or a FIT without a principal →
-        403 MSG62 and no AI call (AC-010.11). The AI unavailable or no answer within the Jira App deadline
-        (JIRA_APP_ASK_TIMEOUT, 18 s) → 503 MSG06 (AC-010.8).
+        The project comes only from the verified FIT (`context.extension.project.key`, AC-010.13); no T-Solve
+        sign-in is needed, but the FIT must have a Jira user. The answer is the Knowledge Chatbot's for that Project,
+        from its Department's Published Solutions and the Wiki the asker may read: Company-wide documents, plus those
+        their linked T-Solve user may view (AC-010.4, chatbot STORY-012); stored without a user; NO_SOURCE is shown as MSG109 by the Jira App. A blank question → 400 MSG01, longer than 1,000 characters or more than 10 history turns →
+        400 MSG02 (AC-010.5). A site of no Workspace → 403 MSG124; no Jira user, no project, or not an Active T-Solve
+        Project's → 403 MSG08; no AI call or job in either case (AC-010.11). Returns a new job id within 2 seconds,
+        without waiting for the AI (AC-010.4). A full job pool → 503 MSG06 (AC-010.18).
+        Poll getJiraAppQuestionJob for the answer; the job deadline is JIRA_APP_ASK_TIMEOUT (default 60 s).
       security:
         - forgeInvocationToken: []
       requestBody:
@@ -1571,12 +2016,12 @@ paths:
             schema:
               $ref: '#/components/schemas/ChatbotQuestion'
       responses:
-        '200':
-          description: The answer, or NO_SOURCE.
+        '202':
+          description: Question accepted; poll the job for its answer.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ChatbotAnswer'
+                $ref: '#/components/schemas/JiraAppQuestionJob'
         '400':
           $ref: '#/components/responses/Problem'
         '401':
@@ -1584,6 +2029,79 @@ paths:
         '403':
           $ref: '#/components/responses/Problem'
         '503':
+          $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/questions/{jobId}:
+    get:
+      tags: [jira-app]
+      operationId: getJiraAppQuestionJob
+      summary: Reads the status and completed answer of an Ask T-Solve job.
+      description: >
+        Only the FIT's cloudId, accountId and projectKey that started the job may read it (AC-010.16).
+        Missing, expired or other-owner jobs answer 404 MSG06. Jobs expire 5 minutes after creation
+        (AC-010.17). A chatbot error or timeout produces FAILED; only DONE includes an answer (AC-010.4).
+        An unavailable job store answers 503 MSG06.
+      security:
+        - forgeInvocationToken: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Current job status; answer is present only when DONE.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JiraAppQuestionJobResult'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '503':
+          description: MSG06
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/jira-app/questions/{answerId}/rating:
+    parameters:
+      - name: answerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [jira-app]
+      operationId: rateJiraAppAnswer
+      summary: >
+        "Solved" (HELPFUL) or "Not solved, create ticket" (NOT_HELPFUL) on the "Ask T-Solve" page rates the last
+        answer (STORY-010, AC-010.15).
+      description: >
+        Only an answer asked in the FIT's project (`context.extension.project.key`) can be rated; any other id →
+        404 MSG04 (chatbot AC-012.7). A site of no Workspace → 403 MSG124; no project or not an Active T-Solve
+        Project's → 403 MSG08.
+      security:
+        - forgeInvocationToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatbotRating'
+      responses:
+        '204':
+          description: Rating saved.
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
           $ref: '#/components/responses/Problem'
   /api/v1/jira-app/issues/{issueKey}/solution-form:
     parameters:
@@ -1593,7 +2111,7 @@ paths:
       operationId: openSolutionForm
       summary: >
         Whether the viewer may open 4.1 Solution Form for the issue and, if so, its content: the viewer's Draft,
-        else the AI draft, else the issue text in Symptoms with MSG67 (STORY-001, 002, 005).
+        else the issue text in Symptoms — summary, a blank line, description — with no AI call (STORY-001, 002, 005).
       security:
         - forgeInvocationToken: []
       requestBody:
@@ -1722,6 +2240,7 @@ paths:
       tags: [jira-app]
       operationId: rewriteSolution
       summary: The AI rewrite of the five sections, for 4.2 AI Rewrite Preview (STORY-007).
+      description: Starts a background job without waiting for AI; poll getSolutionRewriteJob (60 s deadline).
       security:
         - forgeInvocationToken: []
       requestBody:
@@ -1731,12 +2250,12 @@ paths:
             schema:
               $ref: '#/components/schemas/SolutionSections'
       responses:
-        '200':
-          description: The rewritten sections.
+        '202':
+          description: Rewrite job accepted.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SolutionSections'
+                $ref: '#/components/schemas/SolutionRewriteJob'
         '400':
           $ref: '#/components/responses/Problem'
         '401':
@@ -1749,7 +2268,42 @@ paths:
                 $ref: '#/components/schemas/ProblemDetail'
         '503':
           description: >
-            MSG68 — the AI rewrite is unavailable or took too long; MSG06 — the Forge token could not be checked.
+            MSG68 — the AI pool is full or the job cannot be stored; MSG06 — the Forge token could not be checked.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/jira-app/solution-rewrites/{jobId}:
+    get:
+      tags: [jira-app]
+      operationId: getSolutionRewriteJob
+      summary: Read a rewrite job belonging to the FIT's Jira account and site.
+      security:
+        - forgeInvocationToken: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: PENDING, DONE with sections, or FAILED without sections.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolutionRewriteJobResult'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '404':
+          description: MSG68 — unknown, expired or another Jira account's or site's job.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: MSG68 — the job store is unavailable; MSG06 — the Forge token could not be checked.
           content:
             application/problem+json:
               schema:
@@ -2012,6 +2566,38 @@ paths:
         '409':
           $ref: '#/components/responses/Problem'
         '500':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/previews/{previewId}/rows/{rowNo}/publish:
+    post:
+      tags: [import]
+      operationId: publishImportPreviewRow
+      summary: >
+        Publishes one Valid row of a WITHOUT_SOLUTION preview (a file without Solutions or a Jira preview) at once, in
+        an Import Batch of its own, and deletes the row from the preview (MSG32, STORY-017). A WITH_SOLUTION preview or
+        a row that is not Valid = MSG06 (409); Ticket ID taken = MSG33 (409); Project no longer Active = MSG40 (409);
+        Project not managed = MSG08 (403); preview or row not found = 404. A rejection publishes nothing.
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+        - name: rowNo
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Published.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResultResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
           $ref: '#/components/responses/Problem'
   /api/v1/imports/jira:
     post:
@@ -2370,6 +2956,97 @@ paths:
           $ref: '#/components/responses/Problem'
         '404':
           $ref: '#/components/responses/Problem'
+  /api/v1/chatbot/answers/{answerId}/issue-draft:
+    parameters:
+      - name: answerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [chatbot]
+      operationId: draftChatbotIssue
+      summary: The Jira issue form of an own answer, prefilled by the AI from the conversation (UC-58, MSG144).
+      description: >
+        For an ANSWERED or NO_SOURCE answer of the user. Offers only the Departments with a default Project. When the
+        AI fails the draft is empty and the user fills it. Nothing is stored and nothing reaches Jira. A user with no
+        linked Jira account (UC-59) gets 409 code MSG146 instead of the form.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatbotIssueDraftRequest'
+      responses:
+        '200':
+          description: The prefilled form.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatbotIssueDraft'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /api/v1/chatbot/answers/{answerId}/jira-issue:
+    parameters:
+      - name: answerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [chatbot]
+      operationId: createChatbotIssue
+      summary: Creates the Jira issue of an own answer when the user clicks Create in Jira (UC-58, GBR-40).
+      description: >
+        Issue type Task, label tsolve-chatbot, in the default Project of the chosen Department, created with the
+        Workspace's Jira service account with the user's linked Jira account as reporter. One issue per answer: when
+        it exists, 200 returns it without calling Jira. Errors (code): 400 field errors MSG01/MSG02 or MSG06 for a
+        Department that is not offered; 409 MSG146 no linked Jira account; 502 MSG148 Jira refused, MSG157 the
+        default Project has no Task type or requires other fields; 503 MSG149 Jira unreachable. Nothing is created
+        on an error.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatbotIssueRequest'
+      responses:
+        '201':
+          description: The issue was created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatbotJiraIssue'
+        '200':
+          description: The issue of this answer already exists; Jira was not called.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatbotJiraIssue'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '502':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
   /api/v1/tickets:
     get:
       tags: [tickets]
@@ -2640,6 +3317,77 @@ components:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
   schemas:
+    WikiSpaceSettings:
+      type: object
+      required: [spaceId, name, departmentName, knowledgeManagers, ownDepartment, departments, users]
+      properties:
+        spaceId: { type: string, format: uuid }
+        name: { type: string }
+        departmentName: { type: string }
+        knowledgeManagers:
+          type: array
+          description: Full names of the Space's Active Knowledge Managers, ordered by name ignoring case; empty when none.
+          items: { type: string }
+        ownDepartment:
+          type: object
+          required: [departmentId, name, locked]
+          properties:
+            departmentId: { type: string, format: uuid }
+            name: { type: string }
+            locked: { type: boolean, const: true }
+        departments:
+          type: array
+          items:
+            type: object
+            required: [permissionId, departmentId, name, grantedBy, grantedAt]
+            properties:
+              permissionId: { type: string, format: uuid }
+              departmentId: { type: string, format: uuid }
+              name: { type: string }
+              grantedBy: { type: string, description: Granting user's full name. }
+              grantedAt: { type: string, format: date-time }
+        users:
+          type: array
+          items:
+            type: object
+            required: [permissionId, userId, fullName, email, homeDepartment, active, grantedBy, grantedAt]
+            properties:
+              permissionId: { type: string, format: uuid }
+              userId: { type: string, format: uuid }
+              fullName: { type: string }
+              email: { type: string, format: email }
+              homeDepartment: { type: [string, 'null'] }
+              active: { type: boolean }
+              grantedBy: { type: string, description: Granting user's full name. }
+              grantedAt: { type: string, format: date-time }
+    WikiPermissionCandidates:
+      type: object
+      required: [departments, users]
+      properties:
+        departments:
+          type: array
+          items:
+            type: object
+            required: [departmentId, name]
+            properties:
+              departmentId: { type: string, format: uuid }
+              name: { type: string }
+        users:
+          type: array
+          items:
+            type: object
+            required: [userId, fullName, email, homeDepartment]
+            properties:
+              userId: { type: string, format: uuid }
+              fullName: { type: string }
+              email: { type: string, format: email }
+              homeDepartment: { type: [string, 'null'] }
+    GrantWikiPermissionsRequest:
+      type: object
+      required: [departmentIds, userIds]
+      properties:
+        departmentIds: { type: array, items: { type: string, format: uuid } }
+        userIds: { type: array, items: { type: string, format: uuid } }
     WikiSpace:
       type: object
       required: [spaceId, name, departmentName, accessLevel]
@@ -2648,6 +3396,52 @@ components:
         name: { type: string }
         departmentName: { type: string }
         accessLevel: { type: string, enum: [VIEW, KNOWLEDGE_MANAGER] }
+    WikiUploadPreview:
+      type: object
+      required: [fileName, title, excerpt, wordCount, result]
+      properties:
+        fileName: { type: string }
+        title: { type: string, maxLength: 200 }
+        excerpt: { type: string, maxLength: 300 }
+        wordCount: { type: integer, minimum: 0 }
+        result: { type: string, enum: [READY, UNREADABLE] }
+    WikiPublishMetadata:
+      type: object
+      required: [documents]
+      properties:
+        folderId: { type: [string, 'null'], format: uuid }
+        documents:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            type: object
+            required: [title, visibility]
+            properties:
+              title: { type: string, minLength: 1, maxLength: 200 }
+              visibility: { type: string, enum: [DEPARTMENT, COMPANY_WIDE] }
+    WikiTrashItem:
+      type: object
+      required: [documentId, title, folderName, owner, deletedBy, deletedAt]
+      properties:
+        documentId: { type: string, format: uuid }
+        title: { type: string }
+        folderName: { type: [string, 'null'] }
+        owner: { type: string, description: Owner's full name. }
+        deletedBy: { type: string, description: Deleting user's full name. }
+        deletedAt: { type: string, format: date-time }
+    WikiRestoreResult:
+      type: object
+      required: [title, renamed]
+      properties:
+        title: { type: string, maxLength: 200 }
+        renamed: { type: boolean }
+    WikiDocumentRef:
+      type: object
+      required: [documentId, title]
+      properties:
+        documentId: { type: string, format: uuid }
+        title: { type: string }
     CreateWikiFolderRequest:
       type: object
       required: [name]
@@ -2696,15 +3490,16 @@ components:
       allOf:
         - $ref: '#/components/schemas/WikiDocumentSummary'
         - type: object
-          required: [content, fileName, fileSize, canDelete]
+          required: [content, fileName, fileSize, canDelete, inTrash]
           properties:
             content: { type: string, description: Extracted plain text. }
             fileName: { type: string }
             fileSize: { type: integer, format: int64 }
             canDelete: { type: boolean }
+            inTrash: { type: boolean, description: True only on the Knowledge Manager's read of a trashed document. }
     WorkspaceSetupRequest:
       type: object
-      required: [companyName, jiraSiteUrl, serviceAccountEmail, serviceAccountToken]
+      required: [companyName, jiraSiteUrl]
       properties:
         companyName: { type: string, minLength: 1, maxLength: 100 }
         jiraSiteUrl:
@@ -2712,26 +3507,24 @@ components:
           minLength: 1
           maxLength: 200
           description: HTTPS Jira Cloud site; a single label followed by .atlassian.net, optionally a trailing slash.
-        serviceAccountEmail: { type: string, format: email, minLength: 1, maxLength: 100 }
-        serviceAccountToken: { type: string, format: password, minLength: 1, writeOnly: true }
     WorkspaceUpdateRequest:
       type: object
-      required: [companyName, serviceAccountEmail]
+      required: [companyName]
       properties:
         companyName: { type: string, minLength: 1, maxLength: 100 }
-        serviceAccountEmail: { type: string, format: email, minLength: 1, maxLength: 100 }
-        serviceAccountToken:
-          type: string
-          format: password
-          writeOnly: true
-          description: Absent or blank keeps the stored token.
     WorkspaceInfo:
       type: object
-      required: [companyName, jiraSiteUrl, serviceAccountEmail]
+      required: [companyName, jiraSiteUrl, jiraAppConnected, jiraAppTokenReceivedAt]
       properties:
         companyName: { type: string }
         jiraSiteUrl: { type: string }
-        serviceAccountEmail: { type: string, format: email }
+        jiraAppConnected:
+          type: boolean
+          description: True while the T-Solve Jira App's token is held for the Workspace (KAN-349).
+        jiraAppTokenReceivedAt:
+          type: [string, 'null']
+          format: date-time
+          description: When the Jira App's token arrived; null while not connected.
     KnowledgeDashboard:
       type: object
       required: [period, options, outcomes, coverage, feedback, gaps, suggestions]
@@ -2920,6 +3713,62 @@ components:
                   items:
                     type: string
                   description: The issue labels; `tsolve-chatbot` marks an issue created by the Chatbot (AC-011.8).
+    IssueUpdatedPayload:
+      type: object
+      description: >
+        The part of a Forge avi:jira:updated:issue event that T-Solve reads; every field may be missing (the server
+        then changes nothing) and other fields Forge sends are ignored. Nothing here is logged except the issue key.
+      properties:
+        atlassianId:
+          type: string
+          description: The Jira account that made the change; owns the Draft when the issue has no assignee.
+        issue:
+          type: object
+          properties:
+            key:
+              type: string
+              maxLength: 50
+              description: The Jira issue key, e.g. ITSUP-1031.
+            fields:
+              type: object
+              properties:
+                summary:
+                  type: string
+                description:
+                  type: [object, 'null']
+                  additionalProperties: true
+                  description: The description as Atlassian Document Format (ADF); absent or null when empty.
+                status:
+                  type: object
+                  properties:
+                    statusCategory:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                          description: The issue's status category after the change; `done` is the Done category.
+                assignee:
+                  type: [object, 'null']
+                  properties:
+                    accountId:
+                      type: string
+        changelog:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                    description: '`status` for a status change.'
+                  from:
+                    type: [string, 'null']
+                    description: The id of the status before the change.
+                  to:
+                    type: [string, 'null']
+                    description: The id of the status after the change.
     AuditAction:
       type: string
       enum:
@@ -3087,6 +3936,26 @@ components:
       required: [name]
       properties:
         name: { type: string, minLength: 1, maxLength: 50 }
+        defaultProjectId: { type: [string, 'null'], format: uuid }
+    DepartmentProjectOption:
+      type: object
+      required: [projectId, jiraProjectKey]
+      properties:
+        projectId: { type: string, format: uuid }
+        jiraProjectKey: { type: string }
+    DepartmentDetail:
+      type: object
+      required: [departmentId, name, defaultProject, projects]
+      properties:
+        departmentId: { type: string, format: uuid }
+        name: { type: string }
+        defaultProject:
+          anyOf:
+            - { $ref: '#/components/schemas/DepartmentProjectOption' }
+            - { type: 'null' }
+        projects:
+          type: array
+          items: { $ref: '#/components/schemas/DepartmentProjectOption' }
     ProjectSummaryResponse:
       type: object
       required: [id, jiraProjectKey, departmentName, projectManagerName, status]
@@ -3112,6 +3981,35 @@ components:
         userId: { type: string, format: uuid }
         fullName: { type: [string, 'null'] }
         email: { type: string, format: email }
+    JiraProjectRoleResponse:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+    JiraRolePeopleResponse:
+      type: object
+      required: [people, groups]
+      properties:
+        people:
+          type: array
+          items: { $ref: '#/components/schemas/JiraRolePersonResponse' }
+        groups:
+          type: array
+          description: Names of the role's group actors; their members are not listed (AC-011.9).
+          items: { type: string }
+    JiraRolePersonResponse:
+      type: object
+      required: [jiraAccountId, displayName, status]
+      properties:
+        jiraAccountId: { type: string }
+        displayName: { type: string }
+        status:
+          type: string
+          enum: [ADDABLE, NOT_LINKED, NOT_TICKET_RESOLVER, NOT_ACTIVE, ALREADY_MEMBER]
+        userId: { type: string, format: uuid, description: Only when ADDABLE. }
+        fullName: { type: [string, 'null'], description: Only when ADDABLE. }
+        email: { type: string, format: email, description: Only when ADDABLE. }
     AddProjectMembersRequest:
       type: object
       required: [userIds]
@@ -3836,13 +4734,86 @@ components:
         canDecide:
           type: boolean
           description: Whether the current user may decide this pending Solution Form ticket in its managed Project.
+    JiraAccountLinkStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [LINKED, NOT_LINKED, SITE_NOT_CONNECTED]
+          description: >
+            LINKED shows "Linked to T-Solve as {full_name} ({email})." and "Link another account"; NOT_LINKED shows
+            "Sign in to T-Solve"; SITE_NOT_CONNECTED shows MSG124 (AC-014.3 to AC-014.5).
+        fullName:
+          type: string
+          description: The linked Account's full name; only when LINKED.
+        email:
+          type: string
+          description: The linked Account's email; only when LINKED.
+        linkedAt:
+          type: string
+          format: date-time
+          description: When the link was recorded; only when LINKED. The page waits for a later one (AC-014.8).
+    JiraAccountLinkStart:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          description: The Workspace site's `/jira-link?request=<id>` link (identity AC-001.69).
+    JiraAppQuestionJob:
+      type: object
+      required: [jobId]
+      properties:
+        jobId:
+          type: string
+          format: uuid
+    JiraAppQuestionJobResult:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [PENDING, DONE, FAILED]
+        answer:
+          description: Present only when status is DONE.
+          allOf:
+            - $ref: '#/components/schemas/ChatbotAnswer'
+        code:
+          type: string
+          description: >-
+            Only on a FAILED job the chatbot refused, its SRS code (e.g. MSG08 when the Project is no longer Active);
+            absent for a timeout or an AI failure, which the Jira App shows as MSG06.
+          example: MSG08
+    SolutionRewriteJob:
+      type: object
+      required: [jobId]
+      properties:
+        jobId:
+          type: string
+          format: uuid
+    SolutionRewriteJobResult:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [PENDING, DONE, FAILED]
+        sections:
+          description: Present only when status is DONE.
+          allOf:
+            - $ref: '#/components/schemas/SolutionSections'
     JiraAskerEligibility:
       type: object
-      required: [linked]
+      required: [status]
       properties:
-        linked:
-          type: boolean
-          description: Whether the FIT user is linked to an active T-Solve user (AC-010.2); false shows MSG62.
+        status:
+          type: string
+          enum: [CONNECTED, SITE_NOT_CONNECTED, PROJECT_NOT_CONNECTED]
+          description: >
+            CONNECTED shows the question box; SITE_NOT_CONNECTED (the site belongs to no Workspace) shows MSG124;
+            PROJECT_NOT_CONNECTED (the FIT's project is not an Active T-Solve Project's) shows "This Jira project is
+            not connected to T-Solve." (AC-010.2, AC-010.14).
     JiraReviewFeedback:
       type: object
       required: [feedback]
@@ -3897,9 +4868,9 @@ components:
     SolutionFormOrigin:
       type: string
       description: >
-        Where the sections come from — the viewer's Draft, the AI draft, the issue text (MSG67), or the ticket's
-        current Solution (a resubmission without a Draft, AC-012.2).
-      enum: [DRAFT, AI_DRAFT, ISSUE, TICKET]
+        Where the sections come from — the viewer's Draft, the issue text (AC-002.1), or the ticket's current
+        Solution (a resubmission without a Draft, AC-012.2).
+      enum: [DRAFT, ISSUE, TICKET]
     SolutionForm:
       type: object
       required: [mayOpen, origin, sections, message]
@@ -3920,7 +4891,7 @@ components:
           anyOf:
             - $ref: '#/components/schemas/MessageRef'
             - type: 'null'
-          description: MSG67 when the AI draft is unavailable; otherwise null.
+          description: A message to show above the sections; null today (MSG67 went with the AI draft, KAN-371).
     SubmitSolutionRequest:
       type: object
       required: [summary, sections]
@@ -4428,10 +5399,10 @@ components:
           type: string
         answer:
           type: string
-          description: The answer text; empty for a NO_SOURCE turn.
+          description: The answer text; empty for a turn that is not ANSWERED.
     ChatbotAnswerOutcome:
       type: string
-      enum: [ANSWERED, NO_SOURCE]
+      enum: [ANSWERED, NO_SOURCE, GREETING, OFF_TOPIC, INJECTION]
     ChatbotAnswer:
       type: object
       required: [answerId, outcome, text, citations]
@@ -4444,10 +5415,10 @@ components:
           $ref: '#/components/schemas/ChatbotAnswerOutcome'
         text:
           type: string
-          description: Plain text with numbered markers [1], [2] …; empty when NO_SOURCE.
+          description: Plain text with numbered markers [1], [2] …; empty unless ANSWERED.
         citations:
           type: array
-          description: In number order; empty when NO_SOURCE.
+          description: In number order; empty unless ANSWERED.
           items:
             $ref: '#/components/schemas/ChatbotCitation'
     ChatbotCitation:
@@ -4515,6 +5486,70 @@ components:
           items:
             type: string
             format: uuid
+    ChatbotIssueDraftRequest:
+      type: object
+      required: [history]
+      properties:
+        history:
+          type: array
+          maxItems: 10
+          description: The turns of the conversation before this answer, oldest first, as for askChatbot.
+          items:
+            $ref: '#/components/schemas/ChatbotTurn'
+    ChatbotIssueDraft:
+      type: object
+      required: [summary, description, departmentId, departments]
+      properties:
+        summary:
+          type: string
+          maxLength: 255
+          description: Prefilled by the AI; empty when the AI failed.
+        description:
+          type: string
+          maxLength: 10000
+        departmentId:
+          type: [integer, 'null']
+          format: int64
+          description: The suggested Department, one of departments; null when none is suggested.
+        departments:
+          type: array
+          description: The Departments with a default Project (UC-13), by name; empty when there is none.
+          items:
+            $ref: '#/components/schemas/IssueDepartment'
+    IssueDepartment:
+      type: object
+      required: [departmentId, name]
+      properties:
+        departmentId:
+          type: integer
+          format: int64
+        name:
+          type: string
+    ChatbotIssueRequest:
+      type: object
+      required: [summary, description, departmentId]
+      properties:
+        summary:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 10000
+        departmentId:
+          type: integer
+          format: int64
+    ChatbotJiraIssue:
+      type: object
+      required: [issueKey, issueUrl]
+      properties:
+        issueKey:
+          type: string
+          description: The Jira issue key, e.g. HR-12.
+        issueUrl:
+          type: string
+          format: uri
+          description: The issue in the Workspace's Jira site ({site}/browse/{issueKey}).
     FieldError:
       type: object
       required: [field, code]

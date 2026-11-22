@@ -255,3 +255,37 @@ secret in errors), `SuggestionJobServiceImplTest` (AC-011.7, AC-012.3, AC-012.6)
 **Verify:** in `backend/`, `mvn spotless:apply` and `mvn verify`; `bun harnessclaude/hooks/sdd.ts check tracker` from root and STORY-013 trace using tracker paths. After checks, report feature/files/results and proposed `feat(tracker): read Jira projects and statuses (KAN-127)` with STORY-013 body and AI Co-Authored-By trailer; stop for user commit agreement before the next feature. One feature plus its harness commit, no push/merge/PR without request. Current tracker spec must be approved separately before code; this planning run performs no approval/status operation.
 **Dependencies:** Task 18.
 **Estimated size:** medium.
+
+---
+
+## Task 20: Every Jira call through the gateway with Bearer (KAN-344)
+
+**Story:** STORY-012, STORY-013
+**Feature:** jira-gateway-bearer
+**Description:** `JiraAccount` becomes `(siteUrl, cloudId, apiToken)`; `toString()` keeps only the site. `JiraClient.http()`
+builds `https://api.atlassian.com/ex/jira/{cloudId}` with `Authorization: Bearer <token>`, no Basic auth (AC-012.9);
+the 5 s / 10 s timeouts stay (AC-013.10). Paths, status mapping and comment lookup (`/myself`) are unchanged. Logs keep
+no token (AC-013.12). Workspace part: workspace Task 10, same PR.
+**Files:**
+- Modify: `backend/src/main/java/vn/tsolve/tracker/dto/JiraAccount.java`, `backend/src/main/java/vn/tsolve/tracker/client/JiraClient.java`
+- Test: `JiraClientTest` (gateway URL, Bearer header, no Basic — AC-012.9; existing comment and project tests on the new base URL),
+  `SuggestionCommentServiceImplTest`, `TrackerProjectServiceImplTest` (new `JiraAccount` shape)
+**Dependencies:** none
+**Estimated size:** small
+
+---
+
+## Task 21: Queue the suggestion job for the worker from the web process (KAN-370, BUG-342)
+
+**Story:** STORY-011
+**Feature:** suggestion-web-jobs
+**Description:** design "Change 2026-11-18". New flag `tsolve.worker.web-jobs-enabled`; `WebJobQueue` and
+`WebJobsConfiguration` (enqueue-only JobRunr created on first use, Workspace from `OutboxWorkspace`);
+`WebSuggestionJobQueue` (AC-011.10, AC-011.11); `InProcessSuggestionJobQueue` only while both flags are off (AC-011.9).
+Staging compose and `.env.example`. Bug-log row BUG-342.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/worker/service/WebJobQueue.java`, `backend/src/main/java/vn/tsolve/worker/config/WebJobsConfiguration.java`, `backend/src/main/java/vn/tsolve/tracker/service/impl/WebSuggestionJobQueue.java`
+- Modify: `backend/src/main/java/vn/tsolve/tracker/service/impl/InProcessSuggestionJobQueue.java`, `backend/src/main/resources/application.yml`, `.env.example`, `infra/compose.staging.yml`, `docs/bug-log.md`
+- Test: `WebSuggestionJobQueueTest`, `WebJobsConfigurationTest`, `SuggestionJobQueueSelectionTest`
+**Dependencies:** Task 16
+**Estimated size:** small

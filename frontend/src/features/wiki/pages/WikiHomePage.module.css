@@ -1,0 +1,291 @@
+/*
+ * 11.1 explorer (KAN-372, plans/261118-1513-wiki-ui-redesign-preview/wiki-variant-b.html):
+ * navigator | list | preview in one card that fills the viewport under the 64px header; each pane scrolls.
+ */
+.explorer {
+  display: grid;
+  grid-template-columns: 256px minmax(0, 1fr) 360px;
+  grid-template-areas: 'nav list preview';
+  height: calc(100vh - 64px - var(--ant-padding-lg));
+  min-height: 560px;
+  overflow: hidden;
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-bg-container);
+  box-shadow: var(--ant-box-shadow-tertiary);
+}
+
+.navigator {
+  grid-area: nav;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ant-margin);
+  min-width: 0;
+  padding: var(--ant-padding) var(--ant-padding-sm);
+  overflow-y: auto;
+  border-right: var(--ant-line-width) solid var(--ant-color-border-secondary);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ant-margin-xxs);
+  min-width: 0;
+}
+
+.label {
+  padding: 0 var(--ant-padding-xs);
+  color: var(--ant-color-text-secondary);
+  font-size: var(--ant-font-size-sm);
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+  gap: var(--ant-margin-xs);
+  min-width: 0;
+  min-height: var(--ant-control-height-lg);
+  padding: var(--ant-padding-xxs) var(--ant-padding-xs);
+  border-radius: var(--ant-border-radius);
+  color: var(--ant-color-text);
+  transition: background-color 0.15s ease;
+}
+
+.entry:hover {
+  background: var(--ant-color-fill-tertiary);
+  color: var(--ant-color-text);
+}
+
+.entry:focus-visible,
+.row:focus-visible {
+  outline: var(--ant-line-width-focus) solid var(--ant-color-primary-border);
+  outline-offset: 1px;
+}
+
+.entry[aria-current='page'] {
+  background: var(--ant-color-primary-bg);
+  color: var(--ant-color-primary);
+  font-weight: var(--ant-font-weight-strong);
+}
+
+.spaceEntry {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.access {
+  color: var(--ant-color-text-secondary);
+  font-size: var(--ant-font-size-sm);
+  font-weight: normal;
+}
+
+/* Folder tree title: the name ellipsizes, the "⋯" button stays inside the 256px column. */
+.folderTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--ant-margin-xxs);
+  width: 100%;
+  contain: inline-size;
+}
+
+.folderName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listPane {
+  grid-area: list;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* One row: the search shrinks first; buttons keep their size. Top-aligned so MSG02 under the box moves nothing. */
+.toolbar {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ant-margin-xs);
+  padding: var(--ant-padding) var(--ant-padding-lg);
+  border-bottom: var(--ant-line-width) solid var(--ant-color-border-secondary);
+}
+
+.search.search {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.listTitle {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ant-margin);
+  padding: var(--ant-padding) var(--ant-padding-lg) var(--ant-padding-xs);
+}
+
+.listTitle h2.ellipsis {
+  margin: 0;
+  font-size: var(--ant-font-size-heading-4);
+  line-height: var(--ant-line-height-heading-4);
+}
+
+.ellipsis {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nowrap {
+  flex: none;
+  white-space: nowrap;
+}
+
+.rows {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 var(--ant-padding-sm) var(--ant-padding);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: var(--ant-control-height) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--ant-margin-sm);
+  padding: var(--ant-padding-sm) var(--ant-padding-xs);
+  border-radius: var(--ant-border-radius-lg);
+  color: var(--ant-color-text);
+  transition: background-color 0.15s ease;
+}
+
+.row:hover {
+  background: var(--ant-color-fill-tertiary);
+  color: var(--ant-color-text);
+}
+
+.row[aria-current='true'] {
+  background: var(--ant-color-primary-bg);
+}
+
+.fileIcon {
+  display: grid;
+  place-items: center;
+  width: var(--ant-control-height);
+  height: var(--ant-control-height);
+  border-radius: var(--ant-border-radius);
+  background: var(--ant-color-primary-bg);
+  color: var(--ant-color-primary);
+}
+
+.rowMain {
+  min-width: 0;
+}
+
+.rowTitle {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--ant-font-weight-strong);
+}
+
+.rowSub,
+.rowEnd {
+  display: flex;
+  gap: var(--ant-margin-sm);
+  overflow: hidden;
+  color: var(--ant-color-text-secondary);
+  font-size: var(--ant-font-size-sm);
+  white-space: nowrap;
+}
+
+.rowEnd {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--ant-margin-xxs);
+}
+
+.preview {
+  grid-area: preview;
+  min-width: 0;
+  padding: var(--ant-padding-lg);
+  overflow-y: auto;
+  border-left: var(--ant-line-width) solid var(--ant-color-border-secondary);
+  background: var(--ant-color-bg-layout);
+}
+
+.previewTitle.previewTitle {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.details {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: var(--ant-margin-xs) var(--ant-margin-sm);
+  margin: 0;
+}
+
+.details dt {
+  color: var(--ant-color-text-secondary);
+}
+
+.details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* First 420 characters, fading out at the bottom. */
+.excerpt {
+  position: relative;
+  max-height: 220px;
+  overflow: hidden;
+  padding: var(--ant-padding);
+  border: var(--ant-line-width) solid var(--ant-color-border-secondary);
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-bg-container);
+  color: var(--ant-color-text-tertiary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.excerpt::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 64px;
+  background: linear-gradient(to bottom, transparent, var(--ant-color-bg-container));
+}
+
+/* Below 1280px the preview moves under the list and the page scrolls instead of the panes. */
+@media (max-width: 1279px) {
+  .explorer {
+    grid-template-columns: 256px minmax(0, 1fr);
+    grid-template-areas:
+      'nav list'
+      'nav preview';
+    height: auto;
+  }
+
+  .rows,
+  .preview,
+  .navigator {
+    overflow-y: visible;
+  }
+
+  .preview {
+    border-left: none;
+    border-top: var(--ant-line-width) solid var(--ant-color-border-secondary);
+  }
+}

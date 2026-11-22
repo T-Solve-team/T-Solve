@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -13,8 +14,11 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import vn.tsolve.identity.TwoTenantDatabases;
+import vn.tsolve.tracker.dto.ChatbotProjectCheck;
 import vn.tsolve.tracker.dto.TrackerProjectLookup;
 import vn.tsolve.tracker.dto.TrackerProjectLookup.Outcome;
+import vn.tsolve.tracker.dto.TrackerRole;
+import vn.tsolve.tracker.dto.TrackerRoleActors;
 import vn.tsolve.tracker.service.TrackerProjectService;
 
 /** Shares one context for all Project ITs; the Jira double asserts no active transaction (AC-005.18, D61). */
@@ -86,6 +90,21 @@ public class ProjectApiITConfiguration {
             requested.add(key);
             hook.run();
             return stubs.getOrDefault(key, TrackerProjectLookup.failed(Outcome.NOT_FOUND));
+        }
+
+        @Override
+        public ChatbotProjectCheck checkChatbotProject(String projectKey) {
+            throw new AssertionError("Project ITs never check a Chatbot project");
+        }
+
+        @Override
+        public Optional<List<TrackerRole>> projectRoles(String projectKey) {
+            throw new AssertionError("Project ITs never read Jira roles");
+        }
+
+        @Override
+        public Optional<TrackerRoleActors> roleActors(String projectKey, long roleId) {
+            throw new AssertionError("Project ITs never read Jira roles");
         }
     }
 }

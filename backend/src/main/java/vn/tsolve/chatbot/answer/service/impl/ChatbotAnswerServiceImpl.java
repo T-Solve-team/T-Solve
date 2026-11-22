@@ -1,22 +1,30 @@
 package vn.tsolve.chatbot.answer.service.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.convert.DurationStyle;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
+import vn.tsolve.ai.client.ChatMessage;
 import vn.tsolve.ai.client.EmbeddingClient;
 import vn.tsolve.ai.client.LlmClient;
 import vn.tsolve.ai.exception.AiUnavailableException;
@@ -28,12 +36,19 @@ import vn.tsolve.chatbot.answer.dto.TicketSolutionCitation;
 import vn.tsolve.chatbot.answer.entity.ChatbotAnswer;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
 import vn.tsolve.chatbot.answer.service.ChatbotAnswerService;
+import vn.tsolve.chatbot.exception.ChatbotProjectNotActiveException;
+import vn.tsolve.chatbot.rating.entity.ChatbotRating;
+import vn.tsolve.chatbot.rating.exception.ChatbotAnswerNotFoundException;
 import vn.tsolve.chatbot.source.service.WikiSources;
+import vn.tsolve.chatbot.source.service.WikiSources.WikiPassage;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.search.retrieval.service.SolutionRetrieval;
+import vn.tsolve.ticket.service.ProjectAccess;
 
 @Service
 public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
+    // The classifier may use at most 1/3 of the remaining ask budget (BUG-329).
+    private static final long CLASSIFIER_SHARE = 3;
     private final EmbeddingClient embeddings;
     private final LlmClient llm;
     private final SolutionRetrieval solutions;
@@ -44,6 +59,9 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
     private final double minSimilarity;
     private final int sourceLimit;
     private final long timeoutNanos;
+    private final QuestionClassifier classifier;
+    private final ProjectAccess projects;
+    private final Clock clock;
 
     @Autowired
     public ChatbotAnswerServiceImpl(
@@ -53,10 +71,14 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
             WikiSources wiki,
             ChatbotAnswerRepository answers,
             PlatformTransactionManager transactionManager,
+            ObjectMapper json,
             @Qualifier("applicationTaskExecutor") Executor executor,
             @Value("${CHATBOT_MIN_SIMILARITY:0.7}") double minSimilarity,
             @Value("${CHATBOT_SOURCE_LIMIT:5}") int sourceLimit,
-            @Value("${CHATBOT_ASK_TIMEOUT:60s}") String timeout) {
+            @Value("${CHATBOT_ASK_TIMEOUT:60s}") String timeout,
+            // Optional, so a context without the ticket module or a Clock bean still answers web questions (BUG-320).
+            ObjectProvider<ProjectAccess> projects,
+            ObjectProvider<Clock> clock) {
         this(
                 embeddings,
                 llm,
@@ -64,10 +86,13 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
                 wiki,
                 answers,
                 transactionManager,
+                json,
                 executor,
                 minSimilarity,
                 sourceLimit,
-                DurationStyle.detectAndParse(timeout));
+                DurationStyle.detectAndParse(timeout),
+                projects.getIfAvailable(),
+                clock.getIfAvailable(Clock::systemUTC));
     }
 
     ChatbotAnswerServiceImpl(
@@ -77,10 +102,41 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
             WikiSources wiki,
             ChatbotAnswerRepository answers,
             PlatformTransactionManager transactionManager,
+            ObjectMapper json,
             Executor executor,
             double minSimilarity,
             int sourceLimit,
             Duration timeout) {
+        this(
+                embeddings,
+                llm,
+                solutions,
+                wiki,
+                answers,
+                transactionManager,
+                json,
+                executor,
+                minSimilarity,
+                sourceLimit,
+                timeout,
+                null,
+                Clock.systemUTC());
+    }
+
+    ChatbotAnswerServiceImpl(
+            EmbeddingClient embeddings,
+            LlmClient llm,
+            SolutionRetrieval solutions,
+            WikiSources wiki,
+            ChatbotAnswerRepository answers,
+            PlatformTransactionManager transactionManager,
+            ObjectMapper json,
+            Executor executor,
+            double minSimilarity,
+            int sourceLimit,
+            Duration timeout,
+            ProjectAccess projects,
+            Clock clock) {
         if (!Double.isFinite(minSimilarity)
                 || minSimilarity < 0
                 || minSimilarity > 1
@@ -99,16 +155,94 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         this.minSimilarity = minSimilarity;
         this.sourceLimit = sourceLimit;
         this.timeoutNanos = timeout.toNanos();
+        this.classifier = new QuestionClassifier(json);
+        this.projects = projects;
+        this.clock = clock;
     }
 
     @Override
     public ChatbotAnswerResponse ask(TSolveUser user, ChatbotQuestionRequest request) {
+        return answer(
+                request,
+                (vector, candidates) -> {
+                    solutions.nearest(vector, minSimilarity, sourceLimit).stream()
+                            .map(ChatbotSource::of)
+                            .forEach(candidates::add);
+                    return wiki.nearest(user, vector, minSimilarity, sourceLimit);
+                },
+                (question, outcome, text) -> new ChatbotAnswer(user.id(), question, outcome, text));
+    }
+
+    @Override
+    public ChatbotAnswerResponse askForProject(
+            UUID projectId, Optional<TSolveUser> reader, ChatbotQuestionRequest request) {
+        // AC-012.4: refused before any AI call.
+        if (projectId == null || projects == null || !projects.isActive(projectId)) {
+            throw new ChatbotProjectNotActiveException();
+        }
+        return answer(
+                request,
+                (vector, candidates) -> {
+                    solutions.nearestInProjectDepartment(projectId, vector, minSimilarity, sourceLimit).stream()
+                            .map(ChatbotSource::of)
+                            .forEach(candidates::add);
+                    // AC-012.1: a linked asker reads what they may view on the web; anyone else Company-wide only.
+                    return reader.isPresent()
+                            ? wiki.nearest(reader.get(), vector, minSimilarity, sourceLimit)
+                            : wiki.nearestCompanyWide(vector, minSimilarity, sourceLimit);
+                },
+                (question, outcome, text) -> ChatbotAnswer.forProject(projectId, question, outcome, text));
+    }
+
+    @Override
+    @Transactional
+    public void rateForProject(UUID projectId, UUID answerId, ChatbotRating rating) {
+        if (projectId == null
+                || answerId == null
+                || rating == null
+                || answers.updateProjectRating(answerId, projectId, rating, Instant.now(clock)) == 0) {
+            throw new ChatbotAnswerNotFoundException();
+        }
+    }
+
+    /** Adds the Solution sources to the list and returns the Wiki passages for one embedded question. */
+    private interface Sources {
+        List<WikiPassage> find(float[] vector, List<ChatbotSource> candidates);
+    }
+
+    private interface Row {
+        ChatbotAnswer of(String question, String outcome, String text);
+    }
+
+    private ChatbotAnswerResponse answer(ChatbotQuestionRequest request, Sources sources, Row row) {
         long deadline = System.nanoTime() + timeoutNanos;
         String question = request.question().trim();
-        // ponytail: No LLM rewrite yet; upgrade to LLM query rewriting if follow-up retrieval quality needs it.
-        String retrievalText = request.history().isEmpty()
-                ? question
-                : request.history().getLast().question().trim() + "\n" + question;
+        if (QuestionClassifier.isGreeting(question)) {
+            return save(row.of(question, Outcome.GREETING.name(), ""), Outcome.GREETING, List.of(), deadline);
+        }
+        var classification =
+                classifier.parse(classify(ClassifierPrompt.messages(question, request.history()), deadline));
+        remaining(deadline);
+        Outcome refused =
+                switch (classification.category()) {
+                    case GREETING -> Outcome.GREETING;
+                    case OFF_TOPIC -> Outcome.OFF_TOPIC;
+                    case INJECTION -> Outcome.INJECTION;
+                    case QUESTION -> null;
+                };
+        if (refused != null) {
+            return save(row.of(question, refused.name(), ""), refused, List.of(), deadline);
+        }
+        // BUG-331: a first question is embedded as asked, so a lossy rewrite cannot drop an error code from it.
+        // The private rewrite only resolves a follow-up against the history; without one the old fallback stays.
+        String retrievalText;
+        if (request.history().isEmpty()) {
+            retrievalText = question;
+        } else if (!classification.query().isEmpty()) {
+            retrievalText = classification.query();
+        } else {
+            retrievalText = request.history().getLast().question().trim() + "\n" + question;
+        }
         float[] vector =
                 callAi(() -> embeddings.embed(List.of(retrievalText)), deadline).getFirst();
         // Fail fast before the vector search if embedding has exhausted the deadline.
@@ -116,13 +250,9 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
 
         // Keep database access on the request thread so it retains the request's Workspace database.
         List<ChatbotSource> candidates = new ArrayList<>();
-        solutions.nearest(vector, minSimilarity, sourceLimit).stream()
-                .map(ChatbotSource::of)
-                .forEach(candidates::add);
+        List<WikiPassage> passages = sources.find(vector, candidates);
         remaining(deadline);
-        wiki.nearest(user, vector, minSimilarity, sourceLimit).stream()
-                .map(ChatbotSource::of)
-                .forEach(candidates::add);
+        passages.stream().map(ChatbotSource::of).forEach(candidates::add);
         candidates.sort(Comparator.comparingDouble(ChatbotSource::similarity)
                 .reversed()
                 .thenComparingInt(source -> source.citation() instanceof TicketSolutionCitation ? 0 : 1));
@@ -133,35 +263,47 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         remaining(deadline);
 
         if (kept.isEmpty()) {
-            return save(user, question, Outcome.NO_SOURCE, "", List.of(), deadline);
+            return save(row.of(question, Outcome.NO_SOURCE.name(), ""), Outcome.NO_SOURCE, List.of(), deadline);
         }
         var messages = AnswerPrompt.messages(question, request.history(), kept);
         String text = callAi(() -> llm.chat(messages, null), deadline);
         remaining(deadline);
         var cited = Citations.of(text, kept);
         if (cited.citations().isEmpty()) {
-            return save(user, question, Outcome.NO_SOURCE, "", List.of(), deadline);
+            return save(row.of(question, Outcome.NO_SOURCE.name(), ""), Outcome.NO_SOURCE, List.of(), deadline);
         }
-        return save(user, question, Outcome.ANSWERED, cited.text(), cited.citations(), deadline);
+        return save(
+                row.of(question, Outcome.ANSWERED.name(), cited.text()), Outcome.ANSWERED, cited.citations(), deadline);
     }
 
     private ChatbotAnswerResponse save(
-            TSolveUser user,
-            String question,
-            Outcome outcome,
-            String text,
-            List<ChatbotCitation> citations,
-            long deadline) {
+            ChatbotAnswer answer, Outcome outcome, List<ChatbotCitation> citations, long deadline) {
         return transaction.execute(status -> {
             remaining(deadline);
-            ChatbotAnswer saved = answers.save(new ChatbotAnswer(user.id(), question, outcome.name(), text));
+            ChatbotAnswer saved = answers.save(answer);
             remaining(deadline);
             // Flush before checking the deadline so a slow insert can still be rolled back.
             answers.flush();
             // This check covers the insert and flush; COMMIT itself is not bounded by the ask deadline.
             remaining(deadline);
-            return new ChatbotAnswerResponse(saved.getId(), outcome, text, citations);
+            return new ChatbotAnswerResponse(saved.getId(), outcome, answer.getAnswerText(), citations);
         });
+    }
+
+    /**
+     * BUG-329, BUG-330: the classifier fails open. It gets a third of the remaining ask budget, so a slow reply still
+     * leaves time for the search; a timeout or any other failure returns {@code null}, which parses as QUESTION.
+     */
+    private String classify(List<ChatMessage> messages, long deadline) {
+        long budget = remaining(deadline) / CLASSIFIER_SHARE;
+        try {
+            return CompletableFuture.supplyAsync(() -> llm.chat(messages, ClassifierPrompt.CLASSIFIER_SCHEMA), executor)
+                    .orTimeout(budget, TimeUnit.NANOSECONDS)
+                    .join();
+        } catch (RuntimeException failure) {
+            // No log: the failure may carry the question or the reply.
+            return null;
+        }
     }
 
     private <T> T callAi(Supplier<T> call, long deadline) {

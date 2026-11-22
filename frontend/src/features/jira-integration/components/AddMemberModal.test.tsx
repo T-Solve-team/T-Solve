@@ -25,8 +25,19 @@ async function openPopup() {
   renderApp(paths.projectDetail(ITSUP_ID), { role: 'PROJECT_MANAGER' });
   await user.click(await screen.findByRole('button', { name: 'Add member' }, { timeout: 5000 }));
   const dialog = await screen.findByRole('dialog', { name: 'Add member' });
+  // The popup opens on "From Jira" (AC-011.6); these tests are about the Search tab (AC-002.10).
+  await user.click(within(dialog).getByRole('tab', { name: 'Search' }));
   await within(dialog).findByRole('row', { name: /Phạm Quốc Bảo/ });
   return { user, dialog };
+}
+
+/** After a 409 the "From Jira" list is reloaded too (AC-011.11): here it no longer offers anyone. */
+function noLongerOfferedFromJira() {
+  server.use(
+    http.get('*/api/v1/projects/:projectId/jira-roles/:roleId/people', () =>
+      HttpResponse.json({ people: [], groups: [] }),
+    ),
+  );
 }
 
 const addButton = (dialog: HTMLElement) => within(dialog).getByRole('button', { name: 'Add' });
@@ -126,6 +137,7 @@ describe('AddMemberModal', () => {
     const { user, dialog } = await openPopup();
     await user.click(within(dialog).getByRole('checkbox', { name: 'Select Phạm Quốc Bảo' }));
     await user.click(within(dialog).getByRole('checkbox', { name: 'Select Ngô Thị Mai' }));
+    noLongerOfferedFromJira();
     server.use(
       http.get('*/api/v1/projects/:projectId/member-candidates', () =>
         HttpResponse.json([
@@ -164,6 +176,7 @@ describe('AddMemberModal', () => {
     server.use(http.post('*/api/v1/projects/:projectId/members', () => problem(409, 'MSG06')));
     const { user, dialog } = await openPopup();
     await user.click(within(dialog).getByRole('checkbox', { name: 'Select Phạm Quốc Bảo' }));
+    noLongerOfferedFromJira();
     server.use(
       http.get('*/api/v1/projects/:projectId/member-candidates', () => HttpResponse.json([])),
     );
@@ -182,6 +195,7 @@ describe('AddMemberModal', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Add member' }));
     const reopened = await screen.findByRole('dialog', { name: 'Add member' });
+    await user.click(within(reopened).getByRole('tab', { name: 'Search' }));
     await within(reopened).findByRole('row', { name: /Phạm Quốc Bảo/ });
     await user.click(within(reopened).getByRole('checkbox', { name: 'Select Phạm Quốc Bảo' }));
     await user.click(within(reopened).getByRole('button', { name: 'Close' }));

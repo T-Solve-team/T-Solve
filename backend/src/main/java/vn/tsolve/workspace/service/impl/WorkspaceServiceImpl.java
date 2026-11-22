@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceException;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
-import java.util.regex.Pattern;
 import org.hibernate.exception.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,15 +21,12 @@ import vn.tsolve.common.exception.BusinessRuleException;
 import vn.tsolve.common.exception.FieldMessageCodeException;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.identity.signin.port.TenantScope;
-import vn.tsolve.tracker.client.TicketTrackerClient;
-import vn.tsolve.tracker.dto.JiraAccount;
-import vn.tsolve.tracker.exception.JiraRejectedException;
-import vn.tsolve.tracker.exception.JiraUnavailableException;
-import vn.tsolve.workspace.crypto.TokenCipher;
+import vn.tsolve.workspace.dto.JiraAppToken;
 import vn.tsolve.workspace.dto.WorkspaceInfoMapper;
 import vn.tsolve.workspace.dto.WorkspaceInfoResponse;
 import vn.tsolve.workspace.entity.WorkspaceInfo;
 import vn.tsolve.workspace.repository.WorkspaceInfoRepository;
+import vn.tsolve.workspace.service.JiraAppTokenService;
 import vn.tsolve.workspace.service.WorkspaceService;
 import vn.tsolve.workspace.site.JiraSiteLinkRefusedException;
 import vn.tsolve.workspace.site.JiraSiteLinker;
@@ -38,13 +35,11 @@ import vn.tsolve.workspace.site.JiraSiteRule;
 @Service
 public class WorkspaceServiceImpl implements WorkspaceService {
     private static final Logger log = LoggerFactory.getLogger(WorkspaceServiceImpl.class);
-    private static final Pattern EMAIL = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
     private final TenantScope scope;
     private final WorkspaceInfoRepository repository;
     private final EntityManager entities;
-    private final TicketTrackerClient tracker;
     private final JiraSiteLinker linker;
-    private final TokenCipher cipher;
+    private final JiraAppTokenService tokens;
     private final AuditService audit;
     private final WorkspaceInfoMapper mapper;
     private final TransactionTemplate transaction;
@@ -53,18 +48,16 @@ public class WorkspaceServiceImpl implements WorkspaceService {
             TenantScope scope,
             WorkspaceInfoRepository repository,
             EntityManager entities,
-            TicketTrackerClient tracker,
             JiraSiteLinker linker,
-            TokenCipher cipher,
+            JiraAppTokenService tokens,
             AuditService audit,
             WorkspaceInfoMapper mapper,
             PlatformTransactionManager transactions) {
         this.scope = scope;
         this.repository = repository;
         this.entities = entities;
-        this.tracker = tracker;
         this.linker = linker;
-        this.cipher = cipher;
+        this.tokens = tokens;
         this.audit = audit;
         this.mapper = mapper;
         this.transaction = new TransactionTemplate(transactions);
@@ -75,26 +68,23 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         if (input == null || !input.isObject()) {
             throw error(null, "MSG03", Map.of());
         }
+        // AC-005.15: serviceAccountEmail and serviceAccountToken are ignored (KAN-349: no customer credential).
         String companyName = field(input, "companyName", "Company name", 100).strip();
         String rawSite = field(input, "jiraSiteUrl", "Jira site address", 200);
-        String email = field(input, "serviceAccountEmail", "Service account email", 100)
-                .strip();
-        String token = field(input, "serviceAccountToken", "Service account API token", null);
-        if (!EMAIL.matcher(email).matches()) {
-            throw error("serviceAccountEmail", "MSG03", Map.of());
-        }
         String site = JiraSiteRule.normalise(rawSite).orElseThrow(() -> error("jiraSiteUrl", "MSG61", Map.of()));
         UUID workspaceId = scope.currentWorkspaceId();
         if (repository.count() != 0) {
             throw alreadySetUp();
         }
+        String cloudId;
         try {
-            tracker.checkServiceAccount(new JiraAccount(site, email, token));
-        } catch (JiraRejectedException | JiraUnavailableException failure) {
-            // The underlying Jira exception/body must never be propagated with the credential error.
-            throw error("serviceAccountToken", "MSG156", Map.of("tracker_name", "Jira"));
+            // AC-005.6, AC-005.14: the site's cloud id, read with no transaction open (D30).
+            cloudId = linker.readCloudId(site);
+        } catch (JiraSiteLinkRefusedException failure) {
+            log.warn("Jira tenant information could not be read during Workspace setup");
+            throw error("jiraSiteUrl", "MSG61", Map.of());
         }
-        // D30: the Jira check above runs with no transaction open; link (AC-005.8), insert and audit commit together.
+        // Link (AC-005.8), insert and audit commit together.
         return transaction.execute(status -> {
             try {
                 linker.linkJiraSite(site);
@@ -105,8 +95,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                 log.warn("Jira tenant information could not be read during Workspace setup");
                 throw error("jiraSiteUrl", "MSG61", Map.of());
             }
-            WorkspaceInfo workspace =
-                    new WorkspaceInfo(workspaceId, companyName, site, email, cipher.encrypt(workspaceId, token));
+            WorkspaceInfo workspace = new WorkspaceInfo(workspaceId, companyName, site, cloudId);
             try {
                 // Assigned ids make JpaRepository.save merge: a concurrent Setup could overwrite the winner.
                 // Persist is insert-only; flush brings the unique violation inside this error boundary.
@@ -122,15 +111,15 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                     AuditAction.TRACKER_CONFIGURATION_CHANGE,
                     "WORKSPACE",
                     workspaceId,
-                    Map.of("companyName", companyName, "jiraSiteUrl", site, "serviceAccountEmail", email));
-            return mapper.toResponse(workspace);
+                    Map.of("companyName", companyName, "jiraSiteUrl", site));
+            return response(workspace);
         });
     }
 
     @Override
     @Transactional(readOnly = true)
     public WorkspaceInfoResponse get() {
-        return mapper.toResponse(repository
+        return response(repository
                 .findById(scope.currentWorkspaceId())
                 .orElseThrow(() -> new NotFoundException("MSG60", Map.of())));
     }
@@ -140,56 +129,31 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         if (input == null || !input.isObject()) {
             throw error(null, "MSG03", Map.of());
         }
+        // AC-007.7: jiraSiteUrl, serviceAccountEmail and serviceAccountToken are ignored; AC-007.6: no Jira call.
         String companyName = field(input, "companyName", "Company name", 100).strip();
-        String email = field(input, "serviceAccountEmail", "Service account email", 100)
-                .strip();
-        if (!EMAIL.matcher(email).matches()) {
-            throw error("serviceAccountEmail", "MSG03", Map.of());
-        }
-        JsonNode tokenInput = input.path("serviceAccountToken");
-        if (!tokenInput.isMissingNode() && !tokenInput.isNull() && !tokenInput.isTextual()) {
-            throw error("serviceAccountToken", "MSG03", Map.of());
-        }
-        String token = tokenInput.isTextual() ? tokenInput.textValue() : "";
-        boolean tokenChanged = !token.isBlank();
         UUID workspaceId = scope.currentWorkspaceId();
         WorkspaceInfo stored =
                 repository.findById(workspaceId).orElseThrow(() -> new NotFoundException("MSG60", Map.of()));
-        if (tokenChanged || !email.equals(stored.getServiceAccountEmail())) {
-            String resultingToken = tokenChanged ? token : storedToken(workspaceId, stored);
-            try {
-                tracker.checkServiceAccount(new JiraAccount(stored.getJiraSiteAddress(), email, resultingToken));
-            } catch (JiraRejectedException | JiraUnavailableException failure) {
-                throw error("serviceAccountToken", "MSG156", Map.of("tracker_name", "Jira"));
-            }
-        }
-        String encryptedToken = tokenChanged ? cipher.encrypt(workspaceId, token) : stored.getServiceAccountApiToken();
-        // Keep the immutable site and the stored ciphertext when no replacement token was supplied.
-        WorkspaceInfo updated =
-                new WorkspaceInfo(workspaceId, companyName, stored.getJiraSiteAddress(), email, encryptedToken);
-        // Jira checks finish before the write transaction; the update and its audit commit together.
+        String oldCompanyName = stored.getCompanyName();
+        stored.rename(companyName);
         return transaction.execute(status -> {
-            WorkspaceInfo saved = repository.save(updated);
+            WorkspaceInfo saved = repository.save(stored);
             audit.record(
                     AuditAction.TRACKER_CONFIGURATION_CHANGE,
                     "WORKSPACE",
                     workspaceId,
-                    Map.of(
-                            "companyName", Map.of("old", stored.getCompanyName(), "new", companyName),
-                            "serviceAccountEmail", Map.of("old", stored.getServiceAccountEmail(), "new", email),
-                            "tokenChanged", tokenChanged));
-            return mapper.toResponse(saved);
+                    Map.of("companyName", Map.of("old", oldCompanyName, "new", companyName)));
+            return response(saved);
         });
     }
 
-    private String storedToken(UUID workspaceId, WorkspaceInfo stored) {
-        try {
-            return cipher.decrypt(workspaceId, stored.getServiceAccountApiToken());
-        } catch (IllegalStateException failure) {
-            // D29: the Admin re-enters the token; never log the value or the cause.
-            log.error("Workspace {} stored Jira token could not be decrypted", workspaceId);
-            throw error("serviceAccountToken", "MSG156", Map.of("tracker_name", "Jira"));
-        }
+    // AC-006.6: the Jira App status comes with every answer.
+    private WorkspaceInfoResponse response(WorkspaceInfo workspace) {
+        Optional<JiraAppToken> token = tokens.current(workspace.getId());
+        return mapper.toResponse(
+                workspace,
+                token.isPresent(),
+                token.map(JiraAppToken::receivedAt).orElse(null));
     }
 
     private static String field(JsonNode input, String field, String label, Integer maxLength) {

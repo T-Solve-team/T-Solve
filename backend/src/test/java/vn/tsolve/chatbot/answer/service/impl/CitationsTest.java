@@ -3,6 +3,7 @@ package vn.tsolve.chatbot.answer.service.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.reflect.RecordComponent;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -37,10 +38,29 @@ class CitationsTest {
 
     @Test
     void listsAdjacentMarkersAndIgnoresOtherForms_AC_006_1() {
-        var citations = Citations.of("Both [1][2]; not [01], [ 3 ], [0] or [1, 3].", kept);
+        var citations = Citations.of("Both [1][2]; not [01], [ 3 ], [0] or [n=3].", kept);
 
         assertThat(citations.citations()).extracting(ChatbotCitation::number).containsExactly(1, 2);
-        assertThat(citations.text()).isEqualTo("Both [1][2]; not [01], [ 3 ], [0] or [1, 3].");
+        assertThat(citations.text()).isEqualTo("Both [1][2]; not [01], [ 3 ], [0] or [n=3].");
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "Can Tho [1,2] and Hai Phong [3, 1].|Can Tho [1][2] and Hai Phong [3][1].|1;2;3",
+                "All of them [1,2,3].|All of them [1][2][3].|1;2;3",
+                "Keep [1, 9] and drop [9,42].|Keep [1] and drop.|1",
+                "Code args[1,2] and [n=1,n=2] are text [2].|Code args[1,2] and [n=1,n=2] are text [2].|2"
+            })
+    void readsGroupMarkersAsSingleMarkers_AC_006_8_BUG_348(String text, String expected, String numbers) {
+        var citations = Citations.of(text, kept);
+
+        assertThat(citations.text()).isEqualTo(expected);
+        assertThat(citations.citations())
+                .extracting(ChatbotCitation::number)
+                .containsExactly(
+                        Arrays.stream(numbers.split(";")).map(Integer::valueOf).toArray(Integer[]::new));
     }
 
     @ParameterizedTest
@@ -51,7 +71,7 @@ class CitationsTest {
                 "Restart the service [1] [42].|Restart the service [1].",
                 "Restart [4][1] now.|Restart [1] now.",
                 "Restart [99]|Restart",
-                "Keep [1, 9] as text [1].|Keep [1, 9] as text [1]."
+                "Keep [n=9] as text [1].|Keep [n=9] as text [1]."
             })
     void removesUnknownMarkers_AC_006_2(String text, String expected) {
         var citations = Citations.of(text, kept);

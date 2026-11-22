@@ -269,9 +269,17 @@ public class DashboardRepository {
                     select distinct on (lower(trim(a.question)))
                         lower(trim(a.question)) as grouping_key, trim(a.question) as spelling,
                         count(*) over (partition by lower(trim(a.question))) as total
-                    from chatbot_answer a join app_user u on u.id = a.user_id
+                    from chatbot_answer a left join app_user u on u.id = a.user_id
+                    left join project p on p.public_id = a.project_id
                     where a.outcome = 'NO_SOURCE' and a.created_at >= :start and a.created_at < :end
-                """ + (departments == null ? "" : " and u.department_id in (:departments)") + """
+                      and (u.id is not null or p.project_id is not null)
+                """
+                        + (departments == null
+                                ? ""
+                                // AC-004.11: a question asked in Jira has no asker; it counts in its Project's
+                                // Department.
+                                : " and coalesce(u.department_id, p.department_id) in (:departments)")
+                        + """
                     order by lower(trim(a.question)), a.created_at, a.chatbot_answer_id
                 )
                 select spelling, total, sum(total) over () as no_source

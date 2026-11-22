@@ -189,6 +189,41 @@ integrity, 10 Integration · Skipped: 4 Scale (one form per user), 6 Environment
 - The daily Draft reminder email (worker job, own recurring id and mail sender, reuses `WorkerTenantService` only) is
   a separate Jira issue.
 
+## Change — 2026-11-14: Draft reminder email (STORY-011, KAN-336, Tasks 11–12)
+
+Branch `feat/KAN-336-jira-app-draft-reminder`, cut from the KAN-126 branch (Close keeps a Draft is not on `main` yet);
+rebased onto `main` once PR #203 merges.
+
+```
+JobRunr recurring "jira-app-draft-reminder"  0 8 * * *  Asia/Ho_Chi_Minh   (DraftReminderRegistration)
+  └─ DraftReminderDispatchHandler          for each WorkerTenantService.activeWorkspaceIds()
+       └─ DraftReminderWorkspaceHandler    runInTenant: writers with an open Draft (ticket's SolutionDraftService)
+            └─ enqueue(jobId = UUID(workspace, account, date), DraftReminderEmailRequest)   ← one per writer per day
+                 └─ DraftReminderEmailHandler   runInTenant: active Account (identity) + its open Drafts → EmailOutboxService.queue
+```
+
+| Decision | Chosen | Alternatives | Rationale |
+|---|---|---|---|
+| Where the code lives | `vn.tsolve.jiraapp` (handlers); the open-Draft query in `ticket` (`SolutionDraftService`) | in `worker`; in `ticket-review` | User 14/11: do not change Dương's `worker`/`ticket-review` code; only use `WorkerTenantService`, `TenantExecutionService`, `JobRunrRuntime` |
+| Schedule | own recurring id `jira-app-draft-reminder`, `0 8 * * *`, Asia/Ho_Chi_Minh | reuse JOB-02's run | A shared id would overwrite JOB-02; 08:00 avoids JOB-02's 00:00 |
+| One email per writer per day (AC-011.5) | JobRunr job id = name-based UUID of workspace + account + date; JobRunr ignores a second enqueue with the same id | a "last reminded" column | No schema change; a retried dispatch cannot mail twice |
+| Retry per writer (AC-011.4) | one JobRunr job per writer queues its email; JobRunr's default retries if the queue call fails; delivery retries are the outbox's (3 attempts in 1 hour). An address the outbox rejects is logged and dropped, not retried | one job per Workspace | A failed writer does not requeue the others; a bad address cannot succeed on retry |
+| Mail sender (changed 15/11) | the shared email outbox, `EmailOutboxService.queue(OutboundEmail)` (worker STORY-004, KAN-162), plain text, HTML body null; called inside `runInTenant` because the outbox stores the bound Workspace | own SMTP client (the 14/11 choice); reuse `ReviewNotificationSender` | PR #233 merged: one mail path for the team, with its validation, display name and retries; backend AGENTS §1 forbids calling `worker`'s `client/` directly. HTML body to follow (user, 15/11) |
+| No sender configured (AC-011.6) | queue anyway; the outbox logs the missing sender once and expires the row (worker AC-004.9, AC-004.10) | skip the run and warn (the 14/11 choice) | jira-app cannot see the outbox's SMTP sender without reaching into `worker` internals |
+| Open Draft | `solution_draft` row whose `jira_issue_key` has no `ticket` (any source, as "the issue's ticket"), creator ACTIVE | also check Project membership | The spec says nothing of membership; a Draft stays the writer's |
+| Jira link | `JIRA_SITE_URL` (already read by `tracker`) + `/browse/` + key; omitted when empty | per-Workspace site registry | No registry yet (platform); one dev site today |
+| Logs (AC-011.7) | Workspace id, account id, counts, error class only | — | NF 3 |
+
+Decided in planning: "last saved" is `solution_draft.updated_at`; dates format `yyyy-MM-dd` in Asia/Ho_Chi_Minh; the
+singular subject is used for exactly one open Draft (builder check).
+
+Change 2026-11-18 (AC-011.3, HTML body): `DraftReminderMessage` also renders `mail/draft-reminder.html`, a copy of
+the frame of `ticket-review`'s `mail/review-notification.html` (KAN-333) — header, badge "Draft reminder", heading,
+greeting with the Account's full name, one card with a table of the open Drafts (issue key linked to Jira, last saved
+date), closing line, footer. Its own template and renderer in `jiraapp`, not `worker/client/ReviewEmailRenderer`:
+backend AGENTS §1 forbids using another module's `client/`. Values are HTML-escaped and filled in one pass, as
+`ReviewEmailRenderer` does. The outbox sends the HTML with the plain-text body as its alternative.
+
 ## Change — 2026-11-14: Resubmit after Changes requested (Tasks 13, 14; KAN-130)
 - Spec: STORY-012 (AC-012.1 to AC-012.7). Decisions of 14/11: due date reset as for a new submission; the form is filled
   from the writer's Draft, else the ticket's Solution; Close keeps a Draft; success shows MSG66; the panel button
@@ -216,3 +251,48 @@ integrity, 10 Integration · Skipped: 4 Scale (one form per user), 6 Environment
   409 MSG06 re-reads the panel and counts a `PENDING_REVIEW` status as submitted (an earlier try got through).
 - Risk: a PM decision and a resubmission at the same time — the guarded UPDATE changes the row only while it is still
   `CHANGES_REQUESTED`, so one of them wins and the other gets 409.
+
+## Change — 2026-11-18: no AI draft, a Draft at Done, reminders only while Done (KAN-371, Tasks 28–31)
+
+Branch `feat/KAN-371-jira-app-draft-at-done`, from `main` after KAN-336 (#296). Spec: AC-002.1, AC-005.2,
+AC-005.6 to AC-005.10, AC-011.2.
+
+```
+Forge trigger avi:jira:updated:issue ──(remote, FIT, ROLE_JIRA_APP)──▶ POST /api/v1/jira-app/events/issue-updated
+  JiraAppIssueEventController → IssueUpdatedService (jiraapp)
+    1. no issue key / no `status` item in changelog.items → 202, nothing           (AC-005.10)
+    2. JiraWorkspaceLookup.workspaceOf(FIT cloudId) → none → 202, nothing
+    3. TenantScope.runIn(workspace):
+         ProjectService: project of the key's prefix → none → 202, nothing
+         done = issue.fields.status.statusCategory.key == "done"
+         SolutionDraftService.recordIssueDone(projectId, issueKey, done)            (AC-005.9)
+         moved into Done (changelog `status` item whose from-status was not Done, now done)
+           owner = assignee.accountId ?: atlassianId → JiraAskerLookup.find(cloudId, owner)
+           member? (ScopeAccessService, as JiraIssueAccessImpl) · no ticket? (SolutionFormTicketService.findStatus)
+           SolutionDraftService.createIfAbsent(owner, projectId, issueKey, issueText)  (AC-005.7, AC-005.8)
+       the Jira status read (below) runs first, outside any transaction; the two writes of 3 share one
+       transaction; a failure → 500, nothing stored                                    (AC-005.10)
+```
+
+| Decision | Chosen | Alternatives | Rationale |
+|---|---|---|---|
+| Form prefill (AC-002.1) | `JiraAppSolutionServiceImpl.openForm` returns `Origin.ISSUE` with the existing `fromIssue(summary, description)` (summary, blank line, description, cut to 10,000), message null; `SolutionFormAi.draft`, `Origin.AI_DRAFT` and `MSG67` go away; `SolutionFormAi.rewrite` stays | keep the AI call behind a flag | User 18/11: drop the AI draft. `fromIssue` moves to a small `IssueText` helper in `jiraapp/service/impl` so the trigger uses the same text |
+| Where the Done state lives | new table `jira_issue_done_state` in the Workspace DB, owned by `ticket` next to `solution_draft` (changeset `048-jira-app-issue-done-state.sql`): `project_id`, `jira_issue_key` (PK with project), `done` boolean, `updated_at` | a column on `solution_draft`; a table in `jiraapp` | The state is per issue, not per Draft (a Draft made later by Close still needs it); the open-Draft query already lives in `ticket` (KAN-336 decision), so the filter stays one JPQL `exists` |
+| Reminder filter (AC-011.2) | `findOpenDrafts` gains `exists (select s from JiraIssueDoneState s where s.projectId = d.projectId and s.issueKey = d.issueKey and s.done = true)` | filter in the handler | One query; a never-recorded issue is simply absent, so it is not reminded (user 18/11) |
+| Owner (AC-005.7) | `issue.fields.assignee.accountId`, else the event's `atlassianId`; looked up with `JiraAskerLookup` (the linked active Account) | the person who moved it first | User 18/11 |
+| Create without replacing (AC-005.8) | `SolutionDraftService.createIfAbsent` — `INSERT … ON CONFLICT (creator_id, project_id, jira_issue_key) DO NOTHING` | read then insert | A Close at the same moment wins and is never overwritten; no race |
+| Description text | the event's description is ADF; a `jiraapp` copy of the frontend's `issueText` (paragraphs and list items on their own lines, trailing breaks stripped) | `tracker/client/AdfTextExtractor` | backend AGENTS §1 forbids another module's `client/`; the same rules as `watchDone.js#issueText` keep the Draft equal to what the form shows when opened from the issue view |
+| Trigger (AC-005.6) | manifest `trigger` key `tsolve-issue-updated-trigger`, events `avi:jira:updated:issue`, `filter.ignoreSelf: true`, endpoint `tsolve-issue-updated-endpoint` (remote `tsolve-backend`, route `/api/v1/jira-app/events/issue-updated`) | a Forge function that filters first | Same shape as the issue-created trigger; the server ignores events without a status change, so no function hop |
+| Payload | `IssueUpdatedPayload` reads only `issue.key`, `issue.fields.{summary, description, status.statusCategory.key, assignee.accountId}`, `atlassianId`, `changelog.items[]{field, from, to}`; unknown fields ignored | full event | Forge sends more than T-Solve needs; logs carry the issue key and ids only (NF 3) |
+
+Decided in planning: "moved into Done" = a changelog item with `field == "status"`, the issue's current category
+`done`, and a "before" state that is not Done. The event's `from` is a status id, not a category, so the "before" is
+the server's recorded state for the issue; when there is none (the first status change T-Solve sees for that issue),
+the server reads the `from` status's category from Jira (`GET /rest/api/3/status/{id}`) with the Workspace's app
+token through a new `jiraapp/client/JiraStatusClient` (as `RestJiraUserClient`, 10 s timeout). If that read fails,
+the change counts as a move into Done — a missing Draft costs a reminder, an extra one costs nothing. The
+`JiraAppIssueEventController` lives in `jiraapp/controller` (the issue-created one stays in `tracker`).
+
+Risks: Forge may deliver an event twice — `createIfAbsent` and the idempotent state upsert make a repeat harmless.
+Forge does not retry a failed remote trigger, so a 500 loses that move; the next status change records the state
+again (AC-005.10). Reassigning after Done does not move the Draft (Out of Scope).

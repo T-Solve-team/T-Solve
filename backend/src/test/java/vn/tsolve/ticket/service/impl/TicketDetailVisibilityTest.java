@@ -99,6 +99,31 @@ class TicketDetailVisibilityTest {
     }
 
     @Test
+    void nonPublishedProjectManagerOfAnInactiveProject_AC_008_2_BUG_312() {
+        // an inactive Project is missing from the caller's active Projects, but its membership still counts
+        ticket(TicketStatus.UNPUBLISHED, null);
+        when(tickets.isProjectManager(PROJECT, CALLER)).thenReturn(true);
+        assertThat(reads.detail(Map.of(), CALLER, true, ID).ticketId()).isEqualTo(ID);
+    }
+
+    @Test
+    void nonPublishedNonManagerOfAnInactiveProjectIsDenied_AC_008_2_BUG_312() {
+        ticket(TicketStatus.UNPUBLISHED, null);
+        when(tickets.isProjectManager(PROJECT, CALLER)).thenReturn(false);
+        assertThatThrownBy(() -> reads.detail(Map.of(), CALLER, true, ID)).isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void pendingSolutionFormOfAnInactiveProjectIsReadableButNotDecidable_AC_008_2_BUG_312() {
+        // the decision service checks only active Projects, so the manager must not get an Approve/Reject that 403s
+        ticket(TicketStatus.PENDING_REVIEW, null);
+        when(tickets.isProjectManager(PROJECT, CALLER)).thenReturn(true);
+        var detail = reads.detail(Map.of(), CALLER, true, ID);
+        assertThat(detail.ticketId()).isEqualTo(ID);
+        assertThat(detail.canDecide()).isFalse();
+    }
+
+    @Test
     @DisplayName("AC-008.2 AC-008.4 denies a Department manager who does not manage this Project")
     void pendingOtherProjectManager() {
         ticket(TicketStatus.PENDING_REVIEW, null);

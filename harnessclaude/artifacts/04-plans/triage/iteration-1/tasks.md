@@ -120,3 +120,40 @@ Cover edge cases 25, 27, 29–31, 34–36.
 **Dependencies:** search Task 20 (`nearestInProjectDepartment`, `UUID` Project id); tracker suggestion job (on main); ai (done).
 **Estimated size:** small
 **Verification:** `bun harnessclaude/hooks/sdd.ts trace triage`; in `backend/`, `mvn verify`. Report files, results and the proposed commit before committing.
+
+---
+
+## Task 5: Managed Projects from project_membership (KAN-347)
+
+**Story:** STORY-003, STORY-004
+**Feature:** managed-projects
+**Jira:** KAN-347 · branch `fix/KAN-347-triage-managed-projects`
+**Description:** `MembershipManagedProjects implements ManagedProjects` reads, for the account id in
+`Authentication.getName()`, the `ACTIVE` Projects of `ACTIVE` Departments where the account's
+`project_membership.role_in_project` is `PROJECT_MANAGER`, the account is `ACTIVE` and holds the PROJECT_MANAGER Role
+(the rule of `ticket.repository.ProjectAccessRepository`). A user id that is not a UUID gives no Project. Delete
+`NoManagedProjects`.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/triage/repository/ManagedProjectRepository.java`,
+  `backend/src/main/java/vn/tsolve/triage/service/impl/MembershipManagedProjects.java`
+- Delete: `backend/src/main/java/vn/tsolve/triage/service/impl/NoManagedProjects.java`
+- Test: `backend/src/test/java/vn/tsolve/triage/repository/ManagedProjectRepositoryIT.java` (AC-003.1: manager,
+  non-manager, Removed Project, Deleted Department, inactive account, account without the Role)
+**Estimated size:** small
+**Verification:** in `backend/`, `mvn verify`.
+
+---
+
+## Task 6: Jira site of the Workspace (KAN-348)
+
+**Story:** STORY-003, STORY-004
+**Feature:** jira-site
+**Jira:** KAN-348 · branch `fix/KAN-348-triage-jira-site`
+**Description:** `WorkspaceJiraSite implements JiraSite` reads the one row of `workspace.jira_site_address` of the
+bound Workspace database; null or blank gives empty (`issueUrl` already drops a trailing `/`). Delete `NoJiraSite`.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/triage/service/impl/WorkspaceJiraSite.java`
+- Delete: `backend/src/main/java/vn/tsolve/triage/service/impl/NoJiraSite.java`
+- Test: `backend/src/test/java/vn/tsolve/triage/service/impl/WorkspaceJiraSiteIT.java` (AC-003.5, AC-003.6)
+**Estimated size:** small
+**Verification:** in `backend/`, `mvn verify`.

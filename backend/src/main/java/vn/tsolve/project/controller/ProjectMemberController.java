@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vn.tsolve.common.security.Roles;
 import vn.tsolve.project.dto.AddProjectMembersRequest;
+import vn.tsolve.project.dto.JiraProjectRoleResponse;
+import vn.tsolve.project.dto.JiraRolePeopleResponse;
 import vn.tsolve.project.dto.MemberCandidateResponse;
 import vn.tsolve.project.dto.ProjectMemberResponse;
 import vn.tsolve.project.dto.ProjectSummaryResponse;
@@ -76,6 +78,29 @@ public class ProjectMemberController {
     public ResponseEntity<List<ProjectMemberResponse>> addProjectMembers(
             @PathVariable UUID projectId, @Valid @RequestBody AddProjectMembersRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.addMembers(projectId, request));
+    }
+
+    @GetMapping("/jira-roles")
+    @Operation(operationId = "listProjectJiraRoles", summary = "The roles of the Project's Jira project")
+    @ApiResponse(responseCode = "403", description = "Not the Project Manager of this Project")
+    @ApiResponse(responseCode = "404", description = "Unknown Project")
+    @ApiResponse(responseCode = "503", description = "MSG06: Jira roles not available")
+    @PreAuthorize("hasRole('" + Roles.PROJECT_MANAGER + "')")
+    public ResponseEntity<List<JiraProjectRoleResponse>> listProjectJiraRoles(@PathVariable UUID projectId) {
+        return ResponseEntity.ok(service.jiraRoles(projectId));
+    }
+
+    @GetMapping("/jira-roles/{roleId}/people")
+    @Operation(
+            operationId = "listProjectJiraRolePeople",
+            summary = "The people of a Jira project role and whether each can be added")
+    @ApiResponse(responseCode = "403", description = "Not the Project Manager of this Project")
+    @ApiResponse(responseCode = "404", description = "Unknown Project")
+    @ApiResponse(responseCode = "503", description = "MSG06: Jira role not available")
+    @PreAuthorize("hasRole('" + Roles.PROJECT_MANAGER + "')")
+    public ResponseEntity<JiraRolePeopleResponse> listProjectJiraRolePeople(
+            @PathVariable UUID projectId, @PathVariable long roleId) {
+        return ResponseEntity.ok(service.jiraRolePeople(projectId, roleId));
     }
 
     @DeleteMapping("/members/{userId}")

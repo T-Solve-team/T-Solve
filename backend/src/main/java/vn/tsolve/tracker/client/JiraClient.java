@@ -3,27 +3,33 @@ package vn.tsolve.tracker.client;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import vn.tsolve.tracker.dto.JiraAccount;
+import vn.tsolve.tracker.dto.TrackerCreateField;
+import vn.tsolve.tracker.dto.TrackerRole;
+import vn.tsolve.tracker.dto.TrackerRoleActors;
 import vn.tsolve.tracker.dto.TrackerStatus;
 import vn.tsolve.tracker.exception.JiraRejectedException;
 import vn.tsolve.tracker.exception.JiraUnavailableException;
 
 /**
- * Jira Cloud REST API v3 as the Workspace's service account (Basic auth: email + API token). Errors keep only the HTTP
- * status: Jira's body may quote the issue, and the credentials never leave this class (Non-Functional 4, 9).
+ * Jira Cloud REST API v3 as the Workspace's service account: its scoped API token as Bearer through the Atlassian
+ * gateway {@code https://api.atlassian.com/ex/jira/{cloudId}} (AC-012.9, KAN-344). Errors keep only the HTTP status:
+ * Jira's body may quote the issue, and the token never leaves this class (Non-Functional 4, 9).
  */
 @Component
 public class JiraClient implements TicketTrackerClient {
@@ -31,49 +37,40 @@ public class JiraClient implements TicketTrackerClient {
     // Jira lists comments oldest first by default; the newest page is enough to find the one T-Solve posted.
     private static final String COMMENTS = "/rest/api/3/issue/{issueKey}/comment?orderBy=-created&maxResults=100";
 
+    private static final int PAGE_SIZE = 200;
+    private static final String ISSUE_TYPES =
+            "/rest/api/3/issue/createmeta/{projectKey}/issuetypes?startAt={startAt}&maxResults=" + PAGE_SIZE;
+    private static final String CREATE_FIELDS = "/rest/api/3/issue/createmeta/{projectKey}/issuetypes/{issueTypeId}"
+            + "?startAt={startAt}&maxResults=" + PAGE_SIZE;
+
+    private static final String GATEWAY = "https://api.atlassian.com/ex/jira/";
+    // Only a canonical UUID may become part of the gateway path (workspace AC-011.8).
+    private static final Pattern CLOUD_ID =
+            Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+
     private final RestClient.Builder builder;
+    private final String gateway;
 
     @Autowired
     public JiraClient(
             @Value("${tsolve.tracker.jira.connect-timeout:5s}") Duration connectTimeout,
             @Value("${tsolve.tracker.jira.read-timeout:10s}") Duration readTimeout) {
+        this(connectTimeout, readTimeout, GATEWAY);
+    }
+
+    /** For tests: real timeouts with the gateway replaced by a local stub server ({@code <base>/ex/jira/}). */
+    public JiraClient(Duration connectTimeout, Duration readTimeout, String gateway) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(connectTimeout);
         factory.setReadTimeout(readTimeout);
         this.builder = RestClient.builder().requestFactory(factory);
+        this.gateway = gateway;
     }
 
     /** For tests: a builder bound to a mock server. */
     public JiraClient(RestClient.Builder builder) {
         this.builder = builder;
-    }
-
-    @Override
-    public void checkServiceAccount(JiraAccount account) {
-        RestClient http = http(account);
-        ResponseEntity<Void> me =
-                call(() -> http.get().uri("/rest/api/3/myself").retrieve().toBodilessEntity());
-        if (me.getStatusCode().value() != 200) {
-            throw new JiraRejectedException(me.getStatusCode().value());
-        }
-        ResponseEntity<JsonNode> response = call(() -> http.get()
-                .uri("/rest/api/3/mypermissions?permissions=BROWSE_PROJECTS,CREATE_ISSUES,MODIFY_REPORTER")
-                .retrieve()
-                .toEntity(JsonNode.class));
-        if (response.getStatusCode().value() != 200) {
-            throw new JiraRejectedException(response.getStatusCode().value());
-        }
-        JsonNode permissions = response.getBody();
-        for (String permission : List.of("BROWSE_PROJECTS", "CREATE_ISSUES", "MODIFY_REPORTER")) {
-            if (permissions == null
-                    || !permissions
-                            .path("permissions")
-                            .path(permission)
-                            .path("havePermission")
-                            .booleanValue()) {
-                throw new JiraRejectedException(403);
-            }
-        }
+        this.gateway = GATEWAY;
     }
 
     @Override
@@ -155,6 +152,129 @@ public class JiraClient implements TicketTrackerClient {
         return List.copyOf(statuses);
     }
 
+    @Override
+    public boolean hasProjectPermissions(JiraAccount account, String projectKey, List<String> permissions) {
+        // The permission names are T-Solve's constants; only the project key comes from data, so it is a variable.
+        JsonNode answer = call(() -> http(account)
+                .get()
+                .uri(
+                        "/rest/api/3/mypermissions?projectKey={projectKey}&permissions="
+                                + String.join(",", permissions),
+                        projectKey)
+                .retrieve()
+                .body(JsonNode.class));
+        if (answer == null || !answer.path("permissions").isObject()) {
+            throw new JiraUnavailableException(0);
+        }
+        return permissions.stream().allMatch(permission -> answer.path("permissions")
+                .path(permission)
+                .path("havePermission")
+                .booleanValue());
+    }
+
+    @Override
+    public List<TrackerRole> projectRoles(JiraAccount account, String projectKey) {
+        // {"Member": "https://…/rest/api/3/project/10001/role/10015", …}: the id is the last part of each link.
+        JsonNode roles = call(() -> http(account)
+                .get()
+                .uri("/rest/api/3/project/{projectKey}/role", projectKey)
+                .retrieve()
+                .body(JsonNode.class));
+        if (roles == null || !roles.isObject()) {
+            throw new JiraUnavailableException(0);
+        }
+        List<TrackerRole> read = new ArrayList<>();
+        roles.fields().forEachRemaining(role -> {
+            String link = role.getValue().asText("");
+            String id = link.substring(link.lastIndexOf('/') + 1);
+            if (id.chars().allMatch(Character::isDigit) && !id.isEmpty()) {
+                read.add(new TrackerRole(Long.parseLong(id), role.getKey()));
+            }
+        });
+        return List.copyOf(read);
+    }
+
+    @Override
+    public TrackerRoleActors roleActors(JiraAccount account, String projectKey, long roleId) {
+        JsonNode role = call(() -> http(account)
+                .get()
+                .uri("/rest/api/3/project/{projectKey}/role/{roleId}", projectKey, roleId)
+                .retrieve()
+                .body(JsonNode.class));
+        if (role == null || !role.path("actors").isArray()) {
+            throw new JiraUnavailableException(0);
+        }
+        List<TrackerRoleActors.Person> people = new ArrayList<>();
+        List<String> groups = new ArrayList<>();
+        for (JsonNode actor : role.path("actors")) {
+            String type = actor.path("type").asText("");
+            if ("atlassian-user-role-actor".equals(type)) {
+                String accountId = actor.path("actorUser").path("accountId").asText("");
+                if (!accountId.isBlank()) {
+                    String name = actor.path("displayName").asText("");
+                    people.add(new TrackerRoleActors.Person(accountId, name.isBlank() ? accountId : name));
+                }
+            } else if ("atlassian-group-role-actor".equals(type)) {
+                String name = actor.path("actorGroup")
+                        .path("name")
+                        .asText(actor.path("displayName").asText(""));
+                if (!name.isBlank()) {
+                    groups.add(name);
+                }
+            }
+        }
+        return new TrackerRoleActors(people, groups);
+    }
+
+    @Override
+    public Optional<List<TrackerCreateField>> createFields(
+            JiraAccount account, String projectKey, String issueTypeName) {
+        RestClient http = http(account);
+        Optional<String> issueTypeId = Optional.empty();
+        for (JsonNode type : pages(http, ISSUE_TYPES, "issueTypes", projectKey)) {
+            if (issueTypeName.equalsIgnoreCase(type.path("name").asText())
+                    && !type.path("subtask").booleanValue()) {
+                issueTypeId = Optional.of(requiredText(type, "id"));
+                break;
+            }
+        }
+        if (issueTypeId.isEmpty()) {
+            return Optional.empty();
+        }
+        List<TrackerCreateField> fields = new ArrayList<>();
+        for (JsonNode field : pages(http, CREATE_FIELDS, "fields", projectKey, issueTypeId.get())) {
+            fields.add(new TrackerCreateField(
+                    requiredText(field, "fieldId"),
+                    field.path("required").booleanValue(),
+                    field.path("hasDefaultValue").booleanValue()));
+        }
+        return Optional.of(List.copyOf(fields));
+    }
+
+    // Every item of a startAt/total paged list; {@code uri} ends with the startAt variable, after {@code args}.
+    private List<JsonNode> pages(RestClient http, String uri, String listName, Object... args) {
+        List<JsonNode> all = new ArrayList<>();
+        while (true) {
+            Object[] page = Arrays.copyOf(args, args.length + 1);
+            page[args.length] = all.size();
+            JsonNode answer = call(() -> http.get().uri(uri, page).retrieve().body(JsonNode.class));
+            JsonNode items = items(answer, listName);
+            items.forEach(all::add);
+            if (items.isEmpty() || all.size() >= answer.path("total").asInt(0)) {
+                return all;
+            }
+        }
+    }
+
+    // Jira Cloud names the list issueTypes / fields; older answers call it values.
+    private static JsonNode items(JsonNode page, String name) {
+        JsonNode items = page == null ? null : page.has(name) ? page.get(name) : page.get("values");
+        if (items == null || !items.isArray()) {
+            throw new JiraUnavailableException(0);
+        }
+        return items;
+    }
+
     private static String requiredString(JsonNode node, String field) {
         if (node == null || !node.path(field).isTextual()) {
             throw new JiraUnavailableException(0);
@@ -172,9 +292,15 @@ public class JiraClient implements TicketTrackerClient {
     }
 
     private RestClient http(JiraAccount account) {
+        String cloudId = account.cloudId() == null ? "" : account.cloudId().toLowerCase(Locale.ROOT);
+        if (!CLOUD_ID.matcher(cloudId).matches()
+                || account.apiToken() == null
+                || account.apiToken().isBlank()) {
+            throw new JiraUnavailableException(0);
+        }
         return builder.clone()
-                .baseUrl(account.siteUrl())
-                .defaultHeaders(headers -> headers.setBasicAuth(account.email(), account.apiToken()))
+                .baseUrl(gateway + cloudId)
+                .defaultHeaders(headers -> headers.setBearerAuth(account.apiToken()))
                 .defaultHeader("Accept", MediaType.APPLICATION_JSON_VALUE)
                 .build();
     }
@@ -192,7 +318,7 @@ public class JiraClient implements TicketTrackerClient {
             // No answer: connection refused, timeout, unreadable body.
             throw new JiraUnavailableException(0);
         } catch (IllegalArgumentException e) {
-            // A malformed site URL, credential or response header leaves no usable answer.
+            // A malformed credential or response header leaves no usable answer.
             throw new JiraUnavailableException(0);
         }
     }

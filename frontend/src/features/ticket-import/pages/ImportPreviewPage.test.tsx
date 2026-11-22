@@ -2,7 +2,11 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { delay, http } from 'msw';
 import { server } from '@/mocks/server';
-import { fillImportPreviewSolution, type FillSolutionRequest } from '@/shared/api';
+import {
+  fillImportPreviewSolution,
+  publishImportPreviewRow,
+  type FillSolutionRequest,
+} from '@/shared/api';
 import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
 import { renderApp } from '@/test/render';
@@ -807,6 +811,152 @@ describe('ImportPreviewPage', () => {
       await within(dialog).findByText('ITSUP-0872');
       expect(within(dialog).queryByRole('button', { name: 'Apply' })).toBeNull();
       expect(within(dialog).queryByRole('textbox')).toBeNull();
+    });
+
+    it('AC-017.8 shows Apply & publish next to Apply for a Needs Solution row', async () => {
+      const { dialog } = await openSolutionPopup(1);
+
+      expect(within(dialog).getByRole('button', { name: 'Apply & publish' })).toBeEnabled();
+    });
+
+    it('AC-017.8 AC-017.9 saves the Solution, publishes the row, shows MSG32 and refreshes the preview', async () => {
+      const calls: string[] = [];
+      server.events.on('request:start', ({ request }) => {
+        if (request.method === 'POST') calls.push(new URL(request.url).pathname);
+      });
+      const { user, dialog } = await openSolutionPopup(1);
+      writeSolution(dialog);
+
+      await user.click(within(dialog).getByRole('button', { name: 'Apply & publish' }));
+
+      expect(await screen.findByText(msg('MSG32', { created: 1, skipped: 0 }))).toBeInTheDocument();
+      expect(calls).toEqual([
+        '/api/v1/imports/previews/1/fill-solution',
+        '/api/v1/imports/previews/1/rows/1/publish',
+      ]);
+      await waitFor(() => expect(dialog).toHaveClass('ant-zoom-leave'));
+      await waitFor(() => expect(statCard('Needs Solution')).toHaveTextContent('19'));
+      expect(statCard('Valid')).toHaveTextContent('0');
+      server.events.removeAllListeners();
+    });
+
+    it('AC-017.10 shows the publish rejection and keeps the popup open with what was written', async () => {
+      server.use(
+        http.post('*/api/v1/imports/previews/1/rows/1/publish', () => problem(409, 'MSG40')),
+      );
+      const { user, dialog } = await openSolutionPopup(1);
+      writeSolution(dialog);
+
+      await user.click(within(dialog).getByRole('button', { name: 'Apply & publish' }));
+
+      expect(await screen.findByText(msg('MSG40'))).toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: 'Import Ticket Preview' })).toBeInTheDocument();
+      expect(within(dialog).getByRole('textbox', { name: 'Symptoms' })).toHaveValue(
+        'Outlook asks for the password',
+      );
+    });
+
+    it('AC-017.9 drops a published row from the selection, so Fill solution sends only the rows left (BUG-349)', async () => {
+      const saved = recordFills();
+      const { user } = await openPreview();
+      await user.click(screen.getByLabelText('Select row 1'));
+      await user.click(screen.getByLabelText('Select row 7'));
+      await user.click(within(rowOf(1)).getByRole('button', { name: 'Preview' }));
+      const popup = await screen.findByRole('dialog', { name: 'Import Ticket Preview' });
+      await within(popup).findByText('ITSUP-0871');
+      writeSolution(popup);
+      await user.click(within(popup).getByRole('button', { name: 'Apply & publish' }));
+      await screen.findByText(msg('MSG32', { created: 1, skipped: 0 }));
+      await waitFor(() => expect(statCard('Needs Solution')).toHaveTextContent('19'));
+
+      await user.click(screen.getByRole('button', { name: 'Fill solution' }));
+      // jsdom keeps the closing popup in the DOM: wait for the Fill solution popup next to it.
+      const dialog = await waitFor(() => {
+        const found = screen
+          .getAllByRole('dialog', { name: 'Import Ticket Preview' })
+          .find((element) => element !== popup);
+        if (!found) throw new Error('no Fill solution popup yet');
+        return found;
+      });
+      writeSolution(dialog);
+      await user.click(within(dialog).getByRole('button', { name: 'Apply' }));
+
+      await waitFor(() => expect(saved).toHaveBeenCalledTimes(2));
+      expect(saved).toHaveBeenLastCalledWith(expect.objectContaining({ rowNumbers: [7] }));
+      expect(screen.queryByText(msg('MSG04'))).not.toBeInTheDocument();
+    });
+
+    it('AC-017.9 opens the page before when publishing empties the last page (BUG-352)', async () => {
+      // 21 rows left: page 2 holds row 21 only.
+      await fillImportPreviewSolution(1, { ...solution, rowNumbers: [22, 23, 24, 25] });
+      for (const rowNo of [22, 23, 24, 25]) await publishImportPreviewRow(1, rowNo);
+      const { user } = await openPreview();
+      await user.click(screen.getByRole('listitem', { name: '2' }));
+      await screen.findByLabelText('Select row 21');
+      await user.click(within(rowOf(21)).getByRole('button', { name: 'Preview' }));
+      const dialog = await screen.findByRole('dialog', { name: 'Import Ticket Preview' });
+      await within(dialog).findByText('ITSUP-0921');
+      writeSolution(dialog);
+
+      await user.click(within(dialog).getByRole('button', { name: 'Apply & publish' }));
+
+      expect(await screen.findByLabelText('Select row 1')).toBeInTheDocument();
+      expect(screen.getByLabelText('Select row 20')).toBeInTheDocument();
+      expect(screen.queryByLabelText('Select row 21')).not.toBeInTheDocument();
+    });
+
+    it('AC-017.8 sends one save and one publish on a double click', async () => {
+      const posts: string[] = [];
+      server.events.on('request:start', ({ request }) => {
+        if (request.method === 'POST') posts.push(new URL(request.url).pathname);
+      });
+      const { user, dialog } = await openSolutionPopup(1);
+      writeSolution(dialog);
+
+      await user.dblClick(within(dialog).getByRole('button', { name: 'Apply & publish' }));
+
+      await screen.findByText(msg('MSG32', { created: 1, skipped: 0 }));
+      expect(posts).toEqual([
+        '/api/v1/imports/previews/1/fill-solution',
+        '/api/v1/imports/previews/1/rows/1/publish',
+      ]);
+    });
+
+    it('AC-017.10 shows MSG04 when the row is gone and keeps the popup open', async () => {
+      server.use(
+        http.post('*/api/v1/imports/previews/1/rows/1/publish', () => problem(404, 'MSG04')),
+      );
+      const { user, dialog } = await openSolutionPopup(1);
+      writeSolution(dialog);
+
+      await user.click(within(dialog).getByRole('button', { name: 'Apply & publish' }));
+
+      expect(await screen.findByText(msg('MSG04'))).toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: 'Import Ticket Preview' })).toBeInTheDocument();
+    });
+
+    it('AC-017.10 shows a rejected Solution at its field and publishes nothing', async () => {
+      let published = false;
+      server.use(
+        http.post('*/api/v1/imports/previews/1/fill-solution', () =>
+          problem(400, 'MSG01', {
+            fieldErrors: [{ field: 'scope', code: 'MSG01', params: { field_name: 'Scope' } }],
+          }),
+        ),
+        http.post('*/api/v1/imports/previews/1/rows/1/publish', () => {
+          published = true;
+          return problem(500, 'MSG33');
+        }),
+      );
+      const { user, dialog } = await openSolutionPopup(1);
+      writeSolution(dialog);
+
+      await user.click(within(dialog).getByRole('button', { name: 'Apply & publish' }));
+
+      expect(
+        await within(dialog).findByText(msg('MSG01', { field_name: 'Scope' })),
+      ).toBeInTheDocument();
+      expect(published).toBe(false);
     });
   });
 });

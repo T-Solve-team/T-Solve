@@ -15,4 +15,14 @@ public interface JiraSiteLinker {
      * @throws JiraSiteLinkRefusedException when the link is refused or tenant information cannot be read
      */
     String linkJiraSite(String normalisedSiteUrl) throws JiraSiteLinkRefusedException;
+
+    /**
+     * Reads the site's cloud id without linking it (AC-011.8, KAN-344): the service account check needs it before the
+     * link. Only a canonical lower-case UUID is returned, so it can never change the gateway path.
+     *
+     * @param normalisedSiteUrl a site already normalised by {@link JiraSiteRule}
+     * @return the site's cloudId
+     * @throws JiraSiteLinkRefusedException ({@code UNREADABLE}) when it cannot be read or is not a canonical UUID
+     */
+    String readCloudId(String normalisedSiteUrl) throws JiraSiteLinkRefusedException;
 }

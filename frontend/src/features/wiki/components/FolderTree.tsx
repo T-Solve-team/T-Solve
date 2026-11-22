@@ -1,6 +1,8 @@
-import { Button, Space, Tree, type TreeDataNode } from 'antd';
+import { MoreOutlined } from '@ant-design/icons';
+import { Button, Dropdown, Tree, type TreeDataNode } from 'antd';
 import { useState } from 'react';
 import type { WikiFolder } from '@/shared/api';
+import styles from '../pages/WikiHomePage.module.css';
 import { DeleteFolderModal } from './DeleteFolderModal';
 import { FolderModal } from './FolderModal';
 
@@ -22,30 +24,38 @@ export function FolderTree({ folders, folderId, onSelect, managedSpaceId }: Fold
       .map((folder) => ({
         key: folder.folderId,
         title: (
-          <Space>
-            <span>{folder.name}</span>
+          <span className={styles.folderTitle}>
+            <span className={styles.folderName} title={folder.name}>
+              {folder.name}
+            </span>
             {managedSpaceId && (
-              <Space onClick={(event) => event.stopPropagation()}>
-                {(['Rename', 'Move', 'Delete'] as const).map((label) => (
+              // Menu clicks bubble through the portal; keep them from selecting the folder.
+              <span onClick={(event) => event.stopPropagation()}>
+                <Dropdown
+                  trigger={['click']}
+                  menu={{
+                    items: [
+                      { key: 'edit', label: 'Rename' },
+                      { key: 'move', label: 'Move' },
+                      { key: 'delete', label: 'Delete', danger: true },
+                    ],
+                    onClick: ({ key }) =>
+                      setAction({
+                        kind: key === 'delete' ? 'delete' : 'edit',
+                        folderId: folder.folderId,
+                      }),
+                  }}
+                >
                   <Button
-                    key={label}
                     type="text"
                     size="small"
-                    aria-label={`${label} ${folder.name}`}
-                    danger={label === 'Delete'}
-                    onClick={() =>
-                      setAction({
-                        kind: label === 'Delete' ? 'delete' : 'edit',
-                        folderId: folder.folderId,
-                      })
-                    }
-                  >
-                    {label}
-                  </Button>
-                ))}
-              </Space>
+                    icon={<MoreOutlined />}
+                    aria-label={`Actions for ${folder.name}`}
+                  />
+                </Dropdown>
+              </span>
             )}
-          </Space>
+          </span>
         ),
         children: children(folder.folderId),
       }));

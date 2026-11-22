@@ -34,12 +34,14 @@ import vn.tsolve.common.exception.FieldMessageCodeException;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.TSolveUser;
+import vn.tsolve.identity.service.JiraAccountLinkLookup;
 import vn.tsolve.identity.signin.port.TenantScope;
 import vn.tsolve.project.dto.AddProjectMembersRequest;
 import vn.tsolve.project.dto.ProjectMemberResponse;
 import vn.tsolve.project.dto.ProjectSummaryResponse;
 import vn.tsolve.project.entity.ProjectStatus;
 import vn.tsolve.project.repository.ProjectMemberRepository;
+import vn.tsolve.tracker.service.TrackerProjectService;
 
 @ExtendWith(MockitoExtension.class)
 class ProjectMemberServiceImplTest {
@@ -57,11 +59,17 @@ class ProjectMemberServiceImplTest {
     @Mock
     private TenantScope scope;
 
+    @Mock
+    private TrackerProjectService tracker;
+
+    @Mock
+    private JiraAccountLinkLookup links;
+
     private ProjectMemberServiceImpl service;
 
     @BeforeEach
     void setup() {
-        service = new ProjectMemberServiceImpl(repository, audit, scope);
+        service = new ProjectMemberServiceImpl(repository, audit, scope, tracker, links);
         var user = new TSolveUser(CALLER, "pm@example.test", "PM", Set.of(Role.PROJECT_MANAGER));
         SecurityContextHolder.getContext()
                 .setAuthentication(UsernamePasswordAuthenticationToken.authenticated(user, null, user.authorities()));

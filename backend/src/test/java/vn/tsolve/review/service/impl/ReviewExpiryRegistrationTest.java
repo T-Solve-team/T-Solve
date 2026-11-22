@@ -1,6 +1,7 @@
 package vn.tsolve.review.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -21,7 +22,7 @@ class ReviewExpiryRegistrationTest {
             var scheduler = new JobRequestScheduler(storage);
             var runtime = mock(JobRunrRuntime.class);
             when(runtime.scheduler()).thenReturn(scheduler);
-            var registration = new ReviewExpiryRegistration(runtime);
+            var registration = new ReviewExpiryRegistration(runtime, "");
             registration.register();
             registration.register();
             assertThat(storage.getRecurringJobs()).singleElement().satisfies(job -> {
@@ -30,6 +31,33 @@ class ReviewExpiryRegistrationTest {
                 assertThat(job.getZoneId()).isEqualTo("Asia/Ho_Chi_Minh");
             });
         }
+    }
+
+    @Test
+    void takesTheRunTimeFromTheEnvironment_AC_014_1() {
+        try (var storage = new InMemoryStorageProvider()) {
+            storage.setJobMapper(new JobMapper(new JacksonJsonMapper()));
+            var runtime = mock(JobRunrRuntime.class);
+            when(runtime.scheduler()).thenReturn(new JobRequestScheduler(storage));
+            new ReviewExpiryRegistration(runtime, " 30 1 * * * ").register();
+            assertThat(storage.getRecurringJobs())
+                    .singleElement()
+                    .satisfies(job -> assertThat(job.getScheduleExpression()).isEqualTo("30 1 * * *"));
+        }
+    }
+
+    @Test
+    void usesMidnightWhenTheVariableIsBlankOrUnset_AC_014_1() {
+        assertThat(ReviewExpiryRegistration.cron("  ")).isEqualTo("0 0 * * *");
+        assertThat(ReviewExpiryRegistration.cron(null)).isEqualTo("0 0 * * *");
+    }
+
+    @Test
+    void refusesToStartWithAnInvalidCronNamingTheVariable_AC_014_1() {
+        var runtime = mock(JobRunrRuntime.class);
+        assertThatThrownBy(() -> new ReviewExpiryRegistration(runtime, "every night"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("REVIEW_EXPIRY_CRON");
     }
 
     @Test

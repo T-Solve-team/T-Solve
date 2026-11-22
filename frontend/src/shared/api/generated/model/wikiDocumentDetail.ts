@@ -14,4 +14,6 @@ export type WikiDocumentDetail = WikiDocumentSummary & {
   fileName: string;
   fileSize: number;
   canDelete: boolean;
+  /** True only on the Knowledge Manager's read of a trashed document. */
+  inTrash: boolean;
 };

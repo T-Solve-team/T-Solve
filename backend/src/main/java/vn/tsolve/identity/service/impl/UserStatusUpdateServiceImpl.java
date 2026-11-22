@@ -100,7 +100,16 @@ public class UserStatusUpdateServiceImpl implements UserStatusUpdateService {
                 if (recipient != null) recipientIds.add(recipient);
             }
             write.lockRecipients(recipientIds);
-            UserHandoverOptionsResponse options = read.handoverOptions(userId);
+            UserHandoverOptionsResponse allOptions = read.handoverOptions(userId);
+            UserHandoverOptionsResponse options = new UserHandoverOptionsResponse(
+                    allOptions.projects(),
+                    HandoverChoices.soleSpaces(
+                            allOptions.spaces(),
+                            write.soleManagedSpaces(
+                                    userId,
+                                    allOptions.spaces().stream()
+                                            .map(item -> item.space().spaceId())
+                                            .toList())));
             for (ProjectOption option : options.projects()) {
                 if (option.recipients().isEmpty()) {
                     throw new BusinessRuleException(
@@ -132,6 +141,7 @@ public class UserStatusUpdateServiceImpl implements UserStatusUpdateService {
             for (Choice choice : spaces) {
                 write.transferSpace(UUID.fromString(choice.id()), UUID.fromString(choice.recipientId()));
             }
+            if (status == AccountStatus.DEACTIVATED) write.removeSpaceAssignments(userId);
             write.updateStatus(userId, status);
             Map<String, Object> history = new LinkedHashMap<>();
             history.put("statusBefore", target.status());

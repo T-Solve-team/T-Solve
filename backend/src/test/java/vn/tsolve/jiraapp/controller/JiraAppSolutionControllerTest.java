@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -30,9 +31,13 @@ import vn.tsolve.common.security.JiraAppSecurityConfig;
 import vn.tsolve.common.security.Roles;
 import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.jiraapp.dto.IssuePanelResponse;
+import vn.tsolve.jiraapp.dto.JiraAppJobStatus;
+import vn.tsolve.jiraapp.dto.SolutionRewriteJob;
+import vn.tsolve.jiraapp.dto.SolutionRewriteJobResult;
 import vn.tsolve.jiraapp.dto.SubmitSolutionRequest;
 import vn.tsolve.jiraapp.dto.SubmittedTicketResponse;
 import vn.tsolve.jiraapp.exception.JiraIssueAccessDeniedException;
+import vn.tsolve.jiraapp.exception.SolutionRewriteJobNotFoundException;
 import vn.tsolve.jiraapp.service.JiraAppSolutionService;
 import vn.tsolve.ticket.dto.SolutionSections;
 import vn.tsolve.ticket.entity.TicketStatus;
@@ -161,8 +166,19 @@ class JiraAppSolutionControllerTest {
     }
 
     @Test
+    void acceptsRewriteWithoutWaitingForAi_AC_007_5() throws Exception {
+        when(solutions.startRewrite(eq(CALLER), any())).thenReturn(new SolutionRewriteJob(TICKET));
+        mvc.perform(post("/api/v1/jira-app/solution-rewrites")
+                        .with(authentication(fit()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(SECTIONS))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.jobId").value(TICKET.toString()));
+    }
+
+    @Test
     void answersMsg68WhenTheRewriteFails_AC_007_4() throws Exception {
-        when(solutions.rewrite(eq(CALLER), any())).thenThrow(new AiRewriteUnavailableException());
+        when(solutions.startRewrite(eq(CALLER), any())).thenThrow(new AiRewriteUnavailableException());
 
         mvc.perform(post("/api/v1/jira-app/solution-rewrites")
                         .with(authentication(fit()))
@@ -170,6 +186,51 @@ class JiraAppSolutionControllerTest {
                         .content(SECTIONS))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.code").value("MSG68"));
+    }
+
+    @Test
+    void returnsDoneRewriteSections_AC_007_5() throws Exception {
+        when(solutions.rewriteResult(CALLER, TICKET))
+                .thenReturn(new SolutionRewriteJobResult(
+                        JiraAppJobStatus.DONE, new SolutionSections("Drops.", "Old.", "Update.", "", "Laptops.")));
+        mvc.perform(get("/api/v1/jira-app/solution-rewrites/" + TICKET).with(authentication(fit())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("DONE"))
+                .andExpect(jsonPath("$.sections.symptoms").value("Drops."));
+    }
+
+    @Test
+    void omitsSectionsForPendingAndFailed_AC_007_5() throws Exception {
+        for (var state : List.of(JiraAppJobStatus.PENDING, JiraAppJobStatus.FAILED)) {
+            when(solutions.rewriteResult(CALLER, TICKET)).thenReturn(new SolutionRewriteJobResult(state, null));
+            mvc.perform(get("/api/v1/jira-app/solution-rewrites/" + TICKET).with(authentication(fit())))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value(state.name()))
+                    .andExpect(jsonPath("$.sections").doesNotExist());
+        }
+    }
+
+    @Test
+    void hidesUnknownRewriteWithMsg68_AC_007_6() throws Exception {
+        when(solutions.rewriteResult(CALLER, TICKET)).thenThrow(new SolutionRewriteJobNotFoundException());
+        mvc.perform(get("/api/v1/jira-app/solution-rewrites/" + TICKET).with(authentication(fit())))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("MSG68"));
+    }
+
+    @Test
+    void mapsRewriteStoreUnavailableToMsg68_AC_007_8() throws Exception {
+        when(solutions.rewriteResult(CALLER, TICKET)).thenThrow(new AiRewriteUnavailableException());
+        mvc.perform(get("/api/v1/jira-app/solution-rewrites/" + TICKET).with(authentication(fit())))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("MSG68"));
+    }
+
+    @Test
+    void rejectsRewritePollWithoutJiraAppRole_AC_007_6() throws Exception {
+        mvc.perform(get("/api/v1/jira-app/solution-rewrites/" + TICKET)
+                        .with(user("resolver").roles(Roles.TICKET_RESOLVER)))
+                .andExpect(status().isForbidden());
     }
 
     @Test

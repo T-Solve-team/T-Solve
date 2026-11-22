@@ -147,4 +147,17 @@ public class ImportController {
     public ResponseEntity<ImportResultResponse> confirmImport(@PathVariable long previewId, Principal user) {
         return ResponseEntity.ok(confirms.confirm(user.getName(), previewId));
     }
+
+    @PostMapping("/previews/{previewId}/rows/{rowNo}/publish")
+    @Operation(
+            operationId = "publishImportPreviewRow",
+            summary =
+                    "Publishes one Valid row of a file without Solutions or of a Jira preview at once, in an Import Batch of its own.")
+    @ApiResponse(responseCode = "403")
+    @ApiResponse(responseCode = "404")
+    @ApiResponse(responseCode = "409")
+    public ResponseEntity<ImportResultResponse> publishImportPreviewRow(
+            @PathVariable long previewId, @PathVariable int rowNo, Principal user) {
+        return ResponseEntity.ok(confirms.publishRow(user.getName(), previewId, rowNo));
+    }
 }
