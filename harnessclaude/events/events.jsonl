@@ -2233,3 +2233,9 @@
 {"ts":"2026-11-22T06:33:44.027Z","type":"quick-opened","what":"BUG-360: log the wiki-index web-jobs bug","files":["docs/bug-log.md"]}
 {"ts":"2026-11-22T06:34:11.695Z","type":"quick-closed","what":"BUG-360: log the wiki-index web-jobs bug","files":["docs/bug-log.md"]}
 {"ts":"2026-11-22T06:37:34.000Z","type":"quick-opened","what":"BUG-360: fill the PR cell in the bug log","files":["docs/bug-log.md"]}
+{"ts":"2026-11-21T23:34:49.842Z","type":"quick-opened","what":"Report 5.4 NFR run (KAN-378): k6 load-test script for the public staging paths, its run report, and the NFR bug-log rows","files":["infra/loadtest/public-paths.js","infra/loadtest/README.md","docs/bug-log.md"]}
+{"ts":"2026-11-21T23:54:42.711Z","type":"quick-closed","what":"Report 5.4 NFR run (KAN-378): k6 load-test script for the public staging paths, its run report, and the NFR bug-log rows","files":["infra/loadtest/public-paths.js","infra/loadtest/README.md","docs/bug-log.md"]}
+{"ts":"2026-11-22T07:05:38.333Z","type":"quick-opened","what":"KAN-378: renumber the bug ids in the load-test results (BUG-355 becomes BUG-363 after the rebase on main)","files":["infra/loadtest/README.md"]}
+{"ts":"2026-11-22T07:06:00.363Z","type":"quick-closed","what":"KAN-378: renumber the bug ids in the load-test results (BUG-355 becomes BUG-363 after the rebase on main)","files":["infra/loadtest/README.md"]}
+{"ts":"2026-11-22T11:23:35.265Z","type":"quick-opened","what":"KAN-378: renumber the NFR bugs to BUG-366..369 (PR #313 uses BUG-361..365)","files":["docs/bug-log.md","infra/loadtest/README.md"]}
+{"ts":"2026-11-22T11:23:59.140Z","type":"quick-closed","what":"KAN-378: renumber the NFR bugs to BUG-366..369 (PR #313 uses BUG-361..365)","files":["docs/bug-log.md","infra/loadtest/README.md"]}
