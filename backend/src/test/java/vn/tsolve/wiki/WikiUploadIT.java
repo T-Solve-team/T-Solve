@@ -418,7 +418,7 @@ class WikiUploadIT extends WikiReadTestSupport {
                     access,
                     search,
                     new TextExtractor(),
-                    new DocumentTypeClassifier(mock(LlmClient.class), new ObjectMapper(), "3s"),
+                    new DocumentTypeClassifier(mock(LlmClient.class), new ObjectMapper(), "3s", "60s"),
                     storage,
                     audit,
                     jobs,
