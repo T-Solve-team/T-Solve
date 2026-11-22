@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{heading}}</title>
+</head>
+<body style="margin:0;background:#e9ecf2;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#e9ecf2;">
+<tr><td align="center" style="padding:8px 16px 40px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #dde2ea;">
+    <!-- header -->
+    <tr><td style="background:#5577FF;padding:20px 32px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td style="width:32px;height:32px;background:#ffffff;border-radius:8px;text-align:center;font:700 16px/32px Arial,sans-serif;color:#5577FF;">T</td>
+        <td style="padding-left:10px;font:700 18px/32px Arial,sans-serif;color:#ffffff;">T-Solve</td>
+      </tr></table>
+    </td></tr>
+    <!-- status -->
+    <tr><td style="padding:32px 32px 8px;">
+      <span style="display:inline-block;padding:4px 10px;border-radius:999px;background:#F0F5FF;border:1px solid #ADC6FF;font:600 12px/1.4 Arial,sans-serif;color:#1D39C4;">Draft reminder</span>
+      <h1 style="margin:16px 0 8px;font:700 22px/1.35 Arial,sans-serif;color:#141a26;">{{heading}}</h1>
+      <p style="margin:0;font:15px/1.6 Arial,sans-serif;color:#3a4150;">{{greeting}} you started these Solutions in Jira but have not submitted them yet.</p>
+    </td></tr>
+    <!-- drafts card -->
+    <tr><td style="padding:20px 32px 0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f7f8fb;border:1px solid #e6e9f0;border-radius:10px;">
+        <tr>
+          <td style="padding:12px 20px 8px;font:600 12px/1.4 Arial,sans-serif;color:#6b7383;">Issue</td>
+          <td style="padding:12px 20px 8px;font:600 12px/1.4 Arial,sans-serif;color:#6b7383;text-align:right;">Last saved</td>
+        </tr>
+{{rows}}
+      </table>
+    </td></tr>
+    <!-- closing -->
+    <tr><td style="padding:20px 32px 32px;font:15px/1.6 Arial,sans-serif;color:#3a4150;">{{closing}}</td></tr>
+    <!-- footer -->
+    <tr><td style="padding:20px 32px;border-top:1px solid #eef0f4;font:12px/1.6 Arial,sans-serif;color:#8a92a1;">
+      You got this email because you have unsubmitted Solution drafts on T-Solve.<br>This is an automated message — please do not reply.
+    </td></tr>
+  </table>
+</td></tr>
+</table>
+</body>
+</html>

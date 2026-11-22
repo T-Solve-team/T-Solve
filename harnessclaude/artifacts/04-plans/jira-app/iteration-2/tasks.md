@@ -1,7 +1,7 @@
 ---
 module: jira-app
 date: 2026-11-11
-total_tasks: 12
+total_tasks: 31
 owner: Dev
 ---
 
@@ -200,6 +200,23 @@ no longer describes "all empty = Close". Re-check Close, the Draft and Finish on
 **Dependencies:** Task 9
 **Estimated size:** small
 
+---
+
+## Task 11: Open Drafts for the reminder
+
+**Story:** STORY-011
+**Feature:** draft-reminder-query
+**Description:** In `ticket`: `SolutionDraftService` gains the open Drafts of the current Workspace — per writer and for
+one writer — as `(creatorId, issueKey, updatedAt)`, newest first: `solution_draft` rows whose `jira_issue_key` has no
+`ticket` of any source (whether the creator is still ACTIVE is the job's check through `identity`, so `ticket` reads
+no `identity` table). Read-only, no schema change. Tests: AC-011.2 (a Draft with a
+ticket and a writer with none are left out; an inactive creator is left out by the job, Task 12), ordering for AC-011.3; an IT on PostgreSQL.
+**Files:**
+- Modify: `backend/src/main/java/vn/tsolve/ticket/service/SolutionDraftService.java`, its impl,
+  `backend/src/main/java/vn/tsolve/ticket/repository/SolutionDraftRepository.java`
+- Create: `backend/src/main/java/vn/tsolve/ticket/dto/OpenDraft.java`, tests
+**Dependencies:** Task 10
+
 ## Task 13: Resubmit — contract, ticket storage and endpoints
 
 **Story:** STORY-012
@@ -256,6 +273,24 @@ approved and published." (a Jira App text) with no button. No server change: the
 **Estimated size:** small
 
 ---
+
+## Task 12: Reminder job and email
+
+**Story:** STORY-011
+**Feature:** draft-reminder-job
+**Description:** In `vn.tsolve.jiraapp`: `DraftReminderRegistration` (recurring id `jira-app-draft-reminder`,
+`0 8 * * *`, Asia/Ho_Chi_Minh, only with `tsolve.worker.enabled`), `DraftReminderDispatchHandler` (one Workspace job per
+active Workspace), `DraftReminderWorkspaceHandler` (one writer job per writer, job id = name-based UUID of workspace +
+account + date), `DraftReminderEmailHandler` (active Account email + open Drafts → plain-text email of AC-011.3,
+link from `JIRA_SITE_URL`, queued with `EmailOutboxService.queue` inside the Workspace; nothing when the writer has
+none left; changed 15/11 from an own SMTP mailer). Tests: AC-011.1 to AC-011.7 (mail content, singular/plural,
+no link without the site URL, same-day dedupe, per-writer retry of the queue call, a rejected address dropped, the
+email queued inside the Workspace, logs without addresses).
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/jiraapp/dto/DraftReminder*Request.java`, `jiraapp/service/impl/DraftReminder*.java`, tests
+**Dependencies:** Task 11
+**Estimated size:** medium
+
 
 ## Task 17: Hand the app token to the backend (KAN-349)
 
@@ -336,3 +371,192 @@ failures of AC-014.9. The panel's MSG62 state adds "Open T-Solve account setting
 `AccountSettingsPage.test.jsx`, the panel test, `test/manifest.test.js`; `forge lint`.
 **Dependencies:** Task 20
 **Estimated size:** medium
+
+---
+
+## Task 22: Move the T-Solve account page to the Apps section (STORY-014)
+
+**Story:** STORY-014
+**Feature:** account-page-global
+**Description:** Manifest: replace `jira:personalSettingsPage` with `jira:globalPage` (same key, resource, resolver and
+title) (AC-014.1). `settingsPagePath` builds `/jira/apps/{appId}/{envId}` for the panel's MSG62 link (AC-008.1).
+**Files:** Modify `jira-app/TSolve_JiraApp/manifest.yml`, `src/frontend/accountSettings/settingsPage.js`; tests
+`src/manifest.test.js`, `settingsPage.test.js`, `IssuePanel.test.jsx`; `forge lint`.
+**Dependencies:** Task 21
+**Estimated size:** small
+
+---
+
+## Task 23: Draft only while the issue is Done (STORY-008)
+
+**Story:** STORY-008
+**Feature:** draft-only-when-done
+**Description:** The panel shows MSG77 and "Continue draft" only while the issue's status category is Done
+(AC-008.3); otherwise it shows neither, and "Continue draft" re-checks the status before it opens the form. The
+Draft is not touched (AC-008.11). Jira App only; the panel already reloads on `JIRA_ISSUE_CHANGED` (BUG-231).
+**Files:** Modify `jira-app/TSolve_JiraApp/src/frontend/panel/IssuePanel.jsx`; test `IssuePanel.test.jsx`.
+**Dependencies:** none
+**Estimated size:** small
+## Task 24: Ask T-Solve job — contract and backend
+
+**Story:** STORY-010
+**Feature:** ask-job-backend
+**Description:** Changelog 2026-11-18 (the 18 s cut). OpenAPI first: `askJiraAppQuestion` answers 202
+`JiraAppQuestionJob {jobId}` (400, 403 MSG124 / MSG08, 503 MSG06 stay); new `getJiraAppQuestionJob`
+`GET /api/v1/jira-app/questions/{jobId}` → `{status: PENDING|DONE|FAILED, answer?: ChatbotAnswerResponse}`, 404 MSG06;
+regenerate the frontend client. `JiraAppQuestionServiceImpl`: `start` writes the PENDING record to Redis (key
+`jira-app:ask:{jobId}`, owner cloudId + accountId + projectKey, TTL 300 s) and submits the job to the existing pool (full → delete
+the key, 503 MSG06); the job runs `askForProject` with the Workspace bound on the worker (BUG-318) and writes DONE/FAILED with KEEPTTL; `JIRA_APP_ASK_TIMEOUT` default 18s → 60s; `result`
+reads it, 404 MSG06 for a missing key or another owner. Logs: job id and error type only. Log the bug in
+`docs/bug-log.md` and name its id in one test. Tests: unit (`AC_010_4` 202 without waiting — a blocked fake chatbot,
+PENDING → DONE, FAILED on error and on timeout; `AC_010_16` other account / site / project / unknown; `AC_010_18` full
+pool) with a fake job store; `@WebMvcTest` for 202 and 404; one Redis IT only if no shared Redis IT can take the TTL
+check (`AC_010_17`) — prefer adding it to an existing Redis IT class (backend AGENTS §8).
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`,
+  `backend/src/main/java/vn/tsolve/jiraapp/controller/JiraAppQuestionController.java`,
+  `jiraapp/service/JiraAppQuestionService.java`, `jiraapp/service/impl/JiraAppQuestionServiceImpl.java`,
+  `backend/.env.example` (or the root `.env.example` that lists `JIRA_APP_ASK_TIMEOUT`), `docs/bug-log.md`, their tests
+- Create: `jiraapp/dto/JiraAppQuestionJob.java`, `jiraapp/dto/JiraAppQuestionJobResult.java`,
+  `jiraapp/service/impl/RedisAskJobStore.java` (package-private, behind a small interface only if the test needs the fake)
+**Dependencies:** none
+**Estimated size:** medium
+
+## Task 25: Ask T-Solve job — Forge client and page
+
+**Story:** STORY-010
+**Feature:** ask-job-forge
+**Description:** `askQuestion` keeps its signature for the page: POST → `jobId`, then GET every 1.5 s
+(`ASK_POLL_MS`) until DONE (return the answer) or FAILED (MSG06); 404 / 5xx / a call over 20 s → MSG06; the whole
+question over 75 s (`ASK_DEADLINE_MS`) → MSG06 and no further GET (AC-010.3, AC-010.8). Polling stops when the page
+unmounts. Fix the comment on `ASK_TIMEOUT_MS` ("the backend stops at 18 s"). The mock mode is unchanged. Tests with
+fake timers (`AC_010_3`, `AC_010_8`). Check on the dev site: a question the chatbot answers in 30–50 s shows the
+answer, not MSG06.
+**Files:**
+- Modify: `jira-app/TSolve_JiraApp/src/frontend/api/tsolveClient.js`, `api/tsolveClient.test.js`,
+  `askTsolve/AskTsolvePage.jsx` (only the unmount stop), `askTsolve/AskTsolvePage.test.jsx`
+**Dependencies:** Task 24
+
+## Task 26: Rewrite with AI job — contract and backend
+
+**Story:** STORY-007
+**Feature:** rewrite-job-backend
+**Description:** Changelog 2026-11-18 (STORY-007). OpenAPI first: `rewriteSolution` answers 202 `SolutionRewriteJob
+{jobId}`; new `getSolutionRewriteJob` `GET /api/v1/jira-app/solution-rewrites/{jobId}` →
+`{status: PENDING|DONE|FAILED, sections?: SolutionSections}`, 404 MSG68, 503 MSG68; regenerate the frontend client.
+`JiraAppSolutionServiceImpl.rewrite` → `startRewrite` (access check stays synchronous) + `rewriteResult`; the job runs
+the existing `SolutionFormAi.rewrite` path on `SolutionFormAiImpl`'s pool with `JIRA_APP_REWRITE_TIMEOUT` (60s; the
+draft keeps `JIRA_APP_AI_TIMEOUT`); Redis key `jira-app:rewrite:{jobId}` (owner cloudId + accountId, TTL 300 s,
+KEEPTTL XX) by generalising `RedisAskJobStore`; Redis error or full pool → 503 MSG68; GET of another owner / unknown →
+404 MSG68; callbacks on the pool, unwrapped error types in logs, no Solution text logged. Tests `AC_007_5` …
+`AC_007_8` (unit + `@WebMvcTest`), Ask tests still green.
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`, `.env.example`,
+  `backend/src/main/java/vn/tsolve/jiraapp/controller/JiraAppSolutionController.java`,
+  `jiraapp/service/JiraAppSolutionService.java`, `jiraapp/service/SolutionFormAi.java`,
+  `jiraapp/service/impl/JiraAppSolutionServiceImpl.java`, `jiraapp/service/impl/SolutionFormAiImpl.java`,
+  `jiraapp/service/impl/RedisAskJobStore.java`, `jiraapp/service/impl/JiraAppQuestionServiceImpl.java` (store API only),
+  their tests
+- Create: `jiraapp/dto/SolutionRewriteJob.java`, `jiraapp/dto/SolutionRewriteJobResult.java`, a not-found exception
+**Dependencies:** Task 24
+**Estimated size:** medium
+
+## Task 27: Rewrite with AI job — Forge client and form
+
+**Story:** STORY-007, STORY-012
+**Feature:** rewrite-job-forge
+**Description:** `rewriteSolution(sections)` keeps returning the rewritten sections to the form: POST → `jobId`, GET
+every 1.5 s until DONE / FAILED, 20 s per call, 75 s overall, abortable — share the polling helper written for
+`askQuestion` (Task 25), do not copy it. Any failure → MSG68 (AC-007.4). The form aborts on close/unmount; the
+resubmission form uses the same path (AC-012.7). Tests `AC-007.1`, `AC-007.4` with fake timers. Dev-site check: a
+rewrite that takes 30–50 s shows the preview.
+**Files:**
+- Modify: `jira-app/TSolve_JiraApp/src/frontend/api/tsolveClient.js`, `api/solutionClient.test.js` (or
+  `tsolveClient.test.js`), `form/SolutionFormModal.jsx`, `form/SolutionFormModal.test.jsx`
+**Dependencies:** Task 25, Task 26
+
+## Task 28: The form opens with the issue text, no AI draft (KAN-371)
+
+**Story:** STORY-002, STORY-005
+**Feature:** form-from-issue
+**Description:** `openForm` without a Draft returns `Origin.ISSUE` with the issue text (summary, blank line,
+description, cut to 10,000) and no message; no AI call (AC-002.1). The Draft still wins (AC-005.2). Move
+`fromIssue` into `IssueText` (Task 29 reuses it); remove `SolutionFormAi.draft`, `SolutionFormDraft`, `Origin.AI_DRAFT`
+and MSG67 from the response; keep `rewrite`. OpenAPI: drop `AI_DRAFT` from the origin enum and the MSG67 wording of
+the solution-form path and `message`; `npm run generate:api`. Forge: no behaviour change (a null `message` shows no
+notice) — remove MSG67 tests/fixtures that assumed an AI draft. Rewrite or delete the `*_AC_002_1` / `*_AC_002_2`
+tests; new tests name AC-002.1 and AC-005.2.
+**Files:** Modify `backend/src/main/java/vn/tsolve/jiraapp/service/impl/JiraAppSolutionServiceImpl.java`,
+`.../service/SolutionFormAi.java`, `.../service/impl/SolutionFormAiImpl.java`, `.../dto/SolutionFormResponse.java`;
+create `.../service/impl/IssueText.java`; delete `.../dto/SolutionFormDraft.java`; tests
+`JiraAppSolutionServiceImplTest`, `SolutionFormAiImplTest`, new `IssueTextTest`; `frontend/openapi/tsolve-api.yaml`
++ `frontend/src/shared/api/generated`; Forge `SolutionFormModal.test.jsx`, `BackgroundApp.test.jsx` if they use
+`AI_DRAFT`/MSG67.
+**Dependencies:** none
+**Estimated size:** small
+
+## Task 29: Record the Done state and create the Draft at Done (KAN-371)
+
+**Story:** STORY-005
+**Feature:** draft-at-done-backend
+**Description:** Changeset `048-jira-app-issue-done-state.sql` (`jira_issue_done_state`: `project_id` → project,
+`jira_issue_key`, `done`, `updated_at`, PK (project_id, jira_issue_key)) and its entity/repository in `ticket`;
+`SolutionDraftService.recordIssueDone` (upsert) and `createIfAbsent` (`ON CONFLICT DO NOTHING`). OpenAPI path
+`POST /api/v1/jira-app/events/issue-updated` (`IssueUpdatedPayload`, 202). `JiraAppIssueEventController`
+(`ROLE_JIRA_APP`) → `IssueUpdatedService`: Workspace from the FIT site, Project from the key, Done state, move
+detection (recorded state, else `JiraStatusClient` for the `from` status's category, a failed read = a move), owner =
+assignee else `atlassianId`, linked + member + no ticket, Draft = `IssueText` of the summary and the ADF description
+(a `jiraapp` ADF-to-text matching `watchDone.js#issueText`). Jira read outside the transaction; both writes in one.
+Tests: AC-005.6 (role, Workspace from the FIT not the payload), AC-005.7 (assignee, mover without assignee, content),
+AC-005.8 (each refusal leaves an existing Draft unchanged, automation without assignee), AC-005.9 (in/out of Done,
+Draft kept), AC-005.10 (unreadable event → 202 no change; write failure → 5xx, nothing stored); an IT for the
+migration and `createIfAbsent` against a concurrent Close.
+**Files:** Create `backend/src/main/resources/db/changelog/changes/048-jira-app-issue-done-state.sql` (+ master),
+`backend/src/main/java/vn/tsolve/ticket/entity/JiraIssueDoneState.java`,
+`.../ticket/repository/JiraIssueDoneStateRepository.java`, `.../jiraapp/controller/JiraAppIssueEventController.java`,
+`.../jiraapp/dto/IssueUpdatedPayload.java`, `.../jiraapp/service/IssueUpdatedService.java`,
+`.../jiraapp/service/impl/IssueUpdatedServiceImpl.java`, `.../jiraapp/service/impl/AdfText.java`,
+`.../jiraapp/client/JiraStatusClient.java`, `.../jiraapp/client/RestJiraStatusClient.java`; modify
+`.../ticket/service/SolutionDraftService.java`, `.../impl/SolutionDraftServiceImpl.java`,
+`.../ticket/repository/SolutionDraftRepository.java`; `frontend/openapi/tsolve-api.yaml` + generated; tests.
+**Dependencies:** Task 28 (`IssueText`)
+**Estimated size:** large
+
+## Task 30: Forge trigger on issue updates (KAN-371)
+
+**Story:** STORY-005
+**Feature:** issue-updated-trigger
+**Description:** Manifest `trigger` `tsolve-issue-updated-trigger` on `avi:jira:updated:issue` with
+`filter.ignoreSelf: true`, straight to remote endpoint `tsolve-issue-updated-endpoint` (route
+`/api/v1/jira-app/events/issue-updated`), as the issue-created trigger (AC-005.6). `manifest.test.js` checks it;
+`forge lint` passes. No new scope (`read:jira-work` covers the event). Dev-site check: drag a card to Done on the
+board → the assignee's panel shows MSG77 "Continue draft".
+**Files:** Modify `jira-app/TSolve_JiraApp/manifest.yml`, `jira-app/TSolve_JiraApp/src/manifest.test.js`.
+**Dependencies:** Task 29
+**Estimated size:** small
+
+## Task 31: Remind only while the issue is Done (KAN-371)
+
+**Story:** STORY-011
+**Feature:** draft-reminder-done-only
+**Description:** Both `findOpenDrafts` queries require a `jira_issue_done_state` row with `done = true` for the
+Draft's Project and issue (AC-011.2); a Draft of an issue moved out of Done or never recorded gets no email. Tests
+named AC-011.2: Done → reminded, moved out → not, never recorded → not, back in Done → reminded again.
+**Files:** Modify `backend/src/main/java/vn/tsolve/ticket/repository/SolutionDraftRepository.java`; tests of the
+reminder query/handlers (`DraftReminder*Test`, the open-Draft repository IT).
+**Dependencies:** Task 29 (the table)
+**Estimated size:** small
+
+## Task 32: Ask T-Solve texts for a greeting, an off-topic question and an injection
+
+**Story:** STORY-010
+**Feature:** ask-outcome-texts
+**Description:** AC-010.19 (BUG-347): a `GREETING`, `OFF_TOPIC` or `INJECTION` answer shows MSG_NEW_5, MSG_NEW_6 or
+MSG_NEW_7 (the web chatbot's wording) and neither "Solved" nor "Not solved, create ticket"; `NO_SOURCE` keeps MSG109 and
+both buttons. Tests `AC-010.19` for the three outcomes and the three texts; the BUG-328 test checks no button and no
+rating for a greeting. Dev-site check after `forge deploy`: ask "hi".
+**Files:**
+- Modify: `jira-app/TSolve_JiraApp/src/frontend/messages.js`, `messages.test.js`, `askTsolve/AskTsolvePage.jsx`,
+  `askTsolve/AskTsolvePage.test.jsx`, `docs/bug-log.md`
+**Dependencies:** Task 25
+**Estimated size:** small

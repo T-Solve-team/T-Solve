@@ -1,4 +1,33 @@
+/* Reading column on the left, document details rail on the right. */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--ant-padding-lg);
+}
+
+.main {
+  min-width: 0;
+}
+
+.rail {
+  padding-left: var(--ant-padding-lg);
+  border-left: var(--ant-line-width) solid var(--ant-color-border-secondary);
+}
+
 .content {
+  max-width: 72ch;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  line-height: 1.75;
+}
+
+@media (max-width: 1000px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rail {
+    padding-left: 0;
+    border-left: none;
+  }
 }

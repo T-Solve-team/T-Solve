@@ -14,13 +14,14 @@ public interface ChatConversationService {
     List<ChatbotTurnRequest> history(UUID userId, String chatSessionId);
 
     /**
-     * Stores one answered turn and returns its conversation id: a new conversation titled with the question when
-     * {@code chatSessionId} is null (AC-013.1), else that one, whose last message time moves to now (AC-013.3). Joins
+     * Stores one answered turn and returns its conversation id: a new conversation titled with {@code title}, or the
+     * question when it is null, when {@code chatSessionId} is null (AC-013.1), else that one, whose last message time moves to now (AC-013.3). Joins
      * the caller's transaction, so the turn is stored with its {@code chatbot_answer} row or not at all.
      */
     UUID record(
             UUID userId,
             UUID chatSessionId,
+            String title,
             UUID chatbotAnswerId,
             String question,
             String outcome,

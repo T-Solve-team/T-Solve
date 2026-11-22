@@ -175,7 +175,7 @@ describe('KnowledgeChatbotPage ratings', () => {
   });
 
   it('AC-003.1 shows no rating buttons while the answer is pending (edge 24)', async () => {
-    const release = holdAnswer({ text: 'Use GlobalProtect [1].' });
+    const release = holdAnswer({ text: 'Use GlobalProtect.' });
     const { user, box } = await openChatbot();
 
     await enter(user, box, `${VPN_QUESTION}{Enter}`);
@@ -186,7 +186,7 @@ describe('KnowledgeChatbotPage ratings', () => {
 
     release();
     await within(await screen.findByRole('region', { name: 'Conversation' })).findByText(
-      'Use GlobalProtect [1].',
+      'Use GlobalProtect.',
     );
     expect(helpful(false)).toBeInTheDocument();
   });

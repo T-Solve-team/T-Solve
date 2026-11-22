@@ -39,10 +39,14 @@ import vn.tsolve.common.security.JiraAppPrincipal;
 import vn.tsolve.common.security.JiraAppSecurityConfig;
 import vn.tsolve.common.security.Roles;
 import vn.tsolve.common.security.SecurityConfig;
+import vn.tsolve.jiraapp.dto.JiraAppJobStatus;
+import vn.tsolve.jiraapp.dto.JiraAppQuestionJob;
+import vn.tsolve.jiraapp.dto.JiraAppQuestionJobResult;
 import vn.tsolve.jiraapp.dto.JiraAppQuestionRequest;
 import vn.tsolve.jiraapp.dto.JiraAppRatingRequest;
 import vn.tsolve.jiraapp.dto.JiraAskerEligibility;
 import vn.tsolve.jiraapp.dto.JiraAskerEligibility.Status;
+import vn.tsolve.jiraapp.exception.JiraAppQuestionJobNotFoundException;
 import vn.tsolve.jiraapp.exception.JiraIssueAccessDeniedException;
 import vn.tsolve.jiraapp.exception.JiraSiteNotConnectedException;
 import vn.tsolve.jiraapp.service.JiraAppQuestionService;
@@ -61,6 +65,8 @@ class JiraAppQuestionControllerTest {
             "Restart the VPN [1]",
             List.of());
 
+    private static final UUID JOB_ID = UUID.randomUUID();
+
     @Autowired
     private MockMvc mvc;
 
@@ -71,27 +77,63 @@ class JiraAppQuestionControllerTest {
     private JwtDecoder fitJwtDecoder;
 
     @Test
-    void answersWithTheChatbotAnswer_AC_010_4() throws Exception {
-        when(questions.ask(eq(CALLER), any())).thenReturn(ANSWER);
+    void acceptsWithoutWaitingForTheChatbot_AC_010_4_BUG_343() throws Exception {
+        when(questions.start(eq(CALLER), any())).thenReturn(new JiraAppQuestionJob(JOB_ID));
 
         mvc.perform(ask("{\"question\":\"VPN fails\",\"history\":[{\"question\":\"q\",\"answer\":\"a\"}]}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.answerId").value("70000000-0000-0000-0000-000000000001"))
-                .andExpect(jsonPath("$.outcome").value("ANSWERED"))
-                .andExpect(jsonPath("$.text").value("Restart the VPN [1]"))
-                .andExpect(jsonPath("$.citations").isArray());
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.jobId").value(JOB_ID.toString()))
+                .andExpect(jsonPath("$.answer").doesNotExist());
         verify(questions)
-                .ask(CALLER, new JiraAppQuestionRequest("VPN fails", List.of(new ChatbotTurnRequest("q", "a"))));
+                .start(CALLER, new JiraAppQuestionRequest("VPN fails", List.of(new ChatbotTurnRequest("q", "a"))));
+    }
+
+    @Test
+    void readsTheCompletedAnswer_AC_010_4() throws Exception {
+        when(questions.result(CALLER, JOB_ID)).thenReturn(new JiraAppQuestionJobResult(JiraAppJobStatus.DONE, ANSWER));
+        mvc.perform(get(QUESTIONS + "/" + JOB_ID).with(authentication(fit())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("DONE"))
+                .andExpect(jsonPath("$.answer.answerId").value(ANSWER.answerId().toString()))
+                .andExpect(jsonPath("$.answer.text").value(ANSWER.text()))
+                .andExpect(jsonPath("$.answer.citations").isArray());
+        verify(questions).result(CALLER, JOB_ID);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"PENDING", "FAILED"})
+    void readsStatusWithoutAnAnswer_AC_010_4(String state) throws Exception {
+        when(questions.result(CALLER, JOB_ID))
+                .thenReturn(new JiraAppQuestionJobResult(JiraAppJobStatus.valueOf(state), null));
+        mvc.perform(get(QUESTIONS + "/" + JOB_ID).with(authentication(fit())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(state))
+                .andExpect(jsonPath("$.answer").doesNotExist());
+    }
+
+    @Test
+    void answers404Msg06ForAnUnknownOrOtherOwnersJob_AC_010_16() throws Exception {
+        when(questions.result(CALLER, JOB_ID)).thenThrow(new JiraAppQuestionJobNotFoundException());
+        mvc.perform(get(QUESTIONS + "/" + JOB_ID).with(authentication(fit())))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("MSG06"));
+    }
+
+    @Test
+    void refusesAJobReadWithoutFit_AC_010_16() throws Exception {
+        mvc.perform(get(QUESTIONS + "/" + JOB_ID)).andExpect(status().isUnauthorized());
+        verifyNoInteractions(questions);
     }
 
     @Test
     void answersNoSource_AC_010_7() throws Exception {
-        when(questions.ask(eq(CALLER), any()))
-                .thenReturn(new ChatbotAnswerResponse(ANSWER.answerId(), Outcome.NO_SOURCE, "", List.of()));
-
-        mvc.perform(ask("{\"question\":\"VPN fails\",\"history\":[]}"))
+        when(questions.result(CALLER, JOB_ID))
+                .thenReturn(new JiraAppQuestionJobResult(
+                        JiraAppJobStatus.DONE,
+                        new ChatbotAnswerResponse(ANSWER.answerId(), Outcome.NO_SOURCE, "", List.of())));
+        mvc.perform(get(QUESTIONS + "/" + JOB_ID).with(authentication(fit())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.outcome").value("NO_SOURCE"));
+                .andExpect(jsonPath("$.answer.outcome").value("NO_SOURCE"));
     }
 
     @ParameterizedTest
@@ -119,10 +161,10 @@ class JiraAppQuestionControllerTest {
 
     @Test
     void acceptsAQuestionOfExactly1000Characters_AC_010_5() throws Exception {
-        when(questions.ask(eq(CALLER), any())).thenReturn(ANSWER);
+        when(questions.start(eq(CALLER), any())).thenReturn(new JiraAppQuestionJob(JOB_ID));
 
         mvc.perform(ask("{\"question\":\"" + "a".repeat(1000) + "\",\"history\":[]}"))
-                .andExpect(status().isOk());
+                .andExpect(status().isAccepted());
     }
 
     @Test
@@ -138,7 +180,7 @@ class JiraAppQuestionControllerTest {
 
     @Test
     void answers403Msg124ForASiteOfNoWorkspace_AC_010_11() throws Exception {
-        when(questions.ask(eq(CALLER), any())).thenThrow(new JiraSiteNotConnectedException());
+        when(questions.start(eq(CALLER), any())).thenThrow(new JiraSiteNotConnectedException());
 
         mvc.perform(ask("{\"question\":\"VPN fails\",\"history\":[]}"))
                 .andExpect(status().isForbidden())
@@ -148,7 +190,7 @@ class JiraAppQuestionControllerTest {
 
     @Test
     void answers403Msg08ForAProjectThatIsNotConnected_AC_010_11() throws Exception {
-        when(questions.ask(eq(CALLER), any())).thenThrow(new JiraIssueAccessDeniedException());
+        when(questions.start(eq(CALLER), any())).thenThrow(new JiraIssueAccessDeniedException());
 
         mvc.perform(ask("{\"question\":\"VPN fails\",\"history\":[]}"))
                 .andExpect(status().isForbidden())
@@ -187,8 +229,8 @@ class JiraAppQuestionControllerTest {
     }
 
     @Test
-    void answers503Msg06WhenTheAiIsUnavailable_AC_010_8() throws Exception {
-        when(questions.ask(eq(CALLER), any())).thenThrow(new AiUnavailableException());
+    void answers503Msg06WhenThePoolIsFull_AC_010_18() throws Exception {
+        when(questions.start(eq(CALLER), any())).thenThrow(new AiUnavailableException());
 
         mvc.perform(ask("{\"question\":\"VPN fails\",\"history\":[]}"))
                 .andExpect(status().isServiceUnavailable())

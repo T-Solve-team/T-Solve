@@ -19,4 +19,9 @@ export interface ChatbotAnswer {
   citations: ChatbotCitation[];
   /** The conversation of the answer; set on every askChatbot answer, absent for the Jira App. */
   chatSessionId?: string;
+  /**
+   * A short AI-written name for a new conversation (chatbot AC-009.9); only on the answer to a first question that the classifier named. The server also stores it as the conversation title (AC-013.1), else the question.
+   * @maxLength 60
+   */
+  title?: string;
 }

@@ -72,6 +72,13 @@ tsolve:
       min-similarity: ${WIKI_SEARCH_MIN_SIMILARITY:0.55}
   workspace:
     secret-key: ${WORKSPACE_SECRET_KEY}
+  # Registry database (platform): empty url = no Registry beans (see RegistryDataSourceConfig). Once the url is set,
+  # CATALOG_SECRET_KEY (Base64 of 32 bytes) is required.
+  registry:
+    url: ${REGISTRY_DB_URL:}
+    username: ${REGISTRY_DB_USER:}
+    password: ${REGISTRY_DB_PASSWORD:}
+    secret-key: ${CATALOG_SECRET_KEY}
   # File storage (STORY-007) on Garage through the S3 API. Empty endpoint = no storage beans (see StorageConfig).
   storage:
     endpoint: ${FILE_STORAGE_ENDPOINT:}
@@ -83,6 +90,8 @@ tsolve:
     max-bytes: ${FILE_STORAGE_MAX_BYTES:10485760}
   worker:
     enabled: ${TSOLVE_WORKER_ENABLED:false}
+    # The web process alone: queue tenant jobs (the suggestion job) for the worker process; needs outbox-enabled (BUG-342).
+    web-jobs-enabled: ${TSOLVE_WORKER_WEB_JOBS_ENABLED:false}
     # Optional until enabled; validation rejects missing Jobs credentials without a fallback.
     jdbc-url: ${JOBS_DB_URL:}
     username: ${JOBS_DB_USER:}

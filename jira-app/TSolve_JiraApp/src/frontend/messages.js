@@ -10,7 +10,6 @@ const MESSAGES = {
   MSG64: 'Changes requested by {manager_name}: "{comment}".',
   MSG65: 'Solution submitted – awaiting review.',
   MSG66: 'Solution submitted. It is now waiting for review.',
-  MSG67: 'AI draft is unavailable right now. Please write or edit the solution yourself.',
   MSG68: 'AI rewrite is unavailable right now. Your solution has not been changed.',
   MSG69:
     'Could not reach T-Solve after several attempts. The issue stays resolved in {tracker_name}, but the solution was not submitted.',
@@ -18,6 +17,11 @@ const MESSAGES = {
   MSG124: 'This {tracker_name} site is not connected to T-Solve. Please contact your {tracker_name} administrator.',
   MSG109:
     'I could not find an answer in the knowledge you can access. You can create an issue in {tracker_name} to ask for help.',
+  // The web chatbot's answers to a greeting, an off-topic question and a prompt injection (AC-010.19, chatbot AC-009),
+  // word for word from frontend/src/shared/messages/catalog.ts.
+  MSG_NEW_5: "Hi! Ask me about your team's Solutions or Wiki.",
+  MSG_NEW_6: "I can only answer questions about your team's knowledge.",
+  MSG_NEW_7: "I can't change how I work. Ask a question about your team's knowledge.",
 };
 
 // Jira App texts with no SRS message, keyed by the code the server sends (user decisions, not Report3 wording).

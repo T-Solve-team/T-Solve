@@ -4,9 +4,14 @@
 import { invokeRemote } from '@forge/bridge';
 import { MOCK_DELAY_MS, mockAnswer } from './mockAnswers';
 import { USE_MOCK } from './mode';
+import { SECTIONS } from '../form/sections';
 
-/** A UI call gives up after this long and shows MSG06 (AC-010.8, NF 2); the backend stops at 18 s. */
+/** Per-call limit (AC-010.8, NF 2): the answer runs as a job, so no call waits for the AI. */
 export const ASK_TIMEOUT_MS = 20000;
+
+/** Ask and rewrite jobs share this cadence and total deadline (AC-010.3, AC-010.8, AC-007.1, AC-007.4). */
+export const ASK_POLL_MS = 1500;
+export const ASK_DEADLINE_MS = 75000;
 
 /** The earlier turns sent with a question (AC-010.3). */
 export const MAX_HISTORY = 10;
@@ -91,9 +96,9 @@ export async function rateAnswer(answerId, rating, useMock = USE_MOCK) {
 
 /**
  * The Knowledge Chatbot's answer `{answerId, outcome, text, citations}` to `question`, sent with the last 10 of the
- * earlier `{question, answer}` turns (AC-010.3, AC-010.4).
+ * earlier `{question, answer}` turns (AC-010.3, AC-010.4). The POST starts a job; only DONE returns its answer.
  */
-export async function askQuestion(question, history = [], useMock = USE_MOCK) {
+export async function askQuestion(question, history = [], useMock = USE_MOCK, { signal, sleep = wait, now = Date.now } = {}) {
   if (useMock) {
     await new Promise((resolve) => setTimeout(resolve, MOCK_DELAY_MS));
     const answer = mockAnswer(question);
@@ -102,13 +107,76 @@ export async function askQuestion(question, history = [], useMock = USE_MOCK) {
     }
     return answer;
   }
-  const response = await call({
-    path: QUESTIONS,
-    method: 'POST',
-    headers: JSON_HEADERS,
-    body: { question, history: history.slice(-MAX_HISTORY) },
-  });
-  return response.body;
+  let job;
+  try {
+    job = await pollJob(QUESTIONS, { question, history: history.slice(-MAX_HISTORY) }, { signal, sleep, now });
+  } catch (failure) {
+    // Keep POST validation/eligibility errors. Every GET failure is already MSG06 in pollJob.
+    if (failure.status === 404 || failure.status >= 500) {
+      throw new TsolveError('MSG06', { status: failure.status });
+    }
+    throw failure;
+  }
+  if (!job.answer || typeof job.answer !== 'object') {
+    throw new TsolveError('MSG06');
+  }
+  return job.answer;
+}
+
+/**
+ * Start a job and return only its DONE result. Payload validation belongs to the caller. POST refusals are left
+ * to the caller too; poll failures always use failCode, so eligibility errors cannot change a page mid-poll.
+ */
+async function pollJob(path, body, { signal, sleep = wait, now = Date.now, failCode = 'MSG06' } = {}) {
+  // Count from the POST, including its duration and all waits/calls. Each operation is bounded by the time left,
+  // so a GET started near the deadline cannot extend the job by another 20 seconds.
+  const deadline = now() + ASK_DEADLINE_MS;
+  const remaining = () => {
+    if (signal?.aborted) {
+      throw abortError();
+    }
+    const ms = deadline - now();
+    if (ms <= 0) {
+      throw new TsolveError(failCode);
+    }
+    return ms;
+  };
+  const response = await call(
+    { path, method: 'POST', headers: JSON_HEADERS, body },
+    { signal, timeoutMs: remaining() },
+  );
+  remaining();
+  const jobId = response.body?.jobId;
+  if (typeof jobId !== 'string' || !jobId.trim()) {
+    throw new TsolveError(failCode);
+  }
+
+  for (;;) {
+    let job;
+    try {
+      await within(() => sleep(Math.min(ASK_POLL_MS, remaining()), signal), remaining(), signal);
+      // remaining() is checked after the wait and before invoking Forge: no GET at or after the deadline.
+      const poll = await call(
+        { path: `${path}/${encodeURIComponent(jobId)}`, method: 'GET' },
+        { signal, timeoutMs: remaining() },
+      );
+      remaining();
+      job = poll.body;
+    } catch (failure) {
+      if (failure?.name === 'AbortError') throw failure;
+      throw new TsolveError(failCode, { status: failure?.status });
+    }
+    if (job?.status === 'DONE') {
+      return job;
+    }
+    // The job's own refusal (e.g. MSG08: the Project was deactivated meanwhile) keeps its code, as on the POST.
+    if (job?.status === 'FAILED' && typeof job.code === 'string' && /^MSG\d+$/.test(job.code)) {
+      throw new TsolveError(job.code);
+    }
+    if (job?.status !== 'PENDING') {
+      throw new TsolveError(failCode);
+    }
+  }
 }
 
 /**
@@ -186,14 +254,18 @@ export async function saveSolutionDraft(issueKey, sections) {
 }
 
 /** The AI rewrite of the five sections (AC-007.1); MSG68 when it fails (AC-007.4). */
-export async function rewriteSolution(sections) {
-  const response = await call({
-    path: `${JIRA_APP}/solution-rewrites`,
-    method: 'POST',
-    headers: JSON_HEADERS,
-    body: sections,
-  });
-  return response.body;
+export async function rewriteSolution(sections, { signal, sleep, now } = {}) {
+  try {
+    const job = await pollJob(`${JIRA_APP}/solution-rewrites`, sections, { signal, sleep, now, failCode: 'MSG68' });
+    // Do not normalize an incomplete result into empty fields: Accept would silently erase the user's Solution.
+    if (!SECTIONS.every(({ field }) => typeof job.sections?.[field] === 'string')) {
+      throw new TsolveError('MSG68');
+    }
+    return job.sections;
+  } catch (failure) {
+    if (failure?.name === 'AbortError') throw failure;
+    throw new TsolveError('MSG68', { status: failure?.status });
+  }
 }
 
 /** What the Issue Panel shows `{linked, ticketStatus, hasDraft, mayOpenForm}` (STORY-001, STORY-008). */
@@ -211,23 +283,64 @@ export async function getReviewFeedback(issueKey) {
   return response.body?.feedback ?? null;
 }
 
-function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function abortError() {
+  return Object.assign(new Error('Aborted'), { name: 'AbortError' });
 }
 
-async function call(request) {
-  let timer;
-  const timeout = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(new TsolveError('MSG06')), ASK_TIMEOUT_MS);
+/** Abort the poll wait as well as the remote call; leaving the page never starts another GET. */
+function wait(ms, signal) {
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', abort);
+    };
+    const abort = () => {
+      cleanup();
+      reject(abortError());
+    };
+    const timer = setTimeout(() => {
+      cleanup();
+      resolve();
+    }, ms);
+    if (signal?.aborted) {
+      abort();
+    } else {
+      signal?.addEventListener('abort', abort, { once: true });
+    }
   });
-  let response;
+}
+
+/** Race an operation against its limit and cancellation, releasing listeners/timers on every exit path. */
+async function within(operation, timeoutMs, signal) {
+  if (signal?.aborted) {
+    throw abortError();
+  }
+  if (timeoutMs <= 0) {
+    throw new TsolveError('MSG06');
+  }
+  let timer;
+  let abort;
+  const stopped = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new TsolveError('MSG06')), timeoutMs);
+    abort = () => reject(abortError());
+    signal?.addEventListener('abort', abort, { once: true });
+  });
   try {
-    response = await Promise.race([invokeRemote(request), timeout]);
-  } catch (failure) {
-    // A Forge rejection (network, timeout, 401, a non-JSON error body) carries no message code.
-    throw failure instanceof TsolveError ? failure : new TsolveError('MSG06');
+    return await Promise.race([operation(), stopped]);
   } finally {
     clearTimeout(timer);
+    signal?.removeEventListener('abort', abort);
+  }
+}
+
+async function call(request, { signal, timeoutMs = ASK_TIMEOUT_MS } = {}) {
+  let response;
+  try {
+    // Forge does not accept our AbortSignal: stop awaiting its result, and discard any late response.
+    response = await within(() => invokeRemote(request), Math.min(timeoutMs, ASK_TIMEOUT_MS), signal);
+  } catch (failure) {
+    // A Forge rejection (network, timeout, 401, a non-JSON error body) carries no message code.
+    throw failure instanceof TsolveError || failure?.name === 'AbortError' ? failure : new TsolveError('MSG06');
   }
   if (response.status >= 200 && response.status < 300) {
     return response;

@@ -1,6 +1,7 @@
 import { delay, getResponse, http, type HttpHandler } from 'msw';
 import {
   getMe,
+  WikiDocumentType,
   type CreateWikiFolderRequest,
   type UpdateWikiFolderRequest,
   type WikiDocumentDetail,
@@ -61,6 +62,7 @@ const initialDocuments: WikiDocumentDetail[] = [
     folderId: VPN,
     folderName: 'VPN',
     visibility: 'COMPANY_WIDE',
+    documentType: 'GUIDE',
     owner: 'Lê Thu Hương',
     updatedAt: '2026-11-13T08:00:00Z',
     content:
@@ -78,6 +80,7 @@ const initialDocuments: WikiDocumentDetail[] = [
     folderId: null,
     folderName: null,
     visibility: 'COMPANY_WIDE',
+    documentType: 'GUIDE',
     owner: 'Võ Thanh Tâm',
     updatedAt: '2026-11-12T09:00:00Z',
     content: 'Welcome to the company.\nThis handbook describes working hours and leave requests.',
@@ -94,6 +97,7 @@ const initialDocuments: WikiDocumentDetail[] = [
     folderId: null,
     folderName: null,
     visibility: 'DEPARTMENT',
+    documentType: 'RUNBOOK',
     owner: 'Lê Thu Hương',
     updatedAt: '2026-11-11T07:30:00Z',
     content:
@@ -162,6 +166,7 @@ function uploadPreview(file: File): WikiUploadPreview {
     excerpt,
     wordCount: isUnreadable ? 0 : excerpt.split(/\s+/).length,
     result: isUnreadable ? 'UNREADABLE' : 'READY',
+    documentType: isUnreadable ? 'OTHER' : 'GUIDE',
   };
 }
 
@@ -187,7 +192,7 @@ async function uploadMetadata(request: Request): Promise<WikiPublishMetadata | R
     return missing();
   const rows: WikiPublishMetadata['documents'] = [];
   const entries: unknown[] = value.documents;
-  for (const row of entries) {
+  for (const [index, row] of entries.entries()) {
     if (
       typeof row !== 'object' ||
       row === null ||
@@ -197,7 +202,26 @@ async function uploadMetadata(request: Request): Promise<WikiPublishMetadata | R
       (row.visibility !== 'DEPARTMENT' && row.visibility !== 'COMPANY_WIDE')
     )
       return missing();
-    rows.push({ title: row.title, visibility: row.visibility });
+    const rawType = 'documentType' in row ? row.documentType : undefined;
+    const documentType = Object.values(WikiDocumentType).find((type) => type === rawType);
+    if (!documentType) {
+      const code =
+        rawType === undefined ||
+        rawType === null ||
+        (typeof rawType === 'string' && !rawType.trim())
+          ? 'MSG01'
+          : 'MSG06';
+      return problem(400, code, {
+        fieldErrors: [
+          {
+            field: `documents[${index}].documentType`,
+            code,
+            params: code === 'MSG01' ? { field_name: 'Type' } : {},
+          },
+        ],
+      });
+    }
+    rows.push({ title: row.title, visibility: row.visibility, documentType });
   }
   const folderId = 'folderId' in value ? value.folderId : null;
   if (folderId !== null && typeof folderId !== 'string') return missing();
@@ -329,7 +353,7 @@ export const handlers: HttpHandler[] = [
       [
         getGetWikiSpaceSettingsMockHandler({
           ...space,
-          knowledgeManager: me.user.fullName,
+          knowledgeManagers: [me.user.fullName],
           ownDepartment: { ...ownDepartment, locked: true },
           departments: [...(permissionState.get(spaceId)?.departments ?? [])].sort((a, b) =>
             a.name.localeCompare(b.name),
@@ -579,6 +603,7 @@ export const handlers: HttpHandler[] = [
           documentId: crypto.randomUUID(),
           title: row.title.trim(),
           visibility: row.visibility,
+          documentType: row.documentType,
           spaceId,
           spaceName: spaces.find((space) => space.spaceId === spaceId)?.name ?? '',
           folderId,

@@ -15,6 +15,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -52,6 +53,8 @@ import vn.tsolve.ticket.service.ProjectAccess;
 public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
     // The classifier may use at most 1/3 of the remaining ask budget (BUG-329).
     private static final long CLASSIFIER_SHARE = 3;
+    private static final int TITLE_LIMIT = 60;
+    private static final Pattern WHITESPACE = Pattern.compile("\\s+", Pattern.UNICODE_CHARACTER_CLASS);
     private final EmbeddingClient embeddings;
     private final LlmClient llm;
     private final SolutionRetrieval solutions;
@@ -176,7 +179,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         List<ChatbotTurnRequest> history =
                 request.chatSessionId() == null ? List.of() : conversations.history(user.id(), request.chatSessionId());
         UUID chatSessionId = request.chatSessionId() == null ? null : UUID.fromString(request.chatSessionId());
-        // BUG-332: stored turns are not request input, so they skip the AC-007.3 length check.
+        // BUG-373: stored turns are not request input, so they skip the AC-007.3 length check.
         return answer(
                 request.question(),
                 history,
@@ -188,9 +191,10 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
                 },
                 (question, outcome, text) -> new ChatbotAnswer(user.id(), question, outcome, text),
                 // AC-013.1, AC-013.3: the turn is stored in the transaction of its chatbot_answer row.
-                (saved, citations) -> conversations.record(
+                (saved, citations, title) -> conversations.record(
                         user.id(),
                         chatSessionId,
+                        title,
                         saved.getId(),
                         saved.getQuestion(),
                         saved.getOutcome(),
@@ -219,7 +223,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
                 },
                 (question, outcome, text) -> ChatbotAnswer.forProject(projectId, question, outcome, text),
                 // AC-013.12: a Jira App question has no conversation.
-                (saved, citations) -> null);
+                (saved, citations, title) -> null);
     }
 
     @Override
@@ -244,7 +248,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
 
     /** Stores the turn of a saved answer in the same transaction and returns its conversation id, or null. */
     private interface Turn {
-        UUID record(ChatbotAnswer saved, List<ChatbotCitation> citations);
+        UUID record(ChatbotAnswer saved, List<ChatbotCitation> citations, String title);
     }
 
     private ChatbotAnswerResponse answer(
@@ -252,7 +256,8 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         long deadline = System.nanoTime() + timeoutNanos;
         String question = asked.trim();
         if (QuestionClassifier.isGreeting(question)) {
-            return save(turn, row.of(question, Outcome.GREETING.name(), ""), Outcome.GREETING, List.of(), deadline);
+            return save(
+                    turn, row.of(question, Outcome.GREETING.name(), ""), Outcome.GREETING, List.of(), null, deadline);
         }
         var classification = classifier.parse(classify(ClassifierPrompt.messages(question, history), deadline));
         remaining(deadline);
@@ -264,8 +269,9 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
                     case QUESTION -> null;
                 };
         if (refused != null) {
-            return save(turn, row.of(question, refused.name(), ""), refused, List.of(), deadline);
+            return save(turn, row.of(question, refused.name(), ""), refused, List.of(), null, deadline);
         }
+        String title = history.isEmpty() ? title(classification.title()) : null;
         // BUG-331: a first question is embedded as asked, so a lossy rewrite cannot drop an error code from it.
         // The private rewrite only resolves a follow-up against the history; without one the old fallback stays.
         String retrievalText;
@@ -296,35 +302,65 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         remaining(deadline);
 
         if (kept.isEmpty()) {
-            return save(turn, row.of(question, Outcome.NO_SOURCE.name(), ""), Outcome.NO_SOURCE, List.of(), deadline);
+            return save(
+                    turn,
+                    row.of(question, Outcome.NO_SOURCE.name(), ""),
+                    Outcome.NO_SOURCE,
+                    List.of(),
+                    title,
+                    deadline);
         }
         var messages = AnswerPrompt.messages(question, history, kept);
         String text = callAi(() -> llm.chat(messages, null), deadline);
         remaining(deadline);
         var cited = Citations.of(text, kept);
         if (cited.citations().isEmpty()) {
-            return save(turn, row.of(question, Outcome.NO_SOURCE.name(), ""), Outcome.NO_SOURCE, List.of(), deadline);
+            return save(
+                    turn,
+                    row.of(question, Outcome.NO_SOURCE.name(), ""),
+                    Outcome.NO_SOURCE,
+                    List.of(),
+                    title,
+                    deadline);
         }
         return save(
                 turn,
                 row.of(question, Outcome.ANSWERED.name(), cited.text()),
                 Outcome.ANSWERED,
                 cited.citations(),
+                title,
                 deadline);
     }
 
+    /** AC-009.9: one line of at most 60 characters, or null when the classifier wrote none. */
+    private static String title(String title) {
+        String line = WHITESPACE.matcher(title).replaceAll(" ").trim();
+        if (line.isEmpty()) {
+            return null;
+        }
+        return line.codePointCount(0, line.length()) <= TITLE_LIMIT
+                ? line
+                : line.substring(0, line.offsetByCodePoints(0, TITLE_LIMIT));
+    }
+
     private ChatbotAnswerResponse save(
-            Turn turn, ChatbotAnswer answer, Outcome outcome, List<ChatbotCitation> citations, long deadline) {
+            Turn turn,
+            ChatbotAnswer answer,
+            Outcome outcome,
+            List<ChatbotCitation> citations,
+            String title,
+            long deadline) {
         return transaction.execute(status -> {
             remaining(deadline);
             ChatbotAnswer saved = answers.save(answer);
             remaining(deadline);
             // Flush before checking the deadline so a slow insert can still be rolled back.
             answers.flush();
-            UUID chatSessionId = turn.record(saved, citations);
+            UUID chatSessionId = turn.record(saved, citations, title);
             // This check covers the inserts and flushes; COMMIT itself is not bounded by the ask deadline.
             remaining(deadline);
-            return new ChatbotAnswerResponse(saved.getId(), outcome, answer.getAnswerText(), citations, chatSessionId);
+            return new ChatbotAnswerResponse(
+                    saved.getId(), outcome, answer.getAnswerText(), citations, chatSessionId, title);
         });
     }
 

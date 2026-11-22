@@ -185,6 +185,11 @@ services:
       # The web process runs with NO Spring profile (never dev, never identity-mock).
       SPRING_PROFILES_ACTIVE: ""
       <<: *no-unrelated-secrets
+      # The web process only queues the Reject / Request Changes email in the Jobs outbox (BUG-339); the worker sends it.
+      # Not TSOLVE_WORKER_ENABLED: that would also start JobRunr here and switch the tracker queue.
+      TSOLVE_WORKER_OUTBOX_ENABLED: "true"
+      # The web process also queues the suggestion job in JobRunr; the worker runs it in the Workspace (BUG-342).
+      TSOLVE_WORKER_WEB_JOBS_ENABLED: "true"
       DB_HOST: db
       DB_PORT: "5432"
       REDIS_HOST: redis

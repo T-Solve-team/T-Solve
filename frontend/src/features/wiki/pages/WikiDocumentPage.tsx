@@ -12,6 +12,8 @@ import {
   SectionCard,
   StatusTag,
 } from '@/shared/ui';
+import { WikiFileView } from '../components/WikiFileView';
+import { documentTypeLabels } from '../documentTypes';
 import { useWikiDocument, wikiDocumentFileUrl } from '../hooks/useWikiDocument';
 import { useWikiTrashMutations } from '../hooks/useWikiTrashMutations';
 import styles from './WikiDocumentPage.module.css';
@@ -33,14 +35,48 @@ export function WikiDocumentPage() {
     return <ErrorState error={document.error} onRetry={() => void document.refetch()} />;
   }
   const data = document.data;
+  const plainText = (
+    <section aria-label="Content" className={styles.content}>
+      {data.content}
+    </section>
+  );
   return (
-    <Flex vertical gap="large">
-      <SectionCard>
-        <Flex justify="space-between" align="center" gap="middle">
+    <SectionCard>
+      <div className={styles.layout}>
+        <Flex vertical gap="middle" className={styles.main}>
           <Space>
             <Typography.Title level={2}>{data.title}</Typography.Title>
             {data.inTrash && <StatusTag status="IN_TRASH" />}
           </Space>
+          {data.inTrash ? (
+            plainText
+          ) : (
+            <WikiFileView
+              key={data.documentId}
+              documentId={data.documentId}
+              fileName={data.fileName}
+              title={data.title}
+              fallback={plainText}
+            />
+          )}
+        </Flex>
+        <Flex vertical gap="large" className={styles.rail}>
+          <Descriptions
+            column={1}
+            layout="vertical"
+            items={[
+              { key: 'space', label: 'Space', children: data.spaceName },
+              { key: 'folder', label: 'Folder', children: data.folderName ?? '—' },
+              {
+                key: 'visibility',
+                label: 'Visibility',
+                children: data.visibility === 'COMPANY_WIDE' ? 'Company-wide' : 'Department',
+              },
+              { key: 'type', label: 'Type', children: documentTypeLabels[data.documentType] },
+              { key: 'owner', label: 'Owner', children: data.owner },
+              { key: 'updated', label: 'Updated', children: formatDateTime(data.updatedAt) },
+            ]}
+          />
           <Space>
             {!data.inTrash && (
               <Button href={wikiDocumentFileUrl(data.documentId)} download={data.fileName}>
@@ -54,20 +90,7 @@ export function WikiDocumentPage() {
             )}
           </Space>
         </Flex>
-        <Descriptions
-          items={[
-            { key: 'space', label: 'Space', children: data.spaceName },
-            { key: 'folder', label: 'Folder', children: data.folderName ?? '—' },
-            {
-              key: 'visibility',
-              label: 'Visibility',
-              children: data.visibility === 'COMPANY_WIDE' ? 'Company-wide' : 'Department',
-            },
-            { key: 'owner', label: 'Owner', children: data.owner },
-            { key: 'updated', label: 'Updated', children: formatDateTime(data.updatedAt) },
-          ]}
-        />
-      </SectionCard>
+      </div>
       {isDeleteOpen && (
         <ConfirmDialog
           isOpen
@@ -91,12 +114,7 @@ export function WikiDocumentPage() {
           }}
         />
       )}
-      <SectionCard>
-        <section aria-label="Content" className={styles.content}>
-          {data.content}
-        </section>
-      </SectionCard>
-    </Flex>
+    </SectionCard>
   );
 }
 

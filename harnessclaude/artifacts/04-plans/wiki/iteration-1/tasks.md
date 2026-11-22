@@ -185,3 +185,92 @@ Blockers: Tasks 6 and 9 need `FileStorage` (KAN-96) on `main`. AC-001.7 needs tr
 `backend/src/main/java/vn/tsolve/wiki/service/impl/WikiSourcesImpl.java`; tests `WikiPortsTest` (mapping, arguments) and
 `WikiIndexIT` (the three Space rules and the unknown Project, on CI).
 **Estimated size:** small
+
+## Task 15: Space Settings lists every Knowledge Manager (KAN-362)
+
+**Story:** STORY-006
+**Feature:** wiki-space-managers-list
+**Decisions owned:** KAN-362 (Dương, 17/11: Space Settings shows the Knowledge Managers as a list)
+**Acceptance criteria:** AC-006.11
+**Description:** identity design "Several Knowledge Managers per Space — KAN-362", Wiki. `WikiSpaceSettings.knowledgeManager`
+becomes `knowledgeManagers: string[]` (Active Knowledge Managers' full names, ordered by name ignoring case, empty when
+none); the header query aggregates instead of joining one row; the page joins the names with ", " or shows "—"; the
+MSW wiki mock returns the list. Access checks already use `EXISTS`; a test proves both co-managers can manage the Space.
+Not in scope: identity assignment and handover (identity Tasks 38–39).
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml` (`WikiSpaceSettings`), `backend/src/main/java/vn/tsolve/wiki/{dto/WikiSpaceSettings,repository/WikiPermissionRepository}.java`, `frontend/src/features/wiki/pages/SpaceSettingsPage.tsx`, `frontend/src/features/wiki/mocks/handlers.ts`, regenerated `frontend/src/shared/api/generated`
+- Test: `backend/src/test/java/vn/tsolve/wiki/WikiPermissionIT.java` (two managers), `frontend/src/features/wiki/pages/SpaceSettingsPage.test.tsx`
+**Dependencies:** identity Task 38 (changeset 047) for two `space_manager` rows in the IT.
+**PR / Jira:** same branch as identity Tasks 38–39; Jira KAN-362.
+**Estimated size:** small (5 modified files); about 5 tests
+**Verification:** Tests name AC-006.11; `sdd.ts trace wiki`; backend `mvn verify`; frontend verify; `generate:api` committed with no further diff.
+
+## Task 16: Wiki Home as a three-pane explorer (KAN-372)
+
+**Story:** STORY-002
+**Feature:** wiki-home-explorer
+**Decisions owned:** KAN-372 (Hải Anh, 18/11: 11.1 matches `plans/261118-1513-wiki-ui-redesign-preview/wiki-variant-b.html`; the preview fetches the document detail; a navigator selection clears the search)
+**Acceptance criteria:** AC-002.14 to AC-002.17, AC-002.21 to AC-002.25
+**Description:** Rebuild 11.1 as variant B: navigator (256px) | list pane | preview pane (360px) inside one card.
+Navigator: "Company-wide" entry (current when `?space=` names no viewable Space), "Spaces" label, each Space with
+its access level, the selected Space's FolderTree; folder actions Rename, Move and Delete in a "⋯" menu per folder so
+nothing overflows the column. List pane: toolbar on top (search box, then for the Knowledge Manager "New folder" and
+"Space Settings" as icon buttons with those accessible names, and "Upload documents"); title (entry name, or
+"Search results for “q”" with "Clear search"); document rows (title, Folder or Space name, Owner, Visibility tag,
+Updated) as links that set `?doc=`. Preview pane: `getWikiDocument(?doc= or first row)` — title, visibility, Space,
+Folder, Owner, Updated, File, Size, first 420 characters, "Open" (11.2) and Download (`wikiDocumentFileUrl`); MSG04
+when the list is empty; "This document is no longer available." on 404 MSG110. Loading and error states per pane.
+Below 1280px the preview pane moves under the list (Decided in planning: responsive fallback).
+`DocumentsTable` is no longer used by 11.1; keep it only if another screen imports it.
+Also: Delete folder popup disables Delete after a 409 MSG87 answer (AC-003.16 shows MSG87 with the counts).
+**Files:**
+- Modify: `frontend/src/features/wiki/pages/WikiHomePage.tsx`, `frontend/src/features/wiki/pages/WikiHomePage.module.css`, `frontend/src/features/wiki/hooks/useWikiHome.ts`, `frontend/src/features/wiki/components/FolderTree.tsx`, `frontend/src/features/wiki/components/CompanyWideView.tsx` (remove or replace), `frontend/src/features/wiki/components/DeleteFolderModal.tsx`
+- Test: `frontend/src/features/wiki/pages/WikiHomePage.test.tsx`
+**Tests:** AC-002.14 to AC-002.17, AC-002.21 to AC-002.25, each test name prefixed with its id.
+**Estimated size:** medium
+**Verification:** frontend `format:check`, `lint`, `typecheck`, `test`, `build` (CI); `sdd.ts trace wiki`.
+
+## Task 17: Document type on upload (KAN-374)
+
+**Story:** STORY-007, STORY-004, STORY-002
+**Feature:** wiki-document-type
+**Decisions owned:** `artifacts/04-plans/wiki/doc-type-chunking-decisions.md` (U1, U2, C3 to C6)
+**Acceptance criteria:** AC-007.1 to AC-007.3, AC-007.9, AC-007.10, AC-004.1, AC-004.6, AC-004.10, AC-004.12, AC-002.10
+**Description:** Changeset `NNN-wiki-document-type.sql`: `wiki_document.document_type varchar(20) NOT NULL DEFAULT 'OTHER'` with a check on the ten values. Enum `WikiDocumentType`. `DocumentTypeClassifier` (concrete class) calls `LlmClient.chat` with the prompt file and a JSON schema enum, files in parallel, `tsolve.wiki.classify.timeout` 20 s, any failure → `OTHER`. Extract rows gain `documentType`; publish rows require it (MSG01 / MSG06); audit detail; summary and detail DTOs carry it. OpenAPI first, then `generate:api`.
+**Files:**
+- Create: `backend/src/main/resources/db/changelog/changes/NNN-wiki-document-type.sql`, `backend/src/main/java/vn/tsolve/wiki/entity/WikiDocumentType.java`, `backend/src/main/java/vn/tsolve/wiki/service/DocumentTypeClassifier.java`, `backend/src/main/resources/prompts/wiki-document-type.txt`
+- Modify: `frontend/openapi/tsolve-api.yaml`, `WikiDocument.java`, `WikiUploadServiceImpl.java`, upload DTOs, summary and detail DTOs and their queries
+- Test: `DocumentTypeClassifierTest.java`, `WikiUploadIT.java`, `WikiDocumentTypeMigrationIT.java`
+**Tests:** AC-007.1 to AC-007.3, AC-007.9, AC-007.10, AC-004.1, AC-004.6, AC-004.10, AC-004.12, AC-002.10 · edge cases 30, 31, 35.
+**Estimated size:** medium
+**Verification:** backend `mvn verify`; `generate:api` committed with no further diff; `sdd.ts trace wiki`.
+
+## Task 18: Document-type-aware chunking with docling-serve (KAN-374)
+
+**Story:** STORY-007, STORY-004
+**Feature:** wiki-typed-chunking
+**Decisions owned:** U3 to U5, C1, C2, C7, C8
+**Acceptance criteria:** AC-007.4 to AC-007.8, AC-004.14
+**Dependencies:** Task 17
+**Description:** `DoclingClient` (wiki, `DOCLING_BASE_URL` no default, `tsolve.wiki.docling.timeout` 120 s) posts the original file from `FileStorage` and returns Markdown. `TypedChunker` parses Markdown headings, list items and tables and cuts units per type, applies the 1,500-character limit and the prefix, at most 200. `PassageSplitter` gains the prefix. `WikiIndexJobHandler` picks the path: `OTHER` or any docling failure or zero typed passages → `PassageSplitter`. Docker Compose service `docling` (official image, pinned tag) for local dev; `.env.example` gains `DOCLING_BASE_URL`.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/wiki/service/DoclingClient.java`, `backend/src/main/java/vn/tsolve/wiki/service/TypedChunker.java`
+- Modify: `PassageSplitter.java`, `WikiIndexJobHandler.java`, `docker-compose.yml`, `backend/.env.example`
+- Test: `TypedChunkerTest.java` (one case per type, the limit, the prefix, heading-only units), `WikiIndexJobHandlerTest.java` (fallback causes), `WikiIndexIT.java` (stub docling server)
+**Tests:** AC-007.4 to AC-007.8, AC-004.14 · edge cases 32 to 34.
+**Estimated size:** medium
+**Verification:** backend `mvn verify`; `sdd.ts trace wiki`.
+
+## Task 19: Type on the Wiki screens (KAN-374)
+
+**Story:** STORY-007, STORY-002, STORY-004
+**Feature:** wiki-document-type-ui
+**Dependencies:** Task 17 (generated API)
+**Acceptance criteria:** AC-007.11, AC-002.14, AC-002.19, AC-002.24, AC-004.20
+**Description:** Type label (AC-007.1) on 11.1 rows and preview, on the 11.2 header, and an editable Type select on each 11.3 row with the suggestion selected; publish sends it. MSW handlers return `documentType`.
+**Files:**
+- Modify: `frontend/src/features/wiki/pages/WikiHomePage.tsx`, `WikiDocumentPage.tsx`, `UploadDocumentsPage.tsx`, `frontend/src/features/wiki/mocks/handlers.ts`
+- Test: `WikiHomePage.test.tsx`, `WikiDocumentPage.test.tsx`, `UploadDocumentsPage.test.tsx`
+**Tests:** AC-007.11, AC-002.14, AC-002.19, AC-002.24, AC-004.20, each test name prefixed with its id.
+**Estimated size:** small
+**Verification:** frontend `format:check`, `lint`, `typecheck`, `test`, `build`; `sdd.ts trace wiki`.

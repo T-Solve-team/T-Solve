@@ -301,7 +301,7 @@ class WikiAccessIT {
     }
 
     @Test
-    void returnsTheBestPassagePerDocumentAboveThresholdInOrderWithLimit_AC_001_5() {
+    void returnsTheBestPassagePerDocumentAboveThresholdInOrderWithLimit_AC_001_5_AC_007_10() {
         grant("USER_PERMISSION");
         UUID best = document(targetSpace, "Best", "DEPARTMENT", "INDEXED");
         chunk(best, 0, "Weak passage", 0, 1);
@@ -310,6 +310,8 @@ class WikiAccessIT {
         chunk(next, 0, "Next passage", 0.8f, 0.6f);
         UUID far = document(targetSpace, "Far", "COMPANY_WIDE", "INDEXED");
         chunk(far, 0, "Far passage", 0, 1);
+        jdbc.update("UPDATE wiki_document SET document_type = 'POLICY' WHERE wiki_document_id = ?", best);
+        jdbc.update("UPDATE wiki_document SET document_type = 'FAQ' WHERE wiki_document_id = ?", next);
 
         var passages = chatbot.nearest(user, vector(1, 0), 0.7, 10);
         assertThat(passages).extracting(WikiSources.WikiPassage::wikiDocumentId).containsExactly(best, next);
@@ -373,7 +375,7 @@ class WikiAccessIT {
     }
 
     @Test
-    void suggestionsNeverRetrieveDepartmentDocumentsAndApplyThresholdOrderAndLimit_AC_001_7() {
+    void suggestionsNeverRetrieveDepartmentDocumentsAndApplyThresholdOrderAndLimit_AC_001_7_AC_007_10() {
         grant("MANAGER");
         UUID restricted = document(targetSpace, "Private", "DEPARTMENT", "INDEXED");
         chunk(restricted, 0, "Private passage", 1, 0);
@@ -384,6 +386,9 @@ class WikiAccessIT {
         chunk(next, 0, "Next passage", 0.8f, 0.6f);
         UUID far = document(targetSpace, "Far", "COMPANY_WIDE", "INDEXED");
         chunk(far, 0, "Far passage", 0, 1);
+        jdbc.update("UPDATE wiki_document SET document_type = 'FORM' WHERE wiki_document_id = ?", best);
+        jdbc.update("UPDATE wiki_document SET document_type = 'RECORD' WHERE wiki_document_id = ?", next);
+
         var rows = triage.nearest(vector(1, 0), 0.7, 10);
         assertThat(rows).extracting(WikiSource::documentId).containsExactly(best.toString(), next.toString());
         assertThat(rows.getFirst().title()).isEqualTo("Best");

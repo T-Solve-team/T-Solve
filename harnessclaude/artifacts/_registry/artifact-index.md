@@ -214,6 +214,7 @@ Master registry of all artifacts in this workspace.
 | RESEARCH-004 | research | jira-app | complete | artifacts/01-research/RESEARCH-004-ask-ai-before-creating-a-jira-issue.md |
 | RESEARCH-005 | research | platform | complete | artifacts/01-research/RESEARCH-005-signed-url-route-on-caddy.md |
 | RESEARCH-006 | research | chatbot | complete | artifacts/01-research/RESEARCH-006-chatbot-question-classification.md |
+| RESEARCH-007 | research | project-integration | complete | artifacts/01-research/RESEARCH-007-jira-role-membership-sync.md |
 | MODULE-REVIEW-24 | module | ticket-review | decomposed | artifacts/03-modules/ticket-review/module.md |
 | SPEC-REVIEW-24 | spec | ticket-review | approved | artifacts/03-modules/ticket-review/spec.md |
 | DESIGN-REVIEW-24 | design | ticket-review | approved | artifacts/04-plans/ticket-review/design.md |
@@ -310,3 +311,8 @@ Master registry of all artifacts in this workspace.
 | — | tasks | workspace | approved | artifacts/04-plans/workspace/iteration-1/kan-119/tasks.md |
 | — | tasks | workspace | approved | artifacts/04-plans/workspace/iteration-1/kan-344/tasks.md |
 | — | tasks | workspace | approved | artifacts/04-plans/workspace/iteration-1/kan-349/tasks.md |
+| — | review | ticket-review | pass | artifacts/06-evaluation/ticket-review/quick-bug-339-review-email-outbox-review.md |
+| — | session-log | platform | passing | artifacts/05-implementation/platform/task-3a-registry-db.md |
+| — | review | platform | pass | artifacts/06-evaluation/platform/task-3a-registry-db-review.md |
+| — | review | platform | pass | artifacts/06-evaluation/platform/task-3a-registry-db-review2.md |
+| — | test-report | platform | pass | artifacts/06-evaluation/platform/task-3a-registry-db-test-report.md |

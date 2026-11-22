@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.TextNode;
 import jakarta.persistence.EntityManagerFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -42,6 +43,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.web.multipart.MultipartFile;
+import vn.tsolve.ai.client.LlmClient;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.audit.impl.AuditServiceImpl;
 import vn.tsolve.common.exception.BusinessRuleException;
@@ -59,10 +61,12 @@ import vn.tsolve.wiki.repository.AccessRepository;
 import vn.tsolve.wiki.repository.FolderRepository;
 import vn.tsolve.wiki.repository.WikiDocumentRepository;
 import vn.tsolve.wiki.repository.WikiSearchRepository;
+import vn.tsolve.wiki.service.DocumentTypeClassifier;
 import vn.tsolve.wiki.service.TextExtractor;
 import vn.tsolve.wiki.service.WikiUploadService;
 import vn.tsolve.wiki.service.impl.WikiUploadServiceImpl;
 import vn.tsolve.worker.service.TenantJobService;
+import vn.tsolve.worker.service.WebJobQueue;
 
 class WikiUploadIT extends WikiReadTestSupport {
     private static AnnotationConfigApplicationContext context;
@@ -139,7 +143,8 @@ class WikiUploadIT extends WikiReadTestSupport {
                     .containsEntry("folder_id", folder)
                     .containsEntry("owner_id", user)
                     .containsEntry("status", "PUBLISHED")
-                    .containsEntry("index_status", "PENDING");
+                    .containsEntry("index_status", "PENDING")
+                    .containsEntry("document_type", i == 0 ? "GUIDE" : "POLICY");
             assertThat(document.get("content").toString()).contains("guide with readable text.");
             assertThat(storage.files.get(document.get("file_key")))
                     .isEqualTo(files.get(i).getBytes());
@@ -149,7 +154,8 @@ class WikiUploadIT extends WikiReadTestSupport {
                     .containsEntry("target_type", "WIKI_DOCUMENT")
                     .containsEntry("actor_id", user);
             var details = new ObjectMapper().readTree(entry.get("details").toString());
-            assertThat(details.size()).isEqualTo(5);
+            assertThat(details.size()).isEqualTo(6);
+            assertThat(details.path("documentType").asText()).isEqualTo(i == 0 ? "GUIDE" : "POLICY");
             assertThat(details.path("operation").asText()).isEqualTo("UPLOAD");
             assertThat(details.path("spaceId").asText()).isEqualTo(spaceId.toString());
             assertThat(details.path("folderId").asText()).isEqualTo(folder.toString());
@@ -323,7 +329,8 @@ class WikiUploadIT extends WikiReadTestSupport {
     }
 
     private WikiPublishMetadata.Document row(String title, Visibility visibility) {
-        return new WikiPublishMetadata.Document(title, visibility);
+        return new WikiPublishMetadata.Document(
+                title, visibility, TextNode.valueOf(visibility == Visibility.DEPARTMENT ? "GUIDE" : "POLICY"));
     }
 
     private MockMultipartFile file(String name) throws IOException {
@@ -404,6 +411,7 @@ class WikiUploadIT extends WikiReadTestSupport {
                 ObjectProvider<FileStorage> storage,
                 AuditService audit,
                 ObjectProvider<TenantJobService> jobs,
+                ObjectProvider<WebJobQueue> webJobs,
                 PlatformTransactionManager transactions,
                 ObjectProvider<TenantContext> tenants) {
             return new WikiUploadServiceImpl(
@@ -412,9 +420,11 @@ class WikiUploadIT extends WikiReadTestSupport {
                     access,
                     search,
                     new TextExtractor(),
+                    new DocumentTypeClassifier(mock(LlmClient.class), new ObjectMapper(), "3s"),
                     storage,
                     audit,
                     jobs,
+                    webJobs,
                     transactions,
                     tenants,
                     Mappers.getMapper(WikiDocumentMapper.class),

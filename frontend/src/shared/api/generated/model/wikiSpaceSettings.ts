@@ -14,11 +14,8 @@ export interface WikiSpaceSettings {
   spaceId: string;
   name: string;
   departmentName: string;
-  /**
-   * Knowledge Manager's full name.
-   * @nullable
-   */
-  knowledgeManager: string | null;
+  /** Full names of the Space's Active Knowledge Managers, ordered by name ignoring case; empty when none. */
+  knowledgeManagers: string[];
   ownDepartment: WikiSpaceSettingsOwnDepartment;
   departments: WikiSpaceSettingsDepartmentsItem[];
   users: WikiSpaceSettingsUsersItem[];

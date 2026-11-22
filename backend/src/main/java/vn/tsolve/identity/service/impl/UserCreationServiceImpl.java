@@ -141,7 +141,7 @@ public class UserCreationServiceImpl implements UserCreationService {
             throw required("spaceIds", "Spaces");
         }
         for (var space : spaces) {
-            if (repository.isOccupied(space.id())) {
+            if (repository.managerCount(space.id()) >= 3) {
                 throw occupied(space.name());
             }
         }
@@ -172,9 +172,7 @@ public class UserCreationServiceImpl implements UserCreationService {
             }
             repository.insertRoles(id, List.copyOf(roles));
             for (var space : spaces) {
-                if (!repository.insertManager(space.id(), id)) {
-                    throw occupied(space.name());
-                }
+                repository.insertManager(space.id(), id);
             }
             Map<String, Object> details = new HashMap<>();
             details.put("roles", List.copyOf(roles));

@@ -9,7 +9,7 @@ import {
 } from '@/shared/api';
 import { showMessage } from '@/shared/messages';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10; // KAN-382: "Show more" adds 10 (AC-002.3, AC-002.16)
 
 /** Server conversations stay in the query cache; null selects the unsaved empty conversation. */
 export function useConversations() {

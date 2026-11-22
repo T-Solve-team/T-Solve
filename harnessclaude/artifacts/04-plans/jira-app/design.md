@@ -23,8 +23,9 @@ Jira project → "Hỏi T-Solve" (jira:projectPage, UI Kit, render: native)
   AskTsolvePage.jsx
    ├─ conversation.js   state: turns[], status (idle | asking | answered | failed | solved), validation
    ├─ validation.js     MSG01 (blank) / MSG02 (> 1,000 code points) — nothing is sent
-   ├─ api/tsolveClient.js  invokeRemote('tsolve-backend', POST /api/v1/jira-app/questions)
-   │      body {question, history: last 10 turns}; 20 s client timeout; maps status → MSG code
+   ├─ api/tsolveClient.js  invokeRemote('tsolve-backend', POST /api/v1/jira-app/questions) → 202 {jobId}
+   │      body {question, history: last 10 turns}; then GET /questions/{jobId} every 1.5 s until DONE | FAILED;
+   │      20 s per call, 75 s for the whole question (AC-010.8); maps status → MSG code
    └─ prefill.js        CreateIssueModal({context:{projectId}, fields:{summary, description, labels:['tsolve-asked']}})
 
 backend /api/v1/jira-app/** (FIT chain, ROLE_JIRA_APP, tracker STORY-001)
@@ -32,9 +33,17 @@ backend /api/v1/jira-app/** (FIT chain, ROLE_JIRA_APP, tracker STORY-001)
    └─ JiraAppQuestionService(Impl)
         ├─ JiraAskerLookup.find(cloudId, accountId) → Optional<TSolveUser>   empty → 403 MSG62, no AI call
         │     └─ impl/ConfigJiraAskerLookup  (stub: TSOLVE_STUB_JIRA_ASKERS → active Account)
-        └─ ChatbotAnswerService.ask(user, ChatbotQuestionRequest)  run with its own deadline
-              (JIRA_APP_ASK_TIMEOUT, default 18s) → past it / AiUnavailableException → 503 MSG06
+        ├─ start: Redis SET jira-app:ask:{jobId} {cloudId, accountId, projectKey, status: PENDING} EX 300, then submit
+        │     to the jira-app-ask pool (JIRA_APP_ASK_THREADS running + as many queued; full → 503 MSG06,
+        │     key deleted) → 202 {jobId}                                        (AC-010.4, AC-010.17, AC-010.18)
+        ├─ job (worker, Workspace bound again — BUG-318): askForProject(project, reader, question) .orTimeout(60s)
+        │     → SET … {status: DONE, answer} KEEPTTL  |  error / timeout → {status: FAILED} KEEPTTL
+        └─ GET /questions/{jobId}: Redis GET; missing, expired, other cloudId/accountId/projectKey → 404 MSG06 (AC-010.16)
 ```
+
+- **Why a job** (changelog 2026-11-18): one `invokeRemote` must finish within Forge's 25 s, so the old 18 s cut
+  answered MSG06 for every slow chatbot answer. Now no call waits for the AI; the chatbot gets the 60 s it has on
+  the web. The job id is made by the server, so there is no subscribe-before-invoke race to handle.
 
 - **Page → server**: the UI calls the backend with `invokeRemote` (no Forge resolver hop), as KAN-126 decided; Forge
   attaches a FIT whose `principal` is the viewer's accountId. Every call goes through `api/tsolveClient.js`
@@ -72,7 +81,9 @@ Stub config (`.env.example`): `TSOLVE_STUB_JIRA_ASKERS=<accountId>=<accountUuid>
 | Decision | Choice | Alternatives Considered | Rationale |
 |----------|--------|------------------------|-----------|
 | FIT → T-Solve user | Port `JiraAskerLookup` + `ConfigJiraAskerLookup` reading `TSOLVE_STUB_JIRA_ASKERS` | fail-closed stand-in; wait for identity | User, 2026-11-08: demo on the dev site now; replaced by identity's `JiraAccountLinkLookup` (identity AC-001.69..71) |
-| 20 s limit (NF 2) | Own deadline in the jira-app service, `JIRA_APP_ASK_TIMEOUT` default 18s → 503 MSG06 | deadline passed into `ChatbotAnswerService`; lower `CHATBOT_ASK_TIMEOUT` | User, 2026-11-08: no change to the chatbot module. Known cost: a late chatbot call keeps running and may still save its `ChatbotAnswer` row |
+| 20 s limit (NF 2) | ~~Own deadline, `JIRA_APP_ASK_TIMEOUT` 18s → 503 MSG06~~ (2026-11-08) → replaced 2026-11-18: a job + polling, `JIRA_APP_ASK_TIMEOUT` default 60s → `FAILED` | Forge Async Events queue consumer + Forge Realtime stream; deadline passed into `ChatbotAnswerService` | User, 2026-11-18: the app has no Forge function and an async consumer has no FIT of the viewer (AC-010.11, AC-010.13); streaming needs a streaming chatbot/ai first (Out of Scope). Still no change to the chatbot module; a late chatbot call may still save its `ChatbotAnswer` row |
+| Rewrite job (STORY-007, 2026-11-18) | Same job pattern as Ask T-Solve: `POST /solution-rewrites` → 202 `{jobId}` after `JiraIssueAccess.asUser`; job on `SolutionFormAiImpl`'s own pool with `JIRA_APP_REWRITE_TIMEOUT` (default 60s); Redis key `jira-app:rewrite:{jobId}`, owner cloudId + accountId, TTL 300 s, KEEPTTL XX; GET → PENDING/DONE/FAILED, 404 MSG68; Redis down or pool full → 503 MSG68. `RedisAskJobStore` generalised (key prefix + JSON payload type) rather than copied | Keep 18 s; Forge Realtime | User, 18/11: "make Rewrite with AI the same". Owner has no project: the rewrite is not tied to a Jira project (only `asUser`). The AI draft stays synchronous (Out of Scope) |
+| Job store | Redis (`StringRedisTemplate`, JSON via the app's `ObjectMapper`), key `jira-app:ask:{jobId}`, TTL 300 s | JVM map with TTL; a DB table | User, 2026-11-18: a poll may reach another backend instance; Redis is already required (`REDIS_*`); TTL deletes the text by itself (AC-010.17). A restart loses running jobs: the page shows MSG06 at 75 s |
 | Forge test setup | Jest + Babel + React Testing Library, `@forge/react` and `@forge/bridge` / `@forge/jira-bridge` mocked | Vitest + RTL; unit only | User, 2026-11-08 (matches the Forge testing approach they researched). Snapshot tests skipped; Playwright E2E later |
 | UI → server | `invokeRemote` from the page | Forge resolver relay | Same as KAN-126; FIT carries the viewer, no extra hop |
 | Answer engine | Call `ChatbotAnswerService` as is | own retrieval | Spec AC-010.4: same sources, citations and outcomes as the web chatbot |
@@ -225,3 +236,14 @@ MSG62 links to the page.
   (`localId` / `environmentId`).
 - **Risk.** `jira:personalSettingsPage` is a Forge Preview module: it may change before GA; the dev site is enough
   for the demo. Reported to the team.
+
+**Change 2026-11-17 (dev-site test):** the profile menu of bdang798 did not show the `jira:personalSettingsPage`
+item, although the page worked by its URL. The page becomes the app's single `jira:globalPage` (key
+`tsolve-account-settings`, title "T-Solve account", same resource and resolver), shown under **Apps** in Jira's
+navigation; its URL is `/jira/apps/{appId}/{envId}`, which the panel's MSG62 link now opens. An app may register only
+one `jira:globalPage`.
+
+## Change 2026-11-18: no AI draft, a Draft at Done (KAN-371)
+The form opens with the issue text (no AI draft, no MSG67); a Forge trigger on `avi:jira:updated:issue` creates a
+Draft for the assignee (else the mover) when an issue moves into Done and records each issue's Done state, which the
+daily reminder now requires. Details and decisions: `iteration-2/design.md`, "Change — 2026-11-18".

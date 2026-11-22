@@ -91,7 +91,7 @@ class ChatbotAnswerControllerTest {
     void ignoresHistoryOnAWebQuestionAndPassesTheConversation_AC_007_3_AC_013_2() throws Exception {
         UUID session = UUID.randomUUID();
         when(answers.ask(any(), any()))
-                .thenReturn(new ChatbotAnswerResponse(ANSWER_ID, Outcome.NO_SOURCE, "", List.of(), session));
+                .thenReturn(new ChatbotAnswerResponse(ANSWER_ID, Outcome.NO_SOURCE, "", List.of(), session, null));
 
         mvc.perform(post(PATH)
                         .with(csrf())

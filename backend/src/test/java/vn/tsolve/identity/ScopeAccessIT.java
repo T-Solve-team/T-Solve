@@ -396,4 +396,16 @@ class ScopeAccessIT {
                 account,
                 space);
     }
+
+    @Test
+    void grantsBothCoManagersSpaceAccess_AC_011_5() {
+        JdbcTemplate db = TwoTenantDatabases.tenantA();
+        db.update("INSERT INTO user_role(user_id,role,assigned_at) VALUES (?,'KNOWLEDGE_MANAGER',now())", EMPLOYEE);
+        manager(db, EMPLOYEE, S3);
+        scope.runIn(TwoTenantDatabases.ACME, () -> {
+            assertThat(service.canAccessSpace(KM, S3)).isTrue();
+            assertThat(service.canAccessSpace(EMPLOYEE, S3)).isTrue();
+            return null;
+        });
+    }
 }

@@ -269,6 +269,69 @@ class ImportConfirmIT {
         assertThat(count("import_preview")).isZero();
     }
 
+    @Test
+    void publishedRowLeavesThePreviewAndTheRestStillConfirms_AC_017_1_AC_017_2_AC_017_3() {
+        long id = uploadWithoutSolutions("T-1", "T-2");
+        previewService.fillSolution("pm-a", id, solution(List.of(1, 2)));
+
+        ImportResultResponse result = confirms.publishRow("pm-a", id, 1);
+
+        assertThat(result.created()).isEqualTo(1);
+        assertThat(jdbc.queryForList("select source_ticket_id from ticket", String.class))
+                .containsExactly("T-1");
+        assertThat(jdbc.queryForList("select published_count, error_count, removed_count, status from import_batch"))
+                .singleElement()
+                .satisfies(row -> {
+                    assertThat(row.get("published_count")).isEqualTo(1);
+                    assertThat(row.get("error_count")).isEqualTo(0);
+                    assertThat(row.get("removed_count")).isEqualTo(0);
+                    assertThat(row.get("status")).isEqualTo("COMPLETED");
+                });
+        assertThat(jdbc.queryForList("select decision from ticket_decision", String.class))
+                .containsExactly("APPROVED");
+        // after commit: another connection already sees the Ticket
+        assertThat(published.seen).containsExactly("ids=1 visible=1");
+        assertThat(jdbc.queryForList("select row_no from import_preview_row where preview_id = ?", Integer.class, id))
+                .containsExactly(2);
+        assertThat(previewService.preview("pm-a", id).validCount()).isEqualTo(1);
+
+        assertThat(confirms.confirm("pm-a", id).created()).isEqualTo(1);
+        assertThat(count("ticket")).isEqualTo(2);
+        assertThat(count("import_batch")).isEqualTo(2);
+    }
+
+    @Test
+    void publishWaitsForARunningConfirmThenFindsThePreviewGone_AC_017_7() throws Exception {
+        long id = uploadWithoutSolutions("T-1");
+        previewService.fillSolution("pm-a", id, solution(List.of(1)));
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        try (Connection confirm = jdbc.getDataSource().getConnection()) {
+            // stands in for a Confirm that holds the preview lock, then deletes the preview on commit
+            confirm.setAutoCommit(false);
+            confirm.createStatement().execute("select id from import_preview where id = " + id + " for update");
+
+            Future<String> publish = pool.submit(() -> {
+                try {
+                    confirms.publishRow("pm-a", id, 1);
+                    return "ok";
+                } catch (NotFoundException e) {
+                    return "404";
+                }
+            });
+            awaitWaitingLock();
+            assertThat(publish.isDone()).isFalse();
+
+            confirm.createStatement().execute("delete from import_preview where id = " + id);
+            confirm.commit();
+
+            assertThat(publish.get()).isEqualTo("404");
+            assertThat(count("ticket")).isZero();
+            assertThat(count("import_batch")).isZero();
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
     /** Polls until some session waits for a row lock, so the test does not race the other thread. */
     private void awaitWaitingLock() throws InterruptedException {
         for (int i = 0; i < 100; i++) {

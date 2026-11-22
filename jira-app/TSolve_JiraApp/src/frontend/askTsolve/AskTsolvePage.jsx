@@ -1,5 +1,5 @@
 // "Ask T-Solve" — the Jira project page that asks the Knowledge Chatbot before an issue is created (STORY-010).
-import React, { useEffect, useReducer, useState } from 'react';
+import React, { useEffect, useReducer, useRef, useState } from 'react';
 import {
   Box,
   Button,
@@ -34,8 +34,12 @@ const CREATE = 'Not solved, create ticket';
 const SOLVED_TEXT = 'Your problem is solved. Thank you!';
 
 const FIELD_CODES = ['MSG01', 'MSG02'];
-// The outcomes the backend lets a user rate (chatbot AC-003.1).
+// The outcomes the backend lets a user rate (chatbot AC-003.1); also the only outcomes that show the
+// "Solved" / "Not solved, create ticket" buttons (AC-010.19).
 const RATEABLE = ['ANSWERED', 'NO_SOURCE'];
+// What the page shows for an answer other than ANSWERED (AC-010.7, AC-010.19), as the web chatbot.
+// An outcome not listed here (one the backend may add later) shows MSG06.
+const ANSWER_MESSAGES = { NO_SOURCE: 'MSG109', GREETING: 'MSG_NEW_5', OFF_TOPIC: 'MSG_NEW_6', INJECTION: 'MSG_NEW_7' };
 
 // The eligibility status → what the page shows (AC-010.2, AC-010.14).
 const ACCESS = { CONNECTED: 'connected', SITE_NOT_CONNECTED: 'site', PROJECT_NOT_CONNECTED: 'project' };
@@ -84,7 +88,12 @@ export function AskTsolvePage() {
   const [access, setAccess] = useState('checking');
   const [conversation, dispatch] = useReducer(conversationReducer, initialConversation);
   const [draft, setDraft] = useState('');
+  const [boxVersion, setBoxVersion] = useState(0);
   const [fieldError, setFieldError] = useState(null);
+  const pendingQuestion = useRef(null);
+
+  // The conversation exists only while this page is open (AC-010.12). Cancel its job polling on unmount.
+  useEffect(() => () => pendingQuestion.current?.abort(), []);
 
   useEffect(() => {
     let active = true;
@@ -110,12 +119,22 @@ export function AskTsolvePage() {
     }
     const question = draft;
     const earlier = history(conversation);
+    pendingQuestion.current?.abort();
+    const controller = new AbortController();
+    pendingQuestion.current = controller;
     dispatch({ type: 'send', question });
     try {
-      const answer = await askQuestion(question, earlier);
+      const answer = await askQuestion(question, earlier, undefined, { signal: controller.signal });
+      if (controller.signal.aborted) {
+        return;
+      }
       dispatch({ type: 'answer', answer });
       setDraft('');
+      setBoxVersion((version) => version + 1);
     } catch (failure) {
+      if (controller.signal.aborted || failure?.name === 'AbortError') {
+        return;
+      }
       const code = failure?.code ?? 'MSG06';
       if (code === 'MSG124') {
         setAccess('site');
@@ -126,6 +145,10 @@ export function AskTsolvePage() {
         setFieldError(code);
       }
       dispatch({ type: 'fail', code });
+    } finally {
+      if (pendingQuestion.current === controller) {
+        pendingQuestion.current = null;
+      }
     }
   };
 
@@ -196,7 +219,7 @@ export function AskTsolvePage() {
           <Stack space="space.200">
             {conversation.turns.map((turn, index) => (
               <Turn key={index} turn={turn}>
-                {answered && index === lastIndex && (
+                {answered && index === lastIndex && RATEABLE.includes(turn.answer.outcome) && (
                   <Inline space="space.100" shouldWrap>
                     <Button iconBefore="check-mark" onClick={solve}>
                       {SOLVED}
@@ -223,9 +246,12 @@ export function AskTsolvePage() {
             <Stack space="space.050">
               <Inline space="space.100" alignBlock="end">
                 <Box xcss={growStyle}>
+                  {/* Uncontrolled: a value sent back through the Forge bridge arrives late and undoes what a
+                      Vietnamese input method rewrites (BUG-332). A new key empties it after an answer. */}
                   <TextArea
+                    key={`question-${boxVersion}`}
                     id="tsolve-question"
-                    value={draft}
+                    defaultValue=""
                     placeholder={PLACEHOLDER}
                     minimumRows={1}
                     resize="smart"
@@ -282,7 +308,7 @@ function Turn({ turn, children }) {
       <Stack space="space.150">
         <Question text={question} />
         <Answer>
-          <Text>{message('MSG109')}</Text>
+          <Text>{message(ANSWER_MESSAGES[answer.outcome] ?? 'MSG06')}</Text>
           {children}
         </Answer>
       </Stack>

@@ -392,14 +392,11 @@ describe('AddProjectModal', () => {
     await click(user, dialog, 'Save');
     await expectClosed(dialog);
     expect(await screen.findByText(msg('MSG05'))).toBeInTheDocument();
-    await waitFor(() =>
-      expect(cellsOf(screen.getByRole('row', { name: /\bOLD\b/ }))).toEqual([
-        MOCK_PROJECT_IDS.OLD,
-        'OLD',
-        'Đỗ Minh Quân',
-        '2',
-        'Active',
-      ]),
+    const row = await screen.findByRole('row', { name: /\bOLD\b/ });
+    await waitFor(() => expect(cellsOf(row)).toEqual(['1', 'OLD', 'Đỗ Minh Quân', '2', 'Active']));
+    expect(within(row).getByRole('link', { name: 'OLD' })).toHaveAttribute(
+      'href',
+      `/jira-integration/projects/${MOCK_PROJECT_IDS.OLD}`,
     );
     expect(spy.lists).toBe(2);
   });

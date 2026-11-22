@@ -23,19 +23,23 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  ChatbotAnswer,
   ChatbotQuestion,
   ChatbotRating,
   IssueCreatedPayload,
   IssuePanel,
+  IssueUpdatedPayload,
   JiraAccountLinkStart,
   JiraAccountLinkStatus,
+  JiraAppQuestionJob,
+  JiraAppQuestionJobResult,
   JiraAskerEligibility,
   JiraReviewFeedback,
   ProblemDetail,
   ProblemResponse,
   SolutionForm,
   SolutionFormRequest,
+  SolutionRewriteJob,
+  SolutionRewriteJobResult,
   SolutionSections,
   SubmitSolutionRequest,
   SubmittedTicket,
@@ -307,6 +311,113 @@ export const useReceiveIssueCreated = <TError = ErrorType<ProblemResponse>, TCon
   TContext
 > => {
   return useMutation(getReceiveIssueCreatedMutationOptions(options), queryClient);
+};
+export const getReceiveIssueUpdatedUrl = () => {
+  return `/api/v1/jira-app/events/issue-updated`;
+};
+
+/**
+ * @summary Forge trigger avi:jira:updated:issue — records whether the issue is in Done and, on a move into Done, creates the Solution Form Draft of the assignee or the mover (jira-app STORY-005, AC-005.6 to AC-005.10).
+
+ */
+export const receiveIssueUpdated = async (
+  issueUpdatedPayload: IssueUpdatedPayload,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<void>(getReceiveIssueUpdatedUrl(), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(issueUpdatedPayload),
+  });
+};
+
+export const getReceiveIssueUpdatedMutationKey = () => ['receiveIssueUpdated'] as const;
+
+export const getReceiveIssueUpdatedMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof receiveIssueUpdated>>,
+    TError,
+    ReceiveIssueUpdatedMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof receiveIssueUpdated>>,
+  TError,
+  ReceiveIssueUpdatedMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReceiveIssueUpdatedMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof receiveIssueUpdated>>,
+    ReceiveIssueUpdatedMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return receiveIssueUpdated(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReceiveIssueUpdatedMutationResult = NonNullable<
+  Awaited<ReturnType<typeof receiveIssueUpdated>>
+>;
+export type ReceiveIssueUpdatedMutationBody = IssueUpdatedPayload;
+export type ReceiveIssueUpdatedMutationError = ErrorType<ProblemResponse>;
+export type ReceiveIssueUpdatedMutationVariables = { data: IssueUpdatedPayload };
+
+/**
+ * @summary Forge trigger avi:jira:updated:issue — records whether the issue is in Done and, on a move into Done, creates the Solution Form Draft of the assignee or the mover (jira-app STORY-005, AC-005.6 to AC-005.10).
+
+ */
+export const useReceiveIssueUpdated = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof receiveIssueUpdated>>,
+      TError,
+      ReceiveIssueUpdatedMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof receiveIssueUpdated>>,
+  TError,
+  ReceiveIssueUpdatedMutationVariables,
+  TContext
+> => {
+  return useMutation(getReceiveIssueUpdatedMutationOptions(options), queryClient);
 };
 export const getReceiveJiraAppTokenUrl = () => {
   return `/api/v1/jira-app/app-token`;
@@ -706,13 +817,13 @@ export const getAskJiraAppQuestionUrl = () => {
 };
 
 /**
- * The project comes only from the verified FIT (`context.extension.project.key`, AC-010.13); no T-Solve sign-in is needed, but the FIT must have a Jira user. The answer is the Knowledge Chatbot's for that Project, from its Department's Published Solutions and the Wiki the asker may read: Company-wide documents, plus those their linked T-Solve user may view (AC-010.4, chatbot STORY-012); stored without a user; NO_SOURCE is shown as MSG109 by the Jira App. A blank question → 400 MSG01, longer than 1,000 characters or more than 10 history turns → 400 MSG02 (AC-010.5). A site of no Workspace → 403 MSG124; no Jira user, no project, or not an Active T-Solve Project's → 403 MSG08; no AI call in either case (AC-010.11). The AI unavailable or no answer within the Jira App deadline (JIRA_APP_ASK_TIMEOUT, 18 s) → 503 MSG06 (AC-010.8).
- * @summary Answers a question from the "Ask T-Solve" page with the Knowledge Chatbot (STORY-010).
+ * The project comes only from the verified FIT (`context.extension.project.key`, AC-010.13); no T-Solve sign-in is needed, but the FIT must have a Jira user. The answer is the Knowledge Chatbot's for that Project, from its Department's Published Solutions and the Wiki the asker may read: Company-wide documents, plus those their linked T-Solve user may view (AC-010.4, chatbot STORY-012); stored without a user; NO_SOURCE is shown as MSG109 by the Jira App. A blank question → 400 MSG01, longer than 1,000 characters or more than 10 history turns → 400 MSG02 (AC-010.5). A site of no Workspace → 403 MSG124; no Jira user, no project, or not an Active T-Solve Project's → 403 MSG08; no AI call or job in either case (AC-010.11). Returns a new job id within 2 seconds, without waiting for the AI (AC-010.4). A full job pool → 503 MSG06 (AC-010.18). Poll getJiraAppQuestionJob for the answer; the job deadline is JIRA_APP_ASK_TIMEOUT (default 60 s).
+ * @summary Starts a question job from the "Ask T-Solve" page (STORY-010).
  */
 export const askJiraAppQuestion = async (
   chatbotQuestion: ChatbotQuestion,
   options?: Parameters<typeof http>[1],
-): Promise<ChatbotAnswer> => {
+): Promise<JiraAppQuestionJob> => {
   const getHeaders = (
     h?: NonNullable<RequestInit['headers']>,
   ): Record<string, string | readonly string[]> => {
@@ -732,7 +843,7 @@ export const askJiraAppQuestion = async (
     }
     return headers;
   };
-  return http<ChatbotAnswer>(getAskJiraAppQuestionUrl(), {
+  return http<JiraAppQuestionJob>(getAskJiraAppQuestionUrl(), {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
@@ -786,7 +897,7 @@ export type AskJiraAppQuestionMutationError = ErrorType<ProblemResponse>;
 export type AskJiraAppQuestionMutationVariables = { data: ChatbotQuestion };
 
 /**
- * @summary Answers a question from the "Ask T-Solve" page with the Knowledge Chatbot (STORY-010).
+ * @summary Starts a question job from the "Ask T-Solve" page (STORY-010).
  */
 export const useAskJiraAppQuestion = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
   options?: {
@@ -807,6 +918,147 @@ export const useAskJiraAppQuestion = <TError = ErrorType<ProblemResponse>, TCont
 > => {
   return useMutation(getAskJiraAppQuestionMutationOptions(options), queryClient);
 };
+export const getGetJiraAppQuestionJobUrl = (jobId: string) => {
+  return `/api/v1/jira-app/questions/${jobId}`;
+};
+
+/**
+ * Only the FIT's cloudId, accountId and projectKey that started the job may read it (AC-010.16). Missing, expired or other-owner jobs answer 404 MSG06. Jobs expire 5 minutes after creation (AC-010.17). A chatbot error or timeout produces FAILED; only DONE includes an answer (AC-010.4). An unavailable job store answers 503 MSG06.
+ * @summary Reads the status and completed answer of an Ask T-Solve job.
+ */
+export const getJiraAppQuestionJob = async (
+  jobId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<JiraAppQuestionJobResult> => {
+  return http<JiraAppQuestionJobResult>(getGetJiraAppQuestionJobUrl(jobId), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetJiraAppQuestionJobQueryKey = (jobId: string) => {
+  return [`/api/v1/jira-app/questions/${jobId}`] as const;
+};
+
+export const getGetJiraAppQuestionJobQueryOptions = <
+  TData = Awaited<ReturnType<typeof getJiraAppQuestionJob>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJiraAppQuestionJob>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetJiraAppQuestionJobQueryKey(jobId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getJiraAppQuestionJob>>> = ({ signal }) =>
+    getJiraAppQuestionJob(jobId, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: jobId !== null && jobId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getJiraAppQuestionJob>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetJiraAppQuestionJobQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getJiraAppQuestionJob>>
+>;
+export type GetJiraAppQuestionJobQueryError = ErrorType<ProblemResponse | ProblemDetail>;
+
+export function useGetJiraAppQuestionJob<
+  TData = Awaited<ReturnType<typeof getJiraAppQuestionJob>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  jobId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJiraAppQuestionJob>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getJiraAppQuestionJob>>,
+          TError,
+          Awaited<ReturnType<typeof getJiraAppQuestionJob>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetJiraAppQuestionJob<
+  TData = Awaited<ReturnType<typeof getJiraAppQuestionJob>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJiraAppQuestionJob>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getJiraAppQuestionJob>>,
+          TError,
+          Awaited<ReturnType<typeof getJiraAppQuestionJob>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetJiraAppQuestionJob<
+  TData = Awaited<ReturnType<typeof getJiraAppQuestionJob>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJiraAppQuestionJob>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Reads the status and completed answer of an Ask T-Solve job.
+ */
+
+export function useGetJiraAppQuestionJob<
+  TData = Awaited<ReturnType<typeof getJiraAppQuestionJob>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getJiraAppQuestionJob>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetJiraAppQuestionJobQueryOptions(jobId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export const getRateJiraAppAnswerUrl = (answerId: string) => {
   return `/api/v1/jira-app/questions/${answerId}/rating`;
 };
@@ -921,7 +1173,7 @@ export const getOpenSolutionFormUrl = (issueKey: string) => {
 };
 
 /**
- * @summary Whether the viewer may open 4.1 Solution Form for the issue and, if so, its content: the viewer's Draft, else the AI draft, else the issue text in Symptoms with MSG67 (STORY-001, 002, 005).
+ * @summary Whether the viewer may open 4.1 Solution Form for the issue and, if so, its content: the viewer's Draft, else the issue text in Symptoms — summary, a blank line, description — with no AI call (STORY-001, 002, 005).
 
  */
 export const openSolutionForm = async (
@@ -1002,7 +1254,7 @@ export type OpenSolutionFormMutationError = ErrorType<ProblemResponse | ProblemD
 export type OpenSolutionFormMutationVariables = { issueKey: string; data: SolutionFormRequest };
 
 /**
- * @summary Whether the viewer may open 4.1 Solution Form for the issue and, if so, its content: the viewer's Draft, else the AI draft, else the issue text in Symptoms with MSG67 (STORY-001, 002, 005).
+ * @summary Whether the viewer may open 4.1 Solution Form for the issue and, if so, its content: the viewer's Draft, else the issue text in Symptoms — summary, a blank line, description — with no AI call (STORY-001, 002, 005).
 
  */
 export const useOpenSolutionForm = <
@@ -1250,12 +1502,13 @@ export const getRewriteSolutionUrl = () => {
 };
 
 /**
+ * Starts a background job without waiting for AI; poll getSolutionRewriteJob (60 s deadline).
  * @summary The AI rewrite of the five sections, for 4.2 AI Rewrite Preview (STORY-007).
  */
 export const rewriteSolution = async (
   solutionSections: SolutionSections,
   options?: Parameters<typeof http>[1],
-): Promise<SolutionSections> => {
+): Promise<SolutionRewriteJob> => {
   const getHeaders = (
     h?: NonNullable<RequestInit['headers']>,
   ): Record<string, string | readonly string[]> => {
@@ -1275,7 +1528,7 @@ export const rewriteSolution = async (
     }
     return headers;
   };
-  return http<SolutionSections>(getRewriteSolutionUrl(), {
+  return http<SolutionRewriteJob>(getRewriteSolutionUrl(), {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
@@ -1353,6 +1606,146 @@ export const useRewriteSolution = <
 > => {
   return useMutation(getRewriteSolutionMutationOptions(options), queryClient);
 };
+export const getGetSolutionRewriteJobUrl = (jobId: string) => {
+  return `/api/v1/jira-app/solution-rewrites/${jobId}`;
+};
+
+/**
+ * @summary Read a rewrite job belonging to the FIT's Jira account and site.
+ */
+export const getSolutionRewriteJob = async (
+  jobId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<SolutionRewriteJobResult> => {
+  return http<SolutionRewriteJobResult>(getGetSolutionRewriteJobUrl(jobId), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetSolutionRewriteJobQueryKey = (jobId: string) => {
+  return [`/api/v1/jira-app/solution-rewrites/${jobId}`] as const;
+};
+
+export const getGetSolutionRewriteJobQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSolutionRewriteJob>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSolutionRewriteJob>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSolutionRewriteJobQueryKey(jobId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSolutionRewriteJob>>> = ({ signal }) =>
+    getSolutionRewriteJob(jobId, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: jobId !== null && jobId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getSolutionRewriteJob>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetSolutionRewriteJobQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSolutionRewriteJob>>
+>;
+export type GetSolutionRewriteJobQueryError = ErrorType<ProblemResponse | ProblemDetail>;
+
+export function useGetSolutionRewriteJob<
+  TData = Awaited<ReturnType<typeof getSolutionRewriteJob>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  jobId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSolutionRewriteJob>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSolutionRewriteJob>>,
+          TError,
+          Awaited<ReturnType<typeof getSolutionRewriteJob>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSolutionRewriteJob<
+  TData = Awaited<ReturnType<typeof getSolutionRewriteJob>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSolutionRewriteJob>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSolutionRewriteJob>>,
+          TError,
+          Awaited<ReturnType<typeof getSolutionRewriteJob>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSolutionRewriteJob<
+  TData = Awaited<ReturnType<typeof getSolutionRewriteJob>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSolutionRewriteJob>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Read a rewrite job belonging to the FIT's Jira account and site.
+ */
+
+export function useGetSolutionRewriteJob<
+  TData = Awaited<ReturnType<typeof getSolutionRewriteJob>>,
+  TError = ErrorType<ProblemResponse | ProblemDetail>,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSolutionRewriteJob>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetSolutionRewriteJobQueryOptions(jobId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export const getGetIssuePanelUrl = (issueKey: string) => {
   return `/api/v1/jira-app/issues/${issueKey}/panel`;
 };

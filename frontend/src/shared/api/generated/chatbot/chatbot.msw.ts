@@ -97,6 +97,10 @@ export const getGetChatbotConversationResponseMock = (
           ]),
       ),
       chatSessionId: faker.helpers.arrayElement([faker.string.uuid(), undefined]),
+      title: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 60 } }),
+        undefined,
+      ]),
     },
     rating: faker.helpers.arrayElement([
       faker.helpers.arrayElement(['HELPFUL', 'NOT_HELPFUL'] as const),
@@ -152,6 +156,10 @@ export const getAskChatbotResponseMock = (
       ]),
   ),
   chatSessionId: faker.helpers.arrayElement([faker.string.uuid(), undefined]),
+  title: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 60 } }),
+    undefined,
+  ]),
   ...overrideResponse,
 });
 

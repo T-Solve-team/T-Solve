@@ -50,6 +50,7 @@ public class ChatConversationServiceImpl implements ChatConversationService {
     public UUID record(
             UUID userId,
             UUID chatSessionId,
+            String title,
             UUID chatbotAnswerId,
             String question,
             String outcome,
@@ -57,10 +58,11 @@ public class ChatConversationServiceImpl implements ChatConversationService {
             List<ChatbotCitation> citations) {
         UUID sessionId;
         if (chatSessionId == null) {
-            sessionId = sessions.saveAndFlush(new ChatSession(userId, question)).getId();
+            sessionId = sessions.saveAndFlush(new ChatSession(userId, title == null ? question : title))
+                    .getId();
         } else {
             sessionId = chatSessionId;
-            // BUG-333: the conversation was deleted after the ownership check; the transaction rolls back the answer.
+            // BUG-374: the conversation was deleted after the ownership check; the transaction rolls back the answer.
             if (sessions.touch(sessionId) == 0) {
                 throw new ChatbotConversationNotFoundException();
             }

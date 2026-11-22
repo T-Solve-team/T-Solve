@@ -45,10 +45,12 @@ import vn.tsolve.wiki.dto.WikiTrashItem;
 import vn.tsolve.wiki.entity.WikiDocument;
 import vn.tsolve.wiki.entity.WikiDocument.IndexStatus;
 import vn.tsolve.wiki.entity.WikiDocument.Status;
+import vn.tsolve.wiki.entity.WikiDocumentType;
 import vn.tsolve.wiki.repository.AccessRepository;
 import vn.tsolve.wiki.repository.WikiDocumentRepository;
 import vn.tsolve.wiki.repository.WikiSearchRepository;
 import vn.tsolve.worker.service.TenantJobService;
+import vn.tsolve.worker.service.WebJobQueue;
 
 class WikiTrashServiceImplTest {
     private final WikiDocumentRepository documents = mock(WikiDocumentRepository.class);
@@ -63,7 +65,8 @@ class WikiTrashServiceImplTest {
             search,
             provider(FileStorage.class, storage),
             audit,
-            provider(TenantJobService.class, jobs));
+            provider(TenantJobService.class, jobs),
+            provider(WebJobQueue.class, null));
     private final UUID user = UUID.randomUUID();
     private final UUID space = UUID.randomUUID();
     private final UUID id = UUID.randomUUID();
@@ -77,6 +80,7 @@ class WikiTrashServiceImplTest {
                 folder,
                 "Guide",
                 WikiDocument.Visibility.DEPARTMENT,
+                WikiDocumentType.OTHER,
                 "Text",
                 "wiki/file",
                 "guide.pdf",
@@ -108,6 +112,7 @@ class WikiTrashServiceImplTest {
                 folder,
                 "Guides",
                 "DEPARTMENT",
+                WikiDocumentType.OTHER,
                 "Owner",
                 Instant.EPOCH,
                 "Text",
@@ -349,11 +354,29 @@ class WikiTrashServiceImplTest {
                 search,
                 provider(FileStorage.class, null),
                 audit,
-                provider(TenantJobService.class, null));
+                provider(TenantJobService.class, null),
+                provider(WebJobQueue.class, null));
         deleted();
         bare.deletePermanently(user, id);
         commit();
         verify(documents).delete(document);
+    }
+
+    @Test
+    void restoreQueuesTheIndexForTheWorkerProcessFromTheWebProcess_AC_005_7_BUG_360() {
+        WebJobQueue webJobs = mock(WebJobQueue.class);
+        var web = new WikiTrashServiceImpl(
+                documents,
+                access,
+                search,
+                provider(FileStorage.class, storage),
+                audit,
+                provider(TenantJobService.class, null),
+                provider(WebJobQueue.class, webJobs));
+        deleted();
+        web.restore(user, id);
+        commit();
+        verify(webJobs).enqueue("wiki-index", id);
     }
 
     private static <T> ObjectProvider<T> provider(Class<T> type, T bean) {

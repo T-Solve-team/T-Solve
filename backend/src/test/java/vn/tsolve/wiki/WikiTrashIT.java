@@ -58,6 +58,7 @@ import vn.tsolve.wiki.mapper.WikiDocumentMapper;
 import vn.tsolve.wiki.repository.AccessRepository;
 import vn.tsolve.wiki.repository.FolderRepository;
 import vn.tsolve.wiki.repository.WikiDocumentRepository;
+import vn.tsolve.wiki.service.DocumentTypeClassifier;
 import vn.tsolve.wiki.service.TextExtractor;
 import vn.tsolve.wiki.service.WikiTrashService;
 import vn.tsolve.wiki.service.WikiUploadService;
@@ -67,6 +68,7 @@ import vn.tsolve.wiki.service.impl.WikiSourcesImpl;
 import vn.tsolve.wiki.service.impl.WikiTrashServiceImpl;
 import vn.tsolve.wiki.service.impl.WikiUploadServiceImpl;
 import vn.tsolve.worker.service.TenantJobService;
+import vn.tsolve.worker.service.WebJobQueue;
 
 class WikiTrashIT extends WikiReadTestSupport {
     private static AnnotationConfigApplicationContext context;
@@ -492,7 +494,8 @@ class WikiTrashIT extends WikiReadTestSupport {
                 AccessRepository access,
                 ObjectProvider<FileStorage> storage,
                 AuditService audit,
-                ObjectProvider<TenantJobService> jobs) {
+                ObjectProvider<TenantJobService> jobs,
+                ObjectProvider<WebJobQueue> webJobs) {
             return new WikiTrashServiceImpl(
                     documents,
                     access,
@@ -500,7 +503,8 @@ class WikiTrashIT extends WikiReadTestSupport {
                             new org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate(jdbc)),
                     storage,
                     audit,
-                    jobs);
+                    jobs,
+                    webJobs);
         }
 
         @Bean
@@ -511,6 +515,7 @@ class WikiTrashIT extends WikiReadTestSupport {
                 ObjectProvider<FileStorage> storage,
                 AuditService audit,
                 ObjectProvider<TenantJobService> jobs,
+                ObjectProvider<WebJobQueue> webJobs,
                 PlatformTransactionManager transactions,
                 ObjectProvider<TenantContext> tenants) {
             return new WikiUploadServiceImpl(
@@ -520,9 +525,11 @@ class WikiTrashIT extends WikiReadTestSupport {
                     new vn.tsolve.wiki.repository.WikiSearchRepository(
                             new org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate(jdbc)),
                     new TextExtractor(),
+                    mock(DocumentTypeClassifier.class),
                     storage,
                     audit,
                     jobs,
+                    webJobs,
                     transactions,
                     tenants,
                     Mappers.getMapper(WikiDocumentMapper.class),

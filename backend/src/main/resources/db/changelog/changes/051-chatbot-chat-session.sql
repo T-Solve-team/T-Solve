@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset chatbot:047-chatbot-chat-session
+--changeset chatbot:051-chatbot-chat-session
 -- KAN-183: a web user's conversations, kept 30 days after their last message (spec STORY-013).
 CREATE TABLE chat_session (
     chat_session_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

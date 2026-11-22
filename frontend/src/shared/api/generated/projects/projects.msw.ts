@@ -15,6 +15,8 @@ import { ProjectRole, ProjectStatus } from '../model';
 import type {
   AddProjectMembersRequest,
   CreateProjectRequest,
+  JiraProjectRoleResponse,
+  JiraRolePeopleResponse,
   MemberCandidateResponse,
   Project,
   ProjectConnectionTest,
@@ -166,6 +168,40 @@ export const getSearchProjectMemberCandidatesResponseMock = (): MemberCandidateR
     ]),
     email: faker.internet.email(),
   }));
+
+export const getListProjectJiraRolesResponseMock = (): JiraProjectRoleResponse[] =>
+  Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.number.int(),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  }));
+
+export const getListProjectJiraRolePeopleResponseMock = (
+  overrideResponse: Partial<Extract<JiraRolePeopleResponse, object>> = {},
+): JiraRolePeopleResponse => ({
+  people: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      jiraAccountId: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      status: faker.helpers.arrayElement([
+        'ADDABLE',
+        'NOT_LINKED',
+        'NOT_TICKET_RESOLVER',
+        'NOT_ACTIVE',
+        'ALREADY_MEMBER',
+      ] as const),
+      userId: faker.helpers.arrayElement([faker.string.uuid(), undefined]),
+      fullName: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      email: faker.helpers.arrayElement([faker.internet.email(), undefined]),
+    }),
+  ),
+  groups: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  ...overrideResponse,
+});
 
 export const getTestProjectConnectionMockHandler = (
   overrideResponse?:
@@ -358,6 +394,54 @@ export const getSearchProjectMemberCandidatesMockHandler = (
     options,
   );
 };
+
+export const getListProjectJiraRolesMockHandler = (
+  overrideResponse?:
+    | JiraProjectRoleResponse[]
+    | ((
+        info: Parameters<HttpResponseResolver<{ projectId: string }>>[0],
+      ) => Promise<JiraProjectRoleResponse[]> | JiraProjectRoleResponse[]),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get<{ projectId: string }>(
+    '*/api/v1/projects/:projectId/jira-roles',
+    async (info: Parameters<HttpResponseResolver<{ projectId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListProjectJiraRolesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListProjectJiraRolePeopleMockHandler = (
+  overrideResponse?:
+    | JiraRolePeopleResponse
+    | ((
+        info: Parameters<HttpResponseResolver<{ projectId: string; roleId: string }>>[0],
+      ) => Promise<JiraRolePeopleResponse> | JiraRolePeopleResponse),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get<{ projectId: string; roleId: string }>(
+    '*/api/v1/projects/:projectId/jira-roles/:roleId/people',
+    async (info: Parameters<HttpResponseResolver<{ projectId: string; roleId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListProjectJiraRolePeopleResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
 export const getProjectsMock = () => [
   getTestProjectConnectionMockHandler(),
   getCreateProjectMockHandler(),
@@ -367,4 +451,6 @@ export const getProjectsMock = () => [
   getAddProjectMembersMockHandler(),
   getRemoveProjectMemberMockHandler(),
   getSearchProjectMemberCandidatesMockHandler(),
+  getListProjectJiraRolesMockHandler(),
+  getListProjectJiraRolePeopleMockHandler(),
 ];

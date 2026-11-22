@@ -93,13 +93,141 @@ All three tasks are Jira KAN-243, so one branch `feat/KAN-243-chatbot-classify-q
 
 ---
 
-## Task 16: Store web conversations on the backend
+## Task 16: One combined answer from the sources
+
+**Story:** STORY-005
+**Feature:** combined-answer-prompt
+**Jira:** KAN-380 · branch `feature/KAN-380-chatbot-combined-answer`
+**Description:**
+- `AnswerPrompt.SYSTEM`: ask for one answer that merges what the sources say (the steps to take), never a walk
+  through the sources one by one; the citation rules stay as they are (AC-005.3, AC-006.8).
+**Files:**
+- Modify: `backend/src/main/java/vn/tsolve/chatbot/answer/service/impl/AnswerPrompt.java`
+- Test: `backend/src/test/java/vn/tsolve/chatbot/answer/service/impl/AnswerPromptTest.java`
+  (`asksForOneCombinedAnswer_AC_005_3`)
+**Covers:** AC-005.3
+**Dependencies:** none
+**Estimated size:** small
+
+---
+
+## Task 17: Show the cited Solutions open
+
+**Story:** STORY-001
+**Feature:** open-solution-citations
+**Jira:** KAN-380 · branch `feature/KAN-380-chatbot-combined-answer`
+**Description:**
+- `CitationList.tsx`: a ticket Solution citation shows "[n] Solution from a ticket" and its `TicketSolution` under
+  it, with no Show/Hide button (AC-001.10, AC-001.11). Wiki citations unchanged.
+- Frontend `verify` passes; `generate:api` leaves no diff (no contract change).
+**Files:**
+- Modify: `frontend/src/features/chatbot/components/CitationList.tsx`
+- Test: `frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx` (`AC-001.10 …`, `AC-001.11 …`)
+**Covers:** AC-001.10, AC-001.11
+**Dependencies:** none
+**Estimated size:** small
+
+---
+
+## Task 18: An AI title for a new conversation
+
+**Story:** STORY-009, STORY-002
+**Feature:** conversation-title-api
+**Jira:** KAN-380 · branch `feature/KAN-380-chatbot-combined-answer`
+**Description:**
+- Contract first: `ChatbotAnswer.title` (optional string) in `frontend/openapi/tsolve-api.yaml`; `generate:api`.
+- `ClassifierPrompt`: schema gains `title`; the system message asks for it when there are no earlier turns.
+- `QuestionClassifier.Classification` carries the title; `ChatbotAnswerServiceImpl` returns it for a first
+  `QUESTION` only, white space collapsed, at most 60 characters (`ChatbotAnswerResponse.title`, omitted when null).
+**Files:**
+- Modify: `frontend/openapi/tsolve-api.yaml`, `backend/…/chatbot/answer/dto/ChatbotAnswerResponse.java`,
+  `…/service/impl/ClassifierPrompt.java`, `…/service/impl/QuestionClassifier.java`,
+  `…/service/impl/ChatbotAnswerServiceImpl.java`
+- Test: `ClassifierPromptTest` (`asksForTitleOnFirstQuestion_AC_009_9`), `QuestionClassifierTest`
+  (`readsTitle_AC_009_9`), `ChatbotAnswerServiceImplTest` (`returnsTitleOnFirstQuestionOnly_AC_009_9`)
+**Covers:** AC-009.9
+**Dependencies:** none
+**Estimated size:** small
+
+---
+
+## Task 19: Show the AI title on one line
+
+**Story:** STORY-002
+**Feature:** conversation-title-ui
+**Jira:** KAN-380 · branch `feature/KAN-380-chatbot-combined-answer`
+**Description:**
+- `Conversation` keeps `title` (from the first answer, else the first question), stored in session storage; an
+  older stored conversation without one falls back to its first question.
+- `ConversationList`: one line, CSS ellipsis, antd `Tooltip` with the whole title (hover and focus).
+- Mock answers carry a `title` on a first question.
+**Files:**
+- Modify: `frontend/src/features/chatbot/model.ts`, `…/hooks/useConversations.ts`, `…/hooks/chatbot-storage.ts`,
+  `…/components/ConversationList.tsx`, `…/components/Conversation.module.css`, `…/mocks/handlers.ts`
+- Test: `KnowledgeChatbotPage.test.tsx` (`AC-002.2 …`, `AC-002.13 …`), `chatbot-storage.test.ts`
+**Covers:** AC-002.2, AC-002.13
+**Dependencies:** Task 18 (generated type)
+**Estimated size:** small
+
+---
+
+## Task 20: Empty the question box on send
+
+**Story:** STORY-001
+**Feature:** clear-box-on-send
+**Jira:** KAN-382 · branch `feat/KAN-382-chatbot-focus-layout`
+**Description:**
+- `KnowledgeChatbotPage.handleAsk`: empty the box right after `ask.mutate` is called (AC-001.6); on any error that is
+  not a 401, put the question back when the box is still empty, then show MSG06 or the field error as before
+  (AC-001.13, AC-001.14). Text typed while waiting stays (AC-001.7). The success path no longer touches the box.
+- Reported: the box kept the question after Enter or Send; emptying on send removes the dependence on when the
+  answer arrives.
+**Files:**
+- Modify: `frontend/src/features/chatbot/pages/KnowledgeChatbotPage.tsx`
+- Test: `frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx` (`AC-001.6 …`, `AC-001.7 …`,
+  `AC-001.13 …`, `AC-001.14 …`)
+**Covers:** AC-001.6, AC-001.7, AC-001.13, AC-001.14
+**Dependencies:** none
+**Estimated size:** small
+
+---
+
+## Task 21: Focus layout with the conversation sidebar
+
+**Story:** STORY-001, STORY-002
+**Feature:** focus-layout
+**Jira:** KAN-382 · branch `feat/KAN-382-chatbot-focus-layout`
+**Description:**
+- Layout of option C ("Focus") with the conversation list kept as the left sidebar: a reading column (720 px) in
+  the thread; each question as a heading line with the asker's initials; the answer as body text; its citations as
+  numbered notes under it (Solutions open, AC-001.7, AC-001.11); rating buttons under the notes; the pending answer
+  as a skeleton (AC-001.6).
+- An empty conversation shows the box in the middle under the heading and line of AC-001.16; after the first
+  question the box sits at the bottom of the thread, one rounded row with a round Send icon button (accessible name
+  "Send"), the count and the Enter hint under it.
+- Markers `[n]` of an `ANSWERED` text become small buttons (the text stays plain text, AC-001.8); a click scrolls
+  citation n of that answer into view and highlights it (AC-001.17).
+- `ConversationList`: the 10 newest conversations, then "Show more" adding 10 each click (AC-002.14); one-line
+  titles with the tooltip of AC-002.13 stay.
+**Files:**
+- Modify: `frontend/src/features/chatbot/pages/KnowledgeChatbotPage.tsx`, `…/pages/KnowledgeChatbotPage.module.css`,
+  `…/components/ConversationThread.tsx`, `…/components/ChatAnswer.tsx`, `…/components/CitationList.tsx`,
+  `…/components/ConversationList.tsx`, `…/components/Conversation.module.css`, `…/components/Citations.module.css`,
+  `…/components/QuestionBox.tsx`, `…/components/QuestionBox.module.css`
+- Test: `KnowledgeChatbotPage.test.tsx` (`AC-001.16 …`, `AC-001.17 …`, `AC-002.14 …`)
+**Covers:** AC-001.7, AC-001.11, AC-001.16, AC-001.17, AC-002.14
+**Dependencies:** Task 20 (same page file)
+**Estimated size:** medium
+
+---
+
+## Task 22: Store web conversations on the backend
 
 **Story:** STORY-013, STORY-007, STORY-010
 **Feature:** conversation-store
 **Jira:** KAN-183 · branch `feat/KAN-183-chatbot-persist-sessions` (from `main` once KAN-243 is merged; it needs the five outcomes)
 **Description:**
-- Changeset `047-chat-session.sql` (author `chatbot`): `chat_session` and `chat_message` as spec Interface Contracts,
+- Changeset `051-chatbot-chat-session.sql` (author `chatbot`): `chat_session` and `chat_message` as spec Interface Contracts,
   indexes, `--rollback` drops both (AC-013.11).
 - Contract (`frontend/openapi/tsolve-api.yaml`): `askChatbot` takes the new `ChatbotAsk`; `ChatbotAnswer` gains optional
   `chatSessionId`; 404 on `askChatbot`; `draftChatbotIssue` loses its body and `ChatbotIssueDraftRequest`; the Jira App
@@ -111,11 +239,11 @@ All three tasks are Jira KAN-243, so one branch `feat/KAN-243-chatbot-classify-q
 - `ChatbotIssueServiceImpl.draft`: the turns before the answer's message in its conversation (none when the answer has
   no message), no request body (AC-010.3, AC-010.8).
 **Files:**
-- Create: `backend/src/main/resources/db/changelog/changes/047-chat-session.sql`,
+- Create: `backend/src/main/resources/db/changelog/changes/051-chatbot-chat-session.sql`,
   `backend/src/main/java/vn/tsolve/chatbot/conversation/entity/ChatSession.java`, `…/entity/ChatMessage.java`,
   `…/repository/ChatSessionRepository.java`, `…/repository/ChatMessageRepository.java`,
   `backend/src/main/java/vn/tsolve/chatbot/answer/dto/ChatbotAskRequest.java`
-- Modify: `backend/src/main/resources/db/changelog/db.changelog-master.yaml`, `frontend/openapi/tsolve-api.yaml`,
+- Modify: `backend/src/main/resources/db/changelog/db.changelog-master.xml`, `frontend/openapi/tsolve-api.yaml`,
   `frontend/src/shared/api/generated/**` (regenerated), `…/chatbot/answer/controller/ChatbotAnswerController.java`,
   `…/answer/dto/ChatbotAnswerResponse.java`, `…/answer/service/ChatbotAnswerService.java`,
   `…/answer/service/impl/ChatbotAnswerServiceImpl.java`, `…/issue/controller/ChatbotIssueController.java`,
@@ -130,7 +258,7 @@ All three tasks are Jira KAN-243, so one branch `feat/KAN-243-chatbot-classify-q
 
 ---
 
-## Task 17: List, open and delete conversations; retention job
+## Task 23: List, open and delete conversations; retention job
 
 **Story:** STORY-013
 **Feature:** conversation-api
@@ -155,12 +283,12 @@ All three tasks are Jira KAN-243, so one branch `feat/KAN-243-chatbot-classify-q
 - Test: `ChatbotConversationIT` (`list_AC_013_5`, `open_AC_013_6`, `delete_AC_013_7`, `unknown_AC_013_8`,
   `noSession_AC_013_10`), `ConversationRetentionJobIT` (`AC_013_9`)
 **Covers:** AC-013.5 – AC-013.10
-**Dependencies:** Task 16
+**Dependencies:** Task 22
 **Estimated size:** medium
 
 ---
 
-## Task 18: Saved conversations in the web app
+## Task 24: Saved conversations in the web app
 
 **Story:** STORY-002, STORY-001, STORY-003, STORY-004
 **Feature:** conversation-ui
@@ -181,12 +309,12 @@ All three tasks are Jira KAN-243, so one branch `feat/KAN-243-chatbot-classify-q
 - Delete: `…/hooks/chatbot-storage.ts`, `…/hooks/chatbot-storage.test.ts`
 - Test: `…/pages/KnowledgeChatbotPage.test.tsx` (`AC-001.6`, `AC-002.x`, `AC-003.4`), `…/mocks/handlers.test.ts` (`AC-004.8`)
 **Covers:** AC-001.6, AC-002.1 – AC-002.15, AC-003.4, AC-004.8
-**Dependencies:** Task 17 (generated client)
+**Dependencies:** Task 23 (generated client)
 **Estimated size:** large
 
 ---
 
-## Task 19: Page the conversation list with Load more
+## Task 25: Page the conversation list with Load more
 
 **Story:** STORY-013, STORY-002, STORY-004
 **Feature:** conversation-paging
@@ -211,5 +339,22 @@ All three tasks are Jira KAN-243, so one branch `feat/KAN-243-chatbot-classify-q
   (`AC-002.3`, `AC-002.16`: Load more appends, hides at the end, MSG06 on failure, refetch after ask and delete),
   `mocks/handlers.test.ts` (`AC-004.8`)
 **Covers:** AC-013.5, AC-002.3, AC-002.16, AC-004.8
-**Dependencies:** Task 17, Task 18
+**Dependencies:** Task 23, Task 18
 **Estimated size:** small
+
+---
+
+## Task 26: Merge of main: AI title stored, list paged by 10
+
+**Story:** STORY-002, STORY-009, STORY-013
+**Feature:** merge-title-paging
+**Jira:** KAN-183 · same branch
+**Description:**
+- Merge `origin/main` (KAN-380, KAN-382) into the branch; the changeset becomes `051-chatbot-chat-session`.
+- Backend: the AI `title` of a first `askChatbot` (no `chatSessionId`) is returned and stored as
+  `chat_session.title`, the trimmed question when there is none (AC-009.9, AC-013.1).
+- Frontend: the focus layout of KAN-382 on the server list; `useInfiniteQuery` asks `size` 10 and the button reads
+  "Show more" (AC-002.3, AC-002.16); one-line titles stay (AC-002.17); the box empties on send (AC-001.6).
+**Covers:** AC-001.6, AC-002.2, AC-002.3, AC-002.16, AC-002.17, AC-009.9, AC-013.1
+**Dependencies:** Task 21, Task 25
+**Estimated size:** medium

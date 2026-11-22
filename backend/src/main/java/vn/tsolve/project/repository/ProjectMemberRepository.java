@@ -1,12 +1,15 @@
 package vn.tsolve.project.repository;
 
 import java.time.OffsetDateTime;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -85,6 +88,38 @@ public class ProjectMemberRepository {
                         ProjectMemberResponse.Role.valueOf(rs.getString("role_in_project")),
                         rs.getObject("date_added", OffsetDateTime.class).toInstant()));
     }
+
+    /** What the "From Jira" tab needs to know about these accounts (AC-011.2); unknown ids are absent. */
+    public Map<UUID, MemberState> memberStates(UUID projectId, Collection<UUID> userIds) {
+        Map<UUID, MemberState> states = new HashMap<>();
+        if (userIds.isEmpty()) {
+            return states;
+        }
+        jdbc.query("""
+                SELECT u.id, u.full_name, u.email, u.status = 'ACTIVE' AS active,
+                    EXISTS (SELECT 1 FROM user_role r WHERE r.user_id = u.id AND r.role = 'TICKET_RESOLVER')
+                        AS ticket_resolver,
+                    EXISTS (SELECT 1 FROM project_membership m WHERE m.user_id = u.id AND m.project_id = :project)
+                        AS member
+                FROM app_user u WHERE u.id IN (:ids)
+                """, Map.of("project", projectId, "ids", userIds), (RowCallbackHandler) rs -> {
+            UUID id = rs.getObject("id", UUID.class);
+            states.put(
+                    id,
+                    new MemberState(
+                            id,
+                            rs.getString("full_name"),
+                            rs.getString("email"),
+                            rs.getBoolean("active"),
+                            rs.getBoolean("ticket_resolver"),
+                            rs.getBoolean("member")));
+        });
+        return states;
+    }
+
+    /** An account as the "From Jira" tab sees it. */
+    public record MemberState(
+            UUID id, String fullName, String email, boolean active, boolean ticketResolver, boolean member) {}
 
     /** {@code q} is trimmed; it is matched literally, ignoring case, in the full name or email. */
     public List<MemberCandidateResponse> candidates(UUID projectId, String q) {

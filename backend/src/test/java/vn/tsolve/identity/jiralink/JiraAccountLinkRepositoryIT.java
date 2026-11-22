@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -96,5 +97,28 @@ class JiraAccountLinkRepositoryIT {
 
         assertThat(links.find("jira-acct-1")).contains(new JiraAccountLink("jira-acct-1", account, linkedAt));
         assertThat(links.find("jira-acct-2")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("AC-001.78 reads the linked account ids of several tracker accounts, a deactivated account too")
+    void readsTheLinkedAccountIdsOfSeveralTrackerAccounts_AC_001_78() {
+        JdbcTemplate db = TwoTenantDatabases.tenantA();
+        UUID active = UUID.randomUUID();
+        UUID deactivated = UUID.randomUUID();
+        db.update(
+                "INSERT INTO app_user (id, email, full_name, status, created_at) VALUES (?, ?, 'A', 'ACTIVE', now())",
+                active,
+                active + "@acme.example");
+        db.update(
+                "INSERT INTO app_user (id, email, full_name, status, created_at) VALUES (?, ?, 'D', 'DEACTIVATED', now())",
+                deactivated,
+                deactivated + "@acme.example");
+        JiraAccountLinkRepository links = new JiraAccountLinkRepository(db);
+        links.upsert(new JiraAccountLink("jira-a", active, Instant.parse("2026-11-18T08:00:00Z")));
+        links.upsert(new JiraAccountLink("jira-d", deactivated, Instant.parse("2026-11-18T08:00:00Z")));
+
+        assertThat(links.accountIds(List.of("jira-a", "jira-d", "jira-unknown")))
+                .containsOnly(Map.entry("jira-a", active), Map.entry("jira-d", deactivated));
+        assertThat(links.accountIds(List.of())).isEmpty();
     }
 }

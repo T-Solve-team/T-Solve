@@ -1,5 +1,8 @@
 import { invokeRemote } from '@forge/bridge';
 import {
+  ASK_DEADLINE_MS,
+  ASK_POLL_MS,
+  ASK_TIMEOUT_MS,
   getIssuePanel,
   getReviewFeedback,
   openSolutionForm,
@@ -24,12 +27,14 @@ describe('tsolveClient — Solution Form and Issue Panel', () => {
     sleep = jest.fn().mockResolvedValue(undefined);
   });
 
+  afterEach(() => jest.useRealTimers());
+
   it('AC-002.1 sends the issue text to open the form', async () => {
-    invokeRemote.mockResolvedValue(answer(200, { mayOpen: true, origin: 'AI_DRAFT', sections: SECTIONS, message: null }));
+    invokeRemote.mockResolvedValue(answer(200, { mayOpen: true, origin: 'ISSUE', sections: SECTIONS, message: null }));
 
     const form = await openSolutionForm('ITSUP-12', { summary: 'VPN', description: 'After sleep' });
 
-    expect(form.origin).toBe('AI_DRAFT');
+    expect(form.origin).toBe('ISSUE');
     expect(invokeRemote).toHaveBeenCalledWith(
       expect.objectContaining({
         path: '/api/v1/jira-app/issues/ITSUP-12/solution-form',
@@ -158,6 +163,170 @@ describe('tsolveClient — Solution Form and Issue Panel', () => {
     invokeRemote.mockResolvedValue(answer(503, { code: 'MSG68' }));
 
     await expect(rewriteSolution(SECTIONS)).rejects.toMatchObject({ code: 'MSG68' });
+  });
+
+  it('AC-007.1 posts the sections then polls every 1.5 seconds until DONE returns all five sections', async () => {
+    jest.useFakeTimers();
+    const started = Date.now();
+    const polls = [];
+    const rewritten = { ...SECTIONS, symptoms: 'The connection drops.' };
+    invokeRemote.mockImplementation(({ method }) => {
+      if (method === 'POST') return Promise.resolve(answer(202, { jobId: 'rewrite/1 ?' }));
+      polls.push(Date.now() - started);
+      return Promise.resolve(answer(200, polls.length < 3 ? { status: 'PENDING' } : { status: 'DONE', sections: rewritten }));
+    });
+
+    const result = rewriteSolution(SECTIONS);
+    await jest.advanceTimersByTimeAsync(ASK_POLL_MS - 1);
+    expect(invokeRemote).toHaveBeenCalledTimes(1);
+    await jest.advanceTimersByTimeAsync(1 + 2 * ASK_POLL_MS);
+
+    await expect(result).resolves.toEqual(rewritten);
+    expect(polls).toEqual([1500, 3000, 4500]);
+    expect(invokeRemote.mock.calls[0][0]).toEqual({
+      path: '/api/v1/jira-app/solution-rewrites', method: 'POST',
+      headers: { 'Content-Type': 'application/json' }, body: SECTIONS,
+    });
+    expect(invokeRemote.mock.calls[1][0]).toEqual({
+      path: '/api/v1/jira-app/solution-rewrites/rewrite%2F1%20%3F', method: 'GET',
+    });
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it.each([
+    ['FAILED', 200, { status: 'FAILED' }],
+    ['GET 404', 404, { code: 'MSG68' }],
+    ['GET 503', 503, { code: 'MSG06' }],
+    ['GET 403', 403, { code: 'MSG08' }],
+    ['unknown status', 200, { status: 'UNKNOWN' }],
+    ['missing sections', 200, { status: 'DONE' }],
+    ['incomplete sections', 200, { status: 'DONE', sections: { symptoms: 'Only one' } }],
+    ['non-string section', 200, { status: 'DONE', sections: { ...SECTIONS, workaround: null } }],
+  ])('AC-007.4 maps %s to MSG68 and stops polling', async (_, status, body) => {
+    invokeRemote.mockResolvedValueOnce(answer(202, { jobId: 'job-1' })).mockResolvedValue(answer(status, body));
+
+    await expect(rewriteSolution(SECTIONS, { sleep })).rejects.toMatchObject({ name: 'TsolveError', code: 'MSG68' });
+    expect(invokeRemote).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([[400, 'MSG01'], [401, 'MSG08'], [403, 'MSG62'], [503, 'MSG06']])(
+    'AC-007.4 maps POST %s %s to MSG68 without polling', async (status, code) => {
+      invokeRemote.mockResolvedValue(answer(status, { code }));
+      await expect(rewriteSolution(SECTIONS, { sleep })).rejects.toMatchObject({ code: 'MSG68', status });
+      expect(invokeRemote).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each([{}, { jobId: '' }, { jobId: 42 }])('AC-007.4 maps malformed POST %j to MSG68', async (body) => {
+    invokeRemote.mockResolvedValue(answer(202, body));
+    await expect(rewriteSolution(SECTIONS, { sleep })).rejects.toMatchObject({ code: 'MSG68' });
+    expect(invokeRemote).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['POST', 'GET'])('AC-007.4 maps a rejected %s invocation to MSG68', async (method) => {
+    if (method === 'GET') invokeRemote.mockResolvedValueOnce(answer(202, { jobId: 'job-1' }));
+    invokeRemote.mockRejectedValue(new Error('Remote unavailable'));
+    await expect(rewriteSolution(SECTIONS, { sleep })).rejects.toMatchObject({ code: 'MSG68' });
+    expect(invokeRemote).toHaveBeenCalledTimes(method === 'POST' ? 1 : 2);
+  });
+
+  it.each(['POST', 'GET'])('AC-007.4 a %s that never answers gives MSG68 after 20 seconds', async (method) => {
+    jest.useFakeTimers();
+    if (method === 'GET') invokeRemote.mockResolvedValueOnce(answer(202, { jobId: 'job-1' }));
+    invokeRemote.mockReturnValue(new Promise(() => {}));
+    const result = expect(rewriteSolution(SECTIONS)).rejects.toMatchObject({ code: 'MSG68' });
+    const calls = method === 'POST' ? 1 : 2;
+
+    await jest.advanceTimersByTimeAsync((method === 'GET' ? ASK_POLL_MS : 0) + ASK_TIMEOUT_MS - 1);
+    expect(invokeRemote).toHaveBeenCalledTimes(calls);
+    expect(jest.getTimerCount()).toBe(1);
+    await jest.advanceTimersByTimeAsync(1);
+    await result;
+    await jest.advanceTimersByTimeAsync(100000);
+    expect(invokeRemote).toHaveBeenCalledTimes(calls);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('AC-007.4 PENDING at 75 seconds gives MSG68 with no GET at or after the deadline', async () => {
+    jest.useFakeTimers();
+    const started = Date.now();
+    const polls = [];
+    invokeRemote.mockResolvedValueOnce(answer(202, { jobId: 'job-1' })).mockImplementation(() => {
+      polls.push(Date.now() - started);
+      return Promise.resolve(answer(200, { status: 'PENDING' }));
+    });
+    const result = expect(rewriteSolution(SECTIONS)).rejects.toMatchObject({ code: 'MSG68' });
+    await jest.advanceTimersByTimeAsync(ASK_DEADLINE_MS);
+    await result;
+    expect(polls).toHaveLength(49);
+    expect(polls.every((time) => time < 75000)).toBe(true);
+    await jest.advanceTimersByTimeAsync(100000);
+    expect(invokeRemote).toHaveBeenCalledTimes(50);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('AC-007.4 counts POST time and cuts an in-flight GET at the overall deadline', async () => {
+    jest.useFakeTimers();
+    const started = Date.now();
+    invokeRemote.mockImplementation(({ method }) => {
+      if (method === 'POST') {
+        return new Promise((resolve) => setTimeout(() => resolve(answer(202, { jobId: 'job-1' })), 19000));
+      }
+      return Date.now() - started < 70000
+        ? Promise.resolve(answer(200, { status: 'PENDING' })) : new Promise(() => {});
+    });
+    const result = expect(rewriteSolution(SECTIONS)).rejects.toMatchObject({ code: 'MSG68' });
+    await jest.advanceTimersByTimeAsync(ASK_DEADLINE_MS);
+    await result;
+    const calls = invokeRemote.mock.calls.length;
+    await jest.advanceTimersByTimeAsync(30000);
+    expect(invokeRemote).toHaveBeenCalledTimes(calls);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('AC-007.4 supports injected sleep and now for the 75-second deadline', async () => {
+    let time = 0;
+    sleep.mockImplementation(async (ms) => { time += ms; });
+    invokeRemote.mockResolvedValueOnce(answer(202, { jobId: 'job-1' }))
+      .mockResolvedValue(answer(200, { status: 'PENDING' }));
+
+    await expect(rewriteSolution(SECTIONS, { sleep, now: () => time })).rejects.toMatchObject({ code: 'MSG68' });
+    expect(time).toBe(75000);
+    expect(sleep).toHaveBeenCalledWith(1500, undefined);
+    expect(invokeRemote).toHaveBeenCalledTimes(50);
+  });
+
+  it.each(['before POST', 'during POST', 'between polls', 'during GET'])(
+    'AC-007.1 abort stops polling quietly %s', async (stage) => {
+      jest.useFakeTimers();
+      const controller = new AbortController();
+      invokeRemote.mockResolvedValueOnce(answer(202, { jobId: 'job-1' })).mockResolvedValue(answer(200, { status: 'PENDING' }));
+      if (stage === 'before POST') controller.abort();
+      if (stage === 'during POST') invokeRemote.mockReset().mockReturnValue(new Promise(() => {}));
+      if (stage === 'during GET') invokeRemote.mockReturnValue(new Promise(() => {}));
+      const result = expect(rewriteSolution(SECTIONS, { signal: controller.signal })).rejects.toMatchObject({ name: 'AbortError' });
+      await jest.advanceTimersByTimeAsync(stage === 'during GET' ? ASK_POLL_MS : 0);
+      const calls = invokeRemote.mock.calls.length;
+      expect(calls).toBe(stage === 'before POST' ? 0 : stage === 'during GET' ? 2 : 1);
+      controller.abort();
+      await result;
+      await jest.advanceTimersByTimeAsync(100000);
+      expect(invokeRemote).toHaveBeenCalledTimes(calls);
+      expect(jest.getTimerCount()).toBe(0);
+    },
+  );
+
+  it('AC-007.7 never logs Solution text on success or failure', async () => {
+    const spies = ['log', 'info', 'warn', 'error', 'debug'].map((level) => jest.spyOn(console, level).mockImplementation(() => {}));
+    try {
+      invokeRemote.mockResolvedValueOnce(answer(202, { jobId: 'job-1' })).mockResolvedValue(answer(200, { status: 'DONE', sections: SECTIONS }));
+      await rewriteSolution(SECTIONS, { sleep });
+      invokeRemote.mockRejectedValue(new Error('Private Solution text'));
+      await rewriteSolution(SECTIONS, { sleep }).catch(() => {});
+      spies.forEach((spy) => expect(spy).not.toHaveBeenCalled());
+    } finally {
+      spies.forEach((spy) => spy.mockRestore());
+    }
   });
 
   it('AC-008.1 reads the panel state', async () => {

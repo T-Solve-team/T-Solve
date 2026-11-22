@@ -156,6 +156,15 @@ class TicketListRepositoryIT {
     }
 
     @Test
+    void keywordMatchesDescription_AC_006_4() {
+        jdbc.update(
+                "UPDATE ticket SET description = 'Token expired after password reset' WHERE source_ticket_id='IT-1'");
+        assertThat(list("token EXPIRED", null, null, null))
+                .extracting(TicketSummaryResponse::sourceTicketId)
+                .containsExactly("IT-1");
+    }
+
+    @Test
     void outsideDepartmentExcludesOwnAndManagedTickets_AC_006_4() {
         assertThat(list(null, otherPublicId.toString(), null, null)).isEmpty();
         assertThat(list(null, UUID.randomUUID().toString(), null, null)).isEmpty();

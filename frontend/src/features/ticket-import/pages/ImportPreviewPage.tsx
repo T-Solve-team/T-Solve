@@ -240,6 +240,10 @@ function ImportPreview({ previewId }: { previewId: number }) {
             );
           }
         }}
+        onPublished={(published) =>
+          // The row has left the preview, so it can no longer be unchecked in the table (BUG-349).
+          setSelectedRows((rows) => rows.filter((row) => row.rowNo !== published))
+        }
         onError={leaveIfGone}
         onClose={() => {
           setPreviewRow(null);

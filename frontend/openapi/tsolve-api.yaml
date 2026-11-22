@@ -303,7 +303,7 @@ paths:
             application/json:
               schema: { type: array, items: { $ref: '#/components/schemas/WikiDocumentRef' } }
         '400':
-          description: MSG01 for files, metadata or documents[i].title; MSG02 for titles over 200; MSG88 for over ten files; MSG89 for invalid type with file_name; MSG90 for unreadable text with file_name.
+          description: MSG01 for files, metadata, documents[i].title or documents[i].documentType; MSG02 for titles over 200; MSG06 for an invalid document type; MSG88 for over ten files; MSG89 for invalid file type with file_name; MSG90 for unreadable text with file_name.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ProblemDetail' }
@@ -1008,6 +1008,59 @@ paths:
         '403':
           $ref: '#/components/responses/Problem'
         '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/projects/{projectId}/jira-roles:
+    get:
+      tags: [projects]
+      operationId: listProjectJiraRoles
+      summary: The roles of the Project's Jira project, for the Add member "From Jira" tab (STORY-011, AC-011.1)
+      description: >
+        Read with the Workspace's T-Solve Jira App token; the role `atlassian-addons-project-access` is left out.
+        Project Manager of the Project only (403; 404 for an unknown Project), checked before any Jira call. No token,
+        a Jira error or no answer within 10 s → 503 MSG06 (AC-011.4).
+      parameters:
+        - { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Roles by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/JiraProjectRoleResponse' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
+  /api/v1/projects/{projectId}/jira-roles/{roleId}/people:
+    get:
+      tags: [projects]
+      operationId: listProjectJiraRolePeople
+      summary: The people of a Jira project role and whether each can be added (STORY-011, AC-011.2)
+      description: >
+        User actors of the role, each with a status; ADDABLE carries the T-Solve user id, full name and email. Group
+        actors are named in `groups`, never expanded (AC-011.3). Nothing is added. Same refusals as the roles (403,
+        404, 503 MSG06; an unknown role is 503 MSG06).
+      parameters:
+        - { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: roleId, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: The role's people by Jira display name, and its group names.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JiraRolePeopleResponse' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '503':
           $ref: '#/components/responses/Problem'
   /api/v1/users:
     post:
@@ -1823,6 +1876,30 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/events/issue-updated:
+    post:
+      tags: [jira-app]
+      operationId: receiveIssueUpdated
+      summary: >
+        Forge trigger avi:jira:updated:issue — records whether the issue is in Done and, on a move into Done, creates
+        the Solution Form Draft of the assignee or the mover (jira-app STORY-005, AC-005.6 to AC-005.10).
+      security:
+        - forgeInvocationToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueUpdatedPayload'
+      responses:
+        '202':
+          description: >
+            Accepted — also when the event has no status change, cannot be read, or the issue belongs to no T-Solve
+            Project (nothing changes then).
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
   /api/v1/jira-app/app-token:
     post:
       tags: [jira-app]
@@ -1920,15 +1997,16 @@ paths:
     post:
       tags: [jira-app]
       operationId: askJiraAppQuestion
-      summary: Answers a question from the "Ask T-Solve" page with the Knowledge Chatbot (STORY-010).
+      summary: Starts a question job from the "Ask T-Solve" page (STORY-010).
       description: >
         The project comes only from the verified FIT (`context.extension.project.key`, AC-010.13); no T-Solve
         sign-in is needed, but the FIT must have a Jira user. The answer is the Knowledge Chatbot's for that Project,
         from its Department's Published Solutions and the Wiki the asker may read: Company-wide documents, plus those
         their linked T-Solve user may view (AC-010.4, chatbot STORY-012); stored without a user; NO_SOURCE is shown as MSG109 by the Jira App. A blank question → 400 MSG01, longer than 1,000 characters or more than 10 history turns →
         400 MSG02 (AC-010.5). A site of no Workspace → 403 MSG124; no Jira user, no project, or not an Active T-Solve
-        Project's → 403 MSG08; no AI call in either case (AC-010.11). The AI unavailable or no answer within the Jira App
-        deadline (JIRA_APP_ASK_TIMEOUT, 18 s) → 503 MSG06 (AC-010.8).
+        Project's → 403 MSG08; no AI call or job in either case (AC-010.11). Returns a new job id within 2 seconds,
+        without waiting for the AI (AC-010.4). A full job pool → 503 MSG06 (AC-010.18).
+        Poll getJiraAppQuestionJob for the answer; the job deadline is JIRA_APP_ASK_TIMEOUT (default 60 s).
       security:
         - forgeInvocationToken: []
       requestBody:
@@ -1938,12 +2016,12 @@ paths:
             schema:
               $ref: '#/components/schemas/ChatbotQuestion'
       responses:
-        '200':
-          description: The answer, or NO_SOURCE.
+        '202':
+          description: Question accepted; poll the job for its answer.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ChatbotAnswer'
+                $ref: '#/components/schemas/JiraAppQuestionJob'
         '400':
           $ref: '#/components/responses/Problem'
         '401':
@@ -1952,6 +2030,42 @@ paths:
           $ref: '#/components/responses/Problem'
         '503':
           $ref: '#/components/responses/Problem'
+  /api/v1/jira-app/questions/{jobId}:
+    get:
+      tags: [jira-app]
+      operationId: getJiraAppQuestionJob
+      summary: Reads the status and completed answer of an Ask T-Solve job.
+      description: >
+        Only the FIT's cloudId, accountId and projectKey that started the job may read it (AC-010.16).
+        Missing, expired or other-owner jobs answer 404 MSG06. Jobs expire 5 minutes after creation
+        (AC-010.17). A chatbot error or timeout produces FAILED; only DONE includes an answer (AC-010.4).
+        An unavailable job store answers 503 MSG06.
+      security:
+        - forgeInvocationToken: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Current job status; answer is present only when DONE.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JiraAppQuestionJobResult'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '503':
+          description: MSG06
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
   /api/v1/jira-app/questions/{answerId}/rating:
     parameters:
       - name: answerId
@@ -1997,7 +2111,7 @@ paths:
       operationId: openSolutionForm
       summary: >
         Whether the viewer may open 4.1 Solution Form for the issue and, if so, its content: the viewer's Draft,
-        else the AI draft, else the issue text in Symptoms with MSG67 (STORY-001, 002, 005).
+        else the issue text in Symptoms — summary, a blank line, description — with no AI call (STORY-001, 002, 005).
       security:
         - forgeInvocationToken: []
       requestBody:
@@ -2126,6 +2240,7 @@ paths:
       tags: [jira-app]
       operationId: rewriteSolution
       summary: The AI rewrite of the five sections, for 4.2 AI Rewrite Preview (STORY-007).
+      description: Starts a background job without waiting for AI; poll getSolutionRewriteJob (60 s deadline).
       security:
         - forgeInvocationToken: []
       requestBody:
@@ -2135,12 +2250,12 @@ paths:
             schema:
               $ref: '#/components/schemas/SolutionSections'
       responses:
-        '200':
-          description: The rewritten sections.
+        '202':
+          description: Rewrite job accepted.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SolutionSections'
+                $ref: '#/components/schemas/SolutionRewriteJob'
         '400':
           $ref: '#/components/responses/Problem'
         '401':
@@ -2153,7 +2268,42 @@ paths:
                 $ref: '#/components/schemas/ProblemDetail'
         '503':
           description: >
-            MSG68 — the AI rewrite is unavailable or took too long; MSG06 — the Forge token could not be checked.
+            MSG68 — the AI pool is full or the job cannot be stored; MSG06 — the Forge token could not be checked.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/jira-app/solution-rewrites/{jobId}:
+    get:
+      tags: [jira-app]
+      operationId: getSolutionRewriteJob
+      summary: Read a rewrite job belonging to the FIT's Jira account and site.
+      security:
+        - forgeInvocationToken: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: PENDING, DONE with sections, or FAILED without sections.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolutionRewriteJobResult'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '404':
+          description: MSG68 — unknown, expired or another Jira account's or site's job.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '503':
+          description: MSG68 — the job store is unavailable; MSG06 — the Forge token could not be checked.
           content:
             application/problem+json:
               schema:
@@ -2416,6 +2566,38 @@ paths:
         '409':
           $ref: '#/components/responses/Problem'
         '500':
+          $ref: '#/components/responses/Problem'
+  /api/v1/imports/previews/{previewId}/rows/{rowNo}/publish:
+    post:
+      tags: [import]
+      operationId: publishImportPreviewRow
+      summary: >
+        Publishes one Valid row of a WITHOUT_SOLUTION preview (a file without Solutions or a Jira preview) at once, in
+        an Import Batch of its own, and deletes the row from the preview (MSG32, STORY-017). A WITH_SOLUTION preview or
+        a row that is not Valid = MSG06 (409); Ticket ID taken = MSG33 (409); Project no longer Active = MSG40 (409);
+        Project not managed = MSG08 (403); preview or row not found = 404. A rejection publishes nothing.
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+        - name: rowNo
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Published.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResultResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
           $ref: '#/components/responses/Problem'
   /api/v1/imports/jira:
     post:
@@ -3190,12 +3372,15 @@ components:
   schemas:
     WikiSpaceSettings:
       type: object
-      required: [spaceId, name, departmentName, knowledgeManager, ownDepartment, departments, users]
+      required: [spaceId, name, departmentName, knowledgeManagers, ownDepartment, departments, users]
       properties:
         spaceId: { type: string, format: uuid }
         name: { type: string }
         departmentName: { type: string }
-        knowledgeManager: { type: [string, 'null'], description: Knowledge Manager's full name. }
+        knowledgeManagers:
+          type: array
+          description: Full names of the Space's Active Knowledge Managers, ordered by name ignoring case; empty when none.
+          items: { type: string }
         ownDepartment:
           type: object
           required: [departmentId, name, locked]
@@ -3264,15 +3449,19 @@ components:
         name: { type: string }
         departmentName: { type: string }
         accessLevel: { type: string, enum: [VIEW, KNOWLEDGE_MANAGER] }
+    WikiDocumentType:
+      type: string
+      enum: [POLICY, RUNBOOK, GUIDE, FAQ, REFERENCE, SPEC, RECORD, ANNOUNCEMENT, FORM, OTHER]
     WikiUploadPreview:
       type: object
-      required: [fileName, title, excerpt, wordCount, result]
+      required: [fileName, title, excerpt, wordCount, result, documentType]
       properties:
         fileName: { type: string }
         title: { type: string, maxLength: 200 }
         excerpt: { type: string, maxLength: 300 }
         wordCount: { type: integer, minimum: 0 }
         result: { type: string, enum: [READY, UNREADABLE] }
+        documentType: { $ref: '#/components/schemas/WikiDocumentType' }
     WikiPublishMetadata:
       type: object
       required: [documents]
@@ -3284,10 +3473,11 @@ components:
           maxItems: 10
           items:
             type: object
-            required: [title, visibility]
+            required: [title, visibility, documentType]
             properties:
               title: { type: string, minLength: 1, maxLength: 200 }
               visibility: { type: string, enum: [DEPARTMENT, COMPANY_WIDE] }
+              documentType: { $ref: '#/components/schemas/WikiDocumentType' }
     WikiTrashItem:
       type: object
       required: [documentId, title, folderName, owner, deletedBy, deletedAt]
@@ -3343,7 +3533,7 @@ components:
         level: { type: integer, minimum: 1, maximum: 3 }
     WikiDocumentSummary:
       type: object
-      required: [documentId, title, spaceId, spaceName, folderId, folderName, visibility, owner, updatedAt]
+      required: [documentId, title, spaceId, spaceName, folderId, folderName, visibility, documentType, owner, updatedAt]
       properties:
         documentId: { type: string, format: uuid }
         title: { type: string }
@@ -3352,6 +3542,7 @@ components:
         folderId: { type: [string, 'null'], format: uuid }
         folderName: { type: [string, 'null'] }
         visibility: { type: string, enum: [DEPARTMENT, COMPANY_WIDE] }
+        documentType: { $ref: '#/components/schemas/WikiDocumentType' }
         owner: { type: string, description: Owner's full name. }
         updatedAt: { type: string, format: date-time }
     WikiDocumentDetail:
@@ -3581,6 +3772,62 @@ components:
                   items:
                     type: string
                   description: The issue labels; `tsolve-chatbot` marks an issue created by the Chatbot (AC-011.8).
+    IssueUpdatedPayload:
+      type: object
+      description: >
+        The part of a Forge avi:jira:updated:issue event that T-Solve reads; every field may be missing (the server
+        then changes nothing) and other fields Forge sends are ignored. Nothing here is logged except the issue key.
+      properties:
+        atlassianId:
+          type: string
+          description: The Jira account that made the change; owns the Draft when the issue has no assignee.
+        issue:
+          type: object
+          properties:
+            key:
+              type: string
+              maxLength: 50
+              description: The Jira issue key, e.g. ITSUP-1031.
+            fields:
+              type: object
+              properties:
+                summary:
+                  type: string
+                description:
+                  type: [object, 'null']
+                  additionalProperties: true
+                  description: The description as Atlassian Document Format (ADF); absent or null when empty.
+                status:
+                  type: object
+                  properties:
+                    statusCategory:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                          description: The issue's status category after the change; `done` is the Done category.
+                assignee:
+                  type: [object, 'null']
+                  properties:
+                    accountId:
+                      type: string
+        changelog:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                    description: '`status` for a status change.'
+                  from:
+                    type: [string, 'null']
+                    description: The id of the status before the change.
+                  to:
+                    type: [string, 'null']
+                    description: The id of the status after the change.
     AuditAction:
       type: string
       enum:
@@ -3793,6 +4040,35 @@ components:
         userId: { type: string, format: uuid }
         fullName: { type: [string, 'null'] }
         email: { type: string, format: email }
+    JiraProjectRoleResponse:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+    JiraRolePeopleResponse:
+      type: object
+      required: [people, groups]
+      properties:
+        people:
+          type: array
+          items: { $ref: '#/components/schemas/JiraRolePersonResponse' }
+        groups:
+          type: array
+          description: Names of the role's group actors; their members are not listed (AC-011.9).
+          items: { type: string }
+    JiraRolePersonResponse:
+      type: object
+      required: [jiraAccountId, displayName, status]
+      properties:
+        jiraAccountId: { type: string }
+        displayName: { type: string }
+        status:
+          type: string
+          enum: [ADDABLE, NOT_LINKED, NOT_TICKET_RESOLVER, NOT_ACTIVE, ALREADY_MEMBER]
+        userId: { type: string, format: uuid, description: Only when ADDABLE. }
+        fullName: { type: [string, 'null'], description: Only when ADDABLE. }
+        email: { type: string, format: email, description: Only when ADDABLE. }
     AddProjectMembersRequest:
       type: object
       required: [userIds]
@@ -4544,6 +4820,48 @@ components:
         url:
           type: string
           description: The Workspace site's `/jira-link?request=<id>` link (identity AC-001.69).
+    JiraAppQuestionJob:
+      type: object
+      required: [jobId]
+      properties:
+        jobId:
+          type: string
+          format: uuid
+    JiraAppQuestionJobResult:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [PENDING, DONE, FAILED]
+        answer:
+          description: Present only when status is DONE.
+          allOf:
+            - $ref: '#/components/schemas/ChatbotAnswer'
+        code:
+          type: string
+          description: >-
+            Only on a FAILED job the chatbot refused, its SRS code (e.g. MSG08 when the Project is no longer Active);
+            absent for a timeout or an AI failure, which the Jira App shows as MSG06.
+          example: MSG08
+    SolutionRewriteJob:
+      type: object
+      required: [jobId]
+      properties:
+        jobId:
+          type: string
+          format: uuid
+    SolutionRewriteJobResult:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [PENDING, DONE, FAILED]
+        sections:
+          description: Present only when status is DONE.
+          allOf:
+            - $ref: '#/components/schemas/SolutionSections'
     JiraAskerEligibility:
       type: object
       required: [status]
@@ -4609,9 +4927,9 @@ components:
     SolutionFormOrigin:
       type: string
       description: >
-        Where the sections come from — the viewer's Draft, the AI draft, the issue text (MSG67), or the ticket's
-        current Solution (a resubmission without a Draft, AC-012.2).
-      enum: [DRAFT, AI_DRAFT, ISSUE, TICKET]
+        Where the sections come from — the viewer's Draft, the issue text (AC-002.1), or the ticket's current
+        Solution (a resubmission without a Draft, AC-012.2).
+      enum: [DRAFT, ISSUE, TICKET]
     SolutionForm:
       type: object
       required: [mayOpen, origin, sections, message]
@@ -4632,7 +4950,7 @@ components:
           anyOf:
             - $ref: '#/components/schemas/MessageRef'
             - type: 'null'
-          description: MSG67 when the AI draft is unavailable; otherwise null.
+          description: A message to show above the sections; null today (MSG67 went with the AI draft, KAN-371).
     SubmitSolutionRequest:
       type: object
       required: [summary, sections]
@@ -5227,6 +5545,12 @@ components:
           type: string
           format: uuid
           description: The conversation of the answer; set on every askChatbot answer, absent for the Jira App.
+        title:
+          type: string
+          maxLength: 60
+          description: >-
+            A short AI-written name for a new conversation (chatbot AC-009.9); only on the answer to a first
+            question that the classifier named. The server also stores it as the conversation title (AC-013.1), else the question.
     ChatbotCitation:
       description: A source of an answer. A ticket source carries only its Solution, never the ticket's details (GBR-36).
       oneOf:

@@ -1,6 +1,9 @@
 package vn.tsolve.identity.service.impl;
 
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.tsolve.identity.account.service.AccountLookupService;
@@ -27,5 +30,14 @@ public class JiraAccountLinkLookupImpl implements JiraAccountLinkLookup {
         }
         return links.find(trackerAccountId).flatMap(link -> accounts.findActive(link.accountId())
                 .map(user -> new LinkedAccount(user, link.linkedAt())));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, UUID> linkedAccountIds(Set<String> trackerAccountIds) {
+        if (trackerAccountIds == null || trackerAccountIds.isEmpty()) {
+            return Map.of();
+        }
+        return Map.copyOf(links.accountIds(trackerAccountIds));
     }
 }

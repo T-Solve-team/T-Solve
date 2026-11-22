@@ -15,10 +15,12 @@ import styles from './KnowledgeChatbotPage.module.css';
 /** The route is behind the sign-in guard, so the session has a user whenever this renders (nothing shows otherwise). */
 export function KnowledgeChatbotPage() {
   const { session } = useSession();
-  return session ? <KnowledgeChatbot key={session.user.id} /> : null;
+  return session ? (
+    <KnowledgeChatbot key={session.user.id} fullName={session.user.fullName} />
+  ) : null;
 }
 
-function KnowledgeChatbot() {
+function KnowledgeChatbot({ fullName }: { fullName: string }) {
   const [form] = Form.useForm<QuestionFormValues>();
   const { conversations, openId, turns, open, startNew, list, conversation, remove, loadMore } =
     useConversations();
@@ -36,12 +38,10 @@ function KnowledgeChatbot() {
       {
         onSuccess: (answer) => {
           if (answer.chatSessionId) open(answer.chatSessionId);
-          // Only the sent question: text typed while waiting stays (AC-001.7). Not resetFields(): it re-mounts the
-          // field, and the box would lose focus after every answer.
-          if (form.getFieldValue('question') === question) form.setFieldValue('question', '');
         },
         onError: (error) => {
           if (error.status === 401) return; // the global handler signs the user out (MSG07)
+          if (form.getFieldValue('question') === '') form.setFieldValue('question', question);
           // BUG-006: only an error on the question can be shown under the box; any other is MSG06.
           const isOnQuestion = error.fieldErrors.some(
             (fieldError) => fieldError.field === 'question',
@@ -53,6 +53,9 @@ function KnowledgeChatbot() {
         },
       },
     );
+    // Keep the field mounted and leave any text entered while waiting alone (AC-001.6, AC-001.7).
+    form.setFieldValue('question', '');
+    form.focusField('question');
   }
 
   return (
@@ -67,27 +70,28 @@ function KnowledgeChatbot() {
         onOpen={open}
         onNew={startNew}
       />
-      <div className={styles.chat}>
-        {openId !== null && conversation.isPending ? (
-          <div role="status" aria-label="Loading conversation">
-            <Spin />
-          </div>
-        ) : openId !== null && conversation.isError ? (
-          <Flex vertical gap="small">
-            <Alert type="error" title={msg('MSG06')} />
-            <Button onClick={() => void conversation.refetch()}>Retry</Button>
-          </Flex>
-        ) : (
-          <ConversationThread
-            turns={turns}
-            pendingQuestion={ask.isPending ? ask.variables.data.question : undefined}
-            isRating={rating.isPending}
-            onRate={(answerId, next) => {
-              // A thread with turns always belongs to an open conversation.
-              if (openId !== null) rating.rate(openId, answerId, next);
-            }}
-          />
-        )}
+      <ConversationThread
+        turns={turns}
+        askerName={fullName}
+        pendingQuestion={ask.isPending ? ask.variables.data.question : undefined}
+        isRating={rating.isPending}
+        onRate={(answerId, next) => {
+          // A thread with turns always belongs to an open conversation.
+          if (openId !== null) rating.rate(openId, answerId, next);
+        }}
+        status={
+          openId !== null && conversation.isPending ? (
+            <div role="status" aria-label="Loading conversation">
+              <Spin />
+            </div>
+          ) : openId !== null && conversation.isError ? (
+            <Flex vertical gap="small">
+              <Alert type="error" title={msg('MSG06')} />
+              <Button onClick={() => void conversation.refetch()}>Retry</Button>
+            </Flex>
+          ) : undefined
+        }
+      >
         <QuestionBox
           form={form}
           isSending={
@@ -97,7 +101,7 @@ function KnowledgeChatbot() {
           }
           onAsk={handleAsk}
         />
-      </div>
+      </ConversationThread>
     </div>
   );
 }

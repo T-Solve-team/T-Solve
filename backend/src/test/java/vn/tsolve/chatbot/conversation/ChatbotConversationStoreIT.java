@@ -123,9 +123,9 @@ class ChatbotConversationStoreIT {
         assertThat(count("chat_message")).isZero();
         assertThat(count("chatbot_answer")).isEqualTo(2);
 
-        var sql = new ClassPathResource("db/changelog/changes/047-chatbot-chat-session.sql")
+        var sql = new ClassPathResource("db/changelog/changes/051-chatbot-chat-session.sql")
                 .getContentAsString(StandardCharsets.UTF_8);
-        assertThat(sql).contains("--changeset chatbot:047-chatbot-chat-session");
+        assertThat(sql).contains("--changeset chatbot:051-chatbot-chat-session");
         try {
             sql.lines()
                     .filter(line -> line.startsWith("--rollback "))
@@ -136,7 +136,7 @@ class ChatbotConversationStoreIT {
             assertThat(jdbc.queryForObject("SELECT to_regclass('public.chat_message')::text", String.class))
                     .isNull();
         } finally {
-            jdbc.update("DELETE FROM databasechangelog WHERE id = '047-chatbot-chat-session'");
+            jdbc.update("DELETE FROM databasechangelog WHERE id = '051-chatbot-chat-session'");
             try (var liquibase = liquibase()) {
                 liquibase.update("");
             }
@@ -226,7 +226,7 @@ class ChatbotConversationStoreIT {
     }
 
     @Test
-    void refusesAConversationDeletedDuringTheAsk_AC_013_4_BUG_333() {
+    void refusesAConversationDeletedDuringTheAsk_AC_013_4_BUG_374() {
         UUID session = session(owner, "Deleted");
         var deleting = mock(ChatSessionRepository.class, delegatesTo(sessions));
         doReturn(0).when(deleting).touch(any());

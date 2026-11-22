@@ -11,6 +11,7 @@ final class EmbeddingText {
     static String of(SearchTicket ticket) {
         return Stream.of(
                         ticket.getTitle(),
+                        ticket.getDescription(),
                         ticket.getSymptoms(),
                         ticket.getRootCause(),
                         ticket.getResolutionSteps(),

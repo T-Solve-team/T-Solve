@@ -16,6 +16,6 @@ export interface SolutionForm {
   origin: SolutionFormOrigin | null;
   /** Null when mayOpen is false. */
   sections: SolutionSections | null;
-  /** MSG67 when the AI draft is unavailable; otherwise null. */
+  /** A message to show above the sections; null today (MSG67 went with the AI draft, KAN-371). */
   message: MessageRef | null;
 }

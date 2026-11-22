@@ -28,8 +28,9 @@ describe('manifest: app token for the backend', () => {
     expect(manifest.permissions.scopes.some((scope) => scope.startsWith('manage:'))).toBe(false);
   });
 
-  it('AC-014.1 adds the "T-Solve account" personal settings page', () => {
-    const [page] = manifest.modules['jira:personalSettingsPage'];
+  it('AC-014.1 adds the "T-Solve account" page to the Apps section', () => {
+    const [page] = manifest.modules['jira:globalPage'];
+    expect(manifest.modules['jira:personalSettingsPage']).toBeUndefined();
     expect(page).toMatchObject({
       key: 'tsolve-account-settings',
       resource: 'account-settings',
@@ -44,5 +45,20 @@ describe('manifest: app token for the backend', () => {
     const endpoint = manifest.modules.endpoint.find((e) => e.key === ENDPOINT);
     expect(endpoint.function).toBeUndefined();
     expect(manifest.modules.function).toBeUndefined();
+  });
+
+  it('AC-005.6 sends every issue update straight to the issue-updated endpoint, as the issue-created trigger', () => {
+    const trigger = manifest.modules.trigger.find((t) => t.key === 'tsolve-issue-updated-trigger');
+    expect(trigger).toMatchObject({
+      endpoint: 'tsolve-issue-updated-endpoint',
+      events: ['avi:jira:updated:issue'],
+      filter: { ignoreSelf: true },
+    });
+    const endpoint = manifest.modules.endpoint.find((e) => e.key === 'tsolve-issue-updated-endpoint');
+    expect(endpoint).toEqual({
+      key: 'tsolve-issue-updated-endpoint',
+      remote: 'tsolve-backend',
+      route: { path: '/api/v1/jira-app/events/issue-updated' },
+    });
   });
 });

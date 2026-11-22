@@ -25,6 +25,8 @@ import type {
 import type {
   AddProjectMembersRequest,
   CreateProjectRequest,
+  JiraProjectRoleResponse,
+  JiraRolePeopleResponse,
   MemberCandidateResponse,
   ProblemResponse,
   Project,
@@ -991,6 +993,297 @@ export function useSearchProjectMemberCandidates<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getSearchProjectMemberCandidatesQueryOptions(projectId, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListProjectJiraRolesUrl = (projectId: string) => {
+  return `/api/v1/projects/${projectId}/jira-roles`;
+};
+
+/**
+ * Read with the Workspace's T-Solve Jira App token; the role `atlassian-addons-project-access` is left out. Project Manager of the Project only (403; 404 for an unknown Project), checked before any Jira call. No token, a Jira error or no answer within 10 s → 503 MSG06 (AC-011.4).
+ * @summary The roles of the Project's Jira project, for the Add member "From Jira" tab (STORY-011, AC-011.1)
+ */
+export const listProjectJiraRoles = async (
+  projectId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<JiraProjectRoleResponse[]> => {
+  return http<JiraProjectRoleResponse[]>(getListProjectJiraRolesUrl(projectId), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getListProjectJiraRolesQueryKey = (projectId: string) => {
+  return [`/api/v1/projects/${projectId}/jira-roles`] as const;
+};
+
+export const getListProjectJiraRolesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listProjectJiraRoles>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listProjectJiraRoles>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListProjectJiraRolesQueryKey(projectId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectJiraRoles>>> = ({ signal }) =>
+    listProjectJiraRoles(projectId, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: projectId !== null && projectId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof listProjectJiraRoles>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListProjectJiraRolesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listProjectJiraRoles>>
+>;
+export type ListProjectJiraRolesQueryError = ErrorType<ProblemResponse>;
+
+export function useListProjectJiraRoles<
+  TData = Awaited<ReturnType<typeof listProjectJiraRoles>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listProjectJiraRoles>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listProjectJiraRoles>>,
+          TError,
+          Awaited<ReturnType<typeof listProjectJiraRoles>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListProjectJiraRoles<
+  TData = Awaited<ReturnType<typeof listProjectJiraRoles>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listProjectJiraRoles>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listProjectJiraRoles>>,
+          TError,
+          Awaited<ReturnType<typeof listProjectJiraRoles>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListProjectJiraRoles<
+  TData = Awaited<ReturnType<typeof listProjectJiraRoles>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listProjectJiraRoles>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary The roles of the Project's Jira project, for the Add member "From Jira" tab (STORY-011, AC-011.1)
+ */
+
+export function useListProjectJiraRoles<
+  TData = Awaited<ReturnType<typeof listProjectJiraRoles>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listProjectJiraRoles>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListProjectJiraRolesQueryOptions(projectId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListProjectJiraRolePeopleUrl = (projectId: string, roleId: number) => {
+  return `/api/v1/projects/${projectId}/jira-roles/${roleId}/people`;
+};
+
+/**
+ * User actors of the role, each with a status; ADDABLE carries the T-Solve user id, full name and email. Group actors are named in `groups`, never expanded (AC-011.3). Nothing is added. Same refusals as the roles (403, 404, 503 MSG06; an unknown role is 503 MSG06).
+ * @summary The people of a Jira project role and whether each can be added (STORY-011, AC-011.2)
+ */
+export const listProjectJiraRolePeople = async (
+  projectId: string,
+  roleId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<JiraRolePeopleResponse> => {
+  return http<JiraRolePeopleResponse>(getListProjectJiraRolePeopleUrl(projectId, roleId), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getListProjectJiraRolePeopleQueryKey = (projectId: string, roleId: number) => {
+  return [`/api/v1/projects/${projectId}/jira-roles/${roleId}/people`] as const;
+};
+
+export const getListProjectJiraRolePeopleQueryOptions = <
+  TData = Awaited<ReturnType<typeof listProjectJiraRolePeople>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  roleId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listProjectJiraRolePeople>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListProjectJiraRolePeopleQueryKey(projectId, roleId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectJiraRolePeople>>> = ({
+    signal,
+  }) => listProjectJiraRolePeople(projectId, roleId, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled:
+      projectId !== null && projectId !== undefined && roleId !== null && roleId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof listProjectJiraRolePeople>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListProjectJiraRolePeopleQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listProjectJiraRolePeople>>
+>;
+export type ListProjectJiraRolePeopleQueryError = ErrorType<ProblemResponse>;
+
+export function useListProjectJiraRolePeople<
+  TData = Awaited<ReturnType<typeof listProjectJiraRolePeople>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  roleId: number,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listProjectJiraRolePeople>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listProjectJiraRolePeople>>,
+          TError,
+          Awaited<ReturnType<typeof listProjectJiraRolePeople>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListProjectJiraRolePeople<
+  TData = Awaited<ReturnType<typeof listProjectJiraRolePeople>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  roleId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listProjectJiraRolePeople>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listProjectJiraRolePeople>>,
+          TError,
+          Awaited<ReturnType<typeof listProjectJiraRolePeople>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListProjectJiraRolePeople<
+  TData = Awaited<ReturnType<typeof listProjectJiraRolePeople>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  roleId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listProjectJiraRolePeople>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary The people of a Jira project role and whether each can be added (STORY-011, AC-011.2)
+ */
+
+export function useListProjectJiraRolePeople<
+  TData = Awaited<ReturnType<typeof listProjectJiraRolePeople>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  projectId: string,
+  roleId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listProjectJiraRolePeople>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListProjectJiraRolePeopleQueryOptions(projectId, roleId, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

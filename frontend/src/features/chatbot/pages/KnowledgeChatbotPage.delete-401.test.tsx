@@ -14,7 +14,7 @@ describe('KnowledgeChatbotPage delete, session expired', () => {
     await import('./KnowledgeChatbotPage');
   });
 
-  it('AC-002.14 leaves a delete 401 to MSG07 without showing MSG06 (BUG-342)', async () => {
+  it('AC-002.14 leaves a delete 401 to MSG07 without showing MSG06 (BUG-383)', async () => {
     setDevUser('employee');
     await askChatbot({ question: 'VPN' });
     const user = userEvent.setup();

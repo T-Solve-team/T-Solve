@@ -1,5 +1,6 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { invokeRemote } from '@forge/bridge';
 import { rewriteSolution, saveSolutionDraft, TsolveError } from '../api/tsolveClient';
 import { message } from '../messages';
 import { doneFlag, LABELS, SolutionFormModal } from './SolutionFormModal';
@@ -24,9 +25,13 @@ let onDone;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  rewriteSolution.mockReset();
+  invokeRemote.mockReset();
   submit = jest.fn().mockResolvedValue({ ticketId: 'ITSUP-12', status: 'PENDING_REVIEW' });
   onDone = jest.fn();
 });
+
+afterEach(() => jest.useRealTimers());
 
 function open(form = { mayOpen: true, origin: 'DRAFT', sections: FULL, message: null }) {
   render(<SolutionFormModal issueKey="ITSUP-12" summary="VPN drops" form={form} onDone={onDone} submit={submit} />);
@@ -36,18 +41,14 @@ const field = (label) => screen.getByLabelText(new RegExp(`^${label}`));
 const click = (name) => fireEvent.click(screen.getByRole('button', { name }));
 
 describe('SolutionFormModal', () => {
-  it('AC-002.1 shows the five sections filled with the AI draft', () => {
-    open({ mayOpen: true, origin: 'AI_DRAFT', sections: FULL, message: null });
+  it('AC-002.1 opens with the issue text in Symptoms, the other sections empty and no notice', () => {
+    const symptoms = 'VPN drops\n\nAfter sleep';
+    open({ mayOpen: true, origin: 'ISSUE', sections: { ...EMPTY_SECTIONS, symptoms }, message: null });
 
-    expect(field('Symptoms')).toHaveValue('Drops hourly');
-    expect(field('Scope of applicability')).toHaveValue('Windows laptops');
-    expect(field('Workaround')).toHaveValue('');
-  });
-
-  it('AC-002.2 shows MSG67 when the form opens with the issue text', () => {
-    open({ mayOpen: true, origin: 'ISSUE', sections: { ...EMPTY_SECTIONS, symptoms: 'VPN' }, message: { code: 'MSG67' } });
-
-    expect(screen.getByText(message('MSG67'))).toBeInTheDocument();
+    expect(field('Symptoms')).toHaveValue(symptoms);
+    expect(field('Root cause')).toHaveValue('');
+    expect(field('Scope of applicability')).toHaveValue('');
+    expect(screen.queryByText(message('MSG06'))).not.toBeInTheDocument();
   });
 
   it('AC-002.3 shows MSG01 under the first empty required section and sends nothing', () => {
@@ -209,7 +210,7 @@ describe('SolutionFormModal', () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
-  it('AC-007.1 AC-007.2 shows the rewrite next to the Solution and Accept replaces it', async () => {
+  it('AC-007.1 AC-007.2 shows the rewrite next to the Solution and Accept replaces it (BUG-345)', async () => {
     rewriteSolution.mockResolvedValue({ ...FULL, symptoms: 'The VPN drops every hour.' });
     open();
 
@@ -242,6 +243,175 @@ describe('SolutionFormModal', () => {
     expect(await screen.findByText(message('MSG68'))).toBeInTheDocument();
     expect(field('Symptoms')).toHaveValue('Drops hourly');
   });
+
+  it.each([false, true])('AC-007.8 AC-007.1 AC-012.7 disables Rewrite while pending and enables it after DONE (resubmit=%s)', async (resubmit) => {
+    jest.useFakeTimers();
+    rewriteSolution.mockImplementation(jest.requireActual('../api/tsolveClient').rewriteSolution);
+    invokeRemote
+      .mockResolvedValueOnce({ status: 202, body: { jobId: 'rewrite-1' } })
+      .mockResolvedValueOnce({ status: 200, body: { status: 'PENDING' } })
+      .mockResolvedValueOnce({ status: 200, body: { status: 'DONE', sections: { ...FULL, symptoms: 'Rewritten symptoms' } } });
+    render(<SolutionFormModal issueKey="ITSUP-12" summary="VPN" form={{ sections: FULL }} resubmit={resubmit} onDone={onDone} submit={submit} />);
+
+    expect(screen.getByRole('button', { name: LABELS.rewrite })).toBeEnabled();
+    click(LABELS.rewrite);
+    expect(screen.getByRole('button', { name: LABELS.rewrite })).toBeDisabled();
+    expect(screen.getByRole('button', { name: LABELS.close })).toBeEnabled();
+    click(LABELS.rewrite);
+    expect(rewriteSolution).toHaveBeenCalledTimes(1);
+    expect(rewriteSolution).toHaveBeenCalledWith(FULL, { signal: expect.any(AbortSignal) });
+    await act(async () => { await jest.advanceTimersByTimeAsync(1500); });
+    expect(screen.queryByText(LABELS.rewriteTitle)).not.toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: LABELS.rewrite })).toBeDisabled();
+    expect(invokeRemote).toHaveBeenCalledTimes(2);
+    await act(async () => { await jest.advanceTimersByTimeAsync(1500); });
+
+    expect(screen.getByText(LABELS.rewriteTitle)).toBeInTheDocument();
+    expect(screen.getByText('Rewritten symptoms')).toBeInTheDocument();
+    click(LABELS.discard);
+    expect(screen.getByRole('button', { name: LABELS.rewrite })).toBeEnabled();
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('AC-007.8 AC-007.4 enables Rewrite after FAILED, shows MSG68 and preserves every edited section', async () => {
+    jest.useFakeTimers();
+    rewriteSolution.mockImplementation(jest.requireActual('../api/tsolveClient').rewriteSolution);
+    invokeRemote.mockResolvedValueOnce({ status: 202, body: { jobId: 'rewrite-1' } })
+      .mockResolvedValue({ status: 200, body: { status: 'FAILED' } });
+    open();
+    fireEvent.change(field('Workaround'), { target: { value: 'Use web VPN' } });
+    click(LABELS.rewrite);
+    expect(screen.getByRole('button', { name: LABELS.rewrite })).toBeDisabled();
+    await act(async () => { await jest.advanceTimersByTimeAsync(1500); });
+
+    expect(screen.getByRole('button', { name: LABELS.rewrite })).toBeEnabled();
+    expect(screen.getByText(message('MSG68'))).toBeInTheDocument();
+    expect(screen.queryByText(LABELS.rewriteTitle)).not.toBeInTheDocument();
+    ['Symptoms', 'Root cause', 'Resolution steps', 'Workaround', 'Scope of applicability'].forEach((label, index) => {
+      expect(field(label)).toHaveValue(Object.values({ ...FULL, workaround: 'Use web VPN' })[index]);
+    });
+    expect(submit).not.toHaveBeenCalled();
+  });
+
+  it.each(['Close', 'Close dialog'])(
+    'AC-005.1 AC-007.1 closing via %s during a rewrite aborts polling and saves the current Solution', async (control) => {
+      jest.useFakeTimers();
+      rewriteSolution.mockImplementation(jest.requireActual('../api/tsolveClient').rewriteSolution);
+      invokeRemote.mockResolvedValueOnce({ status: 202, body: { jobId: 'rewrite-1' } })
+        .mockResolvedValue({ status: 200, body: { status: 'PENDING' } });
+      saveSolutionDraft.mockResolvedValue(undefined);
+      open();
+      click(LABELS.rewrite);
+      await act(async () => { await jest.advanceTimersByTimeAsync(1500); });
+      const { signal } = rewriteSolution.mock.calls[0][1];
+      expect(screen.getByRole('button', { name: control })).toBeEnabled();
+      await act(async () => { click(control); });
+      await act(async () => { await jest.advanceTimersByTimeAsync(100000); });
+
+      expect(signal.aborted).toBe(true);
+      expect(invokeRemote).toHaveBeenCalledTimes(2);
+      expect(saveSolutionDraft).toHaveBeenCalledWith('ITSUP-12', FULL);
+      expect(onDone).toHaveBeenCalledWith('closed');
+      expect(screen.queryByText(LABELS.rewriteTitle)).not.toBeInTheDocument();
+      expect(screen.queryByText(message('MSG68'))).not.toBeInTheDocument();
+      expect(jest.getTimerCount()).toBe(0);
+    },
+  );
+
+  it('AC-007.8 AC-005.4 enables Rewrite after Close aborts the job and saving the Draft fails', async () => {
+    jest.useFakeTimers();
+    rewriteSolution.mockImplementation(jest.requireActual('../api/tsolveClient').rewriteSolution);
+    invokeRemote.mockResolvedValueOnce({ status: 202, body: { jobId: 'rewrite-1' } })
+      .mockResolvedValue({ status: 200, body: { status: 'PENDING' } });
+    let rejectSave;
+    saveSolutionDraft.mockImplementation(() => new Promise((resolve, reject) => { rejectSave = reject; }));
+    open();
+    click(LABELS.rewrite);
+    await act(async () => { await jest.advanceTimersByTimeAsync(1500); });
+    expect(screen.getByRole('button', { name: LABELS.rewrite })).toBeDisabled();
+    expect(screen.getByRole('button', { name: LABELS.close })).toBeEnabled();
+    const { signal } = rewriteSolution.mock.calls[0][1];
+
+    await act(async () => { click(LABELS.close); });
+    expect(signal.aborted).toBe(true);
+    expect(saveSolutionDraft).toHaveBeenCalledWith('ITSUP-12', FULL);
+    expect(screen.getByRole('button', { name: LABELS.rewrite })).toBeDisabled();
+    await act(async () => { rejectSave(new TsolveError('MSG06')); });
+    await act(async () => { await jest.advanceTimersByTimeAsync(100000); });
+
+    expect(screen.getByRole('button', { name: LABELS.rewrite })).toBeEnabled();
+    expect(screen.getByText(message('MSG06'))).toBeInTheDocument();
+    expect(screen.queryByText(message('MSG68'))).not.toBeInTheDocument();
+    expect(screen.queryByText(LABELS.rewriteTitle)).not.toBeInTheDocument();
+    expect(field('Symptoms')).toHaveValue(FULL.symptoms);
+    expect(onDone).not.toHaveBeenCalled();
+    expect(invokeRemote).toHaveBeenCalledTimes(2);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it.each(['success', 'failure'])('AC-007.1 ignores a late rewrite %s after close', async (outcome) => {
+    let resolve;
+    let reject;
+    rewriteSolution.mockImplementation(() => new Promise((done, fail) => { resolve = done; reject = fail; }));
+    saveSolutionDraft.mockResolvedValue(undefined);
+    open();
+    click(LABELS.rewrite);
+    const { signal } = rewriteSolution.mock.calls[0][1] ?? {};
+    await act(async () => { click('Close dialog'); });
+    await act(async () => {
+      if (outcome === 'success') resolve({ ...FULL, symptoms: 'Late rewrite' });
+      else reject(new TsolveError('MSG68'));
+    });
+
+    expect(signal?.aborted).toBe(true);
+    expect(screen.queryByText(LABELS.rewriteTitle)).not.toBeInTheDocument();
+    expect(screen.queryByText(message('MSG68'))).not.toBeInTheDocument();
+    expect(field('Symptoms')).toHaveValue(FULL.symptoms);
+    expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
+  it('AC-007.1 unmount aborts a pending rewrite without displaying an error', async () => {
+    jest.useFakeTimers();
+    rewriteSolution.mockImplementation(jest.requireActual('../api/tsolveClient').rewriteSolution);
+    invokeRemote.mockResolvedValueOnce({ status: 202, body: { jobId: 'rewrite-1' } })
+      .mockResolvedValue({ status: 200, body: { status: 'PENDING' } });
+    const { unmount } = render(<SolutionFormModal issueKey="ITSUP-12" form={{ sections: FULL }} onDone={onDone} />);
+    click(LABELS.rewrite);
+    await act(async () => { await jest.advanceTimersByTimeAsync(1500); });
+    const { signal } = rewriteSolution.mock.calls[0][1];
+    await act(async () => { unmount(); });
+    await act(async () => { await jest.advanceTimersByTimeAsync(100000); });
+
+    expect(signal.aborted).toBe(true);
+    expect(invokeRemote).toHaveBeenCalledTimes(2);
+    expect(onDone).not.toHaveBeenCalled();
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('AC-007.1 a new rewrite before the disabled state renders aborts the previous one and ignores its late result', async () => {
+    let previous;
+    let current;
+    rewriteSolution.mockImplementationOnce(() => new Promise((resolve) => { previous = resolve; }))
+      .mockImplementationOnce(() => new Promise((resolve) => { current = resolve; }));
+    open();
+    // Forge may deliver another click before the busy state reaches its UI.
+    act(() => {
+      click(LABELS.rewrite);
+      click(LABELS.rewrite);
+    });
+
+    expect(rewriteSolution).toHaveBeenCalledTimes(2);
+    expect(rewriteSolution.mock.calls[0][1].signal.aborted).toBe(true);
+    expect(rewriteSolution.mock.calls[1][1].signal.aborted).toBe(false);
+    await act(async () => { previous({ ...FULL, symptoms: 'Old rewrite' }); });
+    expect(screen.queryByText(LABELS.rewriteTitle)).not.toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    await act(async () => { current({ ...FULL, symptoms: 'New rewrite' }); });
+    expect(screen.getByText(LABELS.rewriteTitle)).toBeInTheDocument();
+    expect(screen.getByText('New rewrite')).toBeInTheDocument();
+    expect(screen.queryByText(message('MSG68'))).not.toBeInTheDocument();
+  });
 });
 
 describe('doneFlag', () => {
@@ -262,5 +432,19 @@ describe('validateSections', () => {
 
     expect(validateSections(atLimit)).toBeNull();
     expect(validateSections({ ...atLimit, workaround: 'x' })).toMatchObject({ code: 'MSG02' });
+  });
+});
+
+describe('SolutionFormModal with a Vietnamese input method', () => {
+  it('BUG-332 keeps what the input method wrote when the form renders again', () => {
+    open();
+    // An input method rewrites a section before the app has seen the change.
+    field('Symptoms').value = 'Mất kết nối mỗi giờ';
+    fireEvent.change(field('Root cause'), { target: { value: '' } });
+
+    click('Finish'); // Root cause is empty: MSG01 renders the form again
+
+    expect(screen.getByRole('alert')).toHaveTextContent('The Root cause field is required.');
+    expect(field('Symptoms')).toHaveValue('Mất kết nối mỗi giờ');
   });
 });

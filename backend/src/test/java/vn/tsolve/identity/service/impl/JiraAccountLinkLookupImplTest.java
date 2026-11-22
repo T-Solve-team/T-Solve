@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -56,6 +57,22 @@ class JiraAccountLinkLookupImplTest {
     void answersNothingForABlankTrackerAccountWithoutReading_AC_001_77() {
         assertThat(lookup.find(null)).isEmpty();
         assertThat(lookup.find("  ")).isEmpty();
+        verifyNoInteractions(links, accounts);
+    }
+
+    @Test
+    void answersTheLinkedAccountIdsWhateverTheAccountStatus_AC_001_78() {
+        when(links.accountIds(Set.of("jira-1", "jira-2"))).thenReturn(Map.of("jira-1", ACCOUNT));
+
+        assertThat(lookup.linkedAccountIds(Set.of("jira-1", "jira-2")))
+                .containsExactlyEntriesOf(Map.of("jira-1", ACCOUNT));
+        verifyNoInteractions(accounts);
+    }
+
+    @Test
+    void readsNothingForNoTrackerAccount_AC_001_78() {
+        assertThat(lookup.linkedAccountIds(Set.of())).isEmpty();
+        assertThat(lookup.linkedAccountIds(null)).isEmpty();
         verifyNoInteractions(links, accounts);
     }
 }

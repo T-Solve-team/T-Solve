@@ -96,14 +96,19 @@ public class UserRoleUpdateServiceImpl implements UserRoleUpdateService {
         }
         List<Space> spaces = write.spaces();
         List<UUID> selected = selectedSpaces(body.path("spaceIds"), roles, spaces, userId);
-        write.lockSpaces(selected);
+        var lockIds = new LinkedHashSet<>(selected);
+        spaces.stream()
+                .filter(space -> space.managerIds().contains(userId))
+                .map(Space::id)
+                .forEach(lockIds::add);
+        write.lockSpaces(List.copyOf(lockIds));
         // Re-read ownership after waiting for a competing writer of a requested Space.
         spaces = write.spaces();
         selectedSpaces(body.path("spaceIds"), roles, spaces, userId);
         for (Space space : spaces) {
             if (selected.contains(space.id())
-                    && space.managerId() != null
-                    && !space.managerId().equals(userId)) {
+                    && !space.managerIds().contains(userId)
+                    && space.managerIds().size() >= 3) {
                 throw new BusinessRuleException("MSG117", Map.of("space_name", space.name()), "spaceIds");
             }
         }
@@ -139,9 +144,12 @@ public class UserRoleUpdateServiceImpl implements UserRoleUpdateService {
                 !roles.contains(Role.PROJECT_MANAGER) || !Objects.equals(departmentId, previousDepartment)
                         ? options.projects()
                         : List.of();
-        List<SpaceOption> affectedSpaces = options.spaces().stream()
-                .filter(item -> !selected.contains(item.space().spaceId()))
+        List<UUID> candidates = options.spaces().stream()
+                .map(item -> item.space().spaceId())
+                .filter(id -> !selected.contains(id))
                 .toList();
+        List<SpaceOption> affectedSpaces =
+                HandoverChoices.soleSpaces(options.spaces(), write.soleManagedSpaces(userId, candidates));
         for (ProjectOption option : affectedProjects) {
             if (option.recipients().isEmpty()) {
                 throw conflict(
@@ -245,7 +253,7 @@ public class UserRoleUpdateServiceImpl implements UserRoleUpdateService {
             if (id == null
                     || space == null
                     || selected.contains(id)
-                    || (!space.active() && !userId.equals(space.managerId()))) {
+                    || (!space.active() && !space.managerIds().contains(userId))) {
                 throw required("spaceIds", "Spaces");
             }
             selected.add(id);

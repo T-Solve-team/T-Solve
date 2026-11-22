@@ -272,3 +272,20 @@ no token (AC-013.12). Workspace part: workspace Task 10, same PR.
   `SuggestionCommentServiceImplTest`, `TrackerProjectServiceImplTest` (new `JiraAccount` shape)
 **Dependencies:** none
 **Estimated size:** small
+
+---
+
+## Task 21: Queue the suggestion job for the worker from the web process (KAN-370, BUG-342)
+
+**Story:** STORY-011
+**Feature:** suggestion-web-jobs
+**Description:** design "Change 2026-11-18". New flag `tsolve.worker.web-jobs-enabled`; `WebJobQueue` and
+`WebJobsConfiguration` (enqueue-only JobRunr created on first use, Workspace from `OutboxWorkspace`);
+`WebSuggestionJobQueue` (AC-011.10, AC-011.11); `InProcessSuggestionJobQueue` only while both flags are off (AC-011.9).
+Staging compose and `.env.example`. Bug-log row BUG-342.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/worker/service/WebJobQueue.java`, `backend/src/main/java/vn/tsolve/worker/config/WebJobsConfiguration.java`, `backend/src/main/java/vn/tsolve/tracker/service/impl/WebSuggestionJobQueue.java`
+- Modify: `backend/src/main/java/vn/tsolve/tracker/service/impl/InProcessSuggestionJobQueue.java`, `backend/src/main/resources/application.yml`, `.env.example`, `infra/compose.staging.yml`, `docs/bug-log.md`
+- Test: `WebSuggestionJobQueueTest`, `WebJobsConfigurationTest`, `SuggestionJobQueueSelectionTest`
+**Dependencies:** Task 16
+**Estimated size:** small

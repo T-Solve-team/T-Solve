@@ -644,7 +644,7 @@ Decided in planning (builder check, 17/11):
   the list and the open conversation; a rating writes the open conversation's query data (AC-003.4).
 - In mock mode conversations live in the MSW memory and go on a page reload (mock only; AC-004.8).
 - The Delete button is an icon button with `aria-label="Delete"`, one per row.
-- Changeset number 047 (046 is KAN-243's); `chat_message.outcome` has its own five-value check.
+- Changeset number 051 (047 to 050 are taken on main; was 047 before the merge of 23/11); `chat_message.outcome` has its own five-value check.
 
 ### Edge Cases & Risks
 
@@ -680,3 +680,24 @@ The list shows the 20 newest conversations and a Load more button (user, 18/11),
 | P2 | Delete on page 0 while page 1 is loaded | Medium | Same refetch; no row skipped | page test |
 | P3 | `size` 500 sent | Low | Read as 100 | controller test |
 | P4 | Two conversations with the same `started_at` | Low | Tie broken by id: stable pages | IT |
+
+## KAN-382: Focus layout and emptying the box on send
+
+- Decided in planning: the box is emptied when the question is sent and refilled on failure only when still empty
+  (chosen over clearing on success: the reported box kept the question after Enter or Send, and clearing on send
+  does not depend on when the answer arrives). Alternatives: keep clearing on success and debug on staging.
+- Decided with the user (22/11): option C "Focus" with the conversation sidebar, chosen over option B (Sources
+  panel right of the thread, approved earlier the same day and dropped before any code was kept). Citations stay
+  under each answer as KAN-380 decided.
+- Decided in planning: "Show more" pages the list by 10 in page state (not stored); the open conversation is always
+  among the shown ones because opening an older one needs "Show more" first.
+
+## Merge of main into KAN-183 (2026-11-23)
+
+- The AI `title` of a first question (KAN-380) is stored as `chat_session.title` when the session is created, the
+  trimmed question when there is none (user, 23/11). No new column: `title` is already `TEXT NOT NULL`.
+- The KAN-382 "Show more" is the server paging of 18/11 with `size` 10 (user, 23/11): `useInfiniteQuery` asks
+  `size=10`; the backend default stays 20.
+- The changeset is renumbered `051-chatbot-chat-session` (047 to 050 are taken on main).
+- The KAN-183 bugs BUG-332 – BUG-343 are renumbered BUG-373 – BUG-384 (main used those ids for other bugs);
+  the earlier test reports of this feature keep the old ids.

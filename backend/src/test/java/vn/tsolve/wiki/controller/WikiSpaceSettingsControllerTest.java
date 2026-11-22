@@ -65,14 +65,14 @@ class WikiSpaceSettingsControllerTest {
                         SPACE,
                         "Support Wiki",
                         "Support",
-                        "Manager",
+                        List.of("Manager"),
                         new WikiSpaceSettings.OwnDepartment(UUID.randomUUID(), "Support", true),
                         List.of(),
                         List.of()));
         mvc.perform(request("SETTINGS"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.spaceId").value(SPACE.toString()))
-                .andExpect(jsonPath("$.knowledgeManager").value("Manager"))
+                .andExpect(jsonPath("$.knowledgeManagers[0]").value("Manager"))
                 .andExpect(jsonPath("$.ownDepartment.locked").value(true))
                 .andExpect(jsonPath("$.departments").isEmpty())
                 .andExpect(jsonPath("$.users").isEmpty());
