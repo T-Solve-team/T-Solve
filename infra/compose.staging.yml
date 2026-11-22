@@ -254,8 +254,12 @@ services:
     # The image's own HEALTHCHECK (GET /healthz) applies.
     logging: *logging
 
+  # AI runs in ONE of two places, chosen by COMPOSE_PROFILES in the env file:
+  #   gpu      - Ollama and Docling on the GPU server, reached through gpu-tunnel (the staging setup)
+  #   local-ai - Ollama on this VPS (CPU, slow); no Docling, so the Wiki indexes plain text
   ollama:
     image: ollama/ollama:0.12.6
+    profiles: ["local-ai"]
     restart: unless-stopped
     mem_limit: ${OLLAMA_MEM_LIMIT:-6g}
     environment:
@@ -272,24 +276,43 @@ services:
       start_period: 10s
     logging: *logging
 
-  # PDF / DOCX to Markdown for the Wiki indexing job (KAN-374), called by the worker at DOCLING_BASE_URL
-  # (http://docling:5001). No port is published: it has no auth, so only the tsolve network reaches it. When it is
-  # down or slow, the job falls back to plain text, so nothing waits on it.
-  docling:
-    image: quay.io/docling-project/docling-serve:v1.38.1
+  # SSH tunnel to the GPU server: gpu.internal:11434 is its Ollama, gpu.internal:5001 its docling-serve (KAN-374).
+  # Both listen only on the GPU server's loopback and have no auth, so this tunnel is the only way in. No port is
+  # published here: only the tsolve network reaches it. The key and known_hosts come from GPU_TUNNEL_DIR (README §5).
+  gpu-tunnel:
+    image: alpine:3.22
+    profiles: ["gpu"]
     restart: unless-stopped
-    mem_limit: ${DOCLING_MEM_LIMIT:-3g}
-    networks: [tsolve]
+    mem_limit: 64m
+    environment:
+      GPU_SSH_HOST: ${GPU_SSH_HOST:-}
+      GPU_SSH_PORT: ${GPU_SSH_PORT:-22}
+      GPU_SSH_USER: ${GPU_SSH_USER:-}
+    volumes:
+      - ${GPU_TUNNEL_DIR:-/srv/tsolve/staging/gpu-tunnel}:/root/.ssh:ro
+    entrypoint: ["sh", "-ec"]
+    # ponytail: openssh-client is installed on each start (needs the package mirror); bake an image if that bites.
+    # StrictHostKeyChecking=yes: the GPU server's key must already be in known_hosts, so a swapped host is refused.
+    command:
+      - |
+        : "$${GPU_SSH_HOST:?set GPU_SSH_HOST}" "$${GPU_SSH_USER:?set GPU_SSH_USER}"
+        apk add --no-cache openssh-client >/dev/null
+        exec ssh -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
+          -o StrictHostKeyChecking=yes -p "$$GPU_SSH_PORT" \
+          -L 0.0.0.0:11434:127.0.0.1:11434 -L 0.0.0.0:5001:127.0.0.1:5001 "$$GPU_SSH_USER@$$GPU_SSH_HOST"
+    networks:
+      tsolve:
+        aliases: [gpu.internal]
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5001/health')"]
+      test: ["CMD", "nc", "-z", "127.0.0.1", "11434"]
       interval: 15s
       timeout: 5s
-      retries: 10
-      start_period: 60s
+      retries: 5
+      start_period: 30s
     logging: *logging
 
-  # One-off: pulls the two models into the ollama volume. Not part of `up`; run it with
-  #   docker compose -f infra/compose.staging.yml --env-file <env> --profile models run --rm ollama-pull
+  # One-off, local-ai only: pulls the two models into the ollama volume. Not part of `up`; run it with
+  #   docker compose -f infra/compose.staging.yml --env-file <env> --profile local-ai --profile models run --rm ollama-pull
   ollama-pull:
     image: ollama/ollama:0.12.6
     profiles: ["models"]

@@ -1,7 +1,8 @@
 # Staging deploy (one VPS, Docker Compose)
 
 One Compose project runs everything: Caddy (HTTPS), Postgres (pgvector), Redis, Keycloak, the backend (web), the
-worker, the web app, Ollama and Docling. Only Caddy faces the internet (80, 443). Files:
+worker and the web app. Ollama and Docling run on a separate GPU server, reached through the `gpu-tunnel` service
+(SSH). Only Caddy faces the internet (80, 443). Files:
 
 | File | What |
 |---|---|
@@ -15,9 +16,9 @@ worker, the web app, Ollama and Docling. Only Caddy faces the internet (80, 443)
 Hosts (all under `TSOLVE_DOMAIN`): `<slug>.<domain>` (company site and `/api`), `admin.<domain>` (Platform Console and
 `/api`), `login.<domain>` (Keycloak, `/admin` blocked), `api.<domain>` (Jira app and health only).
 
-Sizing: the memory limits add up to about 15.4 GB (db 2g, keycloak 1.5g, backend 1.5g, worker 1g, ollama 6g,
-docling 3g, redis 192m, caddy 128m, web 64m), meant for a 16 GB box. Change them in the env file (`*_MEM_LIMIT`).
-If the box runs short, stop `docling` and empty `DOCLING_BASE_URL`: Wiki indexing then uses plain text.
+Sizing: the memory limits add up to about 6.5 GB (db 2g, keycloak 1.5g, backend 1.5g, worker 1g, redis 192m,
+caddy 128m, web 64m, gpu-tunnel 64m); with the `local-ai` profile Ollama adds 6g, meant for a 16 GB box. Change them
+in the env file (`*_MEM_LIMIT`).
 
 ## 1. Prerequisites
 
@@ -70,18 +71,56 @@ The databases are created by `postgres/init/10-tsolve-dbs.sh` **only when the `d
 start). Changing a database password in the env file later does not change it in Postgres: change it there too
 (`dc exec db psql -U postgres -c "ALTER ROLE tsolve PASSWORD '...'"`), or reset the volume (loses all data).
 
-## 5. Pull the AI models
+## 5. AI: the GPU server
+
+`COMPOSE_PROFILES` in the env file picks where the AI runs: `gpu` (staging) or `local-ai` (Ollama on this VPS, CPU,
+no Docling). The backend and the worker reach the GPU server at `gpu.internal` through `gpu-tunnel`. When the GPU
+server is down, the Chatbot answers MSG06, Wiki conversion falls back to plain text and embeddings fail (the index
+job is retried); nothing else stops.
+
+**On the GPU server** (both bound to loopback only; they have no auth):
+
+```bash
+# Ollama on 127.0.0.1:11434 with the two models
+ollama pull bge-m3 && ollama pull "$OLLAMA_CHAT_MODEL"
+# docling-serve on 127.0.0.1:5001 (CUDA image; without Docker: pip install "docling-serve" and
+#   docling-serve run --host 127.0.0.1 --port 5001)
+docker run -d --name docling --restart unless-stopped --gpus all -p 127.0.0.1:5001:5001 \
+  quay.io/docling-project/docling-serve:v1.38.1
+```
+
+Create a user for the tunnel (not root) and limit its key in `~/.ssh/authorized_keys` to the two ports:
+
+```
+restrict,port-forwarding,permitopen="127.0.0.1:11434",permitopen="127.0.0.1:5001" ssh-ed25519 AAAA... tsolve-staging
+```
+
+**On this VPS**:
+
+```bash
+install -d -m 700 /srv/tsolve/staging/gpu-tunnel
+ssh-keygen -t ed25519 -N '' -C tsolve-staging -f /srv/tsolve/staging/gpu-tunnel/id_ed25519
+# Pin the host key; compare the fingerprint with `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` on the GPU server
+ssh-keyscan -p "$GPU_SSH_PORT" "$GPU_SSH_HOST" > /srv/tsolve/staging/gpu-tunnel/known_hosts
+ssh-keygen -lf /srv/tsolve/staging/gpu-tunnel/known_hosts
+chmod 600 /srv/tsolve/staging/gpu-tunnel/*
+```
+
+Set `GPU_SSH_*`, `OLLAMA_BASE_URL=http://gpu.internal:11434` and `DOCLING_BASE_URL=http://gpu.internal:5001` in the
+env file. `deploy.sh` restarts only backend, worker and web, so start the tunnel once, then let the two read the env:
+
+```bash
+dc up -d --wait gpu-tunnel
+dc exec worker wget -qO- http://gpu.internal:11434/api/ps    # both models listed
+dc exec worker wget -qO- http://gpu.internal:5001/health
+dc up -d backend worker
+```
+
+With `local-ai` instead, pull the models into the `ollama-data` volume (not part of `up`; again after a model change):
 
 ```bash
 dc --profile models run --rm ollama-pull
 ```
-
-This downloads `OLLAMA_EMBED_MODEL` (default `bge-m3`) and `OLLAMA_CHAT_MODEL` into the `ollama-data` volume; it is
-not part of `up`. Run it again whenever you change a model name.
-
-Docling (Wiki document conversion) starts with `up`. `deploy.sh` restarts only backend, worker and web, so on a
-server set up before Docling was added, start it once with `dc up -d --wait docling` and set
-`DOCLING_BASE_URL=http://docling:5001` in the env file, then `dc up -d worker` so the worker reads it.
 
 ## 6. Create the first admin
 
