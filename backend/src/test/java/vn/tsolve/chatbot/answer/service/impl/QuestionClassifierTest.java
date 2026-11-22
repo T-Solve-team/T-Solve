@@ -3,6 +3,7 @@ package vn.tsolve.chatbot.answer.service.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -102,9 +103,28 @@ class QuestionClassifierTest {
         assertFallback(classifier.parse(json));
     }
 
+    @Test
+    void readsTitle_AC_009_9() {
+        var result = classifier.parse("{\"category\":\"QUESTION\",\"query\":\"VPN\",\"title\":\"  VPN error 809  \"}");
+        assertThat(result.title()).isEqualTo("VPN error 809");
+        assertThat(classifier
+                        .parse("{\"category\":\"QUESTION\",\"query\":\"VPN\"}")
+                        .title())
+                .isEmpty();
+        assertThat(classifier
+                        .parse("{\"category\":\"QUESTION\",\"query\":\"VPN\",\"title\":12}")
+                        .title())
+                .isEmpty();
+        assertThat(classifier
+                        .parse("{\"category\":\"INJECTION\",\"query\":\"\",\"title\":\"Owned\"}")
+                        .title())
+                .isEmpty();
+    }
+
     private static void assertFallback(QuestionClassifier.Classification result) {
         assertThat(result).isNotNull();
         assertThat(result.category()).isEqualTo(Category.QUESTION);
         assertThat(result.query()).isEmpty();
+        assertThat(result.title()).isEmpty();
     }
 }

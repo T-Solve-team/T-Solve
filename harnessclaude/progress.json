@@ -323,9 +323,10 @@
         "ticket-suggestion-api": "passing",
         "solution-retrieval": "passing",
         "department-solution-retrieval": "passing",
-        "membership-visible-scope": "evaluating"
+        "membership-visible-scope": "evaluating",
+        "embed-description": "passing"
       },
-      "lastUpdated": "2026-11-17T15:18:08.326Z",
+      "lastUpdated": "2026-11-22T05:55:32.495Z",
       "branch": "feat/search",
       "repos": [
         "default"
@@ -375,9 +376,13 @@
         "chatbot-ask-for-project": "evaluating",
         "classify-outcome-schema": "evaluating",
         "classify-question": "passing",
-        "classify-question-ui": "passing"
+        "classify-question-ui": "passing",
+        "combined-answer-prompt": "in-progress",
+        "open-solution-citations": "pending",
+        "conversation-title-api": "pending",
+        "conversation-title-ui": "pending"
       },
-      "lastUpdated": "2026-11-17T11:52:04.103Z",
+      "lastUpdated": "2026-11-22T05:20:48.520Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"

@@ -25,7 +25,8 @@
   white-space: pre-wrap;
 }
 
-/* Figma 12.1 "Card · Conversations": the list on the left; the card ends after its last entry, a long title wraps. */
+/* Figma 12.1 "Card · Conversations": the list on the left; the card ends after its last entry. A title stays on one
+   line, cut with "…" (AC-002.13). */
 .list {
   align-self: start;
   max-height: 100%;
@@ -51,6 +52,13 @@
   padding-block: var(--ant-padding-xs);
   text-align: left;
   white-space: normal;
+}
+
+.title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .entry[aria-current='true'] {

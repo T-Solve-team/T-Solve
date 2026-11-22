@@ -153,6 +153,10 @@ export const getGetJiraAppQuestionJobResponseMock = (
             { ...getGetJiraAppQuestionJobResponseTicketSolutionCitationMock() },
           ]),
         ),
+        title: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 60 } }),
+          undefined,
+        ]),
       },
     },
     undefined,
