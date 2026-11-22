@@ -234,7 +234,7 @@ Forge trigger (Jira App reads description via REST v2)
 | Runner | `worker` tenant job (`TenantJobService`, JobRunr) | Spring `@Async`, scheduler | User, 07/11; retry and Workspace binding come with it |
 | Job record id | `new UUID(0, suggestionId)`; the handler takes `getLeastSignificantBits()` and ignores an id whose high bits are not 0 | Add a UUID column | `TenantJobService` takes a UUID and the table id is BIGINT; same mapping as changeset 010 (`lpad(to_hex(id), 32, '0')::uuid`); no schema change |
 | Sources | Published tickets of the Project's Department (search STORY-011, new method on `SolutionRetrieval`) + Company-wide Wiki through the triage port `WikiSourceRetrieval` (stand-in `NoWikiSources`) | Workspace-wide `nearest`; wait for wiki | User, 07/11; triage may use search only through its `service/` interface (backend AGENTS) |
-| Threshold | `tsolve.triage.min-similarity: ${SUGGESTION_MIN_SIMILARITY:0.7}`, `@Validated` record `TriageProperties` (0..1) ; at most 5 sources, a constant | Hard-coded; per-Project | User, 07/11; tuning on KAN-49 data is a later round |
+| Threshold | `tsolve.triage.min-similarity: ${SUGGESTION_MIN_SIMILARITY:0.60}` (0.7 until 22/11, KAN-377 D3), `@Validated` record `TriageProperties` (0..1) ; at most 5 sources, a constant | Hard-coded; per-Project | User, 07/11; tuning on KAN-49 data is a later round |
 | AI failure | Exception leaves the job → JobRunr retries (default policy); after the last retry the row stays NULL/`[]`; WARN log with id, key, error type | Status column; error column | User, 07/11: no schema change for failures |
 | Write | Native `UPDATE suggestion_result SET sources_used = CAST(:json AS jsonb), suggested_solution = :text WHERE suggestion_id = :id AND suggested_solution IS NULL` in a triage repository, its own short transaction | JPA entity update | The triage entity stays `@Immutable`; the `IS NULL` guard makes a repeated or racing job a no-op (AC-005.10) |
 | Ticket privacy | Prompt gets each ticket only as "Solution N" with its five sections; Wiki documents by title; the system prompt asks to name only Wiki titles | Pass ticket keys | GBR-36 / spec: tickets are never linked; ids stay in `sources_used` only (AC-005.6) |
@@ -286,7 +286,7 @@ frontend/openapi/tsolve-api.yaml + generated model     IssueCreatedPayload field
 | 27 | STORY-005 | Data integrity | Row from before the change (no `issue_summary`) | Medium | No model call, no change | Task 4 |
 | 28 | STORY-005 | Authorization | Ticket of another Department scores 0.95 | High | Not a source (search AC-011.3) | search Task 20, Task 4 |
 | 29 | STORY-005 | Compliance | Ticket key / title reaches the prompt or the solution | High | Prompt carries sections only; TICKET items have no title | Task 4 |
-| 30 | STORY-005 | Business logic | Best source 0.69 with threshold 0.7; exactly 0.7 | High | 0.69 → no suggestion, no chat call; 0.7 kept | Task 4 |
+| 30 | STORY-005 | Business logic | Best source just under the threshold (0.59 with 0.60); exactly at it | High | under → no suggestion, no chat call; equal kept | Task 4 |
 | 31 | STORY-005 | Scale | 5 tickets + 5 Wiki above threshold | Medium | Exactly 5 kept, most similar first | Task 4 |
 | 32 | STORY-005 | Error cascades | Worker disabled / enqueue throws in the event request | High | 202, row kept, WARN with id + type | Task 4, tracker Task 14 |
 | 33 | STORY-005 | Multi-tenancy | Event request thread has no bound Workspace | High | `enqueueWorkspaceId` + `runIn`; none (several Workspaces) → WARN, no job — accepted until discovery (user, 07/11) | Task 4 |
@@ -347,7 +347,7 @@ asks for 5 so the merged top 5 is exact.
 
 ```text
 backend/src/main/java/vn/tsolve/
-  common/config/TriageProperties.java                  min-similarity (0..1, default 0.7; AGENTS §1)
+  common/config/TriageProperties.java                  min-similarity (0..1, default 0.60; AGENTS §1)
   triage/service/WikiSourceRetrieval.java, triage/dto/WikiSource.java
   triage/service/impl/NoWikiSources.java
   triage/service/impl/SuggestionGenerator.java         implements tracker.service.SuggestionSearch

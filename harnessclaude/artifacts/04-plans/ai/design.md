@@ -27,7 +27,7 @@ service/impl/SolutionAiServiceImpl ──────────► OllamaLlmCl
 - `OllamaHttp` (package-private, one bean) is the only class that talks HTTP. It owns the two `RestClient`s, the
   concurrency semaphore, the retry rule and the one log line per call. Both clients go through it, so the limits of
   STORY-003 hold for every caller.
-- `OllamaLlmClient` builds the `/api/chat` body (`model`, `messages`, `stream: false`, optional `format`) and reads
+- `OllamaLlmClient` builds the `/api/chat` body (`model`, `messages`, `stream: false`, `think: false` (22/11, KAN-377), optional `format`) and reads
   `message.content`. `OllamaEmbeddingClient` builds the `/api/embed` body (`model`, `input: [...]`) and reads
   `embeddings`.
 - `SolutionAiServiceImpl` holds the two prompts (Java text blocks), the JSON schema of the five sections, the input
@@ -44,7 +44,7 @@ Ollama wire format (Ollama API, non-streaming):
 
 | Call | Request | Response read |
 |------|---------|---------------|
-| chat | `{"model", "messages":[{"role","content"}], "stream":false, "format"?: <schema>, "options":{"temperature"}}` | `message.content` |
+| chat | `{"model", "messages":[{"role","content"}], "stream":false, "think":false, "format"?: <schema>, "options":{"temperature"}}` | `message.content` |
 | embed | `{"model", "input":[...]}` | `embeddings` (list of float lists) |
 
 ## Key Decisions

@@ -2203,3 +2203,9 @@
 {"ts":"2026-11-20T07:28:49.572Z","type":"quick-opened","what":"PR 302 review: Import Preview steps back from a last page left empty by Apply & publish (BUG-352)","files":["frontend/src/features/ticket-import/components/ImportPreviewTable.tsx","frontend/src/features/ticket-import/pages/ImportPreviewPage.test.tsx","docs/bug-log.md"]}
 {"ts":"2026-11-20T07:45:41.989Z","type":"quick-closed","what":"PR 302 review: Import Preview steps back from a last page left empty by Apply & publish (BUG-352)","files":["frontend/src/features/ticket-import/components/ImportPreviewTable.tsx","frontend/src/features/ticket-import/pages/ImportPreviewPage.test.tsx","docs/bug-log.md"]}
 {"ts":"2026-11-21T19:22:03.917Z","type":"spec-approved","module":"platform","specHash":"72d7a40f909769eebad9ed9035b6ee0780b02268e3071336481bed1f3872730d"}
+{"ts":"2026-11-22T03:18:23.591Z","type":"spec-approved","module":"ai","specHash":"c4d73c893785b4f9e71fd63ca71e1516db131537330712d3622b4fdc45973ef9"}
+{"ts":"2026-11-22T03:18:23.908Z","type":"spec-approved","module":"triage","specHash":"26e1c35323fa245b3db46bc23af47c415ba1cb39e5c04066c8c9e8d0553c90ee"}
+{"ts":"2026-11-22T03:18:24.242Z","type":"spec-approved","module":"chatbot","specHash":"0110dc81ab5436b991b13870246845b38a228b4a42dd6d487f085137128ee347"}
+{"ts":"2026-11-22T03:20:14.550Z","type":"feature-status","module":"ai","feature":"chat-no-thinking","from":null,"to":"pending"}
+{"ts":"2026-11-22T03:20:14.854Z","type":"feature-status","module":"chatbot","feature":"rag-cut-off","from":null,"to":"pending"}
+{"ts":"2026-11-22T03:20:15.144Z","type":"feature-status","module":"triage","feature":"suggestion-cut-off","from":null,"to":"pending"}

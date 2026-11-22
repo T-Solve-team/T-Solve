@@ -28,6 +28,7 @@ owner: BA
 | 2026-11-17 | STORY-009, STORY-001 | Message ids renamed MSG157–MSG159 → `MSG_NEW_5`–`MSG_NEW_7` (texts unchanged) in AC-001.15, Interface Contracts and Required from other modules | The catalog test of fe-foundation AC-006.7 rejects unknown codes, decision D3 gives unnumbered messages provisional keys, and the workspace spec already plans MSG157/MSG158 (user, 17/11) |
 | 2026-11-18 | STORY-005, STORY-006 | AC-005.3: the prompt asks for one number per brackets. New AC-006.8: a group marker `[1,2]` counts as `[1][2]` | BUG-348 (KAN-243): qwen3:4b wrote `[3,5]` and `[n=1]`, so a found answer was stored as `NO_SOURCE` |
 | 2026-11-17 | STORY-009, STORY-012, Requirement 11 | Merge of main into KAN-243: the KAN-243 requirement is now Requirement 11 (Requirement 10 is KAN-241's); AC-012.1 answers a Jira App question as STORY-009 too, so `askForProject` classifies before its search; the outcome changeset is `046-chatbot-answer-outcomes` (043 to 045 are taken on main) | KAN-241 and KAN-294 merged into main on 17/11; user, 17/11: classify on both paths (one pipeline), the Jira App page keeps MSG109 for the new outcomes until a jira-app change |
+| 2026-11-22 | STORY-005 | AC-005.1: `CHATBOT_MIN_SIMILARITY` defaults to 0.65 instead of 0.7 (also AC-005.4, AC-012.1 and the `.env.example` line, which use the same setting) | KAN-377, decision D2 of `01-research/reranker-eval/decisions.md`: on 300 graded questions the 0.7 cut-off gave NO_SOURCE to 22 % of questions with a helpful ticket; 0.65 gives 9 % for about 1 % answers from unhelpful sources |
 
 ## Requirements
 
@@ -202,7 +203,7 @@ owner: BA
   - AC-005.1: WHEN STORY-009 classifies a valid `POST /api/v1/chatbot/answers` as a question, THE backend SHALL embed
     the retrieval text (AC-009.5) once with the `ai` module's
     `EmbeddingClient` and SHALL take the sources from search's `SolutionRetrieval.nearest` and from
-    `WikiSources.nearest`, both with `CHATBOT_MIN_SIMILARITY` (default 0.7).
+    `WikiSources.nearest`, both with `CHATBOT_MIN_SIMILARITY` (default 0.65).
   - AC-005.2: THE backend SHALL keep at most `CHATBOT_SOURCE_LIMIT` (default 5) sources of both kinds together, most
     similar first, and number them 1, 2, … in that order.
   - AC-005.3: WHEN at least one source is kept, THE backend SHALL call the `ai` module's `LlmClient.chat` once with a
@@ -591,7 +592,7 @@ public interface WikiSources {
 // vn.tsolve.chatbot.source.service.impl.NoWikiSources: no passage; every given id unavailable (fail closed)
 ```
 
-Backend settings (`.env.example`): `CHATBOT_MIN_SIMILARITY=0.7`, `CHATBOT_SOURCE_LIMIT=5`, `CHATBOT_ASK_TIMEOUT=60s`.
+Backend settings (`.env.example`): `CHATBOT_MIN_SIMILARITY=0.65`, `CHATBOT_SOURCE_LIMIT=5`, `CHATBOT_ASK_TIMEOUT=60s`.
 
 ### Required from other modules
 - `fe-foundation` (done): route `/chatbot` for every signed-in user, `paths.wikiDocument`, MSG01, MSG02, MSG06,

@@ -17,6 +17,7 @@ owner: BA
 | 2026-11-07 | STORY-005 (new) | **Backend.** New STORY-005: a `triage-suggestion` tenant job, queued when the tracker records a new issue, embeds the issue summary and description, retrieves the Published tickets of the Project's Department (search STORY-011) and Company-wide Wiki documents (port `WikiSourceRetrieval`, stand-in `NoWikiSources`), keeps at most 5 sources at or above `SUGGESTION_MIN_SIMILARITY` (default 0.7) and fills the existing `suggestion_result` row. Builder check: issue text capped at 8000 characters, AC-005.6/005.9 worded on what a test can see, single-Workspace queueing until Jira App requests are bound to a Workspace (user, 07/11). Functional 5, Non-Functional 4 and 5, Out of Scope, Interface Contracts and Required from other modules follow | KAN-47 backend service only (user, 07/11): API-06 is in tracker (KAN-22); tuning the threshold on KAN-49 data is a later round; on AI failure JobRunr retries and the row stays NULL/[] with a log, no status column |
 | 2026-11-08 | STORY-005 | **Triage builds the suggestion; the tracker runs the job.** Triage implements the tracker's port `SuggestionSearch.suggest(projectId, summary, description)` and returns an `IssueSuggestion`; it queues, reads and writes nothing. Removed AC-005.1, AC-005.2, AC-005.9 and AC-005.10 (covered by tracker AC-011.1, 011.2, 011.6, 011.7, 011.9). Reworded AC-005.3 to AC-005.8 to the port (`projectId` is the Project's `public_id`; sources as `SuggestionSource`; failures throw without text). Added AC-005.13 (blank summary, no model call) and AC-005.14 (the only `SuggestionSearch` bean; the tracker's stand-in `StubSuggestionSearch` and `TSOLVE_STUB_SUGGESTION` are deleted). Functional 5, Non-Functional 4 and 5, Out of Scope, Interface Contracts, Required from other modules and Definition of Done follow | main already has the job (KAN-22, #160): it stores the issue text, queues the job on the worker, stores the answer and posts it (KAN-131), and declares `SuggestionSearch` for KAN-47 with a stand-in; the planned `IssueRecordedEvent` and triage job would duplicate it (user, 08/11) |
 | 2026-11-17 | STORY-003, STORY-004 | AC-003.1 narrowed: only Projects that are `ACTIVE`, in an `ACTIVE` Department, managed by an `ACTIVE` account that holds the PROJECT_MANAGER Role (the import access rule). "Required from other modules": `ManagedProjects` and `JiraSite` are now read from `project_membership` and the Workspace's `jira_site_address`; the stand-ins `NoManagedProjects` and `NoJiraSite` are deleted (KAN-347, KAN-348) | User 17/11: a Removed Project's results leave the history; `project_membership` (identity) and `workspace.jira_site_address` (KAN-344/349) are on main |
+| 2026-11-22 | STORY-005 | AC-005.11: `SUGGESTION_MIN_SIMILARITY` defaults to 0.60 instead of 0.7 (AC-005.4 and AC-005.7 use it unchanged); Out of Scope and the configuration line follow | KAN-377, decision D3 of `01-research/reranker-eval/decisions.md`: an IT agent reviews the suggestion with its sources, so coverage weighs more than for the chatbot; at 0.60, 3 % of graded questions miss a helpful ticket against 22 % at 0.7 |
 
 ## Requirements
 
@@ -91,14 +92,14 @@ owner: BA
   - AC-005.6: THE backend SHALL return each kept ticket as `SuggestionSource("TICKET", <ticket public_id>, null, <s>)` and each kept Wiki document as `SuggestionSource("WIKI", <document id>, <title>, <s>)`, and SHALL give the chat model no ticket id, ticket Jira key or ticket title (only the five Solution sections), and Wiki documents by title only.
   - AC-005.7: IF no source reaches `SUGGESTION_MIN_SIMILARITY`, THEN THE backend SHALL call no chat model and return no suggestion.
   - AC-005.8: IF the embedding or chat model fails or answers a blank text, THEN THE backend SHALL throw an exception whose message holds no issue, source or model text, so that the tracker's job fails and is retried (tracker AC-011.6).
-  - AC-005.11: THE backend SHALL read `SUGGESTION_MIN_SIMILARITY` (default 0.7); IF it is not a number from 0 to 1, THEN THE backend SHALL fail to start.
+  - AC-005.11: THE backend SHALL read `SUGGESTION_MIN_SIMILARITY` (default 0.60); IF it is not a number from 0 to 1, THEN THE backend SHALL fail to start.
   - AC-005.12: WHILE the wiki module provides no `WikiSourceRetrieval`, THE stand-in `NoWikiSources` SHALL return no document, so the sources are tickets only.
   - AC-005.13: IF the summary is blank (a result recorded before the issue text was stored), THEN THE backend SHALL call no model and return no suggestion.
   - AC-005.14: THE backend SHALL provide the only `SuggestionSearch` bean; the tracker's stand-in `StubSuggestionSearch` and its setting `TSOLVE_STUB_SUGGESTION` SHALL no longer exist.
 
 ## Out of Scope
 - Queueing, running, retrying and storing the suggestion job, posting the MSG80 comment, the Issue Panel, recomputing suggestions (API-06) and recording the reporter answer: the tracker (KAN-22, KAN-131).
-- Tuning `SUGGESTION_MIN_SIMILARITY` on the KAN-49 data: a later round; until then the default 0.7 stands.
+- Tuning `SUGGESTION_MIN_SIMILARITY` on the KAN-49 data: a later round; until then the default 0.60 (KAN-377 eval) stands.
 - Wiki retrieval itself (the wiki module) and a retry limit other than JobRunr's default (`worker`, KAN-162).
 - Generating a suggestion for an issue recorded before the issue text was stored (blank summary), or regenerating one.
 - The users, roles and `project_membership` tables and the method security that back PROJECT_MANAGER (KAN-117).
@@ -136,7 +137,7 @@ public interface WikiSourceRetrieval {
 public record WikiSource(String documentId, String title, String content, double similarity) {}
 ```
 
-Configuration: `tsolve.triage.min-similarity` from `SUGGESTION_MIN_SIMILARITY`, default 0.7; at most 5 sources (fixed).
+Configuration: `tsolve.triage.min-similarity` from `SUGGESTION_MIN_SIMILARITY`, default 0.60; at most 5 sources (fixed).
 
 ### Required from other modules
 - fe-foundation: route/role guard, session managed Projects, URL state, UI kit, message catalog, generated transport and MSW registration.

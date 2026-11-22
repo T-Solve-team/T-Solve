@@ -12,6 +12,7 @@ owner: BA
 |------|-------|--------|--------|
 | 2026-11-05 | STORY-001..STORY-005 | Initial spec: the Ollama chat and embedding clients with their limits (KAN-139), the AI draft (KAN-142) and the AI rewrite (KAN-143) of a Solution as a Java service | Plan the `ai` module (KAN-139, KAN-142, KAN-143). Hải Anh 05/11: one spec for all three (Q1); plain `RestClient` to Ollama's own API, no Spring AI (Q2); draft and rewrite are a Java service that `tracker` calls from its FIT-secured Jira App endpoints, `ai` has no REST of its own (Q3); connect 2 s, chat 60 s, embed 10 s, one retry on a connection error or 5xx only, 2 calls at a time per process with a 1 s wait for a slot, failures thrown as an unchecked exception that ends as 503 MSG06 when nobody catches it (Q4) |
 | 2026-11-06 | STORY-004 | AC-004.2 reworded: the fallback draft's Symptoms is cut to 10,000 characters and its Resolution steps to what remains of the 10,000, without splitting a character, so the fallback fits the Solution template | PR #122 review (Trần Trung Hiếu, 05/11): a description over 10,000 characters made a fallback the Solution form rejects (GBR-33), breaking AC-004.3 at the caller; Hải Anh 06/11 chose one 10,000 total, Symptoms first |
+| 2026-11-22 | STORY-001 | AC-001.1: every chat request also sends `"think": false` | KAN-377, decision D9 and BUG-335: Qwen3 hybrid models think by default (~1,300 tokens per call) unless the request turns it off, which made every staging chat call time out |
 
 ## Sources
 
@@ -49,7 +50,7 @@ cancelled on 29/10 (KAN-138): the SRS lines that still say "PII masked" are supe
 - As a backend developer of `search`, `wiki`, `triage` or `chatbot`, I want one client for the Ollama chat model so
   that every AI feature calls the LLM the same way.
 - Acceptance:
-  - AC-001.1: WHEN a caller asks `LlmClient` for a chat completion with a list of messages (each with the role `system`, `user` or `assistant` and its text), THE ai module SHALL send them in one `POST {OLLAMA_BASE_URL}/api/chat` with the model `OLLAMA_CHAT_MODEL` and `"stream": false`, and SHALL return the text of the answer's message.
+  - AC-001.1: WHEN a caller asks `LlmClient` for a chat completion with a list of messages (each with the role `system`, `user` or `assistant` and its text), THE ai module SHALL send them in one `POST {OLLAMA_BASE_URL}/api/chat` with the model `OLLAMA_CHAT_MODEL`, `"stream": false` and `"think": false`, and SHALL return the text of the answer's message.
   - AC-001.2: WHERE the caller gives a JSON schema, THE ai module SHALL send it as the request's `format` and SHALL return the answer only if its text parses as a JSON object.
   - AC-001.3: IF the answer's text is empty or blank, or a JSON answer does not parse as a JSON object, THEN THE ai module SHALL throw `AiUnavailableException`.
 

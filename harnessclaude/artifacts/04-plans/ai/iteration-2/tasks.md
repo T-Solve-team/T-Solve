@@ -1,7 +1,7 @@
 ---
 module: ai
 date: 2026-11-05
-total_tasks: 3
+total_tasks: 5
 owner: Dev
 ---
 
@@ -74,3 +74,20 @@ backend/src/test/java/vn/tsolve/ai/service/impl/SolutionAiServiceImplTest.java; 
 **Dependencies:** Task 2, Task 3.
 **Estimated size:** small.
 **Verification:** AC-004.2 and AC-004.4 tests updated; tests named with BUG-132, BUG-133, BUG-134; `mvn verify`.
+
+---
+
+## Task 5: Chat calls without thinking (KAN-377)
+
+**Story:** STORY-001
+**Feature:** chat-no-thinking
+**Jira:** KAN-377 · branch `feature/KAN-377-ai-rag-tuning` (decisions D9: `01-research/reranker-eval/decisions.md`)
+**Description:** Test-first: `OllamaLlmClient.chat` adds `"think": false` to every `/api/chat` body, with or without a
+schema (AC-001.1, changed 22/11). Part of BUG-335: a Qwen3 hybrid model then answers without a thinking block. The
+bug row gets the code part in Notes; its status waits for the re-test on the GPU AI server (platform Task 22).
+**Files:** backend/src/main/java/vn/tsolve/ai/client/OllamaLlmClient.java;
+backend/src/test/java/vn/tsolve/ai/client/OllamaLlmClientTest.java; docs/bug-log.md.
+**Covers:** AC-001.1.
+**Dependencies:** none.
+**Estimated size:** small.
+**Verification:** the AC-001.1 and AC-001.2 tests expect `"think":false` in the body; `sdd.ts trace ai`; `mvn verify`.

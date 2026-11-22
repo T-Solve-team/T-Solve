@@ -243,8 +243,8 @@
     }
   },
   "chatbot": {
-    "specHash": "ddff8da5c8e3e1f0d097065b9cee98f0d94614440dc80baf75aeedaa0d844b10",
-    "approvedAt": "2026-11-18T10:24:11.801Z",
+    "specHash": "0110dc81ab5436b991b13870246845b38a228b4a42dd6d487f085137128ee347",
+    "approvedAt": "2026-11-22T03:18:24.239Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",
@@ -1108,11 +1108,11 @@
     }
   },
   "ai": {
-    "specHash": "bd7dbb0f81b7f436d9d60afbc40dd6e6965ab5d189ac8a91dfce8548af0ea181",
-    "approvedAt": "2026-11-06T11:57:13.982Z",
+    "specHash": "c4d73c893785b4f9e71fd63ca71e1516db131537330712d3622b4fdc45973ef9",
+    "approvedAt": "2026-11-22T03:18:23.587Z",
     "by": "user",
     "acs": {
-      "AC-001.1": "WHEN a caller asks  for a chat completion with a list of messages (each with the role ,  or  and its text), THE ai module SHALL send them in one  with the model  and , and SHALL return the text of the answer's message.",
+      "AC-001.1": "WHEN a caller asks  for a chat completion with a list of messages (each with the role ,  or  and its text), THE ai module SHALL send them in one  with the model ,  and , and SHALL return the text of the answer's message.",
       "AC-001.2": "WHERE the caller gives a JSON schema, THE ai module SHALL send it as the request's  and SHALL return the answer only if its text parses as a JSON object.",
       "AC-001.3": "IF the answer's text is empty or blank, or a JSON answer does not parse as a JSON object, THEN THE ai module SHALL throw .",
       "AC-002.1": "WHEN a caller asks  to embed a list of one or more texts, THE ai module SHALL send them in one  with the model  (default ) and SHALL return one vector per text, in the order of the texts.",
@@ -1139,8 +1139,8 @@
     }
   },
   "triage": {
-    "specHash": "391a80281f2eb82db8d9a5ffae1d2595707bdd0fe3026e2378b57f736373069c",
-    "approvedAt": "2026-11-17T10:01:23.276Z",
+    "specHash": "26e1c35323fa245b3db46bc23af47c415ba1cb39e5c04066c8c9e8d0553c90ee",
+    "approvedAt": "2026-11-22T03:18:23.905Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager opens , THE frontend SHALL show screen 10.1 with columns Issue, Sources, Suggested solution and Reporter's answer, ordered by newest result first.",
@@ -1179,7 +1179,7 @@
       "AC-005.6": "THE backend SHALL return each kept ticket as  and each kept Wiki document as , and SHALL give the chat model no ticket id, ticket Jira key or ticket title (only the five Solution sections), and Wiki documents by title only.",
       "AC-005.7": "IF no source reaches , THEN THE backend SHALL call no chat model and return no suggestion.",
       "AC-005.8": "IF the embedding or chat model fails or answers a blank text, THEN THE backend SHALL throw an exception whose message holds no issue, source or model text, so that the tracker's job fails and is retried (tracker AC-011.6).",
-      "AC-005.11": "THE backend SHALL read  (default 0.7); IF it is not a number from 0 to 1, THEN THE backend SHALL fail to start.",
+      "AC-005.11": "THE backend SHALL read  (default 0.60); IF it is not a number from 0 to 1, THEN THE backend SHALL fail to start.",
       "AC-005.12": "WHILE the wiki module provides no , THE stand-in  SHALL return no document, so the sources are tickets only.",
       "AC-005.13": "IF the summary is blank (a result recorded before the issue text was stored), THEN THE backend SHALL call no model and return no suggestion.",
       "AC-005.14": "THE backend SHALL provide the only  bean; the tracker's stand-in  and its setting  SHALL no longer exist."

@@ -1,7 +1,7 @@
 ---
 module: triage
 date: 2026-11-02
-total_tasks: 4
+total_tasks: 7
 owner: Dev
 ---
 
@@ -157,3 +157,19 @@ bound Workspace database; null or blank gives empty (`issueUrl` already drops a 
 - Test: `backend/src/test/java/vn/tsolve/triage/service/impl/WorkspaceJiraSiteIT.java` (AC-003.5, AC-003.6)
 **Estimated size:** small
 **Verification:** in `backend/`, `mvn verify`.
+
+---
+
+## Task 7: Suggestion cut-off 0.60 (KAN-377)
+
+**Story:** STORY-005
+**Feature:** suggestion-cut-off
+**Jira:** KAN-377 · branch `feature/KAN-377-ai-rag-tuning` (decision D3: `01-research/reranker-eval/decisions.md`)
+**Description:** Test-first: `SUGGESTION_MIN_SIMILARITY` defaults to 0.60 (AC-005.11, changed 22/11) in
+`TriageProperties`, its `application.yml` line and `.env.example`. The 0..1 check is unchanged.
+**Files:** backend/src/main/java/vn/tsolve/common/config/TriageProperties.java; backend/src/main/resources/application.yml;
+.env.example; backend/src/test/java/vn/tsolve/common/config/TriagePropertiesTest.java.
+**Covers:** AC-005.11 (edge case 30: the boundary is now 0.60).
+**Dependencies:** none.
+**Estimated size:** small.
+**Verification:** `sdd.ts trace triage`; in `backend/`, `mvn verify`.

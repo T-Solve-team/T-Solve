@@ -90,3 +90,22 @@ All three tasks are Jira KAN-243, so one branch `feat/KAN-243-chatbot-classify-q
 **Covers:** AC-001.15, AC-003.1, AC-004.7 (edge case Q7)
 **Dependencies:** Task 13 (generated enum)
 **Estimated size:** small
+
+---
+
+## Task 16: Chatbot cut-off 0.65 (KAN-377)
+
+**Story:** STORY-005
+**Feature:** rag-cut-off
+**Jira:** KAN-377 · branch `feature/KAN-377-ai-rag-tuning` (decision D2: `01-research/reranker-eval/decisions.md`)
+**Description:** Test-first: `CHATBOT_MIN_SIMILARITY` defaults to 0.65 (AC-005.1, changed 22/11). Only the default
+moves: the operator can still set it, and the same value still reaches `SolutionRetrieval` and `WikiSources`
+(AC-005.4, AC-012.1). `.env.example` and `infra/staging.env.example` say 0.65.
+**Files:**
+- Modify: `…/answer/service/impl/ChatbotAnswerServiceImpl.java` (the `@Value` default), `.env.example`,
+  `infra/staging.env.example`
+- Test: `…/answer/service/impl/ChatbotAnswerServiceImplTest.java` (`defaultCutOffIs065_AC_005_1`)
+**Covers:** AC-005.1.
+**Dependencies:** none.
+**Estimated size:** small.
+**Verification:** `sdd.ts trace chatbot`; in `backend/`, `mvn verify`.

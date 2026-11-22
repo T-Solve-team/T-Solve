@@ -340,9 +340,10 @@
         "suggestion-history-api": "passing",
         "suggestion-generation": "passing",
         "jira-site": "passing",
-        "managed-projects": "passing"
+        "managed-projects": "passing",
+        "suggestion-cut-off": "pending"
       },
-      "lastUpdated": "2026-11-17T10:17:33.860Z",
+      "lastUpdated": "2026-11-22T03:20:15.142Z",
       "branch": "feat/triage",
       "repos": [
         "default"
@@ -372,9 +373,10 @@
         "chatbot-ask-for-project": "evaluating",
         "classify-outcome-schema": "evaluating",
         "classify-question": "passing",
-        "classify-question-ui": "passing"
+        "classify-question-ui": "passing",
+        "rag-cut-off": "pending"
       },
-      "lastUpdated": "2026-11-17T11:52:04.103Z",
+      "lastUpdated": "2026-11-22T03:20:14.852Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
@@ -537,9 +539,10 @@
         "ollama-clients": "passing",
         "solution-draft": "passing",
         "solution-rewrite": "passing",
-        "solution-review-fixes": "passing"
+        "solution-review-fixes": "passing",
+        "chat-no-thinking": "pending"
       },
-      "lastUpdated": "2026-11-06T12:13:56.733Z",
+      "lastUpdated": "2026-11-22T03:20:14.548Z",
       "branch": "feat/ai",
       "repos": [
         "default"
