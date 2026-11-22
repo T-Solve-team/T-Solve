@@ -10,6 +10,20 @@ import { msg } from '@/shared/messages';
 import { paths } from '@/shared/routing';
 import { renderApp } from '@/test/render';
 
+const renderDocx = vi.hoisted(() => vi.fn());
+vi.mock('docx-preview', () => ({ renderAsync: renderDocx }));
+
+/** The original file as bytes (msw cannot stream a jsdom Blob). */
+function fileHandler(text: string) {
+  return http.get(
+    '*/api/v1/wiki/documents/:documentId/file',
+    () =>
+      new HttpResponse(new TextEncoder().encode(text), {
+        headers: { 'Content-Type': 'application/octet-stream' },
+      }),
+  );
+}
+
 const ID = '00000000-0000-4000-8000-000000009001';
 const document: WikiDocumentDetail = {
   documentId: ID,
@@ -130,8 +144,88 @@ describe('WikiDocumentPage', () => {
     expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
   });
 
-  it('AC-002.19 shows the complete header, literal plain text and original-file Download (BUG-255)', async () => {
-    server.use(getGetWikiDocumentMockHandler(document));
+  it('AC-002.19 shows a PDF in the browser viewer from a blob URL', async () => {
+    URL.createObjectURL = vi.fn(() => 'blob:vpn');
+    URL.revokeObjectURL = vi.fn();
+    server.use(getGetWikiDocumentMockHandler(document), fileHandler('%PDF-1.1'));
+    renderApp(paths.wikiDocument(ID), { role: 'EMPLOYEE' });
+    expect(await screen.findByTitle('VPN guide', {}, { timeout: 5000 })).toHaveAttribute(
+      'src',
+      'blob:vpn',
+    );
+    expect(screen.queryByRole('region', { name: 'Content' })).not.toBeInTheDocument();
+  });
+
+  it('AC-002.19 renders a DOCX with docx-preview', async () => {
+    renderDocx.mockResolvedValue(undefined);
+    server.use(
+      getGetWikiDocumentMockHandler({ ...document, fileName: 'vpn.docx' }),
+      fileHandler('PK'),
+    );
+    renderApp(paths.wikiDocument(ID), { role: 'EMPLOYEE' });
+    await waitFor(() => expect(renderDocx).toHaveBeenCalled(), { timeout: 5000 });
+    expect(renderDocx.mock.calls[0]?.[1]).toBe(screen.getByLabelText('VPN guide'));
+    expect(screen.queryByRole('region', { name: 'Content' })).not.toBeInTheDocument();
+  });
+
+  it('AC-002.26 falls back to plain text when the DOCX cannot be rendered', async () => {
+    renderDocx.mockRejectedValue(new Error('bad docx'));
+    server.use(
+      getGetWikiDocumentMockHandler({ ...document, fileName: 'vpn.docx' }),
+      fileHandler('not a zip'),
+    );
+    renderApp(paths.wikiDocument(ID), { role: 'EMPLOYEE' });
+    expect(
+      (await screen.findByRole('region', { name: 'Content' }, { timeout: 5000 })).textContent,
+    ).toBe(document.content);
+  });
+
+  it('AC-002.19 renders the next document after a failed DOCX on the previous one (BUG-356)', async () => {
+    URL.createObjectURL = vi.fn(() => 'blob:next');
+    URL.revokeObjectURL = vi.fn();
+    renderDocx.mockRejectedValue(new Error('bad docx'));
+    const NEXT = '00000000-0000-4000-8000-000000009002';
+    server.use(
+      http.get('*/api/v1/wiki/documents/:documentId', ({ params }) =>
+        HttpResponse.json(
+          params.documentId === NEXT
+            ? { ...document, documentId: NEXT, title: 'Next guide' }
+            : { ...document, fileName: 'vpn.docx' },
+        ),
+      ),
+      fileHandler('PK'),
+    );
+    const { router } = renderApp(paths.wikiDocument(ID), { role: 'EMPLOYEE' });
+    await screen.findByRole('region', { name: 'Content' }, { timeout: 5000 });
+    await router.navigate(paths.wikiDocument(NEXT));
+    expect(await screen.findByTitle('Next guide', {}, { timeout: 5000 })).toHaveAttribute(
+      'src',
+      'blob:next',
+    );
+  });
+
+  it('AC-002.19 removes script links from a rendered DOCX (BUG-357)', async () => {
+    renderDocx.mockImplementation((_blob: Blob, container: HTMLElement) => {
+      container.innerHTML =
+        '<a href="javascript:alert(1)">bad</a><a href="https://example.com">good</a>';
+      return Promise.resolve();
+    });
+    server.use(
+      getGetWikiDocumentMockHandler({ ...document, fileName: 'vpn.docx' }),
+      fileHandler('PK'),
+    );
+    renderApp(paths.wikiDocument(ID), { role: 'EMPLOYEE' });
+    await waitFor(() => expect(screen.getByText('bad')).not.toHaveAttribute('href'), {
+      timeout: 5000,
+    });
+    expect(screen.getByText('good')).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
+  it('AC-002.19 AC-002.26 shows the header, literal plain text when the file fails, and Download (BUG-255)', async () => {
+    server.use(
+      getGetWikiDocumentMockHandler(document),
+      http.get('*/api/v1/wiki/documents/:documentId/file', () => problem(404, 'MSG110')),
+    );
     const view = renderApp(paths.wikiDocument(ID), { role: 'EMPLOYEE' });
     expect(
       await screen.findByRole('heading', { name: 'VPN guide' }, { timeout: 5000 }),
@@ -147,7 +241,7 @@ describe('WikiDocumentPage', () => {
     expect(screen.getByText('Folder')).toBeInTheDocument();
     expect(screen.getByText('Type')).toBeInTheDocument();
     expect(screen.getByText('Guide')).toBeInTheDocument();
-    const content = screen.getByRole('region', { name: 'Content' });
+    const content = await screen.findByRole('region', { name: 'Content' });
     expect(content.textContent).toBe(document.content);
     expect(content.querySelector('script')).toBeNull();
     expect(screen.getByRole('link', { name: 'Download' })).toHaveAttribute(

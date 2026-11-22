@@ -14,8 +14,9 @@
 	header {
 		# What the app loads: its own scripts, fonts and API. antd writes its CSS at run time into
 		# <style> tags, hence 'unsafe-inline' for styles only. The app calls its own
-		# origin only (AC-011.1), so connect-src stays 'self'.
-		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+		# origin only (AC-011.1), so connect-src stays 'self'. frame-src blob: lets 11.2 show a
+		# Wiki PDF, fetched by the app, in the browser's own PDF viewer (wiki AC-002.19).
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-src blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
 		Referrer-Policy "strict-origin-when-cross-origin"

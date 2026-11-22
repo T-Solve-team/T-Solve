@@ -2211,5 +2211,8 @@
 {"ts":"2026-11-21T15:16:31.748Z","type":"quick-opened","what":"Fix WikiIndexIT FileStorage provider so the docling success case runs (BUG-354, PR #303 CI)","files":["backend/src/test/java/vn/tsolve/wiki/WikiIndexIT.java","docs/bug-log.md"]}
 {"ts":"2026-11-21T15:19:07.708Z","type":"quick-closed","what":"Fix WikiIndexIT FileStorage provider so the docling success case runs (BUG-354, PR #303 CI)","files":["backend/src/test/java/vn/tsolve/wiki/WikiIndexIT.java","docs/bug-log.md"]}
 {"ts":"2026-11-21T16:02:08.564Z","type":"spec-approved","module":"wiki","specHash":"4a6687a179cc69ef52a955bd24f8d58cdd92537ebb8babd2fc4894bd7737fc65"}
+{"ts":"2026-11-21T19:53:21.264Z","type":"spec-approved","module":"wiki","specHash":"0f85916429c5aadfb60f3ab9f20e8deb51916ec5f1dd267e95a553cbf84d4a6e"}
+{"ts":"2026-11-21T20:21:09.707Z","type":"commit-recorded","module":"wiki","repo":"default","sha":"8cca30a62a9ae1bf0bc826a9f6db15a32d3291ef"}
 {"ts":"2026-11-22T03:15:57.109Z","type":"quick-opened","what":"Fix flaky ReviewQueueEventServiceImplTest fake with per-LISTEN notification queues (BUG-199, KAN-379)","files":["backend/src/test/java/vn/tsolve/review/service/impl/ReviewQueueEventServiceImplTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-22T03:22:10.243Z","type":"quick-closed","what":"Fix flaky ReviewQueueEventServiceImplTest fake with per-LISTEN notification queues (BUG-199, KAN-379)","files":["backend/src/test/java/vn/tsolve/review/service/impl/ReviewQueueEventServiceImplTest.java","docs/bug-log.md"]}
+{"ts":"2026-11-22T05:13:11.462Z","type":"spec-approved","module":"wiki","specHash":"1ddb373a1b48ec8ce31385d9d5a31d5a3efad60f5f32b02edef85d388e31a8e0"}
