@@ -237,11 +237,12 @@ class ChatbotAnswerServiceImplTest {
     }
 
     @Test
-    void returnsTitleOnFirstQuestionOnly_AC_009_9() {
+    void returnsTitleOnFirstQuestionOnly_AC_009_9_BUG_359() {
         withSolution();
+        String question =
+                "{\"category\":\"QUESTION\",\"query\":\"VPN\",\"title\":\"  Lỗi  VPN\\n809 " + "x".repeat(80) + "\"}";
         when(llm.chat(any(), notNull()))
-                .thenReturn("{\"category\":\"QUESTION\",\"query\":\"VPN\",\"title\":\"  Lỗi  VPN\n809 " + "x".repeat(80)
-                        + "\"}");
+                .thenReturn(question, question, "{\"category\":\"GREETING\",\"query\":\"\",\"title\":\"Hello\"}");
         when(llm.chat(any(), isNull())).thenReturn("Answer [1]");
 
         var first = service.ask(USER, new ChatbotQuestionRequest("lỗi VPN 809", List.of()));

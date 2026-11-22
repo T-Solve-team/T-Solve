@@ -51,7 +51,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
     // The classifier may use at most 1/3 of the remaining ask budget (BUG-329).
     private static final long CLASSIFIER_SHARE = 3;
     private static final int TITLE_LIMIT = 60;
-    private static final Pattern WHITESPACE = Pattern.compile("\s+", Pattern.UNICODE_CHARACTER_CLASS);
+    private static final Pattern WHITESPACE = Pattern.compile("\\s+", Pattern.UNICODE_CHARACTER_CLASS);
     private final EmbeddingClient embeddings;
     private final LlmClient llm;
     private final SolutionRetrieval solutions;
