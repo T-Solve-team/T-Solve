@@ -7,6 +7,8 @@ import styles from './Conversation.module.css';
 
 type ConversationThreadProps = {
   turns: readonly ChatTurn[];
+  /** The open conversation's title, shown in the bar above the thread (AC-002.18). */
+  title: string;
   askerName: string;
   /** The question waiting for its answer, if any. */
   pendingQuestion?: string;
@@ -21,6 +23,7 @@ type ConversationThreadProps = {
 /** 12.1 Focus thread: question headings and answers (AC-001.6, AC-001.7), with one composer (AC-001.16). */
 export function ConversationThread({
   turns,
+  title,
   askerName,
   pendingQuestion,
   isRating,
@@ -52,6 +55,9 @@ export function ConversationThread({
       aria-label="Conversation"
       className={isEmpty ? `${styles.conversation} ${styles.empty}` : styles.conversation}
     >
+      <header className={styles.topBar}>
+        <h2 className={styles.title}>{title}</h2>
+      </header>
       <div className={styles.thread} hidden={isEmpty}>
         <div className={`${styles.column} ${styles.turns}`}>
           {status}
@@ -86,7 +92,7 @@ export function ConversationThread({
       <div className={`${styles.column} ${styles.composer}`}>
         {isEmpty && (
           <header className={styles.intro}>
-            <h2>Ask the Knowledge Chatbot</h2>
+            <h3>Ask the Knowledge Chatbot</h3>
             <p>
               Ask in your own words. Answers come from the Solutions and Wiki documents you can
               view.
@@ -106,7 +112,7 @@ function QuestionHeading({ question, initials }: { question: string; initials: s
       <Avatar aria-hidden size={28} className={styles.avatar}>
         {initials}
       </Avatar>
-      <h2>{question}</h2>
+      <h3>{question}</h3>
     </header>
   );
 }

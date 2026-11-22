@@ -11,6 +11,7 @@ export type QuestionFormValues = Pick<ChatbotQuestion, 'question'>;
 
 type QuestionBoxProps = {
   form: FormInstance<QuestionFormValues>;
+  hasQuestion: boolean;
   isSending: boolean;
   onAsk: (question: string) => void;
 };
@@ -18,7 +19,7 @@ type QuestionBoxProps = {
 /**
  * 12.1 composer (AC-001.2–AC-001.6): Enter sends, Shift+Enter adds a line, and MSG01/MSG02 validate the question.
  */
-export function QuestionBox({ form, isSending, onAsk }: QuestionBoxProps) {
+export function QuestionBox({ form, hasQuestion, isSending, onAsk }: QuestionBoxProps) {
   const question = Form.useWatch('question', form) ?? '';
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -41,12 +42,18 @@ export function QuestionBox({ form, isSending, onAsk }: QuestionBoxProps) {
         validateTrigger="onChange"
         rules={[rules.required('Question'), rules.maxLength('Question', QUESTION_MAX_LENGTH)]}
       >
-        <QuestionInput isSending={isSending} onKeyDown={handleKeyDown} />
+        <QuestionInput
+          placeholder={hasQuestion ? 'Ask a follow-up question' : 'Ask a question'}
+          isSending={isSending}
+          onKeyDown={handleKeyDown}
+        />
       </FormField>
       <div className={styles.metadata}>
-        <span>Enter sends, Shift+Enter adds a line</span>
         <span>
-          {question.length} / {QUESTION_MAX_LENGTH}
+          {isSending ? 'Send waits for the current answer' : 'Enter sends, Shift+Enter adds a line'}
+        </span>
+        <span className={styles.count}>
+          {question.length.toLocaleString('en-US')} / {QUESTION_MAX_LENGTH.toLocaleString('en-US')}
         </span>
       </div>
     </AppForm>
@@ -70,7 +77,6 @@ function QuestionInput({
       <Button
         type="primary"
         htmlType="submit"
-        shape="circle"
         size="large"
         icon={<ArrowUpOutlined aria-hidden />}
         aria-label="Send"

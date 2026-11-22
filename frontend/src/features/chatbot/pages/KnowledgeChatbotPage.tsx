@@ -6,6 +6,7 @@ import { applyApiErrors } from '@/shared/forms';
 import { msg, showMessage } from '@/shared/messages';
 import { ConversationList } from '../components/ConversationList';
 import { ConversationThread } from '../components/ConversationThread';
+import { getConversationTitle } from '../components/conversation-title';
 import { QuestionBox, type QuestionFormValues } from '../components/QuestionBox';
 import { useAskQuestion } from '../hooks/useAskQuestion';
 import { useConversations } from '../hooks/useConversations';
@@ -36,6 +37,8 @@ function KnowledgeChatbot({ fullName }: { fullName: string }) {
   } = useConversations();
   const ask = useAskQuestion();
   const rating = useRateAnswer();
+  const pendingQuestion = ask.isPending ? ask.variables.data.question : undefined;
+  const hasQuestion = turns.length > 0 || pendingQuestion !== undefined;
   // Set at once, unlike ask.isPending: a second Enter before the next render must not send the question again.
   const isAsking = useRef(false);
 
@@ -84,8 +87,9 @@ function KnowledgeChatbot({ fullName }: { fullName: string }) {
       />
       <ConversationThread
         turns={turns}
+        title={conversation.data?.title ?? getConversationTitle(turns, pendingQuestion)}
         askerName={fullName}
-        pendingQuestion={ask.isPending ? ask.variables.data.question : undefined}
+        pendingQuestion={pendingQuestion}
         isRating={rating.isPending}
         onRate={(answerId, next) => {
           // A thread with turns always belongs to an open conversation.
@@ -106,6 +110,7 @@ function KnowledgeChatbot({ fullName }: { fullName: string }) {
       >
         <QuestionBox
           form={form}
+          hasQuestion={hasQuestion}
           isSending={
             ask.isPending ||
             remove.isPending ||

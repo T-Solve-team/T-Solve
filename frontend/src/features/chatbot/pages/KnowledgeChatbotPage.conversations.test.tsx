@@ -371,6 +371,30 @@ describe('KnowledgeChatbotPage saved conversations', () => {
     await waitFor(() => expect(deleteButton(VPN)).toBeEnabled());
   });
 
+  it('AC-002.18 shows the open conversation title above the thread with a first-question fallback', async () => {
+    const heading = (name: string) => within(thread()).getByRole('heading', { level: 2, name });
+    const view = await openChatbot();
+    expect(heading('New conversation')).toBeVisible();
+
+    const release = hold('post', '*/api/v1/chatbot/answers');
+    await view.user.click(view.box);
+    await view.user.paste(VPN);
+    await view.user.keyboard('{Enter}');
+    await screen.findByTestId('pending-answer');
+    expect(heading(VPN)).toBeVisible();
+    release();
+    await screen.findByRole('button', { name: VPN });
+    expect(heading(VPN)).toBeVisible();
+
+    await view.user.click(newButton());
+    expect(heading('New conversation')).toBeVisible();
+    await ask(view, LEAVE);
+    expect(heading(LEAVE)).toBeVisible();
+
+    await view.user.click(within(list()).getByRole('button', { name: VPN }));
+    expect(await within(thread()).findByRole('heading', { level: 2, name: VPN })).toBeVisible();
+  });
+
   it('AC-001.6 renders a successful answer even while its conversation is being refreshed', async () => {
     const release = hold('get', '*/api/v1/chatbot/conversations/:id');
     const view = await openChatbot();

@@ -6,6 +6,7 @@ import { msg } from '@/shared/messages';
 import { ConfirmDialog } from '@/shared/ui';
 import type { useConversations } from '../hooks/useConversations';
 import styles from './Conversation.module.css';
+import { NEW_CONVERSATION_TITLE } from './conversation-title';
 
 type ConversationListProps = {
   conversations: readonly ChatbotConversationSummary[];
@@ -17,8 +18,6 @@ type ConversationListProps = {
   onOpen: (id: string) => void;
   onNew: () => void;
 };
-
-const NEW_TITLE = 'New conversation';
 
 /**
  * 12.1 sidebar: the server's saved conversations by pages of 10 with "Show more", one-line titles, and confirmation
@@ -44,7 +43,7 @@ export function ConversationList({
         disabled={isDisabled}
         onClick={onNew}
       >
-        {NEW_TITLE}
+        {NEW_CONVERSATION_TITLE}
       </Button>
       <div className={styles.history}>
         {list.isPending && (
@@ -71,7 +70,7 @@ export function ConversationList({
                 disabled={isDisabled}
                 className={styles.entry}
               >
-                {NEW_TITLE}
+                {NEW_CONVERSATION_TITLE}
               </Button>
             </li>
           )}

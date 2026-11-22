@@ -6,8 +6,9 @@
 .row {
   display: flex;
   align-items: flex-end;
-  gap: var(--ant-margin-xs);
-  padding: var(--ant-padding-xs);
+  gap: 10px;
+  padding-block: 10px;
+  padding-inline: 18px 10px;
   border: 1px solid var(--ant-color-border);
   border-radius: 18px;
   background: var(--ant-color-bg-container);
@@ -17,7 +18,9 @@
 /* The row carries the focus ring, so the borderless textarea inside it draws none of its own. */
 .row:focus-within {
   border-color: var(--ant-color-primary);
-  box-shadow: 0 0 0 var(--ant-control-outline-width) var(--ant-control-outline);
+  box-shadow:
+    0 0 0 var(--ant-control-outline-width) var(--ant-control-outline),
+    var(--ant-box-shadow-tertiary);
 }
 
 .row .input:focus-visible {
@@ -31,12 +34,16 @@
 .row .input {
   flex: 1;
   min-width: 0;
-  padding: var(--ant-padding-xs) var(--ant-padding-sm);
+  padding: var(--ant-padding-xs) 0;
   font-size: calc(var(--ant-font-size) + 1px);
 }
 
-.send {
+.row .send {
   flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: calc(var(--ant-font-size) + 4px);
 }
 
 .metadata {
@@ -47,4 +54,10 @@
   padding: var(--ant-padding-xs) var(--ant-padding-xxs) 0;
   color: var(--ant-color-text-secondary);
   font-size: var(--ant-font-size-sm);
+}
+
+.count {
+  margin-inline-start: auto;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
