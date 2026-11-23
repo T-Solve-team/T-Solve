@@ -2235,3 +2235,7 @@
 {"ts":"2026-11-22T06:37:34.000Z","type":"quick-opened","what":"BUG-360: fill the PR cell in the bug log","files":["docs/bug-log.md"]}
 {"ts":"2026-11-22T15:49:59.423Z","type":"feature-status","module":"platform","feature":"one-tenant-holder","from":null,"to":"pending"}
 {"ts":"2026-11-22T15:49:59.740Z","type":"feature-status","module":"platform","feature":"no-workspace-fallbacks","from":null,"to":"pending"}
+{"ts":"2026-11-23T14:16:42.480Z","type":"feature-status","module":"platform","feature":"one-tenant-holder","from":"pending","to":"in-progress"}
+{"ts":"2026-11-23T14:16:42.798Z","type":"feature-status","module":"platform","feature":"one-tenant-holder","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-23T14:16:43.113Z","type":"feature-status","module":"platform","feature":"one-tenant-holder","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-23T14:16:43.461Z","type":"feature-status","module":"platform","feature":"one-tenant-holder","from":"fixing","to":"evaluating"}
