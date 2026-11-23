@@ -2248,3 +2248,7 @@
 {"ts":"2026-11-22T09:07:14.461Z","type":"feature-status","module":"chatbot","feature":"clear-box-on-send","from":null,"to":"pending"}
 {"ts":"2026-11-22T09:07:14.738Z","type":"feature-status","module":"chatbot","feature":"focus-layout","from":null,"to":"pending"}
 {"ts":"2026-11-22T09:07:42.499Z","type":"spec-approved","module":"chatbot","specHash":"de5bdf00ecfc10f1047e126efff5a993e6f1724ddb391b8ae04ac0cdafebd0b3"}
+{"ts":"2026-11-23T14:45:05.919Z","type":"feature-status","module":"platform","feature":"registry-staging-script","from":null,"to":"pending"}
+{"ts":"2026-11-23T14:45:06.180Z","type":"feature-status","module":"platform","feature":"registry-staging-script","from":"pending","to":"in-progress"}
+{"ts":"2026-11-23T14:45:06.421Z","type":"feature-status","module":"platform","feature":"registry-staging-script","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-23T14:45:06.663Z","type":"feature-status","module":"platform","feature":"registry-staging-script","from":"evaluating","to":"passing"}
