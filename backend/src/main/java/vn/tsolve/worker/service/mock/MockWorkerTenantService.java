@@ -5,9 +5,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import org.springframework.web.context.request.RequestContextHolder;
 import vn.tsolve.common.tenant.TenantContext;
-import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.worker.service.WorkerTenantService;
 
 /** Temporary platform mock: never routes queries or grants access to business data. */
@@ -15,11 +13,6 @@ public class MockWorkerTenantService implements WorkerTenantService {
     private final Set<UUID> active;
     private final Set<UUID> suspended;
     private final TenantContext holder;
-
-    /** For tests that bind nothing else: a holder that knows every id, so only the mock's own lists decide. */
-    public MockWorkerTenantService(Set<UUID> active, Set<UUID> suspended) {
-        this(active, suspended, new ThreadLocalTenantContext(id -> true));
-    }
 
     /** {@code holder} is the one per-thread binding: {@code runIn} and {@code currentWorkspaceId} go through it. */
     public MockWorkerTenantService(Set<UUID> active, Set<UUID> suspended, TenantContext holder) {
@@ -37,7 +30,7 @@ public class MockWorkerTenantService implements WorkerTenantService {
     }
 
     /**
-     * Local/demo stacks only: the bound Workspace (on a request thread only when it is Active, so a Suspended or
+     * Local/demo stacks only: the bound Workspace (only when it is Active, on any thread, so a Suspended or
      * unlisted one yields empty and callers queue no job), else the single Active Workspace; otherwise it refuses,
      * never guesses.
      */
@@ -45,8 +38,7 @@ public class MockWorkerTenantService implements WorkerTenantService {
     public Optional<UUID> enqueueWorkspaceId() {
         Optional<UUID> bound = currentWorkspaceId();
         if (bound.isPresent()) {
-            // ponytail: drop the request check in platform Task 6a-2, with StubTenantContext
-            return RequestContextHolder.getRequestAttributes() == null ? bound : bound.filter(active::contains);
+            return bound.filter(active::contains);
         }
         return active.size() == 1 ? active.stream().findFirst() : Optional.empty();
     }
