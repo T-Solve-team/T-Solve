@@ -12,8 +12,8 @@
 4. Branch: refactor/KAN-384-platform-one-tenant-binding
 5. PR: none yet
 
-1. Done: Task 6a-1 code and tests in 8 commits on the branch, review fixed, BUG-324 guard restored, CI failure fixed (BUG-323 IT setup, commit 8063b119)
-2. Open: staging smoke on bluefin-demo.tsolve.io.vn after merge
-3. Next: Task 6a-2 (KAN-385)
+1. Done: Task 6a-1 passed review 3, CI result pending on b386ac2d
+2. Open: CI on b386ac2d, bug-log row for WikiTrash restore (BUG-388), 6a-2 notes
+3. Next: Task 6a-2 (KAN-385) with the notes in prompts/handoffs/KAN-384-review-3.md line 5 and notes 1-3 and 5 of its full file
 4. Branch: refactor/KAN-384-platform-one-tenant-binding
-5. PR: #320 ready to merge (CI green on 8063b119)
+5. PR: #320
