@@ -4,7 +4,8 @@
 # and the db container has been recreated with them:
 #   docker compose -f infra/compose.staging.yml --env-file /srv/tsolve/staging/.env exec -T db sh -s < infra/scripts/registry-db-init.sh
 # The variables come from the db container environment. Idempotent: an existing role is left as it is (no ALTER ROLE,
-# so a changed REGISTRY_DB_PASSWORD is NOT applied), and only a missing database is created. Prints no password.
+# so a changed REGISTRY_DB_PASSWORD is NOT applied), and only a missing database is created. Prints no password; psql
+# reads it with \getenv (psql 15+), so it is never on a command line.
 set -eu
 
 for v in POSTGRES_USER POSTGRES_PASSWORD REGISTRY_DB_USER REGISTRY_DB_PASSWORD; do
@@ -36,7 +37,8 @@ if exists_role; then
     role_note="role $REGISTRY_DB_USER already exists, left as it is"
 else
     psql -X -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres \
-        -v dbuser="$REGISTRY_DB_USER" -v dbpw="$REGISTRY_DB_PASSWORD" <<'SQL' >/dev/null
+        -v dbuser="$REGISTRY_DB_USER" <<'SQL' >/dev/null
+\getenv dbpw REGISTRY_DB_PASSWORD
 CREATE ROLE :"dbuser" LOGIN PASSWORD :'dbpw';
 SQL
     role_note="role $REGISTRY_DB_USER created"

@@ -3,7 +3,7 @@
 # volume (the init script runs only on an empty one). Check names start with the id S1..S5.
 #
 #   S1 edge 73  refuses without POSTGRES_USER / POSTGRES_PASSWORD (or the REGISTRY_DB_* pair), names it, creates nothing
-#   S2 edge 74  creates the database and the user: attributes, connects, other databases untouched, no password printed
+#   S2 edge 74, AC-001.15, AC-001.32  creates the database and the user: attributes, connects, other databases untouched, no password printed
 #   S3 edge 75  a second run (even with another REGISTRY_DB_PASSWORD) changes nothing and never prints a password
 #   S4 edge 74  the end state equals the one the init script gives on a fresh volume
 #   S5 AC-008.5 compose.staging.yml passes, and staging.env.example lists, REGISTRY_DB_* and CATALOG_SECRET_KEY
@@ -298,9 +298,9 @@ no_password_in "$OUT2" || {
   note "the output holds a password"
 }
 if [[ $s2_ok -eq 1 ]]; then
-  pass "S2 edge 74 creates the Registry database and user on an existing volume, others untouched, no password printed"
+  pass "S2 edge 74 AC-001.15 AC-001.32 creates the Registry database and user on an existing volume, others untouched, no password printed"
 else
-  bad "S2 edge 74 creates the Registry database and user on an existing volume, others untouched, no password printed"
+  bad "S2 edge 74 AC-001.15 AC-001.32 creates the Registry database and user on an existing volume, others untouched, no password printed"
 fi
 
 # ---- S3 edge 75 ------------------------------------------------------------------------------------------------------
