@@ -2248,3 +2248,6 @@
 {"ts":"2026-11-22T09:07:14.461Z","type":"feature-status","module":"chatbot","feature":"clear-box-on-send","from":null,"to":"pending"}
 {"ts":"2026-11-22T09:07:14.738Z","type":"feature-status","module":"chatbot","feature":"focus-layout","from":null,"to":"pending"}
 {"ts":"2026-11-22T09:07:42.499Z","type":"spec-approved","module":"chatbot","specHash":"de5bdf00ecfc10f1047e126efff5a993e6f1724ddb391b8ae04ac0cdafebd0b3"}
+{"ts":"2026-11-23T07:35:56.572Z","type":"spec-approved","module":"wiki","specHash":"4e73d9afa2ba714cb87479bed730aebb5c9f4ea522a44c15069d6ecff988e7a2"}
+{"ts":"2026-11-23T07:36:05.774Z","type":"feature-status","module":"wiki","feature":"wiki-preview-file","from":null,"to":"pending"}
+{"ts":"2026-11-23T08:00:14.064Z","type":"feature-status","module":"wiki","feature":"wiki-preview-file","from":"pending","to":"in-progress"}

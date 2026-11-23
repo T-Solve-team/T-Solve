@@ -243,9 +243,10 @@
         "wiki-home-explorer": "evaluating",
         "wiki-document-type": "pending",
         "wiki-typed-chunking": "pending",
-        "wiki-document-type-ui": "pending"
+        "wiki-document-type-ui": "pending",
+        "wiki-preview-file": "in-progress"
       },
-      "lastUpdated": "2026-11-21T20:21:09.702Z",
+      "lastUpdated": "2026-11-23T08:00:14.062Z",
       "branch": "feat/wiki",
       "repos": [
         "default"
