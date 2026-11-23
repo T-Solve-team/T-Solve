@@ -114,4 +114,29 @@ class MockWorkerTenantServiceTest {
         assertThat(chosen.get()).contains(A);
         assertThat(tenants.enqueueWorkspaceId()).isEmpty();
     }
+
+    @Test
+    void enqueueWorkspaceQueuesNothingForASuspendedRequestWorkspace_BUG_324() {
+        var tenants = new MockWorkerTenantService(Set.of(A, B), Set.of(S), holder);
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest()));
+        AtomicReference<Optional<UUID>> chosen = new AtomicReference<>();
+
+        holder.runIn(S, () -> chosen.set(tenants.enqueueWorkspaceId()));
+
+        assertThat(chosen.get())
+                .as("the worker would refuse a Suspended Workspace's job")
+                .isEmpty();
+    }
+
+    @Test
+    void enqueueWorkspaceQueuesNothingForARequestWorkspaceOutsideTheMockLists_BUG_324() {
+        var tenants = new MockWorkerTenantService(Set.of(A, B), Set.of(S), holder);
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest()));
+        AtomicReference<Optional<UUID>> chosen = new AtomicReference<>();
+
+        // KNOWN_ONLY is known to the holder, so it binds, but the mock lists do not name it.
+        holder.runIn(KNOWN_ONLY, () -> chosen.set(tenants.enqueueWorkspaceId()));
+
+        assertThat(chosen.get()).as("an unlisted Workspace is never queued").isEmpty();
+    }
 }
