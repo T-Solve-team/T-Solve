@@ -46,6 +46,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.identity.service.WorkspaceSiteService;
 import vn.tsolve.ticket.config.TicketClockConfig;
 import vn.tsolve.ticket.event.ReviewFeedbackDecidedEvent;
@@ -138,7 +139,7 @@ class ReviewNotificationIT {
     static class OutboxConfig {
         @Bean
         WorkerTenantService tenants() {
-            return new MockWorkerTenantService(Set.of(WORKSPACE), Set.of());
+            return new MockWorkerTenantService(Set.of(WORKSPACE), Set.of(), new ThreadLocalTenantContext(id -> true));
         }
 
         @Bean

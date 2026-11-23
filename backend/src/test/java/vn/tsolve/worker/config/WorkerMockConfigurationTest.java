@@ -31,6 +31,20 @@ class WorkerMockConfigurationTest {
     }
 
     @Test
+    @org.junit.jupiter.api.DisplayName(
+            "AC-002.12 the mock bean starts with no stub Workspace and none bound, and answers from the holder only")
+    void startsWithNoStubWorkspaceAndAnswersFromTheHolderOnly_AC_002_12() {
+        runner.run(context -> {
+            assertThat(context).hasNotFailed();
+            assertThat(context.getBeansOfType(TenantContext.class)).hasSize(1);
+            var tenants = context.getBean(MockWorkerTenantService.class);
+            assertThat(tenants.currentWorkspaceId()).isEmpty();
+            assertThat(holder.runIn(ACME, () -> tenants.currentWorkspaceId())).contains(ACME);
+            assertThat(tenants.currentWorkspaceId()).isEmpty();
+        });
+    }
+
+    @Test
     void readsTheRequestWorkspaceFromTheHolderWhenBound_BUG_324() {
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest()));
 

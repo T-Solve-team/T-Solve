@@ -41,6 +41,7 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.worker.client.SmtpEmailSender;
 import vn.tsolve.worker.config.EmailOutboxConfiguration;
 import vn.tsolve.worker.config.EmailOutboxProperties;
@@ -67,7 +68,8 @@ class EmailOutboxIT {
         var database = WorkerJobsDatabase.instance();
         var jdbc = new JdbcTemplate(
                 new DriverManagerDataSource(database.getJdbcUrl(), database.getUsername(), database.getPassword()));
-        var tenants = new MockWorkerTenantService(Set.of(WORKSPACE), Set.of());
+        var tenants =
+                new MockWorkerTenantService(Set.of(WORKSPACE), Set.of(), new ThreadLocalTenantContext(id -> true));
         var runner = new ApplicationContextRunner()
                 .withUserConfiguration(WorkerConfiguration.class, EmailOutboxConfiguration.class)
                 .withBean(WorkerTenantService.class, () -> tenants)
@@ -163,7 +165,8 @@ class EmailOutboxIT {
         var jdbc = new JdbcTemplate(dataSource);
         var repository = new EmailOutboxRepository(dataSource);
         UUID suspended = UUID.randomUUID();
-        var tenants = new MockWorkerTenantService(Set.of(WORKSPACE), Set.of(suspended));
+        var tenants = new MockWorkerTenantService(
+                Set.of(WORKSPACE), Set.of(suspended), new ThreadLocalTenantContext(id -> true));
         for (int i = 0; i < 25; i++)
             repository.insert(
                     UUID.randomUUID(),
@@ -192,7 +195,8 @@ class EmailOutboxIT {
         var jdbc = new JdbcTemplate(dataSource);
         var repository = new EmailOutboxRepository(dataSource);
         UUID suspended = UUID.randomUUID();
-        var tenants = new MockWorkerTenantService(Set.of(WORKSPACE), Set.of(suspended));
+        var tenants = new MockWorkerTenantService(
+                Set.of(WORKSPACE), Set.of(suspended), new ThreadLocalTenantContext(id -> true));
         // One run reads batch size x 10 = 200 rows; 250 older held rows used to be re-read first on every run.
         for (int i = 0; i < 250; i++)
             repository.insert(
@@ -222,7 +226,8 @@ class EmailOutboxIT {
         var dataSource = jobs();
         var jdbc = new JdbcTemplate(dataSource);
         var repository = new EmailOutboxRepository(dataSource);
-        var tenants = new MockWorkerTenantService(Set.of(WORKSPACE), Set.of());
+        var tenants =
+                new MockWorkerTenantService(Set.of(WORKSPACE), Set.of(), new ThreadLocalTenantContext(id -> true));
         UUID old = queue(repository, tenants, "Old");
         clock.now = NOW.plusSeconds(3601);
         UUID fresh = queue(repository, tenants, "Fresh");
@@ -244,7 +249,8 @@ class EmailOutboxIT {
         var dataSource = jobs();
         var jdbc = new JdbcTemplate(dataSource);
         var repository = new EmailOutboxRepository(dataSource);
-        var tenants = new MockWorkerTenantService(Set.of(), Set.of(WORKSPACE));
+        var tenants =
+                new MockWorkerTenantService(Set.of(), Set.of(WORKSPACE), new ThreadLocalTenantContext(id -> true));
         UUID id = queue(repository, tenants, "Suspended");
         var sender = mock(SmtpEmailSender.class);
         var handler = dispatcher(repository, tenants, sender);
@@ -278,7 +284,8 @@ class EmailOutboxIT {
         var dataSource = jobs();
         var jdbc = new JdbcTemplate(dataSource);
         var database = WorkerJobsDatabase.instance();
-        var tenants = new MockWorkerTenantService(Set.of(WORKSPACE), Set.of());
+        var tenants =
+                new MockWorkerTenantService(Set.of(WORKSPACE), Set.of(), new ThreadLocalTenantContext(id -> true));
         var mailpit = WorkerMailpit.instance();
         mailpit.clear();
         new ApplicationContextRunner()
@@ -338,7 +345,8 @@ class EmailOutboxIT {
     void deliversThroughOutbox() throws Exception {
         var dataSource = jobs();
         var repository = new EmailOutboxRepository(dataSource);
-        var tenants = new MockWorkerTenantService(Set.of(WORKSPACE), Set.of());
+        var tenants =
+                new MockWorkerTenantService(Set.of(WORKSPACE), Set.of(), new ThreadLocalTenantContext(id -> true));
         var mailpit = WorkerMailpit.instance();
         mailpit.clear();
         UUID id = queue(repository, tenants, "Queued message");
@@ -367,7 +375,8 @@ class EmailOutboxIT {
         var dataSource = jobs();
         var jdbc = new JdbcTemplate(dataSource);
         var repository = new EmailOutboxRepository(dataSource);
-        var tenants = new MockWorkerTenantService(Set.of(WORKSPACE), Set.of());
+        var tenants =
+                new MockWorkerTenantService(Set.of(WORKSPACE), Set.of(), new ThreadLocalTenantContext(id -> true));
         UUID id = queue(repository, tenants, "Refused message");
         // Reserve an ephemeral local port, then close it so SMTP connections are refused.
         try (var refusing = ServerSocketChannel.open()) {
@@ -413,7 +422,8 @@ class EmailOutboxIT {
         var dataSource = jobs();
         var jdbc = new JdbcTemplate(dataSource);
         var repository = new EmailOutboxRepository(dataSource);
-        var tenants = new MockWorkerTenantService(Set.of(WORKSPACE), Set.of());
+        var tenants =
+                new MockWorkerTenantService(Set.of(WORKSPACE), Set.of(), new ThreadLocalTenantContext(id -> true));
         var mailpit = WorkerMailpit.instance();
         mailpit.clear();
         for (int i = 0; i < 25; i++) queue(repository, tenants, "Concurrent " + i);
@@ -458,7 +468,8 @@ class EmailOutboxIT {
         var dataSource = jobs();
         var jdbc = new JdbcTemplate(dataSource);
         var repository = new EmailOutboxRepository(dataSource);
-        var tenants = new MockWorkerTenantService(Set.of(WORKSPACE), Set.of());
+        var tenants =
+                new MockWorkerTenantService(Set.of(WORKSPACE), Set.of(), new ThreadLocalTenantContext(id -> true));
         var ids = new ArrayList<UUID>();
         for (int i = 0; i < 22; i++) {
             clock.now = NOW.plusSeconds(i);
@@ -486,7 +497,7 @@ class EmailOutboxIT {
                 .isEqualTo(22);
         clock.now = clock.now.plusSeconds(1);
         // The two unfinished rows become newly FAILED; old terminal rows are deleted.
-        tenants = new MockWorkerTenantService(Set.of(), Set.of(WORKSPACE));
+        tenants = new MockWorkerTenantService(Set.of(), Set.of(WORKSPACE), new ThreadLocalTenantContext(id -> true));
         dispatcher(repository, tenants, sender).run(new EmailOutboxDispatchRequest());
         assertThat(jdbc.queryForList("select email_outbox_id from email_outbox", UUID.class))
                 .containsExactlyInAnyOrder(ids.get(20), ids.get(21));
@@ -498,7 +509,8 @@ class EmailOutboxIT {
         var dataSource = jobs();
         var jdbc = new JdbcTemplate(dataSource);
         var repository = new EmailOutboxRepository(dataSource);
-        var tenants = new MockWorkerTenantService(Set.of(WORKSPACE), Set.of());
+        var tenants =
+                new MockWorkerTenantService(Set.of(WORKSPACE), Set.of(), new ThreadLocalTenantContext(id -> true));
         UUID id = queue(repository, tenants, "Lease");
         var first = new AtomicReference<EmailOutboxRepository.Row>();
         repository.withDueRows(NOW, 20, rows -> {
