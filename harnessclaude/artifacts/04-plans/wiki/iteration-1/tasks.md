@@ -283,7 +283,7 @@ Also: Delete folder popup disables Delete after a 409 MSG87 answer (AC-003.16 sh
 **Decisions owned:** `view-images-decisions.md` rows 5, 5a, 5b
 **Acceptance criteria:** AC-002.24, AC-002.27
 **Dependencies:** none (reuses `WikiFileView` of AC-002.19)
-**Description:** `WikiFileView` gains `variant?: 'full' | 'preview'` (default `full`, 11.2 unchanged). `preview`: a PDF iframe gets `#page=1&view=FitH&toolbar=0` on its `blob:` URL and is about one page tall; a DOCX keeps only the first `section` that `docx-preview` renders and scales it to the pane width (CSS transform, width measured with a `ResizeObserver`). `WikiPreview` renders `<WikiFileView key={documentId} variant="preview" fallback={excerpt} />` in place of the 420-character excerpt, which becomes the fallback (AC-002.27).
+**Description:** `WikiFileView` gains `variant?: 'full' | 'preview'` (default `full`, 11.2 unchanged). `preview`: a PDF iframe gets `#page=1&view=FitH&toolbar=0` on its `blob:` URL and is about one page tall; a DOCX keeps only the first `section` that `docx-preview` renders and scales it to the pane width (CSS `zoom`, never above 1, width measured with a `ResizeObserver`). `WikiPreview` renders `<WikiFileView key={documentId} variant="preview" fallback={excerpt} />` in place of the 420-character excerpt, which becomes the fallback (AC-002.27).
 **Files:**
 - Modify: `frontend/src/features/wiki/components/WikiFileView.tsx`, `frontend/src/features/wiki/components/WikiFileView.module.css`, `frontend/src/features/wiki/components/WikiPreview.tsx`
 - Test: `frontend/src/features/wiki/pages/WikiHomePage.test.tsx`
