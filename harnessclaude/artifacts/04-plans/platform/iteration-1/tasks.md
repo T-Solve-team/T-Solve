@@ -268,24 +268,37 @@ AC-003.10 (no policy that compares a `workspace_id` column).
 **Design:** The row guard; Data Model — Workspace DB (changesets), Roles and grants, Convention guard test data;
 Key Decisions R4, R5, R6.
 **Description:** the three platform changesets in the tenant changelog: `tenant_identity` (singleton primary key),
-`tenant_guard_ok()`, and the last-run policy installer (`runAlways`, `runOrder="last"`; if the Liquibase version
-cannot, the same SQL runs as the last step of `TenantMigrator` — Task 7; Decided in planning). `ConventionGuardIT`
-with `ALLOW_LIST` and the fixed `LEGACY_ALLOW_LIST`; `RowGuardIT` with a runtime user (neither owner nor
-`BYPASSRLS`). The test-only table `isolation_probes` is created by the tests, not the changelog.
+`tenant_guard_ok()` (reads `public.tenant_identity` by its full name), and the last-run policy installer: an inline XML
+changeSet at the end of the master (`runAlways`, `runOnChange`, `runOrder="last"`) that runs the SQL file
+`053-platform-tenant-guard-policies.sql`, because Liquibase 4.27.0 reads `runOrder` only in XML. If a test shows that
+`runOrder` does not reorder across includes, stop: the `TenantMigrator` fallback (Task 7) becomes its own task.
+`ConventionGuardIT` with `ALLOW_LIST` and the fixed `LEGACY_ALLOW_LIST` (the 12 tables of AC-001.21 as changed 23/11);
+`RowGuardIT` with a runtime user (neither owner nor `BYPASSRLS`, never granted TRUNCATE) made by a test-only fixture
+(`TenantGuardDatabase`: the database owned by the app user, the runtime role and its grants as decision R6 says, the
+`tenant_identity` row, then the revoke). The test-only table `isolation_probes` is created by the tests, not the
+changelog. **Prerequisite (KAN-253, Q6):** `dashboard-audit` adds a one-line `COMMENT ON TABLE audit_log_entry IS
+'tsolve:append-only'` changeset as a quick change before the guard test is written; it is not part of this task.
+Staging does not change: Liquibase runs there as the table owner and there is no `FORCE`, so the guard filters nothing
+until wave 4 (the three changesets do run at the next deploy; they fail only if a staging table has another owner).
 **Edge rows (Critical/High):** #6 (runtime user cannot disable RLS, drop the policy or write `tenant_identity`),
 #7 (role attributes), #8 (missing, renamed or second policy), #9 (empty setting is "unset"), #10 (no row or a second row
 in `tenant_identity`), #12 (the allow-list only shrinks). #3 and #5 are in Task 6.
-**Tests (about 12):** guard fails for a scratch table with no policy, a policy named otherwise, another condition, a
+**Tests (12: 9 in `ConventionGuardIT`, 3 in `RowGuardIT`; the test plan is `prompts/handoffs/KAN-253-task-5-qa.md`):** guard fails for a scratch table with no policy, a policy named otherwise, another condition, a
 second policy (AC-001.31, Edge #8); a table breaking AC-001.20 is named (AC-001.22); allow-list rule (Edge #12);
 `id` defaulted by SQL and by JPA (AC-001.23); runtime user: no rows and refused writes when the setting is unset, empty
 or another Workspace's, rows when it matches (AC-001.30, Edge #9); `tenant_identity` empty → no rows (Edge #10);
-refusals in Edge #6; superuser / `BYPASSRLS` / owner check (Edge #7, AC-001.32); no policy compares `workspace_id`
+a malformed setting reads no row or raises 22P02, never a row (Edge #9, Q4); refusals in Edge #6, including a
+`pg_temp.tenant_identity` that cannot shadow the table (Q5); superuser / `BYPASSRLS` / owner check (Edge #7, AC-001.32); no policy compares `workspace_id`
 (AC-003.10).
 **Files:**
-- Create: `backend/src/main/resources/db/changelog/changes/NNN-platform-tenant-identity.sql`,
-  `NNN-platform-tenant-guard-function.sql`, `NNN-platform-tenant-guard-policies.sql`
-- Modify: `backend/src/main/resources/db/changelog/db.changelog-master.xml` (the changeset owner is `be-foundation`, P1)
-- Test: `backend/src/test/java/vn/tsolve/common/tenant/ConventionGuardIT.java`, `RowGuardIT.java`
+- Create (3): `backend/src/main/resources/db/changelog/changes/051-platform-tenant-identity.sql`,
+  `052-platform-tenant-guard-function.sql`, `053-platform-tenant-guard-policies.sql` (a plain SQL body, run by the
+  XML changeSet; no formatted header)
+- Modify (1): `backend/src/main/resources/db/changelog/db.changelog-master.xml` (includes for 051 and 052 after 050; the
+  inline `053` changeSet last; the changeset owner is `be-foundation`, P1). Production total: 4 files
+- Test: `backend/src/test/java/vn/tsolve/common/tenant/ConventionGuardIT.java`, `RowGuardIT.java`,
+  `TenantGuardDatabase.java` (the fixture), `backend/src/test/resources/db/changelog/guard-order-test.xml` (includes the
+  main master, then one changeSet that creates a probe table, to prove the installer runs last)
 **Wave order (22/11, KAN-384):** wave 2, item 3 — built and tested here, not switched on. It is switched on for
 bluefin on staging in wave 4, after routing (Task 6).
 **Dependencies:** Tasks 1 and 3 (init script, `PostgresTestBase`)
