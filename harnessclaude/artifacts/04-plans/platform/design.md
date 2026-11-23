@@ -88,10 +88,11 @@ Defence in depth behind the database boundary (HLA isolation layer 3; H-Q6). The
 2. `tenant_guard_ok()` — a stable SQL function: the `app.tenant_id` setting (empty string treated as unset) equals
    `tenant_identity.tenant_id`.
 3. Per table: `ENABLE ROW LEVEL SECURITY` and one policy `tenant_guard`, `FOR ALL USING (tenant_guard_ok()) WITH CHECK
-   (tenant_guard_ok())`. Modules write **nothing** for this. A final changeset with `runAlways="true"` and
-   `runOrder="last"` (inside `db.changelog-master.xml`, so it follows every module's changesets) installs the policy on
-   every table of `public` except `tenant_identity` and the two Liquibase tables, replacing any existing `tenant_guard`
-   (decision R4).
+   (tenant_guard_ok())`. Modules write **nothing** for this. A final changeset with `runAlways="true"`,
+   `runOnChange="true"` and `runOrder="last"` (an inline XML changeSet at the end of `db.changelog-master.xml`, so it
+   follows every module's changesets; it runs the SQL file `053-platform-tenant-guard-policies.sql`) installs the
+   policy on every table of `public` except `tenant_identity` and the two Liquibase tables, replacing any existing
+   `tenant_guard` (decision R4).
 4. The convention guard test fails for a table without the policy, with a policy of another name or condition, or with
    a second policy (policies are permissive and would OR together).
 
@@ -170,18 +171,18 @@ entity (there is no `TenantEntity`). No changeset writes a GRANT (decision R6).
 Platform's own changesets in the tenant changelog (owner of the master: `be-foundation`, decision P1):
 
 ```sql
---changeset platform:NNN-tenant-identity
+--changeset platform:051-platform-tenant-identity
 CREATE TABLE tenant_identity (
     singleton  BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (singleton),   -- at most one row (AC-001.28)
     tenant_id  UUID    NOT NULL
 );
 
---changeset platform:NNN-tenant-guard-function
+--changeset platform:052-platform-tenant-guard-function splitStatements:false
 CREATE FUNCTION tenant_guard_ok() RETURNS boolean LANGUAGE sql STABLE AS $$
-    SELECT NULLIF(current_setting('app.tenant_id', true), '')::uuid = (SELECT tenant_id FROM tenant_identity)
+    SELECT NULLIF(current_setting('app.tenant_id', true), '')::uuid = (SELECT tenant_id FROM public.tenant_identity)
 $$;
 
---changeset platform:NNN-tenant-guard-policies runAlways:true runOrder:last
+-- 053-platform-tenant-guard-policies.sql: a plain SQL file, no formatted header; the XML changeSet below runs it
 DO $$ DECLARE t record; BEGIN
   FOR t IN SELECT tablename FROM pg_tables WHERE schemaname = 'public'
            AND tablename NOT IN ('tenant_identity', 'databasechangelog', 'databasechangeloglock') LOOP
@@ -192,10 +193,25 @@ DO $$ DECLARE t record; BEGIN
 END $$;
 ```
 
+```xml
+<!-- last element of db.changelog-master.xml; Liquibase 4.27.0 reads runOrder only in XML -->
+<changeSet id="053-platform-tenant-guard-policies" author="platform" runAlways="true" runOnChange="true" runOrder="last">
+    <sqlFile path="changes/053-platform-tenant-guard-policies.sql" relativeToChangelogFile="true" splitStatements="false"/>
+    <rollback>(drop tenant_guard and disable RLS on the same tables)</rollback>
+</changeSet>
+```
+
 An unset or empty setting, or a missing `tenant_identity` row, makes the function return NULL: no row is visible and
 every write fails the `WITH CHECK` (fail closed; AC-001.30). The legacy tables of AC-001.21 get the policy too.
-`runOrder="last"` needs a Liquibase version that supports it; if the version in use does not, the same SQL runs as the
-last step of `TenantMigrator` (Decided in planning; builder check).
+Decided in planning (KAN-253, Q3): the installer is an XML changeSet because Liquibase 4.27.0 (Spring Boot 3.3.5 BOM)
+reads `runOrder` only in XML; its formatted-SQL parser has none. `runOnChange` keeps a later edit of the installer from
+failing checksum validation on existing databases. If a test shows that `runOrder="last"` does not reorder across
+includes, the same SQL runs as the last step of `TenantMigrator` (Task 7), as its own task.
+Decided in planning (KAN-253, Q5): the function reads `public.tenant_identity` by its full name, so a `pg_temp`
+table of the same name cannot shadow it. Numbers 051 - 053 are the next free ones at 60594a7c; renumber on rebase if a
+parallel branch takes them.
+Decided in planning (KAN-253, Q4): a malformed `app.tenant_id` (not a UUID, not empty) makes the function raise SQLState
+22P02, which is a refusal: no row is ever returned. The app always sets a UUID from the bound id.
 
 ### Roles and grants (decision R6)
 
@@ -214,21 +230,28 @@ last step of `TenantMigrator` (Decided in planning; builder check).
   tsolve_template`; `REVOKE ALL ON DATABASE … FROM PUBLIC; GRANT CONNECT ON DATABASE … TO <db_user>` (AC-001.26);
   inside the new database `GRANT USAGE ON SCHEMA public`, `ALTER DEFAULT PRIVILEGES FOR ROLE <owner> IN SCHEMA public
   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES` and `GRANT USAGE, SELECT ON SEQUENCES` to `<db_user>` (so every
-  future table is reachable without a GRANT in a changeset); then the tenant changelog; then `INSERT INTO
+  future table is reachable without a GRANT in a changeset; the runtime user is never granted TRUNCATE, which ignores row
+  policies); then the tenant changelog; then `INSERT INTO
   tenant_identity` and `REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON tenant_identity FROM <db_user>` (AC-001.28).
 - `db_name = db_user = tsolve_<env>_ws_<32 hex of the Workspace id>` (50 characters, within PostgreSQL's 63).
 
 ### Convention guard test data
 
 - `ALLOW_LIST` (permanent, with reasons): `databasechangelog`, `databasechangeloglock` (Liquibase), `tenant_identity`
-  (AC-001.28). `LEGACY_ALLOW_LIST` (fixed set, can only lose entries): `resolved_ticket_snapshot`, `solution`,
-  `solution_source` → `ticket-repository`; `solution_approval` → `ticket-review`; `reuse_record` → `search`
-  (AC-001.21).
+  (AC-001.28). `LEGACY_ALLOW_LIST` (fixed set, can only lose entries; AC-001.21, changed 23/11): `legacy_workspace`,
+  `workspace`, `department` → `workspace`; `app_user`, `user_role`, `space`, `jira_account_links` → `identity`;
+  `import_batch`, `import_preview`, `import_preview_row` → `import-ticket-list`; `project` → `project-integration`;
+  `suggestion_result` → `tracker`. The five tables of changeset 039 are not on it; an entry that names a table that does
+  not exist fails the test.
+- The test checks the `TIMESTAMPTZ NOT NULL` rule and the append-only rule only; which timestamp columns a table has
+  stays a review rule (AC-001.20, Q7). The key `workspace_id` of the table `workspace` is not a "Workspace-id column".
 - The test applies the tenant changelog to an empty database and reads `information_schema` and `pg_catalog`: names,
   keys, defaults, `relrowsecurity`, `pg_policies` (one policy `tenant_guard` per table, `cmd = ALL`, permissive, its
   `USING` and `WITH CHECK` equal to `tenant_guard_ok()`), role attributes (`rolsuper`, `rolbypassrls`) and table owners.
 - A join table is recognised by structure (a composite primary key of two `<entity>_id` columns and no `id`); an
-  append-only table by `COMMENT ON TABLE <t> IS 'tsolve:append-only'`; only such a table may lack `updated_at`. A table
+  append-only table by `COMMENT ON TABLE <t> IS 'tsolve:append-only'`; only such a table may lack `updated_at`.
+  `audit_log_entry` has no such comment yet: its owner (`dashboard-audit`) adds a one-line COMMENT changeset as a quick
+  change before the guard test is written (KAN-253, Q6); until then it would fail the test and the list may not grow. A table
   with a column named like a Workspace id fails ("no Workspace-id column", AC-001.20).
 - The isolation and guard tests add a test-only table `isolation_probes` after the changelog (never in production) and
   run the guard installer again, so the policy is applied to it. The guard test runs before it exists.
@@ -599,10 +622,10 @@ High row into a task.
 | 6 | STORY-001 | Authorization | Runtime user runs `ALTER TABLE … DISABLE ROW LEVEL SECURITY`, `DROP POLICY`, or writes `tenant_identity` | Critical | Refused (not owner, no privilege) | RowGuardIT |
 | 7 | STORY-001 | Authorization | Role attributes: runtime, Registry and Jobs users are superuser or `BYPASSRLS` | Critical | Guard test fails | ConventionGuardIT (AC-001.32) |
 | 8 | STORY-001 | Data integrity | A module adds a table: policy missing, named otherwise, with another condition, or a second policy | High | The installer adds `tenant_guard`; the guard test fails for the others, naming the table | ConventionGuardIT (AC-001.31) |
-| 9 | STORY-001 | Data integrity | Setting is the empty string (after a `RESET`) or malformed | High | Treated as unset: no rows, no cast error on the empty string | RowGuardIT |
+| 9 | STORY-001 | Data integrity | Setting is the empty string (after a `RESET`) or malformed | High | Treated as unset: no rows, no cast error on the empty string. A malformed value raises 22P02 (a refusal, never a row; KAN-253, Q4) | RowGuardIT |
 | 10 | STORY-001 | Data integrity | `tenant_identity` has no row (provisioning died between steps) or a second row is inserted | High | No rows visible (fail closed); second insert refused by the primary key | RowGuardIT |
 | 11 | STORY-001 | Data integrity | SQL injection in the module's code runs `set_config('app.tenant_id', <own id>)` | Medium | Accepted: it can only reach its own Workspace's database; the guard defends misrouting, not injection (the database boundary and the runtime user are the defence) | documented in ADR-0002 |
-| 12 | STORY-001 | Data integrity | A table is added to the legacy allow-list, or one meeting AC-001.20 stays on it | High | Guard test fails ("the allow-list only shrinks") | ConventionGuardIT (AC-001.22) |
+| 12 | STORY-001 | Data integrity | A table is added to the legacy allow-list, or one meeting AC-001.20 stays on it | High | Guard test fails ("the allow-list only shrinks"); so does an entry naming a table that does not exist | ConventionGuardIT (AC-001.22) |
 | 13 | STORY-001 | Error cascades | `CATALOG_SECRET_KEY` missing or wrong | High | Missing: startup refuses; wrong: that Workspace's pool refuses, logs the site name without the password, others keep working | PasswordCipherTest, TenantRoutingIT |
 | 14 | STORY-001 | Compliance | A connection URL or exception with the database password reaches the log | High | No password in any log line | TenantRoutingIT (log capture) |
 | 15 | STORY-002 | Scale | 25 Workspaces open their pools at once (25 × 5 + Registry + Jobs + migration) | High | Stays below `max_connections` 300; idle pools release their connections | TenantRoutingIT, `infra/tests` config check |
