@@ -542,6 +542,17 @@ describe('WikiHomePage', () => {
     expect(within(pane).queryByTitle('VPN guide')).not.toBeInTheDocument();
   });
 
+  it('AC-002.27 shows the first 420 characters when the DOCX cannot be rendered', async () => {
+    renderDocx.mockRejectedValue(new Error('bad docx'));
+    server.use(getGetWikiDocumentMockHandler({ ...detail(document), fileName: 'guide.docx' }));
+    await openHome();
+    const pane = preview();
+    const content = detail(document).content;
+    expect(await within(pane).findByText(content.slice(0, 420))).toBeInTheDocument();
+    expect(pane).not.toHaveTextContent(content.slice(0, 421));
+    expect(within(pane).queryByLabelText('VPN guide')).not.toBeInTheDocument();
+  });
+
   it('AC-002.25 shows "This document is no longer available." when the preview answers 404 MSG110', async () => {
     server.use(http.get('*/api/v1/wiki/documents/:documentId', () => problem(404, 'MSG110')));
     await openHome();
