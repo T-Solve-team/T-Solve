@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Registry (catalog) changelog: run by the web process as the Registry user, never by the worker, never on a Workspace database. -->
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <include file="C001-registry-tenant-workspace.sql" relativeToChangelogFile="true"/>
+    <include file="C002-registry-workspace-email.sql" relativeToChangelogFile="true"/>
+</databaseChangeLog>
