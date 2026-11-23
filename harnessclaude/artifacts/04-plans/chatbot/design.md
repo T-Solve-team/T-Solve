@@ -598,3 +598,14 @@ jira_issue_key VARCHAR(255) NULL`; `--rollback ALTER TABLE chatbot_answer DROP C
 | J6 | Several Jira accounts linked | Low | Latest `linked_at` | IT |
 | J7 | Token or content in logs | High | Only status and error keys logged | adapter test |
 | J8 | Jira created the issue but the DB write failed | Low | 500; the issue exists without a stored key, a retry opens a second one | accepted (no test) |
+
+## KAN-382: Focus layout and emptying the box on send
+
+- Decided in planning: the box is emptied when the question is sent and refilled on failure only when still empty
+  (chosen over clearing on success: the reported box kept the question after Enter or Send, and clearing on send
+  does not depend on when the answer arrives). Alternatives: keep clearing on success and debug on staging.
+- Decided with the user (22/11): option C "Focus" with the conversation sidebar, chosen over option B (Sources
+  panel right of the thread, approved earlier the same day and dropped before any code was kept). Citations stay
+  under each answer as KAN-380 decided.
+- Decided in planning: "Show more" pages the list by 10 in page state (not stored); the open conversation is always
+  among the shown ones because opening an older one needs "Show more" first.

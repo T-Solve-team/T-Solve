@@ -13,6 +13,7 @@ import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
 import { MESSAGES } from '@/shared/messages/catalog';
 import { renderApp } from '@/test/render';
+import citationStyles from '../components/Citations.module.css';
 
 /** Wiki document ids of the mock answers (mocks/data.ts) and the signed-in Employee of `openChatbot`. */
 const DOC_9001 = '00000000-0000-4000-8000-000000009001';
@@ -70,8 +71,8 @@ function recordAvailabilityChecks(): string[][] {
   return checked;
 }
 
-/** Answers the next question only when `release()` is called. */
-function holdAnswer(answer: Partial<ChatbotAnswer>) {
+/** Responds to the next question only when `release()` is called. */
+function holdAskResponse(respond: () => Response) {
   let release = () => {};
   const released = new Promise<void>((resolve) => {
     release = resolve;
@@ -79,16 +80,22 @@ function holdAnswer(answer: Partial<ChatbotAnswer>) {
   server.use(
     http.post('*/api/v1/chatbot/answers', async () => {
       await released;
-      return HttpResponse.json<ChatbotAnswer>({
-        answerId: '00000000-0000-4000-8000-000000000002',
-        outcome: 'ANSWERED',
-        text: '',
-        citations: [],
-        ...answer,
-      });
+      return respond();
     }),
   );
   return release;
+}
+
+function holdAnswer(answer: Partial<ChatbotAnswer>) {
+  return holdAskResponse(() =>
+    HttpResponse.json<ChatbotAnswer>({
+      answerId: '00000000-0000-4000-8000-000000000002',
+      outcome: 'ANSWERED',
+      text: '',
+      citations: [],
+      ...answer,
+    }),
+  );
 }
 
 function thread() {
@@ -217,21 +224,46 @@ describe('KnowledgeChatbotPage', () => {
   });
 
   it('AC-001.6 shows the question with a loading answer and disables Send until the answer arrives', async () => {
-    const release = holdAnswer({ text: 'Use GlobalProtect [1].' });
+    const release = holdAnswer({ text: 'Use GlobalProtect.' });
     const { user, box } = await openChatbot();
 
     await enter(user, box, `${VPN_QUESTION}{Enter}`);
 
     expect(await within(thread()).findByText(VPN_QUESTION)).toBeInTheDocument();
     expect(within(thread()).getByTestId('pending-answer')).toHaveAttribute('aria-busy', 'true');
-    expect(screen.getByRole('button', { name: /Send/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
 
     release();
-    expect(await within(thread()).findByText('Use GlobalProtect [1].')).toBeInTheDocument();
+    expect(await within(thread()).findByText('Use GlobalProtect.')).toBeInTheDocument();
     expect(within(thread()).queryByTestId('pending-answer')).not.toBeInTheDocument();
-    // jsdom never ends antd's fade-out of the loading icon, so its "loading" label stays in the button's name.
-    expect(screen.getByRole('button', { name: /Send/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled();
   });
+
+  it.each([
+    ['Enter', (user: ReturnType<typeof userEvent.setup>) => user.keyboard('{Enter}')],
+    [
+      'Send',
+      (user: ReturnType<typeof userEvent.setup>) =>
+        user.click(screen.getByRole('button', { name: 'Send' })),
+    ],
+  ] as const)(
+    'AC-001.6 empties the question box as soon as the question is sent with %s (BUG-362)',
+    async (_method, send) => {
+      const release = holdAnswer({ text: 'Use GlobalProtect.' });
+      const { user, box } = await openChatbot();
+
+      await enter(user, box, VPN_QUESTION);
+      try {
+        await send(user);
+        await within(thread()).findByTestId('pending-answer');
+        expect(box).toHaveValue('');
+        expect(box).toHaveFocus();
+      } finally {
+        release();
+      }
+      await within(thread()).findByText('Use GlobalProtect.');
+    },
+  );
 
   it('AC-001.6 sends the earlier turns of the conversation with a follow-up question', async () => {
     const sent = recordQuestions();
@@ -248,7 +280,7 @@ describe('KnowledgeChatbotPage', () => {
     expect(sent[1]?.history[0]?.answer).toMatch(/^Install GlobalProtect/);
   });
 
-  it('AC-001.7 shows the answer text with its numbered markers and empties the question box', async () => {
+  it('AC-001.7 shows the answer text with its numbered markers', async () => {
     const { user, box } = await openChatbot();
 
     await enter(user, box, `${VPN_QUESTION}{Enter}`);
@@ -256,21 +288,20 @@ describe('KnowledgeChatbotPage', () => {
     const answer = await within(thread()).findByText(/Install GlobalProtect/);
     expect(answer).toHaveTextContent('with your company account [1].');
     expect(answer).toHaveTextContent('Power Options [2].');
-    expect(box).toHaveValue('');
   });
 
   it('AC-001.7 keeps a question typed while the answer was written', async () => {
-    const release = holdAnswer({ text: 'Use GlobalProtect [1].' });
+    const release = holdAnswer({ text: 'Use GlobalProtect.' });
     const { user, box } = await openChatbot();
 
     await enter(user, box, `${VPN_QUESTION}{Enter}`);
     await within(thread()).findByTestId('pending-answer');
     await user.clear(box);
-    await enter(user, box, 'And on a Mac?');
+    await enter(user, box, VPN_QUESTION);
     release();
 
-    expect(await within(thread()).findByText('Use GlobalProtect [1].')).toBeInTheDocument();
-    expect(box).toHaveValue('And on a Mac?');
+    expect(await within(thread()).findByText('Use GlobalProtect.')).toBeInTheDocument();
+    expect(box).toHaveValue(VPN_QUESTION);
   });
 
   it('AC-001.7 lists the citations under the answer in number order', async () => {
@@ -462,9 +493,8 @@ describe('KnowledgeChatbotPage', () => {
 
     await enter(user, box, `${VPN_QUESTION}{Enter}`);
 
-    expect(
-      await within(thread()).findByText('<b>Bold</b> <script>window.hacked = true</script> [1]'),
-    ).toBeInTheDocument();
+    const answer = await within(thread()).findByText(/<b>Bold<\/b>/);
+    expect(answer).toHaveTextContent('<b>Bold</b> <script>window.hacked = true</script> [1]');
     expect(thread().querySelector('b, script')).toBeNull();
   });
 
@@ -487,7 +517,7 @@ describe('KnowledgeChatbotPage', () => {
       "I can't change how I work. Ask a question about your team's knowledge.",
     ],
   ] as const)(
-    'AC-001.15 shows the catalog message for %s without citations and clears the sent question',
+    'AC-001.15 shows the catalog message for %s without citations',
     async (outcome, code, text) => {
       expect(MESSAGES).toHaveProperty(code, { type: 'inline', text });
       answerWith({
@@ -506,7 +536,6 @@ describe('KnowledgeChatbotPage', () => {
         within(thread()).queryByText('This answer text must not be displayed.'),
       ).not.toBeInTheDocument();
       expect(within(thread()).queryByRole('list', { name: 'Citations' })).not.toBeInTheDocument();
-      expect(box).toHaveValue('');
     },
   );
 
@@ -516,7 +545,6 @@ describe('KnowledgeChatbotPage', () => {
 
     await enter(user, box, 'Hello{Enter}');
     await within(thread()).findByTestId('pending-answer');
-    await user.clear(box);
     await enter(user, box, VPN_QUESTION);
     release();
 
@@ -524,39 +552,59 @@ describe('KnowledgeChatbotPage', () => {
     expect(box).toHaveValue(VPN_QUESTION);
   });
 
-  it.each(['GREETING', 'OFF_TOPIC', 'INJECTION'] as const)(
-    'AC-003.1 hides rating buttons for a %s answer',
-    async (outcome) => {
-      answerWith({ outcome });
-      const { user, box } = await openChatbot();
+  it.each([
+    ['GREETING', 'MSG_NEW_5'],
+    ['OFF_TOPIC', 'MSG_NEW_6'],
+    ['INJECTION', 'MSG_NEW_7'],
+  ] as const)('AC-003.1 hides rating buttons for a %s answer', async (outcome, code) => {
+    answerWith({ outcome });
+    const { user, box } = await openChatbot();
 
-      await enter(user, box, 'Hello{Enter}');
-      await waitFor(() => expect(box).toHaveValue(''));
+    await enter(user, box, 'Hello{Enter}');
+    await within(thread()).findByText(msg(code));
 
-      expect(within(thread()).queryByRole('button', { name: 'Helpful' })).not.toBeInTheDocument();
-      expect(
-        within(thread()).queryByRole('button', { name: 'Not helpful' }),
-      ).not.toBeInTheDocument();
-    },
-  );
+    expect(within(thread()).queryByRole('button', { name: 'Helpful' })).not.toBeInTheDocument();
+    expect(within(thread()).queryByRole('button', { name: 'Not helpful' })).not.toBeInTheDocument();
+  });
 
   it.each([
     ['the AI module is unavailable (503)', () => problem(503, 'MSG06')],
     ['the network fails', () => HttpResponse.error()],
   ])(
-    'AC-001.13 shows MSG06, keeps the question in the box and adds nothing when %s',
+    'AC-001.13 puts the question back in the box after a failure when %s',
     async (_why, failure) => {
-      server.use(http.post('*/api/v1/chatbot/answers', failure));
+      const release = holdAskResponse(failure);
       const { user, box } = await openChatbot();
 
-      await enter(user, box, `${VPN_QUESTION}{Enter}`);
+      try {
+        await enter(user, box, `${VPN_QUESTION}{Enter}`);
+        await within(thread()).findByTestId('pending-answer');
+        expect(box).toHaveValue('');
+      } finally {
+        release();
+      }
 
       expect(await screen.findByText(msg('MSG06'))).toBeInTheDocument();
       expect(box).toHaveValue(VPN_QUESTION);
-      expect(within(thread()).queryByText(VPN_QUESTION)).not.toBeInTheDocument();
+      expect(
+        within(thread()).queryByRole('heading', { name: VPN_QUESTION }),
+      ).not.toBeInTheDocument();
       expect(within(thread()).queryByTestId('pending-answer')).not.toBeInTheDocument();
     },
   );
+
+  it('AC-001.13 keeps text typed while a failed request was pending', async () => {
+    const release = holdAskResponse(() => problem(503, 'MSG06'));
+    const { user, box } = await openChatbot();
+
+    await enter(user, box, `${VPN_QUESTION}{Enter}`);
+    await within(thread()).findByTestId('pending-answer');
+    await enter(user, box, 'And on a Mac?');
+    release();
+
+    expect(await screen.findByText(msg('MSG06'))).toBeInTheDocument();
+    expect(box).toHaveValue('And on a Mac?');
+  });
 
   it('AC-001.13 leaves a 401 to the sign-out (MSG07) and shows no MSG06', async () => {
     const { user, box } = await openChatbot();
@@ -568,6 +616,7 @@ describe('KnowledgeChatbotPage', () => {
 
     expect(await screen.findByRole('dialog')).toHaveTextContent(msg('MSG07'));
     expect(screen.queryByText(msg('MSG06'))).not.toBeInTheDocument();
+    expect(box).toHaveValue('');
   });
 
   it('AC-001.13 shows MSG06 for a field error on another field than the question (BUG-006)', async () => {
@@ -588,29 +637,61 @@ describe('KnowledgeChatbotPage', () => {
     expect(box).toHaveValue(VPN_QUESTION);
   });
 
-  it('AC-001.14 shows a field error from the server under the box and keeps the question', async () => {
-    server.use(
-      http.post('*/api/v1/chatbot/answers', () =>
-        problem(400, 'MSG02', {
-          fieldErrors: [
-            {
-              field: 'question',
-              code: 'MSG02',
-              params: { field_name: 'Question', max_length: 1000 },
-            },
-          ],
-        }),
-      ),
+  it('AC-001.14 puts the question back and shows the field MSG under the box', async () => {
+    const release = holdAskResponse(() =>
+      problem(400, 'MSG02', {
+        fieldErrors: [
+          {
+            field: 'question',
+            code: 'MSG02',
+            params: { field_name: 'Question', max_length: 1000 },
+          },
+        ],
+      }),
     );
     const { user, box } = await openChatbot();
 
-    await enter(user, box, `${VPN_QUESTION}{Enter}`);
+    try {
+      await enter(user, box, `${VPN_QUESTION}{Enter}`);
+      await within(thread()).findByTestId('pending-answer');
+      expect(box).toHaveValue('');
+    } finally {
+      release();
+    }
 
     expect(
       await screen.findByText(msg('MSG02', { field_name: 'Question', max_length: 1000 })),
     ).toBeInTheDocument();
+    expect(box).toHaveAccessibleDescription(
+      msg('MSG02', { field_name: 'Question', max_length: 1000 }),
+    );
     expect(box).toHaveValue(VPN_QUESTION);
     expect(screen.queryByText(msg('MSG06'))).not.toBeInTheDocument();
+  });
+
+  it('AC-001.16 shows the centered composer heading and hint until the first question is sent', async () => {
+    const release = holdAnswer({ text: 'Use GlobalProtect.' });
+    const { user, box } = await openChatbot();
+    const heading = 'Ask the Knowledge Chatbot';
+    const hint =
+      'Ask in your own words. Answers come from the Solutions and Wiki documents you can view.';
+
+    try {
+      expect(within(thread()).getByRole('heading', { name: heading })).toBeInTheDocument();
+      expect(within(thread()).getByText(hint)).toBeInTheDocument();
+      expect(thread()).toContainElement(box);
+
+      await enter(user, box, `${VPN_QUESTION}{Enter}`);
+      await within(thread()).findByTestId('pending-answer');
+      expect(within(thread()).queryByRole('heading', { name: heading })).not.toBeInTheDocument();
+      expect(box).toHaveFocus();
+    } finally {
+      release();
+    }
+    await within(thread()).findByText('Use GlobalProtect.');
+    expect(within(thread()).queryByText(hint)).not.toBeInTheDocument();
+    expect(within(thread()).getByRole('textbox', { name: 'Question' })).toBe(box);
+    expect(box).toHaveFocus();
   });
 });
 
@@ -712,9 +793,42 @@ describe('KnowledgeChatbotPage session conversations', () => {
 
     const entry = within(conversationList()).getByRole('button', { name: title });
     expect(entry.querySelector('[data-title-line]')).not.toBeNull();
+    await user.click(newConversationButton());
+    await user.tab();
+    await user.tab();
+    expect(entry).toHaveFocus();
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(title);
+
+    await user.click(box);
     await user.hover(entry);
 
     expect(await screen.findByRole('tooltip')).toHaveTextContent(title);
+  });
+
+  it('AC-002.14 shows the 10 newest conversations and adds up to 10 more per click', async () => {
+    const titles = Array.from({ length: 23 }, (_, index) => `Conversation ${index + 1}`);
+    sessionStorage.setItem(
+      STORED_KEY,
+      JSON.stringify({
+        version: 2,
+        userId: EMPLOYEE_ID,
+        conversations: titles.map((question, index) => ({
+          id: String(index),
+          startedAt: index,
+          turns: [{ ...validTurn(), question }],
+        })),
+      }),
+    );
+    const { user } = await openChatbot();
+    const newest = [...titles].reverse();
+    const showMore = () => screen.getByRole('button', { name: 'Show more' });
+
+    expect(listTitles()).toEqual(['New conversation', ...newest.slice(0, 10)]);
+    await user.click(showMore());
+    expect(listTitles()).toEqual(['New conversation', ...newest.slice(0, 20)]);
+    await user.click(showMore());
+    expect(listTitles()).toEqual(['New conversation', ...newest]);
+    expect(screen.queryByRole('button', { name: 'Show more' })).not.toBeInTheDocument();
   });
 
   it('AC-002.3 lists the conversations newest first by start time and highlights the open one', async () => {
@@ -732,7 +846,7 @@ describe('KnowledgeChatbotPage session conversations', () => {
   });
 
   it('AC-002.3 disables the list while an answer is pending and files the answer in its own conversation (edge 17)', async () => {
-    const release = holdAnswer({ text: 'Held answer [1].' });
+    const release = holdAnswer({ text: 'Held answer.' });
     const { user, box } = await openChatbot();
 
     await enter(user, box, `${VPN_QUESTION}{Enter}`);
@@ -743,7 +857,7 @@ describe('KnowledgeChatbotPage session conversations', () => {
     ).toBeDisabled();
     release();
 
-    expect(await within(thread()).findByText('Held answer [1].')).toBeInTheDocument();
+    expect(await within(thread()).findByText('Held answer.')).toBeInTheDocument();
     expect(listTitles()).toEqual([VPN_QUESTION]);
   });
 
@@ -759,6 +873,38 @@ describe('KnowledgeChatbotPage session conversations', () => {
     expect(within(thread()).getByText(/Install GlobalProtect/)).toBeInTheDocument();
     expect(within(thread()).getByText('Solution from a ticket', { exact: false })).toBeVisible();
     expect(within(thread()).queryByText(LEAVE_QUESTION)).not.toBeInTheDocument();
+  });
+
+  it('AC-001.17 scrolls to and highlights the clicked citation of its own answer', async () => {
+    const { user, box } = await openChatbot();
+    await ask(user, box, VPN_QUESTION);
+    await ask(user, box, VPN_QUESTION);
+
+    const [first, second] = within(thread()).getAllByRole('article');
+    if (first === undefined || second === undefined) throw new Error('Expected two turns');
+    const notes = (turn: HTMLElement) =>
+      within(within(turn).getByRole('list', { name: 'Citations' })).getAllByRole('listitem');
+    const [firstNote] = notes(first);
+    const [secondNote, secondSolution] = notes(second);
+    const highlighted = citationStyles.highlighted;
+    if (highlighted === undefined) throw new Error('Expected a citation highlight style');
+    scrollIntoView.mockClear();
+
+    await user.click(within(second).getByRole('button', { name: '[1]' }));
+    expect(scrollIntoView.mock.contexts).toContain(secondNote);
+    expect(secondNote).toHaveClass(highlighted);
+    expect(firstNote).not.toHaveClass(highlighted);
+    expect(scrollIntoView.mock.contexts).not.toContain(firstNote);
+
+    await user.click(within(second).getByRole('button', { name: '[2]' }));
+    expect(scrollIntoView.mock.contexts).toContain(secondSolution);
+    expect(secondSolution).toHaveClass(highlighted);
+    expect(secondNote).not.toHaveClass(highlighted);
+
+    await user.click(within(first).getByRole('button', { name: '[1]' }));
+    expect(scrollIntoView.mock.contexts).toContain(firstNote);
+    expect(firstNote).toHaveClass(highlighted);
+    expect(secondSolution).not.toHaveClass(highlighted);
   });
 
   it('AC-002.5 adds a follow-up to the open conversation and sends its earlier turns', async () => {
@@ -973,7 +1119,7 @@ describe('KnowledgeChatbotPage ratings', () => {
   });
 
   it('AC-003.1 shows no rating buttons while the answer is pending (edge 24)', async () => {
-    const release = holdAnswer({ text: 'Use GlobalProtect [1].' });
+    const release = holdAnswer({ text: 'Use GlobalProtect.' });
     const { user, box } = await openChatbot();
 
     await enter(user, box, `${VPN_QUESTION}{Enter}`);
@@ -981,7 +1127,7 @@ describe('KnowledgeChatbotPage ratings', () => {
     expect(screen.queryByRole('button', { name: 'Helpful' })).not.toBeInTheDocument();
 
     release();
-    await within(thread()).findByText('Use GlobalProtect [1].');
+    await within(thread()).findByText('Use GlobalProtect.');
     expect(helpful(false)).toBeInTheDocument();
   });
 

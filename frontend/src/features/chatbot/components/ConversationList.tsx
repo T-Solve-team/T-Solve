@@ -1,5 +1,6 @@
-import { MessageOutlined } from '@ant-design/icons';
-import { Button, Flex, Tooltip } from 'antd';
+import { MessageOutlined, PlusOutlined } from '@ant-design/icons';
+import { Button, Tooltip } from 'antd';
+import { useState } from 'react';
 import type { Conversation } from '../model';
 import styles from './Conversation.module.css';
 
@@ -14,6 +15,7 @@ type ConversationListProps = {
 };
 
 const NEW_TITLE = 'New conversation';
+const PAGE_SIZE = 10;
 
 /** AC-002.2: the AI title of the first answer, else the first question. */
 function titleOf(conversation: Conversation): string {
@@ -21,7 +23,7 @@ function titleOf(conversation: Conversation): string {
   return first?.answer.title ?? first?.question ?? '';
 }
 
-/** 12.1 conversation list: New conversation, then the session's conversations newest first (UC-52). */
+/** 12.1 sidebar: New conversation, one-line titles, and the session history in batches (AC-002.3, AC-002.13, AC-002.14). */
 export function ConversationList({
   conversations,
   openId,
@@ -29,47 +31,68 @@ export function ConversationList({
   onOpen,
   onNew,
 }: ConversationListProps) {
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
   return (
-    <Flex vertical gap="middle" className={styles.list}>
-      <Button disabled={disabled} onClick={onNew}>
+    <aside aria-label="Conversations" className={styles.list}>
+      <Button
+        type="primary"
+        icon={<PlusOutlined aria-hidden />}
+        disabled={disabled}
+        onClick={onNew}
+      >
         {NEW_TITLE}
       </Button>
-      <ul aria-label="Conversations" className={styles.entries}>
-        {openId === null && (
-          <li>
-            <Button
-              type="text"
-              block
-              icon={<MessageOutlined aria-hidden />}
-              aria-current="true"
-              disabled={disabled}
-              className={styles.entry}
-            >
-              {NEW_TITLE}
-            </Button>
-          </li>
-        )}
-        {conversations.map((conversation) => (
-          <li key={conversation.id}>
-            {/* AC-002.13: one line cut with "…"; the tooltip shows the whole title on hover and focus. */}
-            <Tooltip title={titleOf(conversation)} placement="right">
+      <div className={styles.history}>
+        <ul aria-label="Conversations" className={styles.entries}>
+          {openId === null && (
+            <li>
               <Button
                 type="text"
                 block
                 icon={<MessageOutlined aria-hidden />}
+                aria-current="true"
                 disabled={disabled}
-                aria-current={conversation.id === openId ? 'true' : undefined}
                 className={styles.entry}
-                onClick={() => onOpen(conversation.id)}
               >
-                <span data-title-line className={styles.title}>
-                  {titleOf(conversation)}
-                </span>
+                {NEW_TITLE}
               </Button>
-            </Tooltip>
-          </li>
-        ))}
-      </ul>
-    </Flex>
+            </li>
+          )}
+          {conversations.slice(0, visibleCount).map((conversation) => {
+            const title = titleOf(conversation);
+            return (
+              <li key={conversation.id}>
+                <Tooltip title={title} placement="right" trigger={['hover', 'focus']}>
+                  <Button
+                    type="text"
+                    block
+                    icon={<MessageOutlined aria-hidden />}
+                    disabled={disabled}
+                    aria-current={conversation.id === openId ? 'true' : undefined}
+                    className={styles.entry}
+                    onClick={() => onOpen(conversation.id)}
+                  >
+                    <span data-title-line className={styles.title}>
+                      {title}
+                    </span>
+                  </Button>
+                </Tooltip>
+              </li>
+            );
+          })}
+        </ul>
+        {conversations.length > visibleCount && (
+          <Button
+            type="text"
+            block
+            className={styles.showMore}
+            onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
+          >
+            Show more
+          </Button>
+        )}
+      </div>
+    </aside>
   );
 }

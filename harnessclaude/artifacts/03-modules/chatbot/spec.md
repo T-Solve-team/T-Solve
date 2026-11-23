@@ -29,6 +29,7 @@ owner: BA
 | 2026-11-18 | STORY-005, STORY-006 | AC-005.3: the prompt asks for one number per brackets. New AC-006.8: a group marker `[1,2]` counts as `[1][2]` | BUG-348 (KAN-243): qwen3:4b wrote `[3,5]` and `[n=1]`, so a found answer was stored as `NO_SOURCE` |
 | 2026-11-22 | STORY-001, STORY-005, Requirement 3 | **Backend and frontend change.** AC-005.3: the prompt asks for one answer that merges the sources (the steps to take), never a walk through them one by one. AC-001.10 and AC-001.11 reworded: a ticket Solution citation shows its Solution open, with no Show or Hide button. Requirement 3 follows | KAN-380 (the user, 22/11): the answer read as a list of tickets; the user wants the AI's answer first and the Solutions under it. The Jira App page (jira-app) is not changed here |
 | 2026-11-22 | STORY-002, STORY-009 | **Backend and frontend change.** New AC-009.9: the classifier call of a first question also writes a short `title`, returned as the optional `title` of the answer (60 characters at most, not stored). AC-002.2 reworded: the conversation takes that title, or its first question. New AC-002.13: one line with "…" and a tooltip with the whole title. Interface Contracts: `ChatbotAnswer.title`, classifier schema gains `title` | KAN-380 (the user, 22/11): the AI names the conversation from the first question; the title stays on one line. No extra AI call: the title rides on the classifier call that already runs |
+| 2026-11-22 | STORY-001, STORY-002 | **Frontend change (KAN-382).** AC-001.6: the question box is emptied when the question is sent, not when the answer arrives; AC-001.13 and AC-001.14: a failed question goes back into the box when it is still empty; AC-001.15 points to AC-001.6. New AC-001.16 (an empty conversation shows the box in the middle under a heading and one line), AC-001.17 (a marker scrolls to its citation and highlights it), AC-002.14 (10 conversations, then "Show more") | The user, 22/11: screen 12.1 redesigned as option C "Focus" (questions as headings, answers read as text, citations as notes under each answer) with the conversation list kept as a sidebar, "Show more" in the list, and an empty conversation that opens like the Search start page; the box kept the question after Enter or Send, so it is now emptied on send |
 | 2026-11-17 | STORY-009, STORY-012, Requirement 11 | Merge of main into KAN-243: the KAN-243 requirement is now Requirement 11 (Requirement 10 is KAN-241's); AC-012.1 answers a Jira App question as STORY-009 too, so `askForProject` classifies before its search; the outcome changeset is `046-chatbot-answer-outcomes` (043 to 045 are taken on main) | KAN-241 and KAN-294 merged into main on 17/11; user, 17/11: classify on both paths (one pipeline), the Jira App page keeps MSG109 for the new outcomes until a jira-app change |
 
 ## Requirements
@@ -103,11 +104,11 @@ owner: BA
     1,000 characters, THEN THE web app SHALL show MSG02 ("Question must not exceed 1000 characters.") and SHALL not
     send it.
   - AC-001.6: WHEN a question is sent, THE web app SHALL call `POST /api/v1/chatbot/answers` with the question and
-    the earlier turns of the conversation (STORY-002), show the question in the thread with a loading answer, and
-    disable Send until the answer arrives.
+    the earlier turns of the conversation (STORY-002), show the question in the thread with a loading answer, empty
+    the question box at once, and disable Send until the answer arrives (KAN-382).
   - AC-001.7: WHEN the answer arrives with `outcome` `ANSWERED`, THE web app SHALL show its text under the question,
-    with the numbered markers (`[1]`, `[2]` …) as written, followed by the list of its citations in number order, and
-    SHALL empty the question box if it still holds the question that was sent (text typed while waiting is kept).
+    with the numbered markers (`[1]`, `[2]` …) as written, followed by the list of its citations in number order;
+    text typed in the box while waiting is kept.
   - AC-001.8: THE web app SHALL show the answer text and every citation field as plain text, never as HTML.
   - AC-001.9: WHEN a citation is a Wiki document, THE web app SHALL show "[n]", the document title and "· Wiki document"
     as a link that opens 11.2 Wiki Document of that document in the same tab.
@@ -119,14 +120,21 @@ owner: BA
   - AC-001.12: WHEN the answer arrives with `outcome` `NO_SOURCE`, THE web app SHALL show MSG109 as the answer, with
     `{tracker_name}` filled as "Jira", and no citations.
   - AC-001.13: IF the request fails, not with a 401 or a field error on the question, THEN THE web app SHALL show
-    MSG06 as a toast, remove the pending question from the thread, keep the question in the box so the user can send
-    it again, and add nothing to the conversation. This covers the AI module being unavailable (503), network errors
+    MSG06 as a toast, remove the pending question from the thread, put the question back in the box when the box is
+    still empty (text typed while waiting is kept) so the user can send it again, and add nothing to the
+    conversation. This covers the AI module being unavailable (503), network errors
     and field errors on other fields; a 401 signs the user out with MSG07 (fe-foundation), with no MSG06.
-  - AC-001.14: IF the answer request fails with field errors (400), THEN THE web app SHALL show the field's MSG under
-    the question box and keep the question in the box.
+  - AC-001.14: IF the answer request fails with field errors (400), THEN THE web app SHALL put the question back in
+    the box as in AC-001.13 and show the field's MSG under it.
   - AC-001.15: WHEN the answer arrives with `outcome` `GREETING`, `OFF_TOPIC` or `INJECTION`, THE web app SHALL show
     MSG_NEW_5, MSG_NEW_6 or MSG_NEW_7 respectively as the answer, with no citations, and empty the question box as in
-    AC-001.7 (KAN-243).
+    AC-001.6 (KAN-243).
+  - AC-001.16: WHILE the open conversation has no question, THE web app SHALL show the question box in the middle of
+    the thread under the heading "Ask the Knowledge Chatbot" and the line "Ask in your own words. Answers come from
+    the Solutions and Wiki documents you can view."; WHEN its first question is sent, THE web app SHALL show the box
+    at the bottom of the thread (KAN-382).
+  - AC-001.17: WHEN the user clicks a marker `[n]` in an answer, THE web app SHALL scroll citation n of that answer
+    into view and highlight it (KAN-382).
 
 ### STORY-002: Session conversations
 - As an Employee, I want to see and continue my earlier conversations of this session so that I do not have to ask
@@ -165,6 +173,9 @@ owner: BA
   - AC-002.13: THE conversation list SHALL show each conversation's title on one line, cut with "…" when it is wider
     than the list, and SHALL show the whole title in a tooltip when the pointer rests on it or it has the keyboard
     focus (KAN-380).
+  - AC-002.14: THE conversation list SHALL show the 10 newest conversations of the session, and WHEN the session has
+    more, THE web app SHALL show a "Show more" button under them that adds the next 10 each time it is clicked
+    (KAN-382).
 ### STORY-003: Rate an answer
 - As an Employee, I want to say whether an answer helped me so that weak answers and missing knowledge can be
   found. Built in KAN-75.
