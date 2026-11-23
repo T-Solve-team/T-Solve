@@ -2251,3 +2251,5 @@
 {"ts":"2026-11-23T07:35:56.572Z","type":"spec-approved","module":"wiki","specHash":"4e73d9afa2ba714cb87479bed730aebb5c9f4ea522a44c15069d6ecff988e7a2"}
 {"ts":"2026-11-23T07:36:05.774Z","type":"feature-status","module":"wiki","feature":"wiki-preview-file","from":null,"to":"pending"}
 {"ts":"2026-11-23T08:00:14.064Z","type":"feature-status","module":"wiki","feature":"wiki-preview-file","from":"pending","to":"in-progress"}
+{"ts":"2026-11-23T08:02:19.001Z","type":"feature-status","module":"wiki","feature":"wiki-preview-file","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-23T08:12:44.154Z","type":"feature-status","module":"wiki","feature":"wiki-preview-file","from":"evaluating","to":"passing"}

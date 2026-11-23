@@ -244,9 +244,9 @@
         "wiki-document-type": "pending",
         "wiki-typed-chunking": "pending",
         "wiki-document-type-ui": "pending",
-        "wiki-preview-file": "in-progress"
+        "wiki-preview-file": "passing"
       },
-      "lastUpdated": "2026-11-23T08:00:14.062Z",
+      "lastUpdated": "2026-11-23T08:12:44.152Z",
       "branch": "feat/wiki",
       "repos": [
         "default"
