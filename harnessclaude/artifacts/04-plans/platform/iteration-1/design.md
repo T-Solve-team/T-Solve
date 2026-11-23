@@ -50,7 +50,7 @@ Iteration 2 holds only the seed's module data and the reset (Task 23) and the re
 
 ## Wave order and Task 6a (Hiếu, 22/11; KAN-384; split into 6a-1 and 6a-2)
 
-Multi-tenant support comes first and is tried on staging (site `bluefin`, domain `bluefin-demo.tsolve.io.vn`) instead of the
+Multi-tenant support comes first and is tried on staging (site `bluefin`, domain `bluefin.tsolve.io.vn`) instead of the
 local stack; Tasks 11, 14 and the GHCR part of Task 2 wait. The waves, with what each item lets you see, are in the
 order rule of `tasks.md`: wave 1 = Task 6a-1 then 6a-2 (KAN-384, KAN-385) ∥ Task 3; wave 2 = Task 5 (built, not switched on) ∥ Task 4 (catalog with
 bluefin adopted); wave 3 = Task 6 (routing) ∥ Task 10 (resolver rest, `TenantIsolationIT` after Task 6); wave 4 = the

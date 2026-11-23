@@ -1,4 +1,4 @@
-package vn.tsolve.identity.session;
+package vn.tsolve.common.tenant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -28,13 +28,16 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 import vn.tsolve.common.security.SecurityProblemWriter;
-import vn.tsolve.common.tenant.NoTenantException;
-import vn.tsolve.common.tenant.TenantContext;
-import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.identity.account.Account;
 import vn.tsolve.identity.account.AccountRepository;
 import vn.tsolve.identity.account.AccountRoleRepository;
 import vn.tsolve.identity.account.AccountStatus;
+import vn.tsolve.identity.session.ConsolePaths;
+import vn.tsolve.identity.session.OperatorAllowList;
+import vn.tsolve.identity.session.SessionCookie;
+import vn.tsolve.identity.session.WebSession;
+import vn.tsolve.identity.session.WebSessionFilter;
+import vn.tsolve.identity.session.WebSessionStore;
 import vn.tsolve.identity.signin.AuthHosts;
 import vn.tsolve.identity.signin.IdentityClock;
 import vn.tsolve.identity.signin.SignInConfig;

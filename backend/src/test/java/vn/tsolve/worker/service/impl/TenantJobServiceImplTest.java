@@ -27,7 +27,8 @@ import vn.tsolve.worker.service.mock.MockWorkerTenantService;
 class TenantJobServiceImplTest {
     private final UUID workspace = UUID.randomUUID();
     private final UUID recordId = UUID.randomUUID();
-    private final MockWorkerTenantService context = new MockWorkerTenantService(Set.of(workspace), Set.of());
+    private final MockWorkerTenantService context =
+            new MockWorkerTenantService(Set.of(workspace), Set.of(), new ThreadLocalTenantContext(id -> true));
     private final InMemoryStorageProvider storage = new InMemoryStorageProvider();
     private final JobMapper mapper = new JobMapper(new JacksonJsonMapper());
     private final AtomicInteger calls = new AtomicInteger();
@@ -102,7 +103,8 @@ class TenantJobServiceImplTest {
             RequestContextHolder.resetRequestAttributes();
         }
         var unbound = new TenantJobServiceImpl(
-                new MockWorkerTenantService(Set.of(workspace, other), Set.of()),
+                new MockWorkerTenantService(
+                        Set.of(workspace, other), Set.of(), new ThreadLocalTenantContext(id -> true)),
                 new JobRequestScheduler(storage),
                 handler);
         assertThatThrownBy(() -> unbound.enqueueFromRequest("test-record", recordId))
@@ -118,18 +120,9 @@ class TenantJobServiceImplTest {
         var holder = new ThreadLocalTenantContext(Set.of(workspace, suspended)::contains);
         var tenants = new MockWorkerTenantService(Set.of(workspace), Set.of(suspended), holder);
         var queue = new TenantJobServiceImpl(tenants, new JobRequestScheduler(storage), handler);
-        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest()));
-        try {
-            holder.runIn(suspended, () -> {
-                try {
-                    queue.enqueueFromRequest("test-record", recordId);
-                } catch (RuntimeException refused) {
-                    // refusing loudly is allowed; only the stored job count matters
-                }
-            });
-        } finally {
-            RequestContextHolder.resetRequestAttributes();
-        }
+        holder.runIn(suspended, () -> assertThatThrownBy(() -> queue.enqueueFromRequest("test-record", recordId))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Enqueue requires an active workspace"));
         assertThat(storage.getJobStats().getTotal())
                 .as("the worker would refuse a Suspended Workspace's job")
                 .isZero();
@@ -143,18 +136,9 @@ class TenantJobServiceImplTest {
         var holder = new ThreadLocalTenantContext(Set.of(workspace, unlisted)::contains);
         var tenants = new MockWorkerTenantService(Set.of(workspace), Set.of(), holder);
         var queue = new TenantJobServiceImpl(tenants, new JobRequestScheduler(storage), handler);
-        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest()));
-        try {
-            holder.runIn(unlisted, () -> {
-                try {
-                    queue.enqueueFromRequest("test-record", recordId);
-                } catch (RuntimeException refused) {
-                    // refusing loudly is allowed; only the stored job count matters
-                }
-            });
-        } finally {
-            RequestContextHolder.resetRequestAttributes();
-        }
+        holder.runIn(unlisted, () -> assertThatThrownBy(() -> queue.enqueueFromRequest("test-record", recordId))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Enqueue requires an active workspace"));
         assertThat(storage.getJobStats().getTotal())
                 .as("an unlisted Workspace is never queued")
                 .isZero();

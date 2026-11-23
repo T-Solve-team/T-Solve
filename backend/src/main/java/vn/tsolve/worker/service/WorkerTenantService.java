@@ -13,9 +13,7 @@ public interface WorkerTenantService {
      * unbound thread the one to bind with {@link #runIn}. Callers queue no job when it is empty, which includes a
      * bound Workspace that is not Active.
      */
-    default Optional<UUID> enqueueWorkspaceId() {
-        return Optional.empty();
-    }
+    Optional<UUID> enqueueWorkspaceId();
 
     boolean isWorkspaceActive(UUID workspaceId);
 

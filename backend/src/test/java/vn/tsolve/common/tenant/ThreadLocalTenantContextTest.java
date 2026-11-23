@@ -15,7 +15,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.test.web.servlet.MockMvc;
@@ -24,7 +23,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.tsolve.common.exception.GlobalExceptionHandler;
 import vn.tsolve.identity.signin.port.InMemoryWorkspaceLookup;
-import vn.tsolve.platform.service.impl.StubTenantContext;
 
 /**
  * The one per-thread Workspace binding (Task 6a-1). {@code KnownWorkspaces} here knows A and B only; every test ends
@@ -228,27 +226,5 @@ class ThreadLocalTenantContextTest {
 
         assertThat(seenBySecond.get()).contains(A);
         assertThat(ran).hasValue(0);
-    }
-
-    @Test
-    @DisplayName(
-            "AC-002.13 the injected TenantContext is the holder, not the stub, while TSOLVE_STUB_WORKSPACE_ID is set")
-    void theInjectedTenantContextIsTheHolderNotTheStub() {
-        new ApplicationContextRunner()
-                .withUserConfiguration(ThreadLocalTenantContext.class, StubTenantContext.class)
-                .withBean(KnownWorkspaces.class, () -> knownWorkspaces)
-                .withPropertyValues("tsolve.stub.workspace-id=" + A)
-                .run(context -> {
-                    assertThat(context).hasNotFailed();
-                    assertThat(context.getBean(TenantContext.class)).isInstanceOf(ThreadLocalTenantContext.class);
-                    assertThat(context.getBeanProvider(TenantContext.class).getIfAvailable())
-                            .isInstanceOf(ThreadLocalTenantContext.class);
-
-                    TenantContext injected = context.getBean(TenantContext.class);
-                    AtomicInteger ran = new AtomicInteger();
-                    injected.runIn(A, () -> assertThatThrownBy(() -> injected.runIn(B, (Runnable) ran::incrementAndGet))
-                            .isInstanceOf(RuntimeException.class));
-                    assertThat(ran).as("the stub would simply have run it").hasValue(0);
-                });
     }
 }

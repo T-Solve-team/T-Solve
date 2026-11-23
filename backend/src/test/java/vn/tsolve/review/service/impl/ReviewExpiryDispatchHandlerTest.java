@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.jobrunr.scheduling.JobRequestScheduler;
 import org.junit.jupiter.api.Test;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.review.dto.ReviewExpiryDispatchRequest;
 import vn.tsolve.review.dto.ReviewExpiryJobRequest;
 import vn.tsolve.worker.config.JobRunrRuntime;
@@ -25,7 +26,8 @@ class ReviewExpiryDispatchHandlerTest {
     void enqueuesOnlyActiveWorkspacesWithAttemptOne_AC_014_2() {
         UUID first = UUID.randomUUID();
         UUID second = UUID.randomUUID();
-        var tenants = new MockWorkerTenantService(Set.of(first, second), Set.of(UUID.randomUUID()));
+        var tenants = new MockWorkerTenantService(
+                Set.of(first, second), Set.of(UUID.randomUUID()), new ThreadLocalTenantContext(id -> true));
         when(runtime.scheduler()).thenReturn(scheduler);
         new ReviewExpiryDispatchHandler(tenants, runtime).run(new ReviewExpiryDispatchRequest());
         verify(scheduler).enqueue(new ReviewExpiryJobRequest(first, 1));
@@ -35,7 +37,9 @@ class ReviewExpiryDispatchHandlerTest {
 
     @Test
     void emptyActiveListEnqueuesNothing_AC_014_2() {
-        new ReviewExpiryDispatchHandler(new MockWorkerTenantService(Set.of(), Set.of()), runtime)
+        new ReviewExpiryDispatchHandler(
+                        new MockWorkerTenantService(Set.of(), Set.of(), new ThreadLocalTenantContext(id -> true)),
+                        runtime)
                 .run(new ReviewExpiryDispatchRequest());
         verifyNoInteractions(runtime);
     }

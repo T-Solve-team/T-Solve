@@ -102,23 +102,23 @@ class MockWorkerTenantServiceTest {
     }
 
     @Test
-    void enqueueWorkspaceTakesTheRequestWorkspaceOnARequestThread_BUG_324() {
+    @DisplayName("AC-002.12 a bound Active Workspace is returned with and without a request attribute")
+    void enqueueWorkspaceTakesTheBoundActiveWorkspaceOnAnyThread_AC_002_12() {
         var tenants = new MockWorkerTenantService(Set.of(A, B), Set.of(S), holder);
-        // A scheduler or executor thread: nothing is bound, so there is nothing to take.
-        assertThat(tenants.enqueueWorkspaceId()).isEmpty();
+        AtomicReference<Optional<UUID>> job = new AtomicReference<>();
+        holder.runIn(A, () -> job.set(tenants.enqueueWorkspaceId()));
+        assertThat(job.get()).as("a job thread, no request").contains(A);
 
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest()));
-        AtomicReference<Optional<UUID>> chosen = new AtomicReference<>();
-        holder.runIn(A, () -> chosen.set(tenants.enqueueWorkspaceId()));
-
-        assertThat(chosen.get()).contains(A);
-        assertThat(tenants.enqueueWorkspaceId()).isEmpty();
+        AtomicReference<Optional<UUID>> request = new AtomicReference<>();
+        holder.runIn(A, () -> request.set(tenants.enqueueWorkspaceId()));
+        assertThat(request.get()).as("a request thread").contains(A);
     }
 
     @Test
-    void enqueueWorkspaceQueuesNothingForASuspendedRequestWorkspace_BUG_324() {
+    @DisplayName("edge 4 a bound Suspended Workspace yields an empty enqueueWorkspaceId on any thread, request or not")
+    void enqueueWorkspaceQueuesNothingForABoundSuspendedWorkspaceOnAnyThread_edge_4() {
         var tenants = new MockWorkerTenantService(Set.of(A, B), Set.of(S), holder);
-        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest()));
         AtomicReference<Optional<UUID>> chosen = new AtomicReference<>();
 
         holder.runIn(S, () -> chosen.set(tenants.enqueueWorkspaceId()));
@@ -129,14 +129,35 @@ class MockWorkerTenantServiceTest {
     }
 
     @Test
-    void enqueueWorkspaceQueuesNothingForARequestWorkspaceOutsideTheMockLists_BUG_324() {
+    @DisplayName("edge 4 a bound Workspace outside the mock lists yields an empty enqueueWorkspaceId on any thread")
+    void enqueueWorkspaceQueuesNothingForABoundWorkspaceOutsideTheMockLists_edge_4() {
         var tenants = new MockWorkerTenantService(Set.of(A, B), Set.of(S), holder);
-        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest()));
         AtomicReference<Optional<UUID>> chosen = new AtomicReference<>();
 
         // KNOWN_ONLY is known to the holder, so it binds, but the mock lists do not name it.
         holder.runIn(KNOWN_ONLY, () -> chosen.set(tenants.enqueueWorkspaceId()));
 
         assertThat(chosen.get()).as("an unlisted Workspace is never queued").isEmpty();
+    }
+
+    @Test
+    @DisplayName("AC-002.12 the constructor that made its own holder is gone, the holder is always passed in")
+    void hasOnlyTheConstructorThatTakesTheHolder_AC_002_12() {
+        assertThat(MockWorkerTenantService.class.getConstructors())
+                .singleElement()
+                .satisfies(constructor -> assertThat(constructor.getParameterCount())
+                        .as("active, suspended, holder")
+                        .isEqualTo(3));
+    }
+
+    @Test
+    @DisplayName("AC-002.16 with nothing bound enqueueWorkspaceId is the single Active Workspace, else empty")
+    void enqueueWorkspaceWithNothingBoundIsTheSingleActiveOneElseEmpty_AC_002_16() {
+        assertThat(new MockWorkerTenantService(Set.of(A), Set.of(S), holder).enqueueWorkspaceId())
+                .contains(A);
+        assertThat(new MockWorkerTenantService(Set.of(A, B), Set.of(S), holder).enqueueWorkspaceId())
+                .isEmpty();
+        assertThat(new MockWorkerTenantService(Set.of(), Set.of(S), holder).enqueueWorkspaceId())
+                .isEmpty();
     }
 }

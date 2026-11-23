@@ -25,7 +25,6 @@ class PlatformTenantScopeTest {
 
     private static final UUID A = InMemoryWorkspaceLookup.ACME.id();
     private static final UUID B = InMemoryWorkspaceLookup.BETA.id();
-    private static final UUID SUSPENDED = InMemoryWorkspaceLookup.GAMMA.id();
     private static final UUID UNKNOWN = UUID.fromString("00000000-0000-4000-8000-0000000000ff");
 
     private final SignInConfig config = new SignInConfig();
@@ -84,20 +83,6 @@ class PlatformTenantScopeTest {
                 .isInstanceOf(RuntimeException.class);
 
         assertThat(ran).hasValue(0);
-    }
-
-    @Test
-    @DisplayName("AC-002.15 lets a Suspended Workspace bind through TenantScope")
-    void aSuspendedWorkspaceBindsThroughTheScope() {
-        AtomicReference<Optional<UUID>> holderSees = new AtomicReference<>();
-
-        String result = scope.runIn(SUSPENDED, () -> {
-            holderSees.set(holder.currentWorkspaceId());
-            return "ran";
-        });
-
-        assertThat(result).isEqualTo("ran");
-        assertThat(holderSees.get()).contains(SUSPENDED);
     }
 
     @Test

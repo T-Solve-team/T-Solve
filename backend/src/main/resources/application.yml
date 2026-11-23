@@ -114,9 +114,6 @@ tsolve:
   tracker:
     jira-app-id: ${TSOLVE_JIRA_APP_ID}
     forge-jwks-uri: ${FORGE_JWKS_URI}
-    # Dev and mock only: the Workspace bound when the worker enqueues a suggestion job and no Workspace is bound yet
-    # (until platform binds the request's Workspace). One of TSOLVE_MOCK_ACTIVE_WORKSPACES. Empty = not bound.
-    dev-workspace-id: ${TSOLVE_TRACKER_DEV_WORKSPACE_ID:}
     jira:
       connect-timeout: 5s
       read-timeout: 10s
@@ -130,7 +127,6 @@ tsolve:
   # Until the workspace module owns Projects: "user:projectId,projectId;user:projectId", ids as UUIDs. Empty = nobody can import.
   stub:
     projects: ${TSOLVE_STUB_PROJECTS:}
-    workspace-id: ${TSOLVE_STUB_WORKSPACE_ID:}
     inactive-projects: ${TSOLVE_STUB_INACTIVE_PROJECTS:}
     # Jira import: "projectId:JIRAKEY,projectId:JIRAKEY". A Project without a key cannot pull from Jira (MSG50).
     jira-keys: ${TSOLVE_STUB_JIRA_KEYS:}

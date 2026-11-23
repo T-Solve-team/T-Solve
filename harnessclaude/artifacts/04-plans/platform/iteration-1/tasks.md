@@ -24,7 +24,7 @@ task you can …"; a plumbing task names the visible task it serves.
 
 **Wave order (Hiếu, 22/11; KAN-384; replaces the old sequence for Tasks 3–10):** multi-tenant support comes first, and
 it is tried on staging instead of the local stack — the staging site `bluefin` (slug in `infra/scripts/deploy.sh`,
-domain `bluefin-demo.tsolve.io.vn`). The local stack (Task 11), the wildcard DNS (Task 14) and the GHCR part of Task 2 wait.
+domain `bluefin.tsolve.io.vn`). The local stack (Task 11), the wildcard DNS (Task 14) and the GHCR part of Task 2 wait.
 Items of one wave run in parallel; "after" names the items that must be on `main` first.
 - **Wave 1.** (1) Task 6a-1, one Workspace holder (KAN-384), then Task 6a-2, the Workspace fallbacks removed (KAN-385;
   after 6a-1 is merged; it can overlap with item 2) — nothing visible; staging smoke only: after 6a-1 sign in on
@@ -248,7 +248,7 @@ name (AC-004.18); claim: free email recorded lower-case, same Workspace succeeds
 **Wave order (22/11, KAN-384):** wave 2, item 4. Besides the catalog, this task adopts bluefin (one Registry row with
 the env file's Workspace UUID, site, Google domain and org id), and `WorkspaceCatalog` replaces `NoWorkspaceLookup`,
 `ConfigJiraWorkspaceLookup`, `StubWorkspaceStatusLookup`, the worker mock and Task 6a-1's interim `KnownWorkspaces`
-bean. That reaches beyond the Files below; its own plan card plans it in detail before coding (no criterion changes).
+bean. A catalog-backed `WorkerTenantService` (in `worker/service/impl`, using `WorkspaceCatalog` and `TenantContext`, so the dependency runs from worker to platform) replaces `MockWorkerTenantService` and the `worker-mock` profile on staging. `activeWorkspaceIds` comes from a new catalog list of the Active Workspaces, and `enqueueWorkspaceId` returns the bound Workspace only when it is Active, otherwise empty, never the single Active one. Adding that Active-Workspaces list method to `WorkspaceCatalog` is a contract addition needing Hiếu's approval when Task 4 starts. That reaches beyond the Files below; its own plan card plans it in detail before coding (no criterion changes).
 **Dependencies:** Tasks 3a, 6a-1 and 6a-2 (6a-2 merged: this task replaces what it leaves); `be-foundation` Task 1 (`BusinessRuleException` with a code and a field)
 **Estimated size:** small (before the bluefin adoption above)
 **Done when:** `WorkspaceCatalogIT` passes with the race case.
@@ -419,7 +419,9 @@ thread (start-up, `@Async`, a scheduler) is left, since the stub no longer answe
 **Tests (about 8):** `OutboxOnlyConfigurationTest`, `WorkerMockConfigurationTest`: the beans start with no stub
 Workspace and with none bound; `WorkerSuggestionJobQueueTest`, `ReviewNotificationEnqueueBugTest`: the Workspace comes
 from the binding, not from an env id, and a queue call with nothing bound refuses (`MSG06`) instead of using a default;
-`MockWorkerTenantServiceTest`: `enqueueWorkspaceId` with nothing bound answers empty; a context test that no bean of
+`MockWorkerTenantServiceTest`: `enqueueWorkspaceId` always filters a bound id by Active on any thread (request or not),
+and when unbound keeps the single-Active rule (returns the single Active id, else empty — required by
+`ReviewNotificationEnqueueBugTest` BUG-164); a context test that no bean of
 `StubTenantContext` or `OutboxWorkspace` exists and that the removed properties are read nowhere.
 **Files:**
 - Modify: `backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java`,

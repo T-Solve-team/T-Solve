@@ -18,6 +18,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import vn.tsolve.common.tenant.AcceptingKnownWorkspaces;
+import vn.tsolve.common.tenant.KnownWorkspaces;
+import vn.tsolve.common.tenant.TenantContext;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.worker.config.OutboxOnlyConfiguration;
 import vn.tsolve.worker.config.WebJobsConfiguration;
 import vn.tsolve.worker.config.WorkerConfiguration;
@@ -41,15 +44,15 @@ class WebJobsIT {
 
         // The staging backend: no profile, worker off, only the outbox and web jobs.
         new ApplicationContextRunner()
-                .withUserConfiguration(OutboxOnlyConfiguration.class, WebJobsConfiguration.class)
+                .withUserConfiguration(
+                        OutboxOnlyConfiguration.class, WebJobsConfiguration.class, ThreadLocalTenantContext.class)
+                .withBean(KnownWorkspaces.class, () -> A::equals)
                 .withPropertyValues(jobsDatabase())
-                .withPropertyValues(
-                        "tsolve.worker.outbox-enabled=true",
-                        "tsolve.worker.web-jobs-enabled=true",
-                        "TSOLVE_MOCK_ACTIVE_WORKSPACES=" + A)
+                .withPropertyValues("tsolve.worker.outbox-enabled=true", "tsolve.worker.web-jobs-enabled=true")
                 .run(context -> {
                     assertThat(context).hasNotFailed();
-                    jobId[0] = context.getBean(WebJobQueue.class).enqueue(TYPE, RECORD);
+                    jobId[0] = context.getBean(TenantContext.class)
+                            .runIn(A, () -> context.getBean(WebJobQueue.class).enqueue(TYPE, RECORD));
                 });
         String json = jobsJdbc()
                 .queryForObject(

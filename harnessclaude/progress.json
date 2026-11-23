@@ -505,10 +505,10 @@
         "cross-module-isolation": "passing",
         "e2e-smoke": "passing",
         "one-tenant-holder": "passing",
-        "no-workspace-fallbacks": "pending",
+        "no-workspace-fallbacks": "passing",
         "registry-staging-script": "passing"
       },
-      "lastUpdated": "2026-11-23T19:31:06.908Z",
+      "lastUpdated": "2026-11-23T19:52:04.524Z",
       "branch": "feat/platform",
       "repos": [
         "default"
