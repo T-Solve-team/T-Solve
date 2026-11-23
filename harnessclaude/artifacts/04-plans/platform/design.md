@@ -23,7 +23,7 @@ the target, not built here — H-Q1):
 
 | Store | What it holds | Who reads it |
 |-------|---------------|--------------|
-| Tenant Registry DB `tsolve_<env>_registry` ("the Registry") | `workspaces`, `workspace_emails` | the Tenant Resolver, `WorkspaceCatalog`, the router, provisioning, `identity` |
+| Tenant Registry DB `tsolve_<env>_registry` ("the Registry") | `tenant_workspace`, `workspace_email` | the Tenant Resolver, `WorkspaceCatalog`, the router, provisioning, `identity` |
 | One Workspace DB `tsolve_<env>_ws_<id>` per company | all business tables, the one-row `tenant_identity`, the row policies | only through the routing `DataSource` (runtime user) or the owner user (migrations, provisioning) |
 | Jobs DB `tsolve_<env>_jobs` | JobRunr's own tables only | `worker`; the `InvitationJobQueue` implementation of `platform` (enqueue) |
 | Garage bucket `FILE_STORAGE_BUCKET` + Redis | files under `<workspaceId>/` keys; sessions of `identity` | `FileStorage`; `identity` |
@@ -103,14 +103,14 @@ user is not the owner (AC-001.32), so its queries are always filtered.
 ### Tenant Registry DB (Registry changelog `db/changelog/catalog/catalog-master.xml`; no row policy)
 
 ```sql
---changeset platform:C001-registry-workspaces
-CREATE TABLE workspaces (
-    id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+--changeset platform:C001-registry-tenant-workspace
+CREATE TABLE tenant_workspace (
+    workspace_id    UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
     site_name       VARCHAR(63)  NOT NULL,
     status          VARCHAR(20)  NOT NULL CHECK (status IN ('ACTIVE', 'SUSPENDED')),
     db_name         VARCHAR(63)  NOT NULL,
     db_user         VARCHAR(63)  NOT NULL,
-    db_password     TEXT         NOT NULL,                  -- 'v1:' + base64(nonce || AES-GCM ciphertext), AAD = id
+    db_password     TEXT         NOT NULL,                  -- 'v1:' + base64(nonce || AES-GCM ciphertext), AAD = workspace_id
     schema_version  VARCHAR(255) NOT NULL,                  -- id of the last tenant changeset applied to that database
     google_domain   VARCHAR(253) NOT NULL,                  -- lower case (AC-001.34, AC-013.21)
     keycloak_organization_id VARCHAR(100),                  -- null until the sign-in setup returns it; unique (AC-001.34)
@@ -118,28 +118,31 @@ CREATE TABLE workspaces (
     jira_cloud_id   VARCHAR(100),
     created_at      TIMESTAMPTZ  NOT NULL DEFAULT now(),
     updated_at      TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    CONSTRAINT uq_workspaces_site_name UNIQUE (site_name),
-    CONSTRAINT uq_workspaces_db_name UNIQUE (db_name),
-    CONSTRAINT uq_workspaces_jira_cloud_id UNIQUE (jira_cloud_id),
-    CONSTRAINT uq_workspaces_keycloak_org UNIQUE (keycloak_organization_id),
-    CONSTRAINT ck_workspaces_site_name CHECK (site_name ~ '^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$')
+    CONSTRAINT uq_tenant_workspace_site_name UNIQUE (site_name),
+    CONSTRAINT uq_tenant_workspace_db_name UNIQUE (db_name),
+    CONSTRAINT uq_tenant_workspace_jira_cloud_id UNIQUE (jira_cloud_id),
+    CONSTRAINT uq_tenant_workspace_keycloak_org UNIQUE (keycloak_organization_id),
+    CONSTRAINT ck_tenant_workspace_site_name CHECK (site_name ~ '^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$')
 );
 
---changeset platform:C002-registry-workspace-emails
-CREATE TABLE workspace_emails (
+--changeset platform:C002-registry-workspace-email
+CREATE TABLE workspace_email (
     email         VARCHAR(320) PRIMARY KEY,
-    workspace_id  UUID         NOT NULL REFERENCES workspaces (id),
-    CONSTRAINT ck_workspace_emails_lower CHECK (email = lower(email))
+    workspace_id  UUID         NOT NULL REFERENCES tenant_workspace (workspace_id),
+    CONSTRAINT ck_workspace_email_lower CHECK (email = lower(email))
 );
-CREATE INDEX idx_workspace_emails_workspace ON workspace_emails (workspace_id);
+CREATE INDEX idx_workspace_email_workspace ON workspace_email (workspace_id);
 ```
 
 The seed or any environment starts with both tables empty (AC-001.19). A Workspace id in these tables names a
-row of `workspaces`; it is not a tenant column. `identity` adds no table to the Registry (ADR-0003, K12).
+row of `tenant_workspace`; it is not a tenant column. `identity` adds no table to the Registry (ADR-0003, K12).
 
 Registry access is `JdbcClient` on the `registryDataSource` bean with its own `registryTransactionManager` (decision
-R1), not a second JPA unit. The runtime user of the Registry (`CATALOG_DB_USER`) has DML only; the owner user applies
-the changelog. `db_password` encryption: AES-256-GCM, a random 12-byte nonce per value, the Workspace id as associated
+R1), not a second JPA unit. The Registry has one user, `REGISTRY_DB_USER`, the owner of `tsolve_<env>_registry`: it applies the
+changelog and reads and writes the two tables (decided in planning, Q3). A DML-only runtime user is split off later, in
+Task 1's role work. The Registry beans load only when `REGISTRY_DB_URL` is not blank, and once it is set a missing or
+invalid `CATALOG_SECRET_KEY` refuses startup naming the variable; the gate is dropped when routing (Task 5) makes the
+Registry required. `db_password` encryption: AES-256-GCM, a random 12-byte nonce per value, the Workspace id as associated
 data (a copied ciphertext does not decrypt on another row), key `CATALOG_SECRET_KEY` (base64, 32 bytes). A missing key
 fails at startup for the Registry as a whole; a wrong key or a bad value fails only the pool of that Workspace and logs
 its site name, never the password (AC-001.25).
@@ -198,7 +201,8 @@ last step of `TenantMigrator` (Decided in planning; builder check).
 
 - `infra/postgres/init/10-tsolve-roles.sh` runs once on a new PostgreSQL volume (and in Testcontainers): the owner role
   `tsolve_<env>_owner` (LOGIN, `CREATEDB`, `CREATEROLE`, not superuser; it owns every database it creates and runs
-  Liquibase); the Registry DB and Jobs DB with their runtime users (`CATALOG_DB_USER`, `JOBS_DB_USER`, neither
+  Liquibase); the Registry DB with its one owner user (`REGISTRY_DB_USER`, no runtime split yet) and the Jobs DB with its user
+  (`JOBS_DB_USER`); neither user is a
   superuser nor `BYPASSRLS`, each `CONNECT` on its own database only); the **template database** `tsolve_template` with
   `CREATE EXTENSION vector` already done (only the superuser can, so a Workspace database is created `TEMPLATE
   tsolve_template` and the owner never needs superuser).
@@ -253,8 +257,8 @@ last step of `TenantMigrator` (Decided in planning; builder check).
 2. `TenantDatabaseProvisioner`: create role and database, grants (above), generate a random password.
 3. `TenantMigrator`: apply the tenant changelog as the owner user; read the last changeset id.
 4. Write `tenant_identity` (AC-001.28) and revoke writes (above).
-5. Registry transaction: insert `workspaces` (ACTIVE, encrypted password, `schema_version`, `google_domain`) and
-   `workspace_emails` together. A unique violation on `site_name` or the email means a lost race → the same refusal as
+5. Registry transaction: insert `tenant_workspace` (ACTIVE, encrypted password, `schema_version`, `google_domain`) and
+   `workspace_email` together. A unique violation on `site_name` or the email means a lost race → the same refusal as
    step 1 (AC-013.19). A Workspace is Active here; there is no `PENDING_SIGN_IN` and no `activate` (AC-013.24).
 5b. `WorkspaceSignInProvisioner.provision(workspaceId, siteName, googleDomain)` (Keycloak Organization, IdP
    `google-<slug>`, domain, redirect URI; identity-owned port, a no-op bean until its Keycloak implementation exists);
@@ -267,7 +271,7 @@ last step of `TenantMigrator` (Decided in planning; builder check).
 
 Any failure in steps 2–6 runs the compensation (AC-013.6, AC-013.16, AC-013.23): call `WorkspaceSignInProvisioner.remove(workspaceId)`
 when step 5b was reached, close and evict the pool of that Workspace, delete
-the Registry rows (`workspace_emails`, `workspaces`) in one transaction, `DROP DATABASE … WITH (FORCE)`, `DROP ROLE`;
+the Registry rows (`workspace_email`, `tenant_workspace`) in one transaction, `DROP DATABASE … WITH (FORCE)`, `DROP ROLE`;
 the failing step is named in the error. `suspend` / `reactivate` change the Registry `status` in one transaction and
 publish `WorkspaceSuspended` / `WorkspaceReactivated` after the commit (a `TransactionSynchronization`).
 
@@ -554,10 +558,10 @@ docker-compose.yml                      local stack (KAN-94)
 
 | Variable | Used by | Default |
 |----------|---------|---------|
-| `CATALOG_DB_URL`, `CATALOG_DB_USER`, `CATALOG_DB_PASSWORD` | backend, worker (Registry runtime user) | none |
+| `REGISTRY_DB_URL`, `REGISTRY_DB_USER`, `REGISTRY_DB_PASSWORD`, `REGISTRY_DB_NAME` | backend, worker (the Registry owner user; `REGISTRY_DB_NAME` also for the init and staging scripts, default `tsolve_staging_registry`; the beans load only when `REGISTRY_DB_URL` is not blank) | none |
 | `TENANT_DB_HOST`, `TENANT_DB_POOL_MAX` | backend, worker (Workspace databases) | none · 5 |
 | `JOBS_DB_URL`, `JOBS_DB_USER`, `JOBS_DB_PASSWORD` | web, `ops` and `seed` processes (JobRunr enqueue, Task 8); `worker` (job server) | none |
-| `DB_MIGRATION_USER`, `DB_MIGRATION_PASSWORD` | Liquibase, provisioning, ops (owner user) | none |
+| `DB_MIGRATION_USER`, `DB_MIGRATION_PASSWORD` | tenant Liquibase, provisioning, ops (the Workspace owner role; the Registry uses `REGISTRY_DB_*`) | none |
 | `CATALOG_SECRET_KEY` | backend, ops (encrypts Workspace database passwords) | none |
 | `POSTGRES_PASSWORD` and the passwords of the roles | `infra/postgres/init` | none |
 | `TSOLVE_BASE_DOMAIN`, `TSOLVE_ENVIRONMENT` | backend, worker, seed, ops | none |
@@ -658,6 +662,10 @@ High row into a task.
 | 69 | STORY-014 | Input extremes | Body over `EDGE_MAX_BODY_BYTES`; file between `FILE_STORAGE_MAX_BYTES` and the edge limit | Medium | 413 at the edge; an allowed file always passes; the backend still refuses a file over its limit | `edge-limits.test.sh` |
 | 70 | STORY-013 | Error cascades | The Jobs database is down when the invitation is enqueued | High | `create` still keeps the Workspace and the Admin; the failure is logged without the email; `worker` retries the send later (AC-013.18) | InvitationJobQueueIT (Jobs database stopped) |
 | 71 | STORY-013 | Timing | A second enqueue for the same Workspace (retry, double call) | Medium | The job id derives from the Workspace id: one waiting job, no second one (AC-013.17) | InvitationJobQueueIT, JobRunrInvitationJobQueueTest (same Workspace twice) |
+| 72 | STORY-001 | Data integrity | The Registry beans (`registryDataSource`, a second `SpringLiquibase`) are defined next to Boot's auto-configuration | Critical | The primary `DataSource` still connects to the business database, not the Registry (JPA never writes to it), and Boot's tenant `liquibase` bean still runs `db/changelog/db.changelog-master.xml` | RegistryChangelogIT (`keepsPrimaryDataSourceAndTenantLiquibase_edge_72`) |
+| 73 | STORY-001 | Environment | The staging Registry script runs without `POSTGRES_USER` or `POSTGRES_PASSWORD` | High | Exits non-zero naming the missing variable; no Registry database or user is created | `infra/tests/registry-db.test.sh` (S1) |
+| 74 | STORY-001 | State transitions | The staging volume already exists (the init script runs only on an empty volume), so it has no Registry | High | The script creates the Registry database (owned by `REGISTRY_DB_USER`) and the user (LOGIN, no superuser, no `BYPASSRLS`, no `CREATEDB`, no `CREATEROLE`) with the same end state as the init script on a fresh volume; the other databases are untouched; the output holds no password | `infra/tests/registry-db.test.sh` (S2, S4) |
+| 75 | STORY-001 | State transitions | The staging script runs a second time, even with another `REGISTRY_DB_PASSWORD` | Medium | Nothing changes: an existing role is left as it is, its password is never altered and never printed | `infra/tests/registry-db.test.sh` (S3) |
 
 Open questions for the spec owner: none (the spec settles the Redis cache as out of scope and defines `schema_version` in AC-001.15).
 

@@ -16,10 +16,12 @@ import styles from './KnowledgeChatbotPage.module.css';
 /** The route is behind the sign-in guard, so the session has a user whenever this renders (nothing shows otherwise). */
 export function KnowledgeChatbotPage() {
   const { session } = useSession();
-  return session ? <KnowledgeChatbot userId={session.user.id} /> : null;
+  return session ? (
+    <KnowledgeChatbot userId={session.user.id} fullName={session.user.fullName} />
+  ) : null;
 }
 
-function KnowledgeChatbot({ userId }: { userId: string }) {
+function KnowledgeChatbot({ userId, fullName }: { userId: string; fullName: string }) {
   const [form] = Form.useForm<QuestionFormValues>();
   const { conversations, openId, turns, open, startNew, addTurn, setRating } =
     useConversations(userId);
@@ -35,14 +37,10 @@ function KnowledgeChatbot({ userId }: { userId: string }) {
     ask.mutate(
       { data: { question, history: toHistory(turns) } },
       {
-        onSuccess: (answer) => {
-          addTurn(conversationId, { question, answer });
-          // Only the sent question: text typed while waiting stays (AC-001.7). Not resetFields(): it re-mounts the
-          // field, and the box would lose focus after every answer.
-          if (form.getFieldValue('question') === question) form.setFieldValue('question', '');
-        },
+        onSuccess: (answer) => addTurn(conversationId, { question, answer }),
         onError: (error) => {
           if (error.status === 401) return; // the global handler signs the user out (MSG07)
+          if (form.getFieldValue('question') === '') form.setFieldValue('question', question);
           // BUG-006: only an error on the question can be shown under the box; any other is MSG06.
           const isOnQuestion = error.fieldErrors.some(
             (fieldError) => fieldError.field === 'question',
@@ -54,6 +52,9 @@ function KnowledgeChatbot({ userId }: { userId: string }) {
         },
       },
     );
+    // Keep the field mounted and leave any text entered while waiting alone (AC-001.6, AC-001.7).
+    form.setFieldValue('question', '');
+    form.focusField('question');
   }
 
   return (
@@ -65,18 +66,18 @@ function KnowledgeChatbot({ userId }: { userId: string }) {
         onOpen={open}
         onNew={startNew}
       />
-      <div className={styles.chat}>
-        <ConversationThread
-          turns={turns}
-          pendingQuestion={ask.isPending ? ask.variables.data.question : undefined}
-          isRating={rating.isPending}
-          onRate={(answerId, next) => {
-            // A thread with turns always belongs to an open conversation.
-            if (openId !== null) rating.rate(openId, answerId, next);
-          }}
-        />
+      <ConversationThread
+        turns={turns}
+        askerName={fullName}
+        pendingQuestion={ask.isPending ? ask.variables.data.question : undefined}
+        isRating={rating.isPending}
+        onRate={(answerId, next) => {
+          // A thread with turns always belongs to an open conversation.
+          if (openId !== null) rating.rate(openId, answerId, next);
+        }}
+      >
         <QuestionBox form={form} isSending={ask.isPending} onAsk={handleAsk} />
-      </div>
+      </ConversationThread>
     </div>
   );
 }

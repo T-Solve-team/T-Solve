@@ -313,3 +313,7 @@ Master registry of all artifacts in this workspace.
 | — | tasks | workspace | approved | artifacts/04-plans/workspace/iteration-1/kan-344/tasks.md |
 | — | tasks | workspace | approved | artifacts/04-plans/workspace/iteration-1/kan-349/tasks.md |
 | — | review | ticket-review | pass | artifacts/06-evaluation/ticket-review/quick-bug-339-review-email-outbox-review.md |
+| — | session-log | platform | passing | artifacts/05-implementation/platform/task-3a-registry-db.md |
+| — | review | platform | pass | artifacts/06-evaluation/platform/task-3a-registry-db-review.md |
+| — | review | platform | pass | artifacts/06-evaluation/platform/task-3a-registry-db-review2.md |
+| — | test-report | platform | pass | artifacts/06-evaluation/platform/task-3a-registry-db-test-report.md |
