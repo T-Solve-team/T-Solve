@@ -81,5 +81,24 @@
                runOrder="last">
         <!-- From the classpath root: tests re-include this master from other folders (ReviewStorageIT). -->
         <sqlFile path="db/changelog/changes/053-platform-tenant-guard-policies.sql" splitStatements="false"/>
+        <rollback>
+            <sql splitStatements="false">
+                DO $$
+                DECLARE
+                    t text;
+                BEGIN
+                    FOR t IN
+                        SELECT c.relname FROM pg_class c
+                        JOIN pg_namespace n ON n.oid = c.relnamespace
+                        WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
+                          AND c.relname NOT IN ('tenant_identity', 'databasechangelog', 'databasechangeloglock')
+                    LOOP
+                        EXECUTE format('DROP POLICY IF EXISTS tenant_guard ON public.%I', t);
+                        EXECUTE format('ALTER TABLE public.%I DISABLE ROW LEVEL SECURITY', t);
+                    END LOOP;
+                END
+                $$;
+            </sql>
+        </rollback>
     </changeSet>
 </databaseChangeLog>
