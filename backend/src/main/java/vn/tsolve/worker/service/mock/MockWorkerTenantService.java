@@ -42,12 +42,12 @@ public class MockWorkerTenantService implements WorkerTenantService {
      */
     @Override
     public Optional<UUID> enqueueWorkspaceId() {
-        return currentWorkspaceId()
-                .or(() -> active.size() == 1 ? active.stream().findFirst() : Optional.empty())
-                // ponytail: drop the request check in platform Task 6a-2, with StubTenantContext
-                .or(() -> RequestContextHolder.getRequestAttributes() == null
-                        ? Optional.empty()
-                        : holder.currentWorkspaceId().filter(active::contains));
+        Optional<UUID> bound = currentWorkspaceId();
+        if (bound.isPresent()) {
+            // ponytail: drop the request check in platform Task 6a-2, with StubTenantContext
+            return RequestContextHolder.getRequestAttributes() == null ? bound : bound.filter(active::contains);
+        }
+        return active.size() == 1 ? active.stream().findFirst() : Optional.empty();
     }
 
     @Override
