@@ -2254,3 +2254,4 @@
 {"ts":"2026-11-22T09:07:14.461Z","type":"feature-status","module":"chatbot","feature":"clear-box-on-send","from":null,"to":"pending"}
 {"ts":"2026-11-22T09:07:14.738Z","type":"feature-status","module":"chatbot","feature":"focus-layout","from":null,"to":"pending"}
 {"ts":"2026-11-22T09:07:42.499Z","type":"spec-approved","module":"chatbot","specHash":"de5bdf00ecfc10f1047e126efff5a993e6f1724ddb391b8ae04ac0cdafebd0b3"}
+{"ts":"2026-11-23T14:47:26.287Z","type":"feature-status","module":"platform","feature":"one-tenant-holder","from":"evaluating","to":"passing"}

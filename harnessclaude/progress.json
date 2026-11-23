@@ -504,10 +504,10 @@
         "forge-security-chain": "pending",
         "cross-module-isolation": "passing",
         "e2e-smoke": "passing",
-        "one-tenant-holder": "evaluating",
+        "one-tenant-holder": "passing",
         "no-workspace-fallbacks": "pending"
       },
-      "lastUpdated": "2026-11-23T14:16:43.458Z",
+      "lastUpdated": "2026-11-23T14:47:26.285Z",
       "branch": "feat/platform",
       "repos": [
         "default"

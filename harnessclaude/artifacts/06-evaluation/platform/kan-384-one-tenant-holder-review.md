@@ -34,3 +34,4 @@ could queue a job for a Suspended or unlisted bound Workspace), 6 notes.
   `SolutionFormAiImpl` rewrite pool).
 - Trace: add `backend/src/test/java/vn/tsolve/identity/**` to the platform trace paths (harness change).
 - `WorkerTenantService.java` class comment still says "the mock supplies context propagation".
+CI on PR #320: green on 8063b119 (it-other failure BUG-323 IT setup fixed in 8063b119).
