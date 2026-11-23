@@ -316,3 +316,4 @@ Master registry of all artifacts in this workspace.
 | — | review | platform | pass | artifacts/06-evaluation/platform/task-3a-registry-db-review.md |
 | — | review | platform | pass | artifacts/06-evaluation/platform/task-3a-registry-db-review2.md |
 | — | test-report | platform | pass | artifacts/06-evaluation/platform/task-3a-registry-db-test-report.md |
+| — | review | platform | pass | artifacts/06-evaluation/platform/task-3b-registry-staging-review.md |
