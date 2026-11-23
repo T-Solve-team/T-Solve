@@ -2259,3 +2259,7 @@
 {"ts":"2026-11-23T14:45:06.180Z","type":"feature-status","module":"platform","feature":"registry-staging-script","from":"pending","to":"in-progress"}
 {"ts":"2026-11-23T14:45:06.421Z","type":"feature-status","module":"platform","feature":"registry-staging-script","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-23T14:45:06.663Z","type":"feature-status","module":"platform","feature":"registry-staging-script","from":"evaluating","to":"passing"}
+{"ts":"2026-11-23T16:21:55.942Z","type":"spec-approved","module":"platform","specHash":"7f8f7b7e9225e1de02900c25a5fbeea0450fc787385874881b3c4d89d3ff959d"}
+{"ts":"2026-11-23T19:31:06.803Z","type":"feature-status","module":"platform","feature":"row-guard","from":"pending","to":"in-progress"}
+{"ts":"2026-11-23T19:31:06.860Z","type":"feature-status","module":"platform","feature":"row-guard","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-23T19:31:06.909Z","type":"feature-status","module":"platform","feature":"row-guard","from":"evaluating","to":"passing"}
