@@ -37,8 +37,9 @@ public class MockWorkerTenantService implements WorkerTenantService {
     }
 
     /**
-     * Local/demo stacks only: the single Active Workspace, else the request's TenantContext Workspace when it is
-     * Active; otherwise it refuses, never guesses.
+     * Local/demo stacks only: the bound Workspace (on a request thread only when it is Active, so a Suspended or
+     * unlisted one yields empty and callers queue no job), else the single Active Workspace; otherwise it refuses,
+     * never guesses.
      */
     @Override
     public Optional<UUID> enqueueWorkspaceId() {

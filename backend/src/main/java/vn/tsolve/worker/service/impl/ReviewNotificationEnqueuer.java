@@ -121,15 +121,19 @@ public class ReviewNotificationEnqueuer {
                 LOG.warn("Could not queue {} of {} review emails (no Workspace to bind)", total, total);
                 return;
             }
-            if (context == null || context.currentWorkspaceId().isPresent()) {
+            if (context == null) {
+                enqueue.run();
+                return;
+            }
+            var workspaceId = context.enqueueWorkspaceId();
+            if (workspaceId.isEmpty()) {
+                int total = event.decisionIds().size();
+                LOG.warn("Could not queue {} of {} review emails (no Workspace to bind)", total, total);
+                return;
+            }
+            if (context.currentWorkspaceId().isPresent()) {
                 enqueue.run();
             } else {
-                var workspaceId = context.enqueueWorkspaceId();
-                if (workspaceId.isEmpty()) {
-                    int total = event.decisionIds().size();
-                    LOG.warn("Could not queue {} of {} review emails (no Workspace to bind)", total, total);
-                    return;
-                }
                 context.runIn(workspaceId.get(), enqueue);
             }
         } catch (RuntimeException exception) {

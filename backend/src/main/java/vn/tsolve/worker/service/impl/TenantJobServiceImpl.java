@@ -32,6 +32,9 @@ public class TenantJobServiceImpl implements TenantJobService {
     @Override
     public UUID enqueueFromRequest(String handlerType, UUID recordId) {
         if (tenants.currentWorkspaceId().isPresent()) {
+            if (tenants.enqueueWorkspaceId().isEmpty()) {
+                throw new IllegalStateException("Enqueue requires an active workspace");
+            }
             return enqueue(handlerType, recordId);
         }
         UUID workspaceId = tenants.enqueueWorkspaceId()
