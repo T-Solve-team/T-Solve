@@ -69,6 +69,12 @@ The databases are created by `postgres/init/10-tsolve-dbs.sh` **only when the `d
 start). Changing a database password in the env file later does not change it in Postgres: change it there too
 (`dc exec db psql -U postgres -c "ALTER ROLE tsolve PASSWORD '...'"`), or reset the volume (loses all data).
 
+The Registry database is the exception for a volume made before it existed: run `infra/scripts/registry-db-init.sh`
+once on the VPS (after the merge, before the deploy that sets `REGISTRY_DB_*` and `CATALOG_SECRET_KEY`; recreate `db`
+first so it holds the variables): `dc up -d db && dc exec -T db sh -s < infra/scripts/registry-db-init.sh`. It is
+idempotent and leaves an existing role (and its password) as it is. A developer runs the same script against the local
+`db`; there is no separate local compose file.
+
 ## 5. Pull the AI models
 
 ```bash
