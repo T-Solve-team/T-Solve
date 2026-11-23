@@ -168,3 +168,53 @@ All three tasks are Jira KAN-243, so one branch `feat/KAN-243-chatbot-classify-q
 **Covers:** AC-002.2, AC-002.13
 **Dependencies:** Task 18 (generated type)
 **Estimated size:** small
+
+---
+
+## Task 20: Empty the question box on send
+
+**Story:** STORY-001
+**Feature:** clear-box-on-send
+**Jira:** KAN-382 · branch `feat/KAN-382-chatbot-focus-layout`
+**Description:**
+- `KnowledgeChatbotPage.handleAsk`: empty the box right after `ask.mutate` is called (AC-001.6); on any error that is
+  not a 401, put the question back when the box is still empty, then show MSG06 or the field error as before
+  (AC-001.13, AC-001.14). Text typed while waiting stays (AC-001.7). The success path no longer touches the box.
+- Reported: the box kept the question after Enter or Send; emptying on send removes the dependence on when the
+  answer arrives.
+**Files:**
+- Modify: `frontend/src/features/chatbot/pages/KnowledgeChatbotPage.tsx`
+- Test: `frontend/src/features/chatbot/pages/KnowledgeChatbotPage.test.tsx` (`AC-001.6 …`, `AC-001.7 …`,
+  `AC-001.13 …`, `AC-001.14 …`)
+**Covers:** AC-001.6, AC-001.7, AC-001.13, AC-001.14
+**Dependencies:** none
+**Estimated size:** small
+
+---
+
+## Task 21: Focus layout with the conversation sidebar
+
+**Story:** STORY-001, STORY-002
+**Feature:** focus-layout
+**Jira:** KAN-382 · branch `feat/KAN-382-chatbot-focus-layout`
+**Description:**
+- Layout of option C ("Focus") with the conversation list kept as the left sidebar: a reading column (720 px) in
+  the thread; each question as a heading line with the asker's initials; the answer as body text; its citations as
+  numbered notes under it (Solutions open, AC-001.7, AC-001.11); rating buttons under the notes; the pending answer
+  as a skeleton (AC-001.6).
+- An empty conversation shows the box in the middle under the heading and line of AC-001.16; after the first
+  question the box sits at the bottom of the thread, one rounded row with a round Send icon button (accessible name
+  "Send"), the count and the Enter hint under it.
+- Markers `[n]` of an `ANSWERED` text become small buttons (the text stays plain text, AC-001.8); a click scrolls
+  citation n of that answer into view and highlights it (AC-001.17).
+- `ConversationList`: the 10 newest conversations, then "Show more" adding 10 each click (AC-002.14); one-line
+  titles with the tooltip of AC-002.13 stay.
+**Files:**
+- Modify: `frontend/src/features/chatbot/pages/KnowledgeChatbotPage.tsx`, `…/pages/KnowledgeChatbotPage.module.css`,
+  `…/components/ConversationThread.tsx`, `…/components/ChatAnswer.tsx`, `…/components/CitationList.tsx`,
+  `…/components/ConversationList.tsx`, `…/components/Conversation.module.css`, `…/components/Citations.module.css`,
+  `…/components/QuestionBox.tsx`, `…/components/QuestionBox.module.css`
+- Test: `KnowledgeChatbotPage.test.tsx` (`AC-001.16 …`, `AC-001.17 …`, `AC-002.14 …`)
+**Covers:** AC-001.7, AC-001.11, AC-001.16, AC-001.17, AC-002.14
+**Dependencies:** Task 20 (same page file)
+**Estimated size:** medium
