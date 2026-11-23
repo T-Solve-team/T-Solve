@@ -38,7 +38,7 @@ Iteration 2 holds only the seed's module data and the reset (Task 23) and the re
 | P11, Q12, Q13 | Ollama native on the AI VPS behind WireGuard; Cloudflare DNS-01 wildcards for `*.tsolve.io.vn` and `*.staging.tsolve.io.vn` |
 | Q9 | The Jira site URL is normalised and checked through `TenantInfoClient` (public address, `https`, no redirects) |
 | R1 – R3, R15 | Registry through `JdbcClient`; routing `DataSource` with lazy per-Workspace pools; `app.tenant_id` set from the bound id |
-| R4 – R6 | One `runAlways`, `runOrder="last"` changeset installs policy `tenant_guard`; owner role and template database; per-Workspace runtime user |
+| R4 – R6 | One `runAlways`, `runOrder="last"` XML changeSet (it runs a SQL file) installs policy `tenant_guard`; owner role and template database; per-Workspace runtime user |
 | R7, R8 | Database and user named `tsolve_<env>_ws_<32 hex>`; AES-256-GCM password storage |
 | R9, R10 | Provisioning order of AC-013.1; `InvitationJobQueue` is a port with a minimal JobRunr implementation in `platform` (user, 4/11) |
 | R11 – R13 | Signed URLs on the Workspace's own site; objects stored as `application/octet-stream`; in-memory upload |

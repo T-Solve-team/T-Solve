@@ -318,6 +318,9 @@ Master registry of all artifacts in this workspace.
 | — | review | platform | pass | artifacts/06-evaluation/platform/task-3a-registry-db-review2.md |
 | — | test-report | platform | pass | artifacts/06-evaluation/platform/task-3a-registry-db-test-report.md |
 | — | review | platform | pass | artifacts/06-evaluation/platform/task-3b-registry-staging-review.md |
+| — | session-log | platform | passing | artifacts/05-implementation/platform/task-5-row-guard.md |
+| — | review | platform | pass | artifacts/06-evaluation/platform/task-5-row-guard-review.md |
+| — | test-report | platform | pass | artifacts/06-evaluation/platform/task-5-row-guard-test-report.md |
 | — | session-log | platform | passing | artifacts/05-implementation/platform/task-6a-2-no-workspace-fallbacks.md |
 | — | review | platform | pass | artifacts/06-evaluation/platform/task-6a-2-no-workspace-fallbacks-review.md |
 | — | test-report | platform | pass | artifacts/06-evaluation/platform/task-6a-2-no-workspace-fallbacks-test-report.md |
