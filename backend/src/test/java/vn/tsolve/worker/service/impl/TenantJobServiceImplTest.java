@@ -112,6 +112,55 @@ class TenantJobServiceImplTest {
     }
 
     @Test
+    void enqueueFromRequestQueuesNoJobForASuspendedBoundWorkspace_BUG_324() {
+        storage.setJobMapper(mapper);
+        UUID suspended = UUID.randomUUID();
+        var holder = new ThreadLocalTenantContext(Set.of(workspace, suspended)::contains);
+        var tenants = new MockWorkerTenantService(Set.of(workspace), Set.of(suspended), holder);
+        var queue = new TenantJobServiceImpl(tenants, new JobRequestScheduler(storage), handler);
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest()));
+        try {
+            holder.runIn(suspended, () -> {
+                try {
+                    queue.enqueueFromRequest("test-record", recordId);
+                } catch (RuntimeException refused) {
+                    // refusing loudly is allowed; only the stored job count matters
+                }
+            });
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+        }
+        assertThat(storage.getJobStats().getTotal())
+                .as("the worker would refuse a Suspended Workspace's job")
+                .isZero();
+    }
+
+    @Test
+    void enqueueFromRequestQueuesNoJobForAnUnlistedBoundWorkspace_BUG_324() {
+        storage.setJobMapper(mapper);
+        UUID unlisted = UUID.randomUUID();
+        // The holder knows the id, so it binds, but the mock lists do not name it.
+        var holder = new ThreadLocalTenantContext(Set.of(workspace, unlisted)::contains);
+        var tenants = new MockWorkerTenantService(Set.of(workspace), Set.of(), holder);
+        var queue = new TenantJobServiceImpl(tenants, new JobRequestScheduler(storage), handler);
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest()));
+        try {
+            holder.runIn(unlisted, () -> {
+                try {
+                    queue.enqueueFromRequest("test-record", recordId);
+                } catch (RuntimeException refused) {
+                    // refusing loudly is allowed; only the stored job count matters
+                }
+            });
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+        }
+        assertThat(storage.getJobStats().getTotal())
+                .as("an unlisted Workspace is never queued")
+                .isZero();
+    }
+
+    @Test
     void rejectsMalformedPersistedJobs_AC_002_15() {
         for (TenantJobRequest request : List.of(
                 new TenantJobRequest(null, "test-record", recordId),
