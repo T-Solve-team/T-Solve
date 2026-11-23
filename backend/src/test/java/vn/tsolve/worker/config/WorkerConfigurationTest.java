@@ -25,6 +25,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import vn.tsolve.common.tenant.TenantContext;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.worker.service.EmailOutboxService;
 import vn.tsolve.worker.service.TenantJobService;
 import vn.tsolve.worker.service.WorkerTenantService;
@@ -32,6 +34,7 @@ import vn.tsolve.worker.service.mock.MockWorkerTenantService;
 
 class WorkerConfigurationTest {
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
+            .withBean(TenantContext.class, () -> new ThreadLocalTenantContext(id -> true))
             .withUserConfiguration(
                     WorkerConfiguration.class, WorkerMockConfiguration.class, EmailOutboxConfiguration.class);
 

@@ -6,7 +6,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -19,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.worker.dto.TenantJobRequest;
 import vn.tsolve.worker.service.TenantJobHandler;
 import vn.tsolve.worker.service.WorkerTenantService;
@@ -84,14 +84,15 @@ class TenantJobServiceImplTest {
     void enqueueFromRequestBindsTheEnqueueWorkspace_BUG_324() {
         storage.setJobMapper(mapper);
         UUID other = UUID.randomUUID();
-        // Two Workspaces, so only the request's TenantContext Workspace can be chosen.
-        var tenants = new MockWorkerTenantService(Set.of(workspace, other), Set.of(), () -> Optional.of(workspace));
+        // Two Workspaces, so only the request's bound Workspace can be chosen.
+        var holder = new ThreadLocalTenantContext(Set.of(workspace, other)::contains);
+        var tenants = new MockWorkerTenantService(Set.of(workspace, other), Set.of(), holder);
         var queue = new TenantJobServiceImpl(tenants, new JobRequestScheduler(storage), handler);
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest()));
         try {
             assertThatThrownBy(() -> queue.enqueue("test-record", recordId)).isInstanceOf(IllegalStateException.class);
 
-            UUID jobId = queue.enqueueFromRequest("test-record", recordId);
+            UUID jobId = holder.runIn(workspace, () -> queue.enqueueFromRequest("test-record", recordId));
 
             var request =
                     (TenantJobRequest) storage.getJobById(jobId).getJobDetails().getJobParameterValues()[0];
@@ -108,6 +109,55 @@ class TenantJobServiceImplTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("Enqueue requires a bound workspace");
         assertThat(storage.getJobStats().getTotal()).isEqualTo(1);
+    }
+
+    @Test
+    void enqueueFromRequestQueuesNoJobForASuspendedBoundWorkspace_BUG_324() {
+        storage.setJobMapper(mapper);
+        UUID suspended = UUID.randomUUID();
+        var holder = new ThreadLocalTenantContext(Set.of(workspace, suspended)::contains);
+        var tenants = new MockWorkerTenantService(Set.of(workspace), Set.of(suspended), holder);
+        var queue = new TenantJobServiceImpl(tenants, new JobRequestScheduler(storage), handler);
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest()));
+        try {
+            holder.runIn(suspended, () -> {
+                try {
+                    queue.enqueueFromRequest("test-record", recordId);
+                } catch (RuntimeException refused) {
+                    // refusing loudly is allowed; only the stored job count matters
+                }
+            });
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+        }
+        assertThat(storage.getJobStats().getTotal())
+                .as("the worker would refuse a Suspended Workspace's job")
+                .isZero();
+    }
+
+    @Test
+    void enqueueFromRequestQueuesNoJobForAnUnlistedBoundWorkspace_BUG_324() {
+        storage.setJobMapper(mapper);
+        UUID unlisted = UUID.randomUUID();
+        // The holder knows the id, so it binds, but the mock lists do not name it.
+        var holder = new ThreadLocalTenantContext(Set.of(workspace, unlisted)::contains);
+        var tenants = new MockWorkerTenantService(Set.of(workspace), Set.of(), holder);
+        var queue = new TenantJobServiceImpl(tenants, new JobRequestScheduler(storage), handler);
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest()));
+        try {
+            holder.runIn(unlisted, () -> {
+                try {
+                    queue.enqueueFromRequest("test-record", recordId);
+                } catch (RuntimeException refused) {
+                    // refusing loudly is allowed; only the stored job count matters
+                }
+            });
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+        }
+        assertThat(storage.getJobStats().getTotal())
+                .as("an unlisted Workspace is never queued")
+                .isZero();
     }
 
     @Test

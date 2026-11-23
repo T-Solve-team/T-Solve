@@ -48,6 +48,11 @@ the target, not built here — H-Q1):
 - `runIn` refuses a different Workspace when one is bound (AC-002.13), refuses an unknown id (AC-002.14, one existence
   check in the Registry), binds, runs the action inside `TransactionTemplate` with `PROPAGATION_REQUIRES_NEW` (decision
   P5), and restores the previous binding in `finally` (AC-002.12). A Suspended Workspace can still be bound (AC-002.15).
+- Delivered in steps (wave order of 22/11, KAN-384; iteration-1 design "Wave order and Task 6a"): Tasks 6a-1 and 6a-2 make
+  `ThreadLocalTenantContext` the only binding: 6a-1 adds the holder, 6a-2 removes the stub and the other fallbacks.
+  Identity `TenantScope` and worker `runIn` delegate to it; no transaction yet; the existence check goes through the
+  port `KnownWorkspaces` over the env stubs. Task 4 moves the existence check to
+  the Registry; Task 6 adds `TenantBinding`, `REQUIRES_NEW` and routing; Task 10 the resolver's bind.
 
 ### Database routing (STORY-002; AC-002.20 – AC-002.25)
 

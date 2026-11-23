@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -219,11 +220,20 @@ class ReviewNotificationEnqueueBugTest {
     void enqueuesDirectlyOnAnAlreadyBoundThread_BUG_164() {
         var tenants = spy(new MockWorkerTenantService(Set.of(A, B), Set.of()));
 
+        var boundWhenQueued = new java.util.ArrayList<Optional<UUID>>();
+        doAnswer(invocation -> {
+                    boundWhenQueued.add(tenants.currentWorkspaceId());
+                    return null;
+                })
+                .when(outbox)
+                .queue(any(OutboundEmail.class));
+
         tenants.runIn(B, () -> enqueuer(outbox, tenants).onDecided(new ReviewFeedbackDecidedEvent(List.of(RECORD_ID))));
 
-        verify(outbox).queue(any(OutboundEmail.class));
-        verify(tenants, never()).enqueueWorkspaceId();
-        verify(tenants).runIn(any(UUID.class), any(Runnable.class));
+        verify(outbox, times(1)).queue(any(OutboundEmail.class));
+        assertThat(boundWhenQueued).containsExactly(Optional.of(B));
+        verify(tenants, times(1)).runIn(any(UUID.class), any(Runnable.class));
+        verify(tenants, never()).runIn(eq(A), any(Runnable.class));
     }
 
     @Test

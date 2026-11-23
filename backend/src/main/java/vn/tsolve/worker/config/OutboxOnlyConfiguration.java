@@ -95,8 +95,8 @@ public class OutboxOnlyConfiguration {
 
     /**
      * The request's {@link TenantContext} Workspace when the platform binds one, else the single Active Workspace of
-     * the worker mock list (the same rule as {@code MockWorkerTenantService.enqueueWorkspaceId}); several are never
-     * guessed between. The staging web process has no TenantContext bean, so it is optional (BUG-340). It also has no
+     * the worker mock list; several are never guessed between. Unlike {@code MockWorkerTenantService
+     * .enqueueWorkspaceId}, a bound Workspace is not checked against the Active list here. The staging web process has no TenantContext bean, so it is optional (BUG-340). It also has no
      * worker-mock profile, whose yml alone maps TSOLVE_MOCK_ACTIVE_WORKSPACES to the property, so the variable is
      * read directly as the fallback (BUG-341).
      */
