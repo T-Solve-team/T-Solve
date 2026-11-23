@@ -72,4 +72,14 @@
     <include file="changes/048-jira-app-issue-done-state.sql" relativeToChangelogFile="true"/>
     <include file="changes/049-wiki-document-type.sql" relativeToChangelogFile="true"/>
     <include file="changes/050-search-embedding-text-version.sql" relativeToChangelogFile="true"/>
+    <include file="changes/051-platform-tenant-identity.sql" relativeToChangelogFile="true"/>
+    <include file="changes/052-platform-tenant-guard-function.sql" relativeToChangelogFile="true"/>
+    <include file="changes/054-platform-audit-log-entry-append-only.sql" relativeToChangelogFile="true"/>
+
+    <!-- Last element, run on every update: gives every table above the policy tenant_guard (KAN-253, AC-001.31). -->
+    <changeSet id="053-platform-tenant-guard-policies" author="platform" runAlways="true" runOnChange="true"
+               runOrder="last">
+        <!-- From the classpath root: tests re-include this master from other folders (ReviewStorageIT). -->
+        <sqlFile path="db/changelog/changes/053-platform-tenant-guard-policies.sql" splitStatements="false"/>
+    </changeSet>
 </databaseChangeLog>
