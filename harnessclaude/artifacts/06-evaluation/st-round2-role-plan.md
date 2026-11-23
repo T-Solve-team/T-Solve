@@ -110,3 +110,23 @@ Staging state seen on 21/11/2026 that differs from the 16/11 run report: a secon
 `project-manager@` is PM, `ticket-resolver@` is Member); about 314 tickets already in the Ticket List of the PM (CSV
 sample data); Project SAM1 (HR, PM `admin@`) has two Solution Form tickets ("[Sample 012]" Pending review, "[Sample 073]"
 Changes requested); an older REJECTED ticket with the T1 title (from DP-118).
+
+## Round 2: what changed from this plan (22/11/2026)
+
+- Staging had a fifth workspace user, `knowledge-manager@` (IT Support, Knowledge Manager of HR and IT Support, no Google
+  account), and `knowledge-manager-1@` had no Department and managed only "QA Test Depttt". With the user's approval the
+  Admin moved Space IT Support to `knowledge-manager-1@` and gave it Department IT Support for W-1.23 / W-1.24, then moved
+  the Space back and cleared the Department (a Knowledge Manager must keep at least one Space, so HR stayed with
+  `knowledge-manager@`).
+- Resolver B could not be `knowledge-manager-1@`: Project Detail > Add member now lists only Jira users linked to a
+  T-Solve account, and the only linked Jira user ("Duong pham tung") belongs to `ticket-resolver@`. W-2.07, W-2.10,
+  W-2.11, W-2.13 and W-2.14 ran as `ticket-resolver@`; the Ticket Resolver role added to `knowledge-manager-1@` was removed.
+- IT Support's Default Project was set to DP in W-1.15 (it was None) and is kept for W-3.13; set it back to None after
+  the chatbot cases.
+- Extra data created: Jira DP-123 moved to Done with a Solution Form (W-2.02, now Pending review in the queue); T1 is
+  Changes requested and T2 Published after W-2.05 / W-2.08; Wiki folder IT Support / ST2 Network with
+  ST2-VPN-guide-company.pdf (Company-wide) and ST2-server-room-IT-only.pdf (Department); a Jira import draft of DP
+  (3 rows, 22/11/2026 06:48).
+- Gmail is not enabled for the `bluefin-demo.io.vn` Google Workspace, so W-2.06 (review email) cannot be checked.
+- The staging AI server answered 503 MSG06 to every chatbot ask during the run (BUG-335); the chatbot cases and the
+  golden set (`chatbot-golden-set.md`) wait for it.
