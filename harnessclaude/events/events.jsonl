@@ -2277,3 +2277,5 @@
 {"ts":"2026-11-24T15:03:14.236Z","type":"quick-opened","what":"Resolve KAN-383 bug-log conflict and keep the Search regression bug ID in sync","files":["docs/bug-log.md","frontend/src/features/search/pages/SearchPage.test.tsx"]}
 {"ts":"2026-11-24T15:42:53.341Z","type":"quick-closed","what":"Resolve KAN-383 bug-log conflict and keep the Search regression bug ID in sync","files":["docs/bug-log.md","frontend/src/features/search/pages/SearchPage.test.tsx"]}
 {"ts":"2026-11-24T12:04:34.368Z","type":"spec-approved","module":"wiki","specHash":"47fb26627301fe7f41ffc78786ff532ed82a0459519a3b8e64709477d4234361"}
+{"ts":"2026-11-24T17:50:55.559Z","type":"quick-opened","what":"resolve the bug log merge conflict with main: keep BUG-389 and BUG-390","files":["docs/bug-log.md"]}
+{"ts":"2026-11-24T17:51:37.519Z","type":"quick-closed","what":"resolve the bug log merge conflict with main: keep BUG-389 and BUG-390","files":["docs/bug-log.md"]}
