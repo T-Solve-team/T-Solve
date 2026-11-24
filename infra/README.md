@@ -10,6 +10,7 @@ worker, the web app and Ollama. Only Caddy faces the internet (80, 443). Files:
 | `caddy/Caddyfile` | hosts and routing |
 | `keycloak/staging/` | realm files and the Google redirect URIs (`README.md`) |
 | `postgres/init/10-tsolve-dbs.sh` | creates the databases and users |
+| `scripts/registry-adopt-workspace.sh` | adopts the existing Workspace into the Tenant Registry |
 | `scripts/seed-first-admin.sh` | creates the first admin Account |
 
 Hosts (all under `TSOLVE_DOMAIN`): `<slug>.<domain>` (company site and `/api`), `admin.<domain>` (Platform Console and
@@ -74,6 +75,13 @@ once on the VPS (after the merge, before the deploy that sets `REGISTRY_DB_*` an
 first so it holds the variables): `dc up -d db && dc exec -T db sh -s < infra/scripts/registry-db-init.sh`. It is
 idempotent and leaves an existing role (and its password) as it is. A developer runs the same script against the local
 `db`; there is no separate local compose file.
+
+Once `backend` has started with `REGISTRY_DB_URL` and `CATALOG_SECRET_KEY` (so Liquibase has created `tenant_workspace`)
+and `TSOLVE_DEMO_WORKSPACE_ID` is set in `/srv/tsolve/staging/.env`, adopt the existing Workspace into the Registry with
+`infra/scripts/registry-adopt-workspace.sh`. It is idempotent and copies the Jira site from the tenant `workspace` table
+when present (never typed by hand). Locally, `docker-compose.yml` has no `backend` container yet, so point the same
+script at a compose file with `db` and `backend` services and an env file holding `CATALOG_SECRET_KEY` and the other
+required variables: `TSOLVE_COMPOSE_FILE=<compose-file> TSOLVE_ENV_FILE=<env-file> infra/scripts/registry-adopt-workspace.sh`.
 
 ## 5. Pull the AI models
 
