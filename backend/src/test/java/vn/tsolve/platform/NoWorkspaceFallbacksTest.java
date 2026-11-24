@@ -41,7 +41,14 @@ class NoWorkspaceFallbacksTest {
             "tsolve.stub." + "workspaces",
             "TSOLVE_STUB_" + "JIRA_SITES",
             "TSOLVE_STUB_" + "WORKSPACE_READY",
-            "tsolve.stub." + "workspace-ready");
+            "tsolve.stub." + "workspace-ready",
+            // Task 4c (KAN-252): the worker's stand-in tenancy is gone; the worker reads the Registry catalog.
+            "Mock" + "WorkerTenantService",
+            "Worker" + "MockConfiguration",
+            "worker-" + "mock",
+            "TSOLVE_MOCK_" + "ACTIVE_WORKSPACES",
+            "TSOLVE_MOCK_" + "SUSPENDED_WORKSPACES",
+            "tsolve.worker." + "mock");
 
     @Test
     @DisplayName(
@@ -74,7 +81,9 @@ class NoWorkspaceFallbacksTest {
                 Path.of("src/test"),
                 Path.of("../.env.example"),
                 Path.of("../infra"),
-                Path.of("../e2e/README.md"));
+                Path.of("../e2e/README.md"),
+                Path.of("README-worker.md"),
+                Path.of("Dockerfile"));
         List<String> hits;
         try (Stream<Path> files = roots.stream().flatMap(NoWorkspaceFallbacksTest::walk)) {
             hits = files.filter(Files::isRegularFile)

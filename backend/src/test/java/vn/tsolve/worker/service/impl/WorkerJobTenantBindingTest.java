@@ -11,7 +11,6 @@ import static org.mockito.Mockito.when;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -26,22 +25,23 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import vn.tsolve.common.tenant.KnownWorkspaces;
 import vn.tsolve.common.tenant.NoTenantException;
 import vn.tsolve.common.tenant.TenantContext;
 import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.identity.signin.SignInConfig;
 import vn.tsolve.identity.signin.port.TenantScope;
 import vn.tsolve.platform.config.StorageConfig;
+import vn.tsolve.platform.dto.WorkspaceStatus;
+import vn.tsolve.platform.dto.WorkspaceSummary;
 import vn.tsolve.platform.service.WorkspaceCatalog;
 import vn.tsolve.platform.service.impl.ObjectFileStorage;
 import vn.tsolve.worker.dto.TenantJobRequest;
 import vn.tsolve.worker.service.TenantJobHandler;
-import vn.tsolve.worker.service.mock.MockWorkerTenantService;
 
 /**
- * A job reads its Workspace from the one holder (Task 6a-1). The chain under test: holder (knows A and B), the identity
- * {@code PlatformTenantScope}, {@code MockWorkerTenantService} (Active A and B) and {@code TenantExecutionServiceImpl}.
+ * A job reads its Workspace from the one holder (Task 6a-1, on the catalog chain since Task 4c). The chain under test:
+ * holder (knows the Workspaces the catalog has), the identity {@code PlatformTenantScope},
+ * {@code CatalogWorkerTenantService} over the catalog (Active A and B) and {@code TenantExecutionServiceImpl}.
  */
 class WorkerJobTenantBindingTest {
 
@@ -50,11 +50,33 @@ class WorkerJobTenantBindingTest {
     private static final UUID C = UUID.fromString("00000000-0000-4000-8000-00000000000c");
     private static final String FILE_KEY = "7f3a2b1c-0000-4000-8000-000000000001";
 
-    private final KnownWorkspaces known = Set.of(A, B)::contains;
-    private final TenantContext holder = new ThreadLocalTenantContext(known);
+    private final WorkspaceCatalog catalog = activeCatalog();
+    // The rule of SignInConfig.knownWorkspaces: a Workspace is known when the catalog has its row.
+    private final TenantContext holder =
+            new ThreadLocalTenantContext(id -> catalog.findById(id).isPresent());
     private final TenantScope scope = new SignInConfig().tenantScope(holder);
-    private final MockWorkerTenantService worker = new MockWorkerTenantService(Set.of(A, B), Set.of(), holder);
+    private final CatalogWorkerTenantService worker = new CatalogWorkerTenantService(catalog, holder);
     private final TenantExecutionServiceImpl jobs = new TenantExecutionServiceImpl(worker);
+
+    /** A and B are Active in the catalog; C is not in it. */
+    private static WorkspaceCatalog activeCatalog() {
+        WorkspaceCatalog catalog = mock(WorkspaceCatalog.class);
+        List<WorkspaceSummary> active = new java.util.ArrayList<>();
+        for (UUID id : new UUID[] {A, B}) {
+            WorkspaceSummary summary = new WorkspaceSummary(
+                    id,
+                    "ws-" + id,
+                    WorkspaceStatus.ACTIVE,
+                    "example.test",
+                    Optional.empty(),
+                    Optional.empty(),
+                    Optional.empty());
+            when(catalog.findById(id)).thenReturn(Optional.of(summary));
+            active.add(summary);
+        }
+        when(catalog.findActive()).thenReturn(active);
+        return catalog;
+    }
 
     @AfterEach
     void nothingIsLeftBound() {
@@ -115,15 +137,13 @@ class WorkerJobTenantBindingTest {
     }
 
     @Test
-    @DisplayName(
-            "AC-002.14 a job for a Workspace in the mock Active list that KnownWorkspaces does not know is refused and does not run")
-    void aJobForAWorkspaceTheHolderDoesNotKnowIsRefused() {
-        // TSOLVE_MOCK_ACTIVE_WORKSPACES lists C, the catalog (the holder's list) does not: both must agree.
-        MockWorkerTenantService disagreeing = new MockWorkerTenantService(Set.of(A, C), Set.of(), holder);
-        TenantExecutionServiceImpl execution = new TenantExecutionServiceImpl(disagreeing);
+    @DisplayName("AC-002.14 a job for a Workspace the catalog does not know is refused and does not run")
+    void aJobForAWorkspaceTheCatalogDoesNotKnowIsRefused() {
         AtomicInteger ran = new AtomicInteger();
 
-        assertThatThrownBy(() -> execution.runInTenant(C, ran::incrementAndGet)).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> jobs.runInTenant(C, ran::incrementAndGet))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("unavailable or suspended");
 
         assertThat(ran).hasValue(0);
     }

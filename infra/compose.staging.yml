@@ -228,7 +228,7 @@ services:
     mem_limit: ${WORKER_MEM_LIMIT:-1g}
     <<: *backend-env
     environment:
-      SPRING_PROFILES_ACTIVE: worker,worker-mock
+      SPRING_PROFILES_ACTIVE: worker
       <<: *no-unrelated-secrets
       REGISTRY_DB_URL: ${REGISTRY_DB_URL:?set REGISTRY_DB_URL in the env file}
       CATALOG_SECRET_KEY: ${CATALOG_SECRET_KEY:?set CATALOG_SECRET_KEY in the env file}

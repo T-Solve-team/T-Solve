@@ -47,7 +47,7 @@ chmod 600 /srv/tsolve/staging/.env
 
 Edit it: the `[GEN]` values are secrets you generate (`openssl rand -hex 32`; the UUIDs with `uuidgen`; `WORKSPACE_SECRET_KEY` with `openssl rand -base64 32`, which the backend needs to start and which encrypts the Jira token, so back it up), the `[FILL]`
 values are yours (domain, slug, Google client, emails). Keep `SEARCH_DEV_SCOPE` empty. The Workspace UUID in
-`TSOLVE_DEMO_WORKSPACE_ID` (used by `infra/scripts/registry-adopt-workspace.sh`) matches `TSOLVE_MOCK_ACTIVE_WORKSPACES`,
+`TSOLVE_DEMO_WORKSPACE_ID` (used by `infra/scripts/registry-adopt-workspace.sh`) is the Workspace's Registry id,
 and the Workspace's Google domain and `TSOLVE_DEMO_ORG_ID` live in its Registry row. Compose reads this one file.
 
 To keep the file elsewhere, also run `export TSOLVE_ENV_FILE=/path/to/.env` in your shell. Shorthand used below:
