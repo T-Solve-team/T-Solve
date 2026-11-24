@@ -92,6 +92,9 @@ services:
       JOBS_DB_NAME: ${JOBS_DB_NAME:-tsolve_staging_jobs}
       JOBS_DB_USER: ${JOBS_DB_USER:?set JOBS_DB_USER in the env file}
       JOBS_DB_PASSWORD: ${JOBS_DB_PASSWORD:?set JOBS_DB_PASSWORD in the env file}
+      REGISTRY_DB_NAME: ${REGISTRY_DB_NAME:-tsolve_staging_registry}
+      REGISTRY_DB_USER: ${REGISTRY_DB_USER:?set REGISTRY_DB_USER in the env file}
+      REGISTRY_DB_PASSWORD: ${REGISTRY_DB_PASSWORD:?set REGISTRY_DB_PASSWORD in the env file}
     volumes:
       - db-data:/var/lib/postgresql/data
       - ./postgres/init:/docker-entrypoint-initdb.d:ro

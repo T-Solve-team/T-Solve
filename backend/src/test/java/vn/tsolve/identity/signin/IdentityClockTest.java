@@ -1,6 +1,7 @@
 package vn.tsolve.identity.signin;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -8,6 +9,9 @@ import java.time.ZoneOffset;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import vn.tsolve.common.tenant.TenantContext;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
+import vn.tsolve.identity.signin.port.WorkspaceLookup;
 
 class IdentityClockTest {
 
@@ -23,6 +27,8 @@ class IdentityClockTest {
     @DisplayName("Q9 SignInConfig defines IdentityClock and no java.time.Clock bean")
     void signInConfigDefinesIdentityClockAndNoClockBean_Q9() {
         new ApplicationContextRunner()
+                .withBean(WorkspaceLookup.class, () -> mock(WorkspaceLookup.class))
+                .withBean(TenantContext.class, () -> new ThreadLocalTenantContext(id -> true))
                 .withUserConfiguration(SignInConfig.class)
                 .withPropertyValues(
                         "tsolve.auth.login-origin=" + SignInTestFixtures.LOGIN_ORIGIN,

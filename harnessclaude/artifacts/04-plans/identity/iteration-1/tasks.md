@@ -241,6 +241,8 @@ runs before `WebSessionFilter`).
 
 > **Changed 2026-11-05 (KAN-275).** The sign-in tables no longer move to the registry: they are dropped by Task 24 (so the parts of this stub about `sign_in_states` and `hand_off_code` fall away). The adapters, `workspace_email`, the tenant row guard and the `FirstAdminCreator` stay. `WorkspaceSignInProvisioner` moves into the platform's public API when `WorkspaceProvisioning` exists (design, "Platform change requests").
 
+> **Changed 2026-11-22 (KAN-384).** `PlatformTenantScope` is delivered in platform Task 6a-1 as a delegate to `ThreadLocalTenantContext` (`common/tenant`), together with the removal of `LocalTenantScope` and `LocalTenantScopeTest` and the new `PlatformTenantScopeTest`. This task no longer creates, deletes or tests those; the routing of every `Account`, `user_role` and `jira_account_links` query comes from platform Task 6 without a bean change here.
+
 **Story:** STORY-001, STORY-010
 **Feature:** platform-adapters
 **Acceptance criteria:** AC-010.1…AC-010.8 (the port `FirstAdminCreator`, added 2026-11-04; traces to platform AC-013.14…AC-013.19). For STORY-001 none new. It ends the backend AGENTS.md §7 exception of design Key decisions "Platform gap" (KAN-231 Q10, HLA Q4) and meets the HLA change of 2026-11-03: the sign-in states and hand-off codes in the Platform / Tenant Registry database (Q2), one database per company for the account tables (Q4). The AC-001.7 and AC-001.15 two-Workspace tests keep passing on the platform adapters.

@@ -31,9 +31,11 @@ import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.SecurityConfig;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.common.security.WithTSolveUser;
+import vn.tsolve.common.tenant.NoTenantException;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.identity.controller.UserListController;
 import vn.tsolve.identity.service.UserListService;
-import vn.tsolve.identity.signin.port.LocalTenantScope;
+import vn.tsolve.identity.signin.port.PlatformTenantScope;
 import vn.tsolve.identity.signin.port.TenantScope;
 
 @WebMvcTest(
@@ -66,7 +68,7 @@ class MockSignedInCallerFilterTest {
     static class ScopeConfiguration {
         @Bean
         TenantScope scope() {
-            return new LocalTenantScope();
+            return new PlatformTenantScope(new ThreadLocalTenantContext(id -> true));
         }
     }
 
@@ -86,7 +88,7 @@ class MockSignedInCallerFilterTest {
         mvc.perform(get("/api/v1/users")).andExpect(status().isOk());
         verify(reader).read(properties.accountEmail());
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
-        assertThatThrownBy(scope::currentWorkspaceId).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(scope::currentWorkspaceId).isInstanceOf(NoTenantException.class);
     }
 
     @Test

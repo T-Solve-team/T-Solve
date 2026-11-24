@@ -13,8 +13,8 @@ Workspace, Registry, row guard, Garage, Redis, STORY-013, STORY-014) is in the m
 ## Scope
 
 All the tenant layer and the infrastructure for the demo of 15/11:
-- the Registry, the row guard, routing and the Tenant Resolver of the web app (STORY-001, STORY-002, STORY-004;
-  Tasks 3 – 6, 10);
+- the one Workspace binding, the Registry, the row guard, routing and the Tenant Resolver of the web app (STORY-001,
+  STORY-002, STORY-004; Tasks 3 – 6, 6a, 10), in the wave order of 22/11 (below and in `tasks.md`);
 - provisioning, the invitation queue and the ops script (STORY-013; Tasks 7 – 9);
 - the local stack and CI (STORY-008; Tasks 1, 2, 11);
 - the demo Workspaces through provisioning (STORY-012, AC-012.1, AC-012.3 – AC-012.5; Task 12);
@@ -32,13 +32,13 @@ Iteration 2 holds only the seed's module data and the reset (Task 23) and the re
 |----------|--------|
 | P1, P2 | `be-foundation` owns the tenant master and the shared files; platform's changesets are added after changeset 001 |
 | P3 | `spring-security-oauth2-jose` (Nimbus) for the Forge Invocation Token, version from the Spring Boot BOM |
-| P5 | `runIn` runs the action in a new transaction (`REQUIRES_NEW`) |
+| P5 | `runIn` runs the action in a new transaction (`REQUIRES_NEW`) — from Task 6 on; Task 6a-1's `runIn` opens no transaction |
 | P7 | The seed runner creates Workspaces through provisioning and runs on staging after each deploy |
 | P9 | `tsolve-caddy` image built in CI (Cloudflare DNS module, rate-limit module) |
 | P11, Q12, Q13 | Ollama native on the AI VPS behind WireGuard; Cloudflare DNS-01 wildcards for `*.tsolve.io.vn` and `*.staging.tsolve.io.vn` |
 | Q9 | The Jira site URL is normalised and checked through `TenantInfoClient` (public address, `https`, no redirects) |
 | R1 – R3, R15 | Registry through `JdbcClient`; routing `DataSource` with lazy per-Workspace pools; `app.tenant_id` set from the bound id |
-| R4 – R6 | One `runAlways`, `runOrder="last"` changeset installs policy `tenant_guard`; owner role and template database; per-Workspace runtime user |
+| R4 – R6 | One `runAlways`, `runOrder="last"` XML changeSet (it runs a SQL file) installs policy `tenant_guard`; owner role and template database; per-Workspace runtime user |
 | R7, R8 | Database and user named `tsolve_<env>_ws_<32 hex>`; AES-256-GCM password storage |
 | R9, R10 | Provisioning order of AC-013.1; `InvitationJobQueue` is a port with a minimal JobRunr implementation in `platform` (user, 4/11) |
 | R11 – R13 | Signed URLs on the Workspace's own site; objects stored as `application/octet-stream`; in-memory upload |
@@ -47,6 +47,27 @@ Iteration 2 holds only the seed's module data and the reset (Task 23) and the re
 | W1, W2 | AWS SDK v2 `s3`; `caddy-ratelimit` in the custom Caddy image |
 | Forge | `ForgeSecurityConfig` `@Order(1)` on the `api.` host; stateless, no CSRF, no cookie; the claim paths of `cloudId`, principal and lifecycle `eventType` are confirmed against Atlassian's Forge Remote documentation first (Task 19) and recorded in the master |
 | Planning | `ThreadLocal` binding; no resolver cache; `/actuator/health` passes every host; staging basic auth except `api.`; GHCR under the repository owner |
+
+## Wave order and Task 6a (Hiếu, 22/11; KAN-384; split into 6a-1 and 6a-2)
+
+Multi-tenant support comes first and is tried on staging (site `bluefin`, domain `bluefin.tsolve.io.vn`) instead of the
+local stack; Tasks 11, 14 and the GHCR part of Task 2 wait. The waves, with what each item lets you see, are in the
+order rule of `tasks.md`: wave 1 = Task 6a-1 then 6a-2 (KAN-384, KAN-385) ∥ Task 3; wave 2 = Task 5 (built, not switched on) ∥ Task 4 (catalog with
+bluefin adopted); wave 3 = Task 6 (routing) ∥ Task 10 (resolver rest, `TenantIsolationIT` after Task 6); wave 4 = the
+row guard switched on for bluefin on staging; wave 5 = Task 7 ∥ `identity` KAN-247, Task 8, Task 9, then Task 12. The
+Jira App Tasks 18 – 21 are a separate lane after Tasks 4 and 6.
+
+Task 6a (6a-1 the holder, 6a-2 the removal of the fallbacks) builds the master's "The binding" in two steps, so that routing (Task 6) lands on a binding that every entry
+already uses:
+- **Now (Tasks 6a-1 and 6a-2):** Task 6a-1: `ThreadLocalTenantContext` in `common/tenant` is the only per-thread binding. identity
+  `TenantScope` (`PlatformTenantScope`) and the worker's `WorkerTenantService.runIn` delegate to it; requests bind it
+  through `WebSessionFilter`, Jira App calls through `ConfigJiraWorkspaceLookup`'s cloudId path, jobs through
+  `TenantExecutionServiceImpl`; the holder is `@Primary`, so the stub is not injected from then on. Task 6a-2 then removes `StubTenantContext`, the `OutboxWorkspace` fallback, `TSOLVE_STUB_WORKSPACE_ID`,
+  `TSOLVE_TRACKER_DEV_WORKSPACE_ID` and the request-thread check of `MockWorkerTenantService`. `runIn` opens no
+  transaction. The existence check (AC-002.14) goes through the port `KnownWorkspaces`, answered until Task 4 by
+  identity's `WorkspaceLookup.findById` over the env stubs (Decided in planning, builder check). No database change.
+- **Later:** Task 4 answers `KnownWorkspaces` from `WorkspaceCatalog.findById`; Task 6 adds `TenantBinding`,
+  `REQUIRES_NEW` (P5) and the routing; Task 10 adds the resolver's own bind for anonymous site requests.
 
 ## Data model in this iteration
 
@@ -62,6 +83,9 @@ all as in the master's Data Model.
 - The real `FirstAdminCreator` (`identity`, KAN-247) and `InvitationJobQueue` (`platform`, JobRunr; Task 8, minimal, user decision of 4/11) before Tasks 9, 12 and 15 can start the
   real backend.
 - KAN-140 (the chat model) for the chat-model part of Task 22; its `bge-m3` part does not wait.
+- Before Task 6: `WebSessionFilter` wraps the whole request in `TenantScope.runIn`. Once `runIn` opens a
+  `REQUIRES_NEW` transaction (P5), every signed-in request would run in one transaction; Task 6's plan card settles how
+  the filter binds then (for example the resolver's bind of Task 10) — Task 6a-1 keeps `runIn` without a transaction.
 
 ## Edge cases covered here
 
