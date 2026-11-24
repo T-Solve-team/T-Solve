@@ -72,4 +72,33 @@
     <include file="changes/048-jira-app-issue-done-state.sql" relativeToChangelogFile="true"/>
     <include file="changes/049-wiki-document-type.sql" relativeToChangelogFile="true"/>
     <include file="changes/050-search-embedding-text-version.sql" relativeToChangelogFile="true"/>
+    <include file="changes/051-platform-tenant-identity.sql" relativeToChangelogFile="true"/>
+    <include file="changes/052-platform-tenant-guard-function.sql" relativeToChangelogFile="true"/>
+    <include file="changes/054-platform-audit-log-entry-append-only.sql" relativeToChangelogFile="true"/>
+
+    <!-- Last element, run on every update: gives every table above the policy tenant_guard (KAN-253, AC-001.31). -->
+    <changeSet id="053-platform-tenant-guard-policies" author="platform" runAlways="true" runOnChange="true"
+               runOrder="last">
+        <!-- From the classpath root: tests re-include this master from other folders (ReviewStorageIT). -->
+        <sqlFile path="db/changelog/changes/053-platform-tenant-guard-policies.sql" splitStatements="false"/>
+        <rollback>
+            <sql splitStatements="false">
+                DO $$
+                DECLARE
+                    t text;
+                BEGIN
+                    FOR t IN
+                        SELECT c.relname FROM pg_class c
+                        JOIN pg_namespace n ON n.oid = c.relnamespace
+                        WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
+                          AND c.relname NOT IN ('tenant_identity', 'databasechangelog', 'databasechangeloglock')
+                    LOOP
+                        EXECUTE format('DROP POLICY IF EXISTS tenant_guard ON public.%I', t);
+                        EXECUTE format('ALTER TABLE public.%I DISABLE ROW LEVEL SECURITY', t);
+                    END LOOP;
+                END
+                $$;
+            </sql>
+        </rollback>
+    </changeSet>
 </databaseChangeLog>

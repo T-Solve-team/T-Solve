@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Test only (KAN-253, Task 5, ConventionGuardIT edge 8): the main tenant changelog, then one changeSet of "a later module"
+  that creates a table. The policy installer of the master (runOrder="last") must still run after this table exists, so
+  that the table gets the policy tenant_guard in the very first update.
+-->
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <include file="db/changelog/db.changelog-master.xml"/>
+
+    <changeSet id="guard-order-probe" author="guard-order-test">
+        <createTable tableName="guard_order_probe">
+            <column name="guard_order_probe_id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+</databaseChangeLog>

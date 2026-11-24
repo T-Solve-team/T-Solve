@@ -48,7 +48,7 @@ chmod 600 /srv/tsolve/staging/.env
 
 Edit it: the `[GEN]` values are secrets you generate (`openssl rand -hex 32`; the UUIDs with `uuidgen`; `WORKSPACE_SECRET_KEY` with `openssl rand -base64 32`, which the backend needs to start and which encrypts the Jira token, so back it up), the `[FILL]`
 values are yours (domain, slug, Google client, emails). Keep `SEARCH_DEV_SCOPE` empty. The Workspace UUID is the same
-in `TSOLVE_STUB_WORKSPACES` (field 3), `TSOLVE_MOCK_ACTIVE_WORKSPACES` and `TSOLVE_TRACKER_DEV_WORKSPACE_ID`; field 4
+in `TSOLVE_STUB_WORKSPACES` (field 3) and `TSOLVE_MOCK_ACTIVE_WORKSPACES`; field 4
 of the stub is the Google domain and field 5 equals `TSOLVE_DEMO_ORG_ID`. Compose reads this one file.
 
 To keep the file elsewhere, also run `export TSOLVE_ENV_FILE=/path/to/.env` in your shell. Shorthand used below:
@@ -70,6 +70,12 @@ keycloak (imports both realms), backend (runs Liquibase), worker. `--wait` retur
 The databases are created by `postgres/init/10-tsolve-dbs.sh` **only when the `db-data` volume is empty** (first
 start). Changing a database password in the env file later does not change it in Postgres: change it there too
 (`dc exec db psql -U postgres -c "ALTER ROLE tsolve PASSWORD '...'"`), or reset the volume (loses all data).
+
+The Registry database is the exception for a volume made before it existed: run `infra/scripts/registry-db-init.sh`
+once on the VPS (after the merge, before the deploy that sets `REGISTRY_DB_*` and `CATALOG_SECRET_KEY`; recreate `db`
+first so it holds the variables): `dc up -d db && dc exec -T db sh -s < infra/scripts/registry-db-init.sh`. It is
+idempotent and leaves an existing role (and its password) as it is. A developer runs the same script against the local
+`db`; there is no separate local compose file.
 
 ## 5. AI: the GPU server
 

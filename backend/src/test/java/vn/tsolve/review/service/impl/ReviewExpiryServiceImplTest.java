@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.review.repository.ReviewExpiryRepository;
 import vn.tsolve.worker.service.WorkerTenantService;
 import vn.tsolve.worker.service.mock.MockWorkerTenantService;
@@ -30,7 +31,8 @@ class ReviewExpiryServiceImplTest {
         UUID workspace = UUID.randomUUID();
         UUID first = UUID.randomUUID();
         UUID second = UUID.randomUUID();
-        var tenants = new MockWorkerTenantService(Set.of(workspace), Set.of());
+        var tenants =
+                new MockWorkerTenantService(Set.of(workspace), Set.of(), new ThreadLocalTenantContext(id -> true));
         var beans = new StaticListableBeanFactory(Map.of("tenants", tenants));
         var service = new ReviewExpiryServiceImpl(repository, beans.getBeanProvider(WorkerTenantService.class));
         when(repository.expireOverdue(today)).thenReturn(List.of(first, second, first));
@@ -50,7 +52,8 @@ class ReviewExpiryServiceImplTest {
     void reportsCountsOnlyAfterCommitWithWorkspaceCaptured_AC_014_5_AC_014_6() {
         UUID workspace = UUID.randomUUID();
         UUID project = UUID.randomUUID();
-        var tenants = new MockWorkerTenantService(Set.of(workspace), Set.of());
+        var tenants =
+                new MockWorkerTenantService(Set.of(workspace), Set.of(), new ThreadLocalTenantContext(id -> true));
         var beans = new StaticListableBeanFactory(Map.of("tenants", tenants));
         var service = new ReviewExpiryServiceImpl(repository, beans.getBeanProvider(WorkerTenantService.class));
         when(repository.expireOverdue(today)).thenReturn(List.of(project, project));

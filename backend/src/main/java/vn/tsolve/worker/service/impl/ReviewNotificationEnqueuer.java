@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
+import vn.tsolve.common.tenant.TenantContext;
 import vn.tsolve.identity.service.WorkspaceSiteService;
 import vn.tsolve.ticket.dto.ReviewNotification;
 import vn.tsolve.ticket.event.ReviewFeedbackDecidedEvent;
@@ -22,7 +23,6 @@ import vn.tsolve.worker.dto.OutboundEmail;
 import vn.tsolve.worker.exception.EmailOutboxUnavailableException;
 import vn.tsolve.worker.exception.InvalidOutboundEmailException;
 import vn.tsolve.worker.service.EmailOutboxService;
-import vn.tsolve.worker.service.OutboxWorkspace;
 import vn.tsolve.worker.service.WorkerTenantService;
 
 /** Queues the writer email of committed Reject and Request Changes decisions (ticket-review STORY-010). */
@@ -36,7 +36,7 @@ public class ReviewNotificationEnqueuer {
     private final WorkspaceSiteService sites;
     private final ReviewEmailRenderer renderer = new ReviewEmailRenderer();
     private final ObjectProvider<WorkerTenantService> tenants;
-    private final ObjectProvider<OutboxWorkspace> requestTenants;
+    private final ObjectProvider<TenantContext> requestTenants;
     private final String siteOriginTemplate;
 
     public ReviewNotificationEnqueuer(
@@ -56,7 +56,7 @@ public class ReviewNotificationEnqueuer {
         this(outboxes, tenants, notifications, sites, siteOriginTemplate, null);
     }
 
-    /** {@code requestTenants} names the Workspace in the web process, where no WorkerTenantService exists (BUG-339, BUG-340). */
+    /** {@code requestTenants} is the holder that names the Workspace in the web process, where no WorkerTenantService exists. */
     @Autowired
     public ReviewNotificationEnqueuer(
             ObjectProvider<EmailOutboxService> outboxes,
@@ -64,7 +64,7 @@ public class ReviewNotificationEnqueuer {
             ReviewNotificationService notifications,
             WorkspaceSiteService sites,
             @Value("${TSOLVE_SITE_ORIGIN_TEMPLATE:}") String siteOriginTemplate,
-            ObjectProvider<OutboxWorkspace> requestTenants) {
+            ObjectProvider<TenantContext> requestTenants) {
         this.requestTenants = requestTenants;
         this.outboxes = outboxes;
         this.tenants = tenants;
@@ -114,22 +114,26 @@ public class ReviewNotificationEnqueuer {
                     processed.incrementAndGet();
                 }
             };
-            OutboxWorkspace web = requestTenants == null ? null : requestTenants.getIfAvailable();
-            if (context == null && web != null && web.current().isEmpty()) {
+            TenantContext web = requestTenants == null ? null : requestTenants.getIfAvailable();
+            if (context == null && web != null && web.currentWorkspaceId().isEmpty()) {
                 // The web outbox would refuse every email for the same reason; say it once (BUG-341).
                 int total = event.decisionIds().size();
                 LOG.warn("Could not queue {} of {} review emails (no Workspace to bind)", total, total);
                 return;
             }
-            if (context == null || context.currentWorkspaceId().isPresent()) {
+            if (context == null) {
+                enqueue.run();
+                return;
+            }
+            var workspaceId = context.enqueueWorkspaceId();
+            if (workspaceId.isEmpty()) {
+                int total = event.decisionIds().size();
+                LOG.warn("Could not queue {} of {} review emails (no Workspace to bind)", total, total);
+                return;
+            }
+            if (context.currentWorkspaceId().isPresent()) {
                 enqueue.run();
             } else {
-                var workspaceId = context.enqueueWorkspaceId();
-                if (workspaceId.isEmpty()) {
-                    int total = event.decisionIds().size();
-                    LOG.warn("Could not queue {} of {} review emails (no Workspace to bind)", total, total);
-                    return;
-                }
                 context.runIn(workspaceId.get(), enqueue);
             }
         } catch (RuntimeException exception) {
@@ -157,8 +161,8 @@ public class ReviewNotificationEnqueuer {
         if (context != null) {
             return context.currentWorkspaceId();
         }
-        OutboxWorkspace request = requestTenants == null ? null : requestTenants.getIfAvailable();
-        return request == null ? Optional.empty() : request.current();
+        TenantContext request = requestTenants == null ? null : requestTenants.getIfAvailable();
+        return request == null ? Optional.empty() : request.currentWorkspaceId();
     }
 
     private OutboundEmail render(ReviewNotification notification, String host) {

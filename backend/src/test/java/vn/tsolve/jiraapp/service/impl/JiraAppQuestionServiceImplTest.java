@@ -53,7 +53,8 @@ import vn.tsolve.chatbot.rating.exception.ChatbotAnswerNotFoundException;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.common.security.JiraAppPrincipal;
 import vn.tsolve.common.security.TSolveUser;
-import vn.tsolve.identity.signin.port.LocalTenantScope;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
+import vn.tsolve.identity.signin.port.PlatformTenantScope;
 import vn.tsolve.jiraapp.dto.JiraAppJobStatus;
 import vn.tsolve.jiraapp.dto.JiraAppQuestionJobResult;
 import vn.tsolve.jiraapp.dto.JiraAppQuestionRequest;
@@ -80,7 +81,7 @@ class JiraAppQuestionServiceImplTest {
     private static final UUID WORKSPACE = UUID.fromString("20000000-0000-0000-0000-000000000001");
 
     private final JiraWorkspaceLookup workspaces = mock(JiraWorkspaceLookup.class);
-    private final LocalTenantScope tenantScope = new LocalTenantScope();
+    private final PlatformTenantScope tenantScope = new PlatformTenantScope(new ThreadLocalTenantContext(id -> true));
     private final ProjectService projects = mock(ProjectService.class);
     private final JiraAskerLookup askers = mock(JiraAskerLookup.class);
     private final ChatbotAnswerService answers = mock(ChatbotAnswerService.class);

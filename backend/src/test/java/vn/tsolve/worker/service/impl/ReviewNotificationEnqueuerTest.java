@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -12,6 +13,7 @@ import static org.mockito.Mockito.when;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +23,10 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.identity.service.WorkspaceSiteService;
 import vn.tsolve.ticket.dto.ReviewNotification;
 import vn.tsolve.ticket.event.ReviewFeedbackDecidedEvent;
@@ -31,6 +37,7 @@ import vn.tsolve.worker.client.ReviewEmailRenderer;
 import vn.tsolve.worker.dto.OutboundEmail;
 import vn.tsolve.worker.service.EmailOutboxService;
 import vn.tsolve.worker.service.WorkerTenantService;
+import vn.tsolve.worker.service.mock.MockWorkerTenantService;
 
 @ExtendWith(OutputCaptureExtension.class)
 class ReviewNotificationEnqueuerTest {
@@ -55,6 +62,11 @@ class ReviewNotificationEnqueuerTest {
         ObjectProvider<WorkerTenantService> provider = mock(ObjectProvider.class);
         when(provider.getIfAvailable()).thenReturn(tenants);
         return provider;
+    }
+
+    private void bindActiveWorkspace(UUID workspace) {
+        when(tenants.currentWorkspaceId()).thenReturn(Optional.of(workspace));
+        when(tenants.enqueueWorkspaceId()).thenReturn(Optional.of(workspace));
     }
 
     private ReviewNotification notification(ReviewNotification.Kind kind) {
@@ -95,7 +107,7 @@ class ReviewNotificationEnqueuerTest {
 
     private OutboundEmail enqueueLinkNotification(String host, String template) {
         UUID workspace = UUID.randomUUID();
-        when(tenants.currentWorkspaceId()).thenReturn(Optional.of(workspace));
+        bindActiveWorkspace(workspace);
         when(sites.siteHost(workspace)).thenReturn(Optional.of(host));
         when(outboxes.getIfAvailable()).thenReturn(outbox);
         when(notifications.findNotification(DECISION))
@@ -111,7 +123,7 @@ class ReviewNotificationEnqueuerTest {
     @EnumSource(ReviewNotification.Kind.class)
     void passesRenderedContentAndTicketLink_AC_010_1_AC_010_2_AC_010_8(ReviewNotification.Kind kind) {
         UUID workspace = UUID.randomUUID();
-        when(tenants.currentWorkspaceId()).thenReturn(Optional.of(workspace));
+        bindActiveWorkspace(workspace);
         when(sites.siteHost(workspace)).thenReturn(Optional.of("acme.example.test"));
         when(outboxes.getIfAvailable()).thenReturn(outbox);
         when(notifications.findNotification(DECISION)).thenReturn(Optional.of(notification(kind)));
@@ -138,7 +150,7 @@ class ReviewNotificationEnqueuerTest {
     @org.junit.jupiter.params.provider.ValueSource(strings = "   ")
     void omitsTicketLinkWhenSiteUnavailable_AC_010_8(String host) {
         UUID workspace = UUID.randomUUID();
-        when(tenants.currentWorkspaceId()).thenReturn(Optional.of(workspace));
+        bindActiveWorkspace(workspace);
         when(sites.siteHost(workspace)).thenReturn(Optional.ofNullable(host));
         when(outboxes.getIfAvailable()).thenReturn(outbox);
         when(notifications.findNotification(DECISION))
@@ -155,7 +167,7 @@ class ReviewNotificationEnqueuerTest {
     @Test
     void queuesEveryDecisionWithoutLinksWhenSiteLookupThrows_AC_010_8_BUG_223() {
         UUID workspace = UUID.randomUUID();
-        when(tenants.currentWorkspaceId()).thenReturn(Optional.of(workspace));
+        bindActiveWorkspace(workspace);
         when(outboxes.getIfAvailable()).thenReturn(outbox);
         when(sites.siteHost(workspace)).thenThrow(new IllegalStateException());
         var decisions = List.of(DECISION, UUID.randomUUID(), UUID.randomUUID());
@@ -174,6 +186,48 @@ class ReviewNotificationEnqueuerTest {
         });
     }
 
+    private void decideInRequestBoundTo(UUID bound, Set<UUID> known, Set<UUID> active, Set<UUID> suspended) {
+        var holder = new ThreadLocalTenantContext(known::contains);
+        var realTenants = new MockWorkerTenantService(active, suspended, holder);
+        @SuppressWarnings("unchecked")
+        ObjectProvider<WorkerTenantService> provider = mock(ObjectProvider.class);
+        when(provider.getIfAvailable()).thenReturn(realTenants);
+        when(outboxes.getIfAvailable()).thenReturn(outbox);
+        when(notifications.findNotification(DECISION))
+                .thenReturn(Optional.of(notification(ReviewNotification.Kind.REJECTED)));
+        var real =
+                new ReviewNotificationEnqueuer(outboxes, provider, notifications, sites, "https://{slug}.example.test");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest()));
+        try {
+            holder.runIn(bound, () -> real.onDecided(new ReviewFeedbackDecidedEvent(List.of(DECISION))));
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+        }
+    }
+
+    @Test
+    void queuesNoEmailForASuspendedBoundWorkspace_BUG_324() {
+        UUID active = UUID.randomUUID();
+        UUID suspended = UUID.randomUUID();
+        decideInRequestBoundTo(suspended, Set.of(active, suspended), Set.of(active), Set.of(suspended));
+        verify(outbox, never()).queue(any());
+    }
+
+    @Test
+    void queuesNoEmailForAnUnlistedBoundWorkspace_BUG_324() {
+        UUID active = UUID.randomUUID();
+        UUID unlisted = UUID.randomUUID();
+        decideInRequestBoundTo(unlisted, Set.of(active, unlisted), Set.of(active), Set.of());
+        verify(outbox, never()).queue(any());
+    }
+
+    @Test
+    void queuesOneEmailForAnActiveBoundWorkspace_BUG_324() {
+        UUID active = UUID.randomUUID();
+        decideInRequestBoundTo(active, Set.of(active), Set.of(active), Set.of());
+        verify(outbox, times(1)).queue(any(OutboundEmail.class));
+    }
+
     @Test
     void skipsAbsentOutbox_AC_010_3() {
         assertThatCode(() -> enqueuer.onDecided(new ReviewFeedbackDecidedEvent(List.of(DECISION))))
@@ -184,7 +238,7 @@ class ReviewNotificationEnqueuerTest {
     @Test
     void skipsApproveMissingDecisionAndNoWriterButQueuesOthers_AC_010_5() {
         when(outboxes.getIfAvailable()).thenReturn(outbox);
-        when(tenants.currentWorkspaceId()).thenReturn(Optional.of(UUID.randomUUID()));
+        bindActiveWorkspace(UUID.randomUUID());
         UUID approved = UUID.randomUUID();
         UUID missing = UUID.randomUUID();
         UUID noWriter = UUID.randomUUID();
@@ -200,7 +254,7 @@ class ReviewNotificationEnqueuerTest {
     @Test
     void continuesAfterQueueOrLookupFailureAndLogsNoPrivateData_AC_010_3_AC_010_5_AC_010_6(CapturedOutput output) {
         when(outboxes.getIfAvailable()).thenReturn(outbox);
-        when(tenants.currentWorkspaceId()).thenReturn(Optional.of(UUID.randomUUID()));
+        bindActiveWorkspace(UUID.randomUUID());
         UUID lookupFailure = UUID.randomUUID();
         UUID queueFailure = UUID.randomUUID();
         String privateMessage = WRITER + " " + FEEDBACK + " private-subject private-body";
@@ -224,7 +278,7 @@ class ReviewNotificationEnqueuerTest {
     @Test
     void queuesSubjectWithoutLineBreaks_AC_010_9() {
         when(outboxes.getIfAvailable()).thenReturn(outbox);
-        when(tenants.currentWorkspaceId()).thenReturn(Optional.of(UUID.randomUUID()));
+        bindActiveWorkspace(UUID.randomUUID());
         var n = notification(ReviewNotification.Kind.REJECTED);
         when(notifications.findNotification(DECISION))
                 .thenReturn(Optional.of(new ReviewNotification(
