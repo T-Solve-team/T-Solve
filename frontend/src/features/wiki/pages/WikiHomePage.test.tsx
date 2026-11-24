@@ -542,6 +542,23 @@ describe('WikiHomePage', () => {
     expect(within(pane).queryByTitle('VPN guide')).not.toBeInTheDocument();
   });
 
+  it('AC-002.27 shows the first 420 characters when the PDF has no %PDF- header (BUG-391)', async () => {
+    const createUrl = vi.fn(() => 'blob:file');
+    URL.createObjectURL = createUrl;
+    server.use(
+      http.get(
+        '*/api/v1/wiki/documents/:documentId/file',
+        () => new HttpResponse(new TextEncoder().encode('<html>not a pdf</html>')),
+      ),
+    );
+    await openHome();
+    const pane = preview();
+    const content = detail(document).content;
+    expect(await within(pane).findByText(content.slice(0, 420))).toBeInTheDocument();
+    expect(within(pane).queryByTitle('VPN guide')).not.toBeInTheDocument();
+    expect(createUrl).not.toHaveBeenCalled();
+  });
+
   it('AC-002.27 shows the first 420 characters when the DOCX cannot be rendered', async () => {
     renderDocx.mockRejectedValue(new Error('bad docx'));
     server.use(getGetWikiDocumentMockHandler({ ...detail(document), fileName: 'guide.docx' }));

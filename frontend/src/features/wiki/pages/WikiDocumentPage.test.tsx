@@ -193,7 +193,13 @@ describe('WikiDocumentPage', () => {
             : { ...document, fileName: 'vpn.docx' },
         ),
       ),
-      fileHandler('PK'),
+      http.get(
+        '*/api/v1/wiki/documents/:documentId/file',
+        ({ params }) =>
+          new HttpResponse(
+            new TextEncoder().encode(params.documentId === NEXT ? '%PDF-1.1' : 'PK'),
+          ),
+      ),
     );
     const { router } = renderApp(paths.wikiDocument(ID), { role: 'EMPLOYEE' });
     await screen.findByRole('region', { name: 'Content' }, { timeout: 5000 });

@@ -37,11 +37,24 @@ export function WikiFileView({
     if (!blob) return;
     const pdf = pdfRef.current;
     if (pdf) {
-      // The browser's own PDF viewer; the Caddy CSP allows frame-src blob: for it.
-      const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
-      // view=FitH for Chrome, zoom=page-width for Firefox's pdf.js.
-      pdf.src = isPreview ? `${url}#page=1&view=FitH&zoom=page-width&toolbar=0` : url;
-      return () => URL.revokeObjectURL(url);
+      let url: string | undefined;
+      let stopped = false;
+      // A file without the %PDF- header would only show the browser's error page: fall back instead.
+      void new Blob([blob])
+        .slice(0, 5)
+        .text()
+        .then((head) => {
+          if (stopped) return;
+          if (head !== '%PDF-') return setFailed(true);
+          // The browser's own PDF viewer; the Caddy CSP allows frame-src blob: for it.
+          url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+          // view=FitH for Chrome, zoom=page-width for Firefox's pdf.js.
+          pdf.src = isPreview ? `${url}#page=1&view=FitH&zoom=page-width&toolbar=0` : url;
+        });
+      return () => {
+        stopped = true;
+        if (url) URL.revokeObjectURL(url);
+      };
     }
     const docx = docxRef.current;
     if (!docx) return;
