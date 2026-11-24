@@ -112,11 +112,12 @@ public class WikiUploadServiceImpl implements WikiUploadService {
     @Override
     // No transaction: parsing up to 10 files must not hold a pooled connection (BUG-294).
     public List<WikiUploadPreview> extract(UUID userId, UUID spaceId, List<MultipartFile> files) {
-        requireManager(userId, spaceId);
-        // One file at a time: one extract holds at most one Ollama slot (AC-007.2, BUG-355),
-        // and all of them share one time budget so the request ends before a proxy timeout (AC-007.3, BUG-360).
-        var uploads = readFiles(files);
+        // One file at a time: one extract holds at most one Ollama slot (AC-007.2, BUG-355), and all of them
+        // share one time budget counted from the start of the request, parsing included, so the request
+        // ends before a proxy timeout (AC-007.3, BUG-390).
         var deadline = classifier.deadline();
+        requireManager(userId, spaceId);
+        var uploads = readFiles(files);
         return uploads.stream()
                 .map(file -> {
                     String name = file.name();

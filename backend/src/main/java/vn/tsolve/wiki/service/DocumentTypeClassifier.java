@@ -56,7 +56,8 @@ public class DocumentTypeClassifier {
             LlmClient llm,
             ObjectMapper json,
             @Value("${tsolve.wiki.classify.timeout:20s}") String timeout,
-            @Value("${tsolve.wiki.classify.total-timeout:60s}") String totalTimeout) {
+            // 45 s leaves room for parsing, upload and the answer under a 60 s proxy timeout (BUG-390).
+            @Value("${tsolve.wiki.classify.total-timeout:45s}") String totalTimeout) {
         this.llm = llm;
         this.reader = json.readerFor(JsonNode.class).with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
         this.timeout = DurationStyle.detectAndParse(timeout);
@@ -70,7 +71,7 @@ public class DocumentTypeClassifier {
         }
     }
 
-    /** The end of one extract request's classification budget, from now (AC-007.3, BUG-360). */
+    /** The end of one extract request's classification budget, from now (AC-007.3, BUG-390). */
     public Instant deadline() {
         return Instant.now().plus(totalTimeout);
     }
@@ -81,7 +82,7 @@ public class DocumentTypeClassifier {
 
     /**
      * Blocks the caller until the per-file timeout or the deadline, whichever comes first; a late call is interrupted
-     * so it frees its Ollama slot (AC-007.3, BUG-355, BUG-360).
+     * so it frees its Ollama slot (AC-007.3, BUG-355, BUG-390).
      */
     public WikiDocumentType classify(String title, String text, Instant deadline) {
         if (text.isBlank()) return WikiDocumentType.OTHER;

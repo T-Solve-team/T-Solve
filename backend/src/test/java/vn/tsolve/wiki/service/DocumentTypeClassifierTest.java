@@ -91,7 +91,7 @@ class DocumentTypeClassifierTest {
     }
 
     @Test
-    void stopsAtTheRequestDeadlineAndSkipsTheLlmAfterIt_AC_007_3_BUG_360() {
+    void stopsAtTheRequestDeadlineAndSkipsTheLlmAfterIt_AC_007_3_BUG_390() {
         when(llm.chat(any(), any())).thenAnswer(call -> {
             new CountDownLatch(1).await();
             return "{\"documentType\":\"GUIDE\"}";
