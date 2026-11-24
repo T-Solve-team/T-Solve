@@ -39,14 +39,22 @@ export function WikiFileView({
     if (pdf) {
       // The browser's own PDF viewer; the Caddy CSP allows frame-src blob: for it.
       const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
-      pdf.src = isPreview ? `${url}#page=1&view=FitH&toolbar=0` : url;
+      // view=FitH for Chrome, zoom=page-width for Firefox's pdf.js.
+      pdf.src = isPreview ? `${url}#page=1&view=FitH&zoom=page-width&toolbar=0` : url;
       return () => URL.revokeObjectURL(url);
     }
     const docx = docxRef.current;
     if (!docx) return;
     let observer: ResizeObserver | undefined;
-    renderAsync(blob, docx, undefined, { inWrapper: true, useBase64URL: true })
+    let cancelled = false;
+    renderAsync(blob, docx, undefined, {
+      inWrapper: true,
+      useBase64URL: true,
+      // Use the page breaks Word saved, so the first <section> is the first page.
+      ignoreLastRenderedPageBreak: !isPreview,
+    })
       .then(() => {
+        if (cancelled) return;
         // docx-preview copies link targets as is; drop any scheme that could run script.
         for (const a of docx.querySelectorAll('a[href]')) {
           if (/^(https?:|mailto:|#)/i.test(a.getAttribute('href') ?? '')) {
@@ -58,16 +66,20 @@ export function WikiFileView({
         const [first, ...rest] = docx.querySelectorAll<HTMLElement>('section');
         for (const page of rest) page.remove();
         if (!first) return;
+        // Read the natural width once, before any zoom: a zoomed offsetWidth differs per browser.
+        const naturalWidth = first.offsetWidth;
         const fit = () => {
-          if (first.offsetWidth)
-            first.style.zoom = String(Math.min(1, docx.clientWidth / first.offsetWidth));
+          if (naturalWidth) first.style.zoom = String(Math.min(1, docx.clientWidth / naturalWidth));
         };
         fit();
         observer = new ResizeObserver(fit);
         observer.observe(docx);
       })
-      .catch(() => setFailed(true));
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
     return () => {
+      cancelled = true;
       observer?.disconnect();
       docx.replaceChildren();
     };

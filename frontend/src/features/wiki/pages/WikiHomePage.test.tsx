@@ -506,7 +506,7 @@ describe('WikiHomePage', () => {
     ]);
     expect(await within(pane).findByTitle('Employee handbook')).toHaveAttribute(
       'src',
-      'blob:file#page=1&view=FitH&toolbar=0',
+      'blob:file#page=1&view=FitH&zoom=page-width&toolbar=0',
     );
     expect(pane).not.toHaveTextContent(detail(handbook).content.slice(0, 40));
     expect(within(pane).getByRole('link', { name: /Download/ })).toHaveAttribute(

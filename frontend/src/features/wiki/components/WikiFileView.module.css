@@ -18,6 +18,8 @@
 
 /* The first page only; WikiFileView zooms it to this box's width, so no gutter around it. */
 .docxPreview {
+  /* One A4 page tall even when the DOCX has no saved page break (one long <section>). */
+  aspect-ratio: 1 / 1.414;
   overflow: hidden;
   border: var(--ant-line-width) solid var(--ant-color-border-secondary);
 }
