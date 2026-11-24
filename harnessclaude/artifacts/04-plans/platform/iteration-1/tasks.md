@@ -519,6 +519,8 @@ platform AC-004.29, AC-002.14, AC-002.15 (`runIn` through the holder), GBR-38 (a
 AC-003.3); `isWorkspaceActive` from `findById` with status ACTIVE; `enqueueWorkspaceId` returns a bound id only if it is
 Active, on any thread, and when nothing is bound the single Active id, or empty when there is none or more than one
 (the rule of Task 6a-2 and BUG-164; this replaces the earlier sentence of this task, "never the single Active one");
+`enqueueWorkspaceId` also propagates a Registry failure (never empty); the constructor takes `WorkspaceCatalog` directly, so
+without a catalog bean startup fails naming `WorkspaceCatalog` (R19, 24/11);
 `runIn` and `currentWorkspaceId` delegate to `TenantContext`. A `WorkerTenantService` bean must never exist in the web
 process (`OutboxOnlyConfiguration` and `WebJobsConfiguration` say so), hence the same condition as `WorkerConfiguration`;
 on staging that is the worker container only. Delete `MockWorkerTenantService`, `WorkerMockConfiguration` and
@@ -530,7 +532,8 @@ the same behaviour (the new name keeps `NoWorkspaceFallbacksTest`'s scan green);
 **Tests (12 new, 16 updated or deleted):**
 - `CatalogWorkerTenantServiceTest` (10): `activeWorkspaceIds` equals the Active list and is empty when none (worker
   AC-003.1); it throws when the catalog cannot list (Edge #84, worker AC-003.3); `isWorkspaceActive` true for Active,
-  false for Suspended or unknown; `enqueueWorkspaceId` with an Active Workspace bound returns it on a request thread and on
+  false for Suspended or unknown, and it throws when `findById` fails; `enqueueWorkspaceId` throws the Registry failure
+  too (unbound and bound); `enqueueWorkspaceId` with an Active Workspace bound returns it on a request thread and on
   a plain thread; with a Suspended one bound it is empty (Edge #82); with an unknown one bound it is empty; unbound with a
   single Active it returns that one (BUG-164); unbound with none or two it is empty; `runIn` refuses an unknown id
   (AC-002.14) and binds a Suspended one (AC-002.15); `currentWorkspaceId` is the holder's.
@@ -540,10 +543,17 @@ the same behaviour (the new name keeps `NoWorkspaceFallbacksTest`'s scan green);
 - Update the 12 users of `MockWorkerTenantService` and the profile or property tests listed under "Existing tests that
   name the removed stand-ins" (4c). `JobRunrTenantIT`, `WebJobsIT` and `WorkerConfigurationTest` drop the profile and get
   a test `WorkspaceCatalog` bean.
+- `WorkerJobTenantBindingTest` moves onto the catalog chain (not `FixedWorkerTenantService`): `CatalogWorkerTenantService`
+  over a Mockito `WorkspaceCatalog`, the holder's `KnownWorkspaces` = `id -> catalog.findById(id).isPresent()`; the
+  "two lists disagree" case becomes "a job for a Workspace the catalog does not know is refused and does not run".
+- Not covered by a JUnit test: compose `SPRING_PROFILES_ACTIVE: worker` (manual `docker compose config`), doc wording, and
+  the staging smoke.
 **ITs to run:** `-Dit.test=EmailOutboxIT,JobRunrTenantIT,WebJobsIT,ReviewNotificationIT`.
 **Staging after merge:** a tracker suggestion job and a review email sent by the worker.
 **Files:**
-- Create: `backend/src/main/java/vn/tsolve/worker/service/impl/CatalogWorkerTenantService.java`
+- Create: `backend/src/main/java/vn/tsolve/worker/service/impl/CatalogWorkerTenantService.java`; QA step 2 first adds it as
+  an unannotated skeleton `(WorkspaceCatalog, TenantContext)` whose methods throw `UnsupportedOperationException("4c")`, so
+  the tests compile and are red for the right reason; the developer adds the annotations and bodies
 - Modify: `backend/src/main/java/vn/tsolve/worker/service/WorkerTenantService.java` (javadoc), `infra/compose.staging.yml`,
   `backend/Dockerfile` (comment), `backend/README-worker.md`, `.env.example`, `infra/staging.env.example`
 - Delete: `worker/service/mock/MockWorkerTenantService.java`, `worker/config/WorkerMockConfiguration.java`,
