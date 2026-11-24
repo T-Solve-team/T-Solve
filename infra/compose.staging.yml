@@ -188,6 +188,8 @@ services:
       # The web process runs with NO Spring profile (never dev, never identity-mock).
       SPRING_PROFILES_ACTIVE: ""
       <<: *no-unrelated-secrets
+      REGISTRY_DB_URL: ${REGISTRY_DB_URL:?set REGISTRY_DB_URL in the env file}
+      CATALOG_SECRET_KEY: ${CATALOG_SECRET_KEY:?set CATALOG_SECRET_KEY in the env file}
       # The web process only queues the Reject / Request Changes email in the Jobs outbox (BUG-339); the worker sends it.
       # Not TSOLVE_WORKER_ENABLED: that would also start JobRunr here and switch the tracker queue.
       TSOLVE_WORKER_OUTBOX_ENABLED: "true"
@@ -228,6 +230,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: worker,worker-mock
       <<: *no-unrelated-secrets
+      REGISTRY_DB_URL: ${REGISTRY_DB_URL:?set REGISTRY_DB_URL in the env file}
+      CATALOG_SECRET_KEY: ${CATALOG_SECRET_KEY:?set CATALOG_SECRET_KEY in the env file}
       TSOLVE_WORKER_ENABLED: "true"
       DB_HOST: db
       DB_PORT: "5432"

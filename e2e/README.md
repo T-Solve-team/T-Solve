@@ -27,14 +27,12 @@ then use the backend command from the root README:
 ```powershell
 $env:SPRING_PROFILES_ACTIVE = 'dev'
 $env:SEARCH_DEV_SCOPE = 'all'
-$env:TSOLVE_STUB_WORKSPACE_READY = 'true'
 cd backend
 mvn spring-boot:run
 ```
 
 `dev` seeds Alice (Admin) and Bob. `SEARCH_DEV_SCOPE=all` is the existing local demo adapter needed for the ticket
-to be visible. The Workspace module's company-information lookup is not implemented yet: the existing readiness
-stub must report `true` or Alice is redirected to Workspace Setup. These settings are for this local smoke only.
+to be visible. `/me` reads company-information readiness from the Workspace module's lookup. These settings are for this local smoke only.
 The fixture uses the current single `DB_*` dev database; it is not a two-database isolation fixture. It adds missing
 Ticket Resolver / Project Manager roles, the `E2E ACME` Department and `E2EACME` Project, and a Published ticket if
 none exists. It preserves existing accounts, roles and data, and never upgrades an existing draft ticket.

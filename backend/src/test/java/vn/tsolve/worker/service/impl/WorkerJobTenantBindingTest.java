@@ -118,7 +118,7 @@ class WorkerJobTenantBindingTest {
     @DisplayName(
             "AC-002.14 a job for a Workspace in the mock Active list that KnownWorkspaces does not know is refused and does not run")
     void aJobForAWorkspaceTheHolderDoesNotKnowIsRefused() {
-        // TSOLVE_MOCK_ACTIVE_WORKSPACES lists C, TSOLVE_STUB_WORKSPACES (the holder's list) does not: both must agree.
+        // TSOLVE_MOCK_ACTIVE_WORKSPACES lists C, the catalog (the holder's list) does not: both must agree.
         MockWorkerTenantService disagreeing = new MockWorkerTenantService(Set.of(A, C), Set.of(), holder);
         TenantExecutionServiceImpl execution = new TenantExecutionServiceImpl(disagreeing);
         AtomicInteger ran = new AtomicInteger();

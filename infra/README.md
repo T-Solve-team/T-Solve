@@ -46,9 +46,9 @@ chmod 600 /srv/tsolve/staging/.env
 ```
 
 Edit it: the `[GEN]` values are secrets you generate (`openssl rand -hex 32`; the UUIDs with `uuidgen`; `WORKSPACE_SECRET_KEY` with `openssl rand -base64 32`, which the backend needs to start and which encrypts the Jira token, so back it up), the `[FILL]`
-values are yours (domain, slug, Google client, emails). Keep `SEARCH_DEV_SCOPE` empty. The Workspace UUID is the same
-in `TSOLVE_STUB_WORKSPACES` (field 3) and `TSOLVE_MOCK_ACTIVE_WORKSPACES`; field 4
-of the stub is the Google domain and field 5 equals `TSOLVE_DEMO_ORG_ID`. Compose reads this one file.
+values are yours (domain, slug, Google client, emails). Keep `SEARCH_DEV_SCOPE` empty. The Workspace UUID in
+`TSOLVE_DEMO_WORKSPACE_ID` (used by `infra/scripts/registry-adopt-workspace.sh`) matches `TSOLVE_MOCK_ACTIVE_WORKSPACES`,
+and the Workspace's Google domain and `TSOLVE_DEMO_ORG_ID` live in its Registry row. Compose reads this one file.
 
 To keep the file elsewhere, also run `export TSOLVE_ENV_FILE=/path/to/.env` in your shell. Shorthand used below:
 
@@ -153,7 +153,7 @@ dc restart keycloak
 
 Deleting a realm deletes its users and sessions. This stack has no company provisioning (the web process runs without
 the `ops` profile): a new company means editing the env file, the realm file and the Caddy hosts by hand, and this
-stack serves exactly one company (`TSOLVE_STUB_WORKSPACES` accepts one entry).
+stack serves one Workspace (adopted into the Registry with `infra/scripts/registry-adopt-workspace.sh`).
 
 ## 11. Logs and housekeeping
 
