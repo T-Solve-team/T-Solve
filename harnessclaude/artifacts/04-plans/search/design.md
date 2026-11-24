@@ -544,7 +544,9 @@ Spec: AC-002.2 and AC-002.4 reworded, new AC-002.16.
 - **Results area.** Rendered only with a query (`<section aria-label="Results">`); before it the start state takes its
   place (AC-002.2). Results are a reading column of at most 860px: flat rows (`article`) with no border or shadow, the
   container background on hover, title, then the line of AC-002.7 with the helpful rate on the same line, then the
-  excerpt clamped to two lines. Pagination left-aligned under the rows.
+  excerpt clamped to two lines. The title link is stretched over its row (`::after`, `inset: 0`), so the whole row
+  opens the ticket and the hover is a true cue; the row draws the focus ring (`:focus-within`), the link stays the one
+  focus stop and keeps the title as its accessible name. Pagination left-aligned under the rows.
 - **Filters as compact controls.** Each filter is a pill (`border-radius` 999px, 36px tall) holding its visible
   `<label>` (secondary text) and a borderless antd control (`variant="borderless"`), so the label, `htmlFor` and the
   accessible names of AC-002.1 and AC-002.5 do not change; `:focus-within` draws the brand focus ring. Centred under the
