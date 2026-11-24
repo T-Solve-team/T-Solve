@@ -5,6 +5,7 @@
 #   app:      DB_NAME / DB_USER / DB_PASSWORD
 #   keycloak: KEYCLOAK_DB_NAME / KEYCLOAK_DB_USER / KEYCLOAK_DB_PASSWORD
 #   jobs:     JOBS_DB_NAME / JOBS_DB_USER / JOBS_DB_PASSWORD   (JobRunr, a separate database)
+#   registry: REGISTRY_DB_NAME / REGISTRY_DB_USER / REGISTRY_DB_PASSWORD   (the Workspace catalog; the user owns it)
 set -eu
 
 create_db() { # name user password
@@ -18,6 +19,10 @@ SQL
 create_db "$DB_NAME" "$DB_USER" "$DB_PASSWORD"
 create_db "${KEYCLOAK_DB_NAME:-keycloak}" "${KEYCLOAK_DB_USER:-keycloak}" "$KEYCLOAK_DB_PASSWORD"
 create_db "${JOBS_DB_NAME:-tsolve_staging_jobs}" "$JOBS_DB_USER" "$JOBS_DB_PASSWORD"
+: "${REGISTRY_DB_USER:?set REGISTRY_DB_USER (the Registry database owner)}"
+: "${REGISTRY_DB_PASSWORD:?set REGISTRY_DB_PASSWORD (the Registry database owner's password)}"
+: "${REGISTRY_DB_NAME:=tsolve_staging_registry}"
+create_db "${REGISTRY_DB_NAME}" "$REGISTRY_DB_USER" "$REGISTRY_DB_PASSWORD"
 
 # pgvector: creating the extension needs the superuser, so it is done here (the Liquibase changelog's
 # CREATE EXTENSION IF NOT EXISTS then finds it and does nothing).

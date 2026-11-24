@@ -66,6 +66,7 @@ import vn.tsolve.wiki.service.TextExtractor;
 import vn.tsolve.wiki.service.WikiUploadService;
 import vn.tsolve.wiki.service.impl.WikiUploadServiceImpl;
 import vn.tsolve.worker.service.TenantJobService;
+import vn.tsolve.worker.service.WebJobQueue;
 
 class WikiUploadIT extends WikiReadTestSupport {
     private static AnnotationConfigApplicationContext context;
@@ -410,6 +411,7 @@ class WikiUploadIT extends WikiReadTestSupport {
                 ObjectProvider<FileStorage> storage,
                 AuditService audit,
                 ObjectProvider<TenantJobService> jobs,
+                ObjectProvider<WebJobQueue> webJobs,
                 PlatformTransactionManager transactions,
                 ObjectProvider<TenantContext> tenants) {
             return new WikiUploadServiceImpl(
@@ -422,6 +424,7 @@ class WikiUploadIT extends WikiReadTestSupport {
                     storage,
                     audit,
                     jobs,
+                    webJobs,
                     transactions,
                     tenants,
                     Mappers.getMapper(WikiDocumentMapper.class),

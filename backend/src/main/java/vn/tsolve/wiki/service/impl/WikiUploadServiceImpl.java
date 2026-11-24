@@ -53,6 +53,7 @@ import vn.tsolve.wiki.service.DocumentTypeClassifier;
 import vn.tsolve.wiki.service.TextExtractor;
 import vn.tsolve.wiki.service.WikiUploadService;
 import vn.tsolve.worker.service.TenantJobService;
+import vn.tsolve.worker.service.WebJobQueue;
 
 @Service
 public class WikiUploadServiceImpl implements WikiUploadService {
@@ -69,6 +70,8 @@ public class WikiUploadServiceImpl implements WikiUploadService {
     private final AuditService audit;
     // Optional: the worker runs only with tsolve.worker.enabled (BUG-296).
     private final ObjectProvider<TenantJobService> jobs;
+    // The web process has no worker; it queues the job for the worker process instead (BUG-360).
+    private final ObjectProvider<WebJobQueue> webJobs;
     private final TransactionTemplate transaction;
     private final ObjectProvider<TenantContext> tenantContext;
     private final WikiDocumentMapper mapper;
@@ -84,6 +87,7 @@ public class WikiUploadServiceImpl implements WikiUploadService {
             ObjectProvider<FileStorage> storage,
             AuditService audit,
             ObjectProvider<TenantJobService> jobs,
+            ObjectProvider<WebJobQueue> webJobs,
             PlatformTransactionManager transactions,
             ObjectProvider<TenantContext> tenantContext,
             WikiDocumentMapper mapper,
@@ -97,6 +101,7 @@ public class WikiUploadServiceImpl implements WikiUploadService {
         this.storage = storage;
         this.audit = audit;
         this.jobs = jobs;
+        this.webJobs = webJobs;
         this.transaction = new TransactionTemplate(transactions);
         this.transaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         this.tenantContext = tenantContext;
@@ -186,8 +191,10 @@ public class WikiUploadServiceImpl implements WikiUploadService {
                         for (WikiDocumentRef document : result) {
                             try {
                                 TenantJobService worker = jobs.getIfAvailable();
-                                if (worker == null) throw new IllegalStateException("No worker configured");
-                                worker.enqueueFromRequest("wiki-index", document.documentId());
+                                WebJobQueue web = webJobs.getIfAvailable();
+                                if (worker != null) worker.enqueueFromRequest("wiki-index", document.documentId());
+                                else if (web != null) web.enqueue("wiki-index", document.documentId());
+                                else throw new IllegalStateException("No worker configured");
                             } catch (RuntimeException failure) {
                                 // ponytail: no re-index sweep yet; PENDING documents need a manual re-enqueue.
                                 log.error(

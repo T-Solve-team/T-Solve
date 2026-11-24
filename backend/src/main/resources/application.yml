@@ -72,6 +72,13 @@ tsolve:
       min-similarity: ${WIKI_SEARCH_MIN_SIMILARITY:0.55}
   workspace:
     secret-key: ${WORKSPACE_SECRET_KEY}
+  # Registry database (platform): empty url = no Registry beans (see RegistryDataSourceConfig). Once the url is set,
+  # CATALOG_SECRET_KEY (Base64 of 32 bytes) is required.
+  registry:
+    url: ${REGISTRY_DB_URL:}
+    username: ${REGISTRY_DB_USER:}
+    password: ${REGISTRY_DB_PASSWORD:}
+    secret-key: ${CATALOG_SECRET_KEY}
   # File storage (STORY-007) on Garage through the S3 API. Empty endpoint = no storage beans (see StorageConfig).
   storage:
     endpoint: ${FILE_STORAGE_ENDPOINT:}
@@ -107,9 +114,6 @@ tsolve:
   tracker:
     jira-app-id: ${TSOLVE_JIRA_APP_ID}
     forge-jwks-uri: ${FORGE_JWKS_URI}
-    # Dev and mock only: the Workspace bound when the worker enqueues a suggestion job and no Workspace is bound yet
-    # (until platform binds the request's Workspace). One of TSOLVE_MOCK_ACTIVE_WORKSPACES. Empty = not bound.
-    dev-workspace-id: ${TSOLVE_TRACKER_DEV_WORKSPACE_ID:}
     jira:
       connect-timeout: 5s
       read-timeout: 10s
@@ -123,7 +127,6 @@ tsolve:
   # Until the workspace module owns Projects: "user:projectId,projectId;user:projectId", ids as UUIDs. Empty = nobody can import.
   stub:
     projects: ${TSOLVE_STUB_PROJECTS:}
-    workspace-id: ${TSOLVE_STUB_WORKSPACE_ID:}
     inactive-projects: ${TSOLVE_STUB_INACTIVE_PROJECTS:}
     # Jira import: "projectId:JIRAKEY,projectId:JIRAKEY". A Project without a key cannot pull from Jira (MSG50).
     jira-keys: ${TSOLVE_STUB_JIRA_KEYS:}

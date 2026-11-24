@@ -1,5 +1,50 @@
-/* Figma 12.1 callout 2 and (g): the box fills the row; Send lines up with the bottom of the field (box or error). */
-.field {
-  flex: 1;
+/* 12.1 Focus composer row, with validation and the count below it. */
+.form .field {
   margin-bottom: 0;
+}
+
+.row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--ant-margin-xs);
+  padding: var(--ant-padding-xs);
+  border: 1px solid var(--ant-color-border);
+  border-radius: 18px;
+  background: var(--ant-color-bg-container);
+  box-shadow: var(--ant-box-shadow-tertiary);
+}
+
+/* The row carries the focus ring, so the borderless textarea inside it draws none of its own. */
+.row:focus-within {
+  border-color: var(--ant-color-primary);
+  box-shadow: 0 0 0 var(--ant-control-outline-width) var(--ant-control-outline);
+}
+
+.row .input:focus-visible {
+  outline: none;
+}
+
+.row:has(textarea[aria-invalid='true']) {
+  border-color: var(--ant-color-error);
+}
+
+.row .input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--ant-padding-xs) var(--ant-padding-sm);
+  font-size: calc(var(--ant-font-size) + 1px);
+}
+
+.send {
+  flex: none;
+}
+
+.metadata {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--ant-margin-xxs) var(--ant-margin-sm);
+  padding: var(--ant-padding-xs) var(--ant-padding-xxs) 0;
+  color: var(--ant-color-text-secondary);
+  font-size: var(--ant-font-size-sm);
 }

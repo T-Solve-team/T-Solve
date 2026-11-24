@@ -27,6 +27,7 @@ import vn.tsolve.wiki.repository.WikiDocumentRepository;
 import vn.tsolve.wiki.repository.WikiSearchRepository;
 import vn.tsolve.wiki.service.WikiTrashService;
 import vn.tsolve.worker.service.TenantJobService;
+import vn.tsolve.worker.service.WebJobQueue;
 
 @Service
 @Transactional
@@ -39,6 +40,8 @@ public class WikiTrashServiceImpl implements WikiTrashService {
     private final ObjectProvider<FileStorage> storage;
     private final AuditService audit;
     private final ObjectProvider<TenantJobService> jobs;
+    // The web process has no worker; it queues the job for the worker process instead (BUG-360).
+    private final ObjectProvider<WebJobQueue> webJobs;
 
     public WikiTrashServiceImpl(
             WikiDocumentRepository documents,
@@ -46,13 +49,15 @@ public class WikiTrashServiceImpl implements WikiTrashService {
             WikiSearchRepository search,
             ObjectProvider<FileStorage> storage,
             AuditService audit,
-            ObjectProvider<TenantJobService> jobs) {
+            ObjectProvider<TenantJobService> jobs,
+            ObjectProvider<WebJobQueue> webJobs) {
         this.documents = documents;
         this.access = access;
         this.search = search;
         this.storage = storage;
         this.audit = audit;
         this.jobs = jobs;
+        this.webJobs = webJobs;
     }
 
     @Override
@@ -106,11 +111,10 @@ public class WikiTrashServiceImpl implements WikiTrashService {
                 @Override
                 public void afterCommit() {
                     TenantJobService worker = jobs.getIfAvailable();
-                    if (worker == null) {
-                        log.warn("No worker configured; restored Wiki document {} stays unindexed", documentId);
-                        return;
-                    }
-                    worker.enqueueFromRequest("wiki-index", documentId);
+                    WebJobQueue web = webJobs.getIfAvailable();
+                    if (worker != null) worker.enqueueFromRequest("wiki-index", documentId);
+                    else if (web != null) web.enqueue("wiki-index", documentId);
+                    else log.warn("No worker configured; restored Wiki document {} stays unindexed", documentId);
                 }
             });
         }

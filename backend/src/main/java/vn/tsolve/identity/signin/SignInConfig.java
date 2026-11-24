@@ -15,8 +15,10 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import vn.tsolve.identity.signin.port.LocalTenantScope;
-import vn.tsolve.identity.signin.port.TenantScope;
+import vn.tsolve.common.tenant.KnownWorkspaces;
+import vn.tsolve.common.tenant.TenantContext;
+import vn.tsolve.identity.signin.port.PlatformTenantScope;
+import vn.tsolve.identity.signin.port.WorkspaceLookup;
 
 /** Binds {@link SignInProperties}; the application does not start while one of its values is missing. */
 @Configuration
@@ -88,7 +90,12 @@ public class SignInConfig {
     }
 
     @Bean
-    public TenantScope tenantScope() {
-        return new LocalTenantScope();
+    public KnownWorkspaces knownWorkspaces(WorkspaceLookup lookup) {
+        return id -> lookup.findById(id).isPresent();
+    }
+
+    @Bean
+    public PlatformTenantScope tenantScope(TenantContext holder) {
+        return new PlatformTenantScope(holder);
     }
 }
