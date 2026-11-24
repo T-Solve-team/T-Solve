@@ -450,8 +450,13 @@ through the renamed tests below).
   `infra/compose.staging.yml` makes `REGISTRY_DB_URL` and `CATALOG_SECRET_KEY` required (`:?`) in `backend` and `worker`
   (the code gate stays; Task 6 drops it); `infra/README.md`, `infra/keycloak/staging/README.md` (the org id lives in the
   Registry row), `e2e/README.md` (the READY line).
-**Edge rows:** #80, #81, #83.
-**Tests (14 new, 8 updated or deleted):**
+**Edge rows:** #80, #81, #83, #86; #87 is an accepted risk until Task 6 (no test here).
+**Tests (15 new with #86 and the two pins, 8 updated or deleted):**
+- `PlatformWorkspaceLookupTest` also holds `blankTemplateWithACatalogFailsStartup_edge86` (Edge #86): an
+  `ApplicationContextRunner` with the real cycle (catalog, `TenantContext`, `KnownWorkspaces`, `WorkspaceLookup`) fails
+  startup naming `TSOLVE_SITE_ORIGIN_TEMPLATE` when the template is blank or has no `{slug}`; it starts with a valid
+  template; with no catalog bean nothing changes. A constructor-time check (circular reference) must stay red. Give
+  the runners of existing ITs that create a `WorkspaceCatalog` bean the template property, as `CatalogLookupsIT` does.
 - `PlatformWorkspaceLookupTest` (6): a host in any case and with a port maps every field; an unknown host, a host outside
   the template or a blank host is empty (Edge #81); a Suspended Workspace comes through as SUSPENDED; `findById` maps every
   field; with no catalog bean both methods are empty; a Registry failure propagates, never empty (Edge #80; the QA card
@@ -471,7 +476,8 @@ through the renamed tests below).
 context (`grep -l WorkspaceLookup` over `*IT.java`).
 **Files:**
 - Create: `backend/src/main/java/vn/tsolve/identity/signin/port/PlatformWorkspaceLookup.java`,
-  `backend/src/main/java/vn/tsolve/jiraapp/service/impl/CatalogJiraWorkspaceLookup.java`
+  `backend/src/main/java/vn/tsolve/jiraapp/service/impl/CatalogJiraWorkspaceLookup.java` (QA step 2 adds both as
+  unannotated skeletons throwing `UnsupportedOperationException("4b")`; the dev completes them)
 - Modify: `backend/src/main/java/vn/tsolve/identity/signin/SignInConfig.java`, `backend/src/main/resources/application.yml`
 - Delete: `identity/signin/port/NoWorkspaceLookup.java`, `jiraapp/service/impl/ConfigJiraWorkspaceLookup.java`,
   `common/session/lookup/StubWorkspaceStatusLookup.java`
@@ -481,7 +487,15 @@ context (`grep -l WorkspaceLookup` over `*IT.java`).
   `jiraapp/service/impl/CatalogJiraWorkspaceLookupTest.java`, `platform/CatalogLookupsIT.java`; update the tests listed above
 **Dependencies:** Tasks 4a-1 and 4a-2 merged and deployed (the row exists); `be-foundation` spec re-approved (AC-003.7
 retired)
-**Estimated size:** medium (about 6 production files plus config and docs, 14 new tests, 8 updated)
+**Estimated size:** medium (about 7 production files plus config and docs, 15-16 new tests, 8 updated). Size-rule
+exception, kept as one task (QA answers Q1 = A): the production side stays within the rule; two of the extra tests are
+one-method pins in existing classes (the Edge #83 full-context check and the Edge #86 startup check); one deploy removes
+all three env names at once, so there is no deploy where the Jira App reads the catalog but sign-in still reads
+`TSOLVE_STUB_WORKSPACES` (two sources of truth). The PR text explains the count.
+**Skeletons (QA step 2, Q5 = A):** QA adds `PlatformWorkspaceLookup` and `CatalogJiraWorkspaceLookup` as unannotated
+skeletons (no Spring annotation, no `@Profile`; constructors as above; methods throw `UnsupportedOperationException("4b")`)
+so the tests fail for the real reason; the dev adds the annotations and the behaviour.
+**Not covered here:** the callback's answer to a Registry failure (Task 10, Q3 = A); the single-database guard (#87, Task 6).
 **Done when:** the three new test classes and `NoWorkspaceFallbacksTest` pass, the updated tests pass, and the staging
 smoke above passes after the deploy.
 
@@ -762,6 +776,9 @@ Workspace), #5 (injected misroute reads and writes nothing), #13 (wrong `CATALOG
 fails, others work), #14 (no password in any log line, log capture), #15 (25 Workspaces open pools below
 `max_connections`), #17 (one Workspace database down, Registry down), #23 (Hibernate starts with nothing bound). #2 and
 #4 are in Task 6a-1.
+**Must close #87 (accepted Critical risk since Task 4b):** with routing in place, a second Registry row must reach only
+its own database (edge #5 in `TenantRoutingIT`); the Task 6 hand-off repeats "one Registry row until routing; do not
+insert a row by hand before Task 6".
 **Tests (about 10):** `ThreadLocalTenantContextTest` extended: `runIn` runs the action in a new transaction (P5);
 `TenantRoutingIT`: two Workspaces on two databases, no Workspace → throws before a connection (AC-002.21), pool size
 and lazy open, two first requests open one pool, transaction stays on its database (AC-002.23), Edge #3, #5, #13, #14,
@@ -926,6 +943,9 @@ real Workspace, 404 `MSG151` for an unknown one, 403 `MSG150` for a Suspended on
 `admin.`, `login.`, `api.` bind nothing (AC-002.10).
 **Edge rows (Critical/High):** #1 (forwarded headers and Workspace ids ignored), #2 (unbound after an exception), #18
 (404 / 403 before any 401), #19 (host variants), #20 (health on `localhost:8080`). Medium: #22 (logs hold host and code only).
+**From Task 4b (Q3 = A):** a Registry failure at the Keycloak callback (`/api/v1/auth/callback`) is answered here, since
+the resolver runs before Spring Security and looks up the catalog first: with the Registry down the callback answers
+`MSG06` (a test pins it); the body holds no JDBC URL (no `server.error.include-message` or `include-stacktrace`).
 **Tests (about 12):** `HostClassifierTest`: Edge #19, `www.`/`staging.`/bare/deep hosts, reserved labels; `TenantResolverFilterTest`: Edge
 #1, #2, #18, #20, #22, no Registry lookup for a bad label (AC-002.4, AC-002.6), `MSG150` for Suspended; `TenantIsolationIT`
 (Workspaces A and B on two databases, JPA and native query through the filter, AC-002.18).
