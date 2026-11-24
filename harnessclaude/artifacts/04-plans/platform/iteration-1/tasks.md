@@ -307,9 +307,11 @@ source scan), AC-004.29.
 **Design:** Registry rules; Key Decisions R1, R19; Interface Contracts.
 **Description:** the contract files exist on `main` (`platform/service/WorkspaceCatalog.java`, `dto/WorkspaceSummary.java`,
 `dto/WorkspaceStatus.java`); this task adds `findActive()` to `WorkspaceCatalog` and creates `RegistryRepository` and
-`WorkspaceCatalogImpl`. `RegistryRepository`: `JdbcClient` on `registryJdbcClient`; `insert(row)` (password already
-encrypted), `findById`, `findBySiteName` (on `lower(?)`), `findByCloudId`, `findByStatus(ACTIVE)`, `updateStatus`,
-`insertEmailIfAbsent` (`ON CONFLICT (email) DO NOTHING`), `emailOwner(email)`. `WorkspaceCatalogImpl` maps a row to
+`WorkspaceCatalogImpl`. `RegistryRepository`: `JdbcClient` on `registryJdbcClient`; only the reads and the claim:
+`findById`, `findBySiteName` (on `lower(?)`), `findByCloudId`, `findByStatus(ACTIVE)`, `insertEmailIfAbsent`
+(`ON CONFLICT (email) DO NOTHING`), `emailOwner(email)`. It has no `insert` and no `updateStatus`: the IT writes its
+fixture rows with plain JDBC as the Registry user (as `RegistryChangelogIT.insertWorkspace` does), and Task 7 adds
+`insert` and `updateStatus` with their tests (decided with Hiếu, Q1). `WorkspaceCatalogImpl` maps a row to
 `WorkspaceSummary` with no connection data; `claimEmail` trims and lower-cases, takes the id from
 `TenantContext.requireWorkspaceId()` (nothing bound: `NoTenantException`, `MSG06`, nothing recorded), inserts, then reads
 the owner: the same Workspace succeeds, another throws `BusinessRuleException` `MSG155` on `email`; `linkJiraSite`
@@ -319,28 +321,37 @@ config fetches the client by name). The catalog only reads `TenantContext` and n
 planning: no cache; `ObjectFileStorage.signedUrl` already reads the catalog through an `ObjectProvider`.
 **Edge rows:** #26 (race), #76 (`claimEmail` with nothing bound).
 **Tests (13 new, 2 updated):**
-- `WorkspaceCatalogIT` (`PostgresTestBase`, rows inserted through `RegistryRepository`), 11 tests: (1) `findById` returns
-  id, site name, status, Google domain, org id and Jira URL and cloud id, an unknown id is empty (AC-004.17); (2)
-  `findBySiteName("BlueFin")` finds the row, an unknown name is empty (AC-004.17); (3) `findByCloudId` finds the row, an
-  unknown or null cloud id is empty (AC-004.17); (4) `findActive` holds only ACTIVE rows and is empty for an empty
-  Registry (AC-004.29); (5) a free email `" Ann@X.com "` is recorded as `ann@x.com` for the bound Workspace (AC-004.25);
-  (6) the same email in another case for the same Workspace succeeds and changes nothing (AC-004.26); (7) the email in
-  another Workspace gives `MSG155` on `email` and records nothing (AC-004.26); (8) race: two Workspaces claim one email
-  in different cases at once (latch): one row, the other `MSG155`, never `DataIntegrityViolationException` (Edge #26);
-  (9) `claimEmail` with nothing bound throws `NoTenantException` and records nothing (Edge #76, AC-004.25); (10)
-  `updateStatus` changes `status` and `updated_at`, and the Active list follows (repository API, AC-004.29); (11)
-  `findActive` binds no Workspace: `TenantContext.currentWorkspaceId()` is empty before and after (AC-004.29, AC-004.27).
-- `WorkspaceCatalogImplTest` (unit), 2 tests: `WorkspaceSummary` has no component for a password, database or
-  connection (AC-004.18); `linkJiraSite` refuses until Task 18.
-- Update `RegistryChangelogIT`: a blank `REGISTRY_DB_URL` now also means there is no `WorkspaceCatalog` bean.
-- Update `ObjectFileStorageIT`: its private `FakeWorkspaceCatalog` implements `findActive()`.
+- `WorkspaceCatalogIT` (`PostgresTestBase`; fixture rows written with plain JDBC; the context has no business
+  `DataSource`; a `TenantContext` fixture fails the test if the catalog calls `runIn`), 13 tests: (1) `findById` returns
+  id, site name, status, Google domain, org id and Jira URL and cloud id, NULL columns map to empty, an unknown id is
+  empty (AC-004.17); (2) `findBySiteName("BlueFin")` finds the row, an unknown name is empty (AC-004.17); (3)
+  `findByCloudId` finds the row, an unknown or null cloud id is empty (AC-004.17); (4) no lookup returns connection
+  data: `WorkspaceSummary` components are exactly the seven contract fields and no result's `toString()` holds the row's
+  db name, user or password markers (AC-004.18); (5) `findActive` holds only ACTIVE rows and is empty for an empty
+  Registry (AC-004.29); (6) `findActive` follows a status change (set by SQL) on the next call, no cache (AC-004.29);
+  (7) the catalog never binds a Workspace: after each lookup, `findActive` and `claimEmail`, `currentWorkspaceId()` is
+  unchanged (AC-004.27, AC-004.29); (8) a free email `" Ann@X.com "` is recorded as `ann@x.com` for the bound Workspace
+  (AC-004.25); (9) the same email in another case for the same Workspace succeeds and changes nothing (AC-004.26); (10)
+  the email in another Workspace gives `MSG155` on `email` and records nothing (AC-004.26); (11) race: two Workspaces
+  claim one email in different cases at once (latch, 20 rounds): one row, the other `MSG155`, never
+  `DataIntegrityViolationException` (Edge #26); (12) `claimEmail` with nothing bound throws `NoTenantException` and
+  records nothing (Edge #76, AC-004.25); (13) a Registry failure (the `registryDataSource` closed) makes each lookup
+  throw a `DataAccessException`, never an empty result: the catalog's part of Edge #80 (the existing
+  `GlobalExceptionHandler.handleUnexpected` already answers 500 `MSG06`).
+- No `WorkspaceCatalogImplTest`: its checks fold into `WorkspaceCatalogIT` (test 4) or are dropped (`linkJiraSite` refusing
+  until Task 18 is no criterion).
+- Update `RegistryChangelogIT`: the runner adds `AcceptingKnownWorkspaces` (a `TenantContext` bean, needed once the
+  catalog bean exists); edge 72 also asserts a single `WorkspaceCatalog` bean; the blank-URL half of AC-001.25 edge 13
+  also asserts there is no `WorkspaceCatalog` bean.
+- Update `ObjectFileStorageIT`: its private `FakeWorkspaceCatalog` implements `findActive()`. QA's step adds
+  `findActive()` to the `WorkspaceCatalog` contract so the tests compile.
 **ITs to run:** `-Dit.test=WorkspaceCatalogIT,RegistryChangelogIT,ObjectFileStorageIT`, then `mvn spotless:check test`.
 **Files:**
 - Create: `backend/src/main/java/vn/tsolve/platform/registry/RegistryRepository.java`
 - Create: `backend/src/main/java/vn/tsolve/platform/service/impl/WorkspaceCatalogImpl.java`
 - Modify: `backend/src/main/java/vn/tsolve/platform/service/WorkspaceCatalog.java` (`findActive()`),
   `backend/src/main/java/vn/tsolve/platform/registry/RegistryDataSourceConfig.java` (the two beans, inside the gate)
-- Test: `backend/src/test/java/vn/tsolve/platform/WorkspaceCatalogIT.java`, `WorkspaceCatalogImplTest.java`; modify
+- Test: `backend/src/test/java/vn/tsolve/platform/WorkspaceCatalogIT.java`; modify
   `RegistryChangelogIT.java`, `ObjectFileStorageIT.java`
 **Dependencies:** Tasks 3a, 6a-1 and 6a-2 (merged); `be-foundation` Task 1 (`BusinessRuleException` with a code and a
 field); the platform spec approved (AC-004.29)
@@ -782,7 +793,8 @@ design), `TenantDatabaseProvisioner` (role, `CREATE DATABASE … TEMPLATE tsolve
 `TenantMigrator` (owner user; `apply(workspace)`, `applyAll()` that stops and names the first failing Workspace; reads
 the last changeset id into `schema_version`), `FirstAdminCreator` and `InvitationJobQueue` (ports, no implementation
 here), `WorkspaceRuleException` (extends `BusinessRuleException`). A start-up check refuses the `ops` and Console profiles
-without a bean for each port (AC-013.15).
+without a bean for each port (AC-013.15). This task also adds `insert(row)` (password already encrypted) and
+`updateStatus` to `RegistryRepository` (left out of Task 4a-1), with their tests.
 **Edge rows (Critical/High):** #44 (changelog fails on one Workspace → stops, names the site name), #57 (any step or
 `createFirstAdmin` fails → compensation, nothing visible), #58 (two creations for the same email or site name),
 #62 (no password or email in logs or the Jobs database), #64 (no port bean → refuses to start). Medium: #60, #61.
@@ -799,6 +811,7 @@ log capture (Edge #62); a source scan fails when a class outside the Console, `o
 - Create: `backend/src/main/java/vn/tsolve/platform/service/impl/WorkspaceProvisioningService.java`
 - Create: `backend/src/main/java/vn/tsolve/platform/tenantdb/TenantDatabaseProvisioner.java`, `TenantMigrator.java`
 - Create: `backend/src/main/java/vn/tsolve/platform/exception/WorkspaceRuleException.java`
+- Modify: `backend/src/main/java/vn/tsolve/platform/registry/RegistryRepository.java` (`insert`, `updateStatus`)
 - Test: `backend/src/test/java/vn/tsolve/platform/WorkspaceProvisioningIT.java`, `ProvisioningSourceScanTest.java`
 **Dependencies:** Tasks 3a, 4, 5, 6; `be-foundation` Task 1. The real `FirstAdminCreator` (`identity`, KAN-247) and
 `InvitationJobQueue` (`platform`, JobRunr; Task 8) are needed from Task 9 on.
