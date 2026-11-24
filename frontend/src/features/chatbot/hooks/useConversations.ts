@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getGetChatbotConversationQueryKey,
@@ -27,6 +27,17 @@ export function useConversations() {
   const conversation = useGetChatbotConversation(openId ?? '', {
     query: { enabled: openId !== null, staleTime: 0 },
   });
+  // BUG-389: a conversation deleted elsewhere (another tab, the retention job) answers 404 MSG04 (AC-013.4).
+  // Leave it for the unsaved empty one, so the next question starts a new conversation.
+  const forget = (chatSessionId: string) => {
+    setOpenId((current) => (current === chatSessionId ? null : current));
+    client.removeQueries({ queryKey: getGetChatbotConversationQueryKey(chatSessionId) });
+    void client.invalidateQueries({ queryKey: getListChatbotConversationsQueryKey() });
+  };
+  const isGone = openId !== null && conversation.error?.status === 404;
+  useEffect(() => {
+    if (isGone) void client.invalidateQueries({ queryKey: getListChatbotConversationsQueryKey() });
+  }, [isGone, client]);
   const remove = useDeleteChatbotConversation({
     mutation: {
       meta: { handlesOwnErrors: true },
@@ -45,7 +56,7 @@ export function useConversations() {
     list,
     conversation,
     remove,
-    openId,
+    openId: isGone ? null : openId,
     conversations: list.data?.pages.flatMap((page) => page.content) ?? [],
     loadMore: async () => {
       if (!(await list.fetchNextPage()).isFetchNextPageError) return;
@@ -54,6 +65,7 @@ export function useConversations() {
     turns:
       conversation.data?.turns.map((turn) => ({ ...turn, rating: turn.rating ?? undefined })) ?? [],
     open: setOpenId,
+    forget,
     startNew: () => setOpenId(null),
   };
 }

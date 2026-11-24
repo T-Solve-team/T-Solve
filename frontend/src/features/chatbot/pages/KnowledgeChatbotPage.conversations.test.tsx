@@ -2,7 +2,12 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { getResponse, http } from 'msw';
 import { server } from '@/mocks/server';
-import { askChatbot, listChatbotConversations, type ChatbotAsk } from '@/shared/api';
+import {
+  askChatbot,
+  deleteChatbotConversation,
+  listChatbotConversations,
+  type ChatbotAsk,
+} from '@/shared/api';
 import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
 import { setDevUser } from '@/shared/auth';
@@ -211,7 +216,8 @@ describe('KnowledgeChatbotPage saved conversations', () => {
   it('AC-002.8 retries a failed conversation and still lets the user start a new one', async () => {
     const saved = await askChatbot({ question: VPN });
     const path = `*/api/v1/chatbot/conversations/${saved.chatSessionId}`;
-    server.use(http.get(path, () => problem(404, 'MSG04')));
+    // A 404 means the conversation is gone (BUG-389); any other failure offers Retry.
+    server.use(http.get(path, () => problem(500, 'MSG06')));
     const view = await openChatbot();
     await view.user.click(await screen.findByRole('button', { name: VPN }, { timeout: 5000 }));
     expect(await screen.findByRole('alert')).toHaveTextContent(msg('MSG06'));
@@ -316,6 +322,37 @@ describe('KnowledgeChatbotPage saved conversations', () => {
     expect(await screen.findByText(msg('MSG06'))).toBeInTheDocument();
     expect(titles()).toEqual([VPN]);
     expect(within(thread()).getByText(VPN)).toBeInTheDocument();
+  });
+
+  it('AC-013.4 leaves a conversation deleted elsewhere when a question gets 404 (BUG-389)', async () => {
+    const view = await openChatbot();
+    await ask(view, VPN);
+    const saved = (await listChatbotConversations()).content[0];
+    if (!saved) throw new Error('Missing saved conversation');
+    await deleteChatbotConversation(saved.chatSessionId);
+    await view.user.click(view.box);
+    await view.user.paste(LEAVE);
+    await view.user.keyboard('{Enter}');
+    expect(await screen.findByText(msg('MSG06'))).toBeInTheDocument();
+    await waitFor(() => expect(view.box).toHaveValue(LEAVE));
+    await waitFor(() => expect(titles()).toEqual(['New conversation']));
+    expect(within(list()).getByRole('button', { name: 'New conversation' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+    await view.user.keyboard('{Enter}');
+    await waitFor(() => expect(titles()).toEqual([LEAVE]));
+  });
+
+  it('AC-013.4 leaves a conversation that is gone when it is opened (BUG-389)', async () => {
+    const { chatSessionId } = await askChatbot({ question: VPN });
+    const view = await openChatbot();
+    await screen.findByRole('button', { name: VPN }, { timeout: 5000 });
+    if (!chatSessionId) throw new Error('Missing conversation id');
+    await deleteChatbotConversation(chatSessionId);
+    await view.user.click(screen.getByRole('button', { name: VPN }));
+    await waitFor(() => expect(titles()).toEqual(['New conversation']));
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
   });
 
   it('AC-002.15 disables Delete, list and New conversation while an answer is pending', async () => {

@@ -22,8 +22,18 @@ export function KnowledgeChatbotPage() {
 
 function KnowledgeChatbot({ fullName }: { fullName: string }) {
   const [form] = Form.useForm<QuestionFormValues>();
-  const { conversations, openId, turns, open, startNew, list, conversation, remove, loadMore } =
-    useConversations();
+  const {
+    conversations,
+    openId,
+    turns,
+    open,
+    startNew,
+    forget,
+    list,
+    conversation,
+    remove,
+    loadMore,
+  } = useConversations();
   const ask = useAskQuestion();
   const rating = useRateAnswer();
   // Set at once, unlike ask.isPending: a second Enter before the next render must not send the question again.
@@ -41,6 +51,8 @@ function KnowledgeChatbot({ fullName }: { fullName: string }) {
         },
         onError: (error) => {
           if (error.status === 401) return; // the global handler signs the user out (MSG07)
+          // BUG-389: the open conversation is gone (AC-013.4); the next question starts a new one.
+          if (error.status === 404 && openId !== null) forget(openId);
           if (form.getFieldValue('question') === '') form.setFieldValue('question', question);
           // BUG-006: only an error on the question can be shown under the box; any other is MSG06.
           const isOnQuestion = error.fieldErrors.some(
