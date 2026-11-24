@@ -2263,3 +2263,6 @@
 {"ts":"2026-11-23T19:31:06.803Z","type":"feature-status","module":"platform","feature":"row-guard","from":"pending","to":"in-progress"}
 {"ts":"2026-11-23T19:31:06.860Z","type":"feature-status","module":"platform","feature":"row-guard","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-23T19:31:06.909Z","type":"feature-status","module":"platform","feature":"row-guard","from":"evaluating","to":"passing"}
+{"ts":"2026-11-24T13:44:24.536Z","type":"spec-approved","module":"platform","specHash":"e234c4a37cb35de53ced5d718bd4261c91ffbe5a4345aba93054ad76242953f4"}
+{"ts":"2026-11-24T13:44:27.425Z","type":"spec-approved","module":"be-foundation","specHash":"c11bedeba95e6a426a0f12561ab1f63abc0edc2042b62575dd47c3405aaad96c"}
+{"ts":"2026-11-24T13:44:29.407Z","type":"spec-approved","module":"worker","specHash":"5e551b167acd3be6c1132e9387eff52c05bde0d4c5869ac1a311c654747c7de1"}

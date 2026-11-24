@@ -1,7 +1,7 @@
 ---
 module: platform
 date: 2026-11-04
-total_tasks: 26
+total_tasks: 29
 owner: Dev
 iteration: 1
 ---
@@ -33,9 +33,11 @@ Items of one wave run in parallel; "after" names the items that must be on `main
   on an empty volume) — `psql` shows `tenant_workspace` and `workspace_email`, locally and on staging.
 - **Wave 2.** (3) Task 5, the row guard built and tested, not switched on (KAN-253; after item 2) — nothing changes on
   staging; `RowGuardIT` and `ConventionGuardIT` pass. (4) Task 4, the catalog with bluefin adopted (KAN-252; after
-  items 1 (both 6a-1 and 6a-2) and 2): one Registry row with the env file's Workspace UUID, site, Google domain and org id, and
-  `WorkspaceCatalog` replaces `NoWorkspaceLookup`, `ConfigJiraWorkspaceLookup`, `StubWorkspaceStatusLookup` and the
-  worker mock — bluefin still signs in, answers Jira App calls and runs its jobs, now found through its Registry row.
+  items 1 (both 6a-1 and 6a-2) and 2), planned on 24/11 as four tasks, merged and deployed in this order: 4a-1 the catalog
+  (`WorkspaceCatalog`, nothing visible), 4a-2 bluefin adopted (one Registry row copied from the env file and the tenant
+  `workspace` table; wiki files open), 4b sign-in, Jira App and `/me` read the catalog (`NoWorkspaceLookup`,
+  `ConfigJiraWorkspaceLookup`, `StubWorkspaceStatusLookup` go), 4c the worker reads the catalog (`worker-mock` goes) —
+  bluefin still signs in, answers Jira App calls and runs its jobs, now found through its Registry row.
 - **Wave 3** (both after items 1 and 4). (5) The rest of Task 6: the routing `DataSource` and the per-Workspace pools
   (KAN-254) — nothing visible on staging (bluefin keeps its one database); `TenantRoutingIT` shows two databases.
   (6) The rest of the web resolver, Task 10 (KAN-258): `MSG151` / `MSG150` before `MSG07`, anonymous site requests
@@ -222,36 +224,310 @@ starts after the script has run and the variables are set.
 
 ---
 
-## Task 4: `WorkspaceCatalog`: find a Workspace, keep its emails
+## Task 4: The Workspace catalog, bluefin adopted, and every lookup reading the catalog (split into 4a-1, 4a-2, 4b and 4c)
+
+Planned in two steps on 24/11 (KAN-252; step-1 questions Q1 to Q9 answered by Hiếu: Q1 to Q7 with the recommended
+option, Q8 replaced, Q9 = A). Done as one task it would be about 17 production files and 40 tests, so it is four tasks.
+They are merged and deployed **in this order**, so that the Registry row exists before anything reads it. Each is one QA
+card and one developer card; 4a-1 stays on KAN-252 and branch `feat/KAN-252-platform-workspace-catalog`; 4a-2, 4b and 4c
+get new Jira sub-tasks and their own branches (`<type>/KAN-<n>-platform-…`), created by the orchestrator. The adopt
+script is its own task (4a-2) because 4a would otherwise hold 21 tests and 6 production files. A dependency line of another
+task that says "Task 4" means 4a-1 to 4c unless it names one: Task 18 needs 4a-1 only; Tasks 6 and 10 need all four.
+
+**Story:** STORY-004 (4a-1, 4b, 4c), STORY-001 (4a-2)
+**Spec changed first (Change Mode, 24/11; Hiếu approves each before its code):** `platform` AC-004.29 and the contract
+method `findActive()` (Q2); `worker` AC-002.11 and AC-003.2 retired, AC-002.12 reworded, AC-003.3 added (Q5);
+`be-foundation` AC-003.7 retired (Q6). 4a-1 needs `sdd.ts approve platform`; 4b needs `sdd.ts approve be-foundation`;
+4c needs `sdd.ts approve worker`.
+
+**Decisions of the plan (design R17 to R20, Edge rows #76 to #85):** the adopt script is idempotent and runs once per
+environment; its Jira site is copied from bluefin's own tenant `workspace` table, never typed (Q8); the lookups answer
+empty when no Registry bean exists and the code gate stays until Task 6 (Q4); no cache (Task 10 may add one); `dev`
+keeps `DevWorkspaceLookup`; `MockWorkerTenantService` moves to test sources as `FixedWorkerTenantService` (Q7).
+
+**Pre-deploy checklist (Hiếu, on the VPS, before 4a-2 is run; a checklist, not a blocker for coding):**
+1. `TSOLVE_DEMO_WORKSPACE_ID` = field 3 of the old `TSOLVE_STUB_WORKSPACES` value (a UUID, not a secret);
+   `REGISTRY_DB_*` and `CATALOG_SECRET_KEY` are set (Task 3b); `DB_NAME`, `DB_USER`, `DB_PASSWORD` are bluefin's.
+2. Does bluefin's tenant `workspace` table have its row? (`select jira_site_address, jira_cloud_id from workspace;` in
+   bluefin's database.) If yes, the script copies both Jira columns. If no, bluefin's row has no Jira site, and Jira App
+   calls for bluefin stay refused until the Admin does Setup (UC-10; linking is Task 18).
+3. Is `TSOLVE_STUB_JIRA_SITES` set on the VPS? If it is set **and** the tenant row is empty, the Jira App works today
+   and stops working at 4b: run Setup before 4b, or accept it. Never hand-type a cloud id into the Registry (Edge #79).
+4. `TSOLVE_STUB_WORKSPACE_READY` is `false` or absent (4b removes the stub; with `true` and the real lookup both
+   present `/me` fails today).
+5. Before 4c: the worker container has `REGISTRY_DB_URL` and `CATALOG_SECRET_KEY` (4b makes them required in compose).
+
+**Stale mentions to update outside the code PRs (listed here, not edited):** `.env.example:76` (inside the
+`TSOLVE_STUB_WORKSPACES` comment; part of 4b); `docs/bug-log.md:344` (leave it as it is, the bug row is history);
+`harnessclaude/artifacts/04-plans/jira-app/iteration-2/design.md:92,154` and `04-plans/workspace/design.md:585` (design
+files of other modules; edit them through their own plan flow after 4b merges); `04-plans/platform/iteration-1/design.md:64`
+(done in this plan).
+
+**Existing tests that name the removed stand-ins** (each goes in the card of the task that removes the stand-in; the
+dev card runs `grep -rn` for each removed name over `backend/src/test` before it finishes):
+- 4b: delete `identity/signin/port/NoWorkspaceLookupTest`, `jiraapp/service/impl/ConfigJiraWorkspaceLookupTest`,
+  `common/session/StubWorkspaceStatusLookupTest`; update `identity/dev/DevWorkspaceLookupTest`,
+  `identity/keycloak/ProvisioningProfileTest`, `identity/mock/MockUserListSeederTest`,
+  `jiraapp/service/impl/JiraIssueAccessImplTest` (it builds `ConfigJiraWorkspaceLookup` at about line 133, in
+  `aJiraAppCallBoundByItsCloudIdIsSeenByTheHolder_AC_002_12`), `search/list/repository/TicketListRepositoryIT`
+  (`TSOLVE_STUB_WORKSPACES`), `platform/NoWorkspaceFallbacksTest`. No change: `common/tenant/AcceptingKnownWorkspaces`
+  and its three users, `ThreadLocalTenantContextTest`, `PlatformTenantScopeTest`.
+- 4c: delete `worker/service/mock/MockWorkerTenantServiceTest` and `worker/config/WorkerMockConfigurationTest`; update the
+  12 users of `MockWorkerTenantService` (`ReviewExpiryDispatchHandlerTest`, `ReviewExpiryJobHandlerTest`,
+  `ReviewExpiryServiceImplTest`, `WorkerSuggestionJobQueueTest`, `EmailOutboxIT`, `ReviewNotificationEnqueueBugTest`,
+  `ReviewNotificationEnqueuerTest`, `ReviewNotificationIT`, `TenantExecutionServiceImplTest`, `TenantJobServiceImplTest`,
+  `WorkerJobTenantBindingTest`, `JobRunrTenantIT`) to the import and name of `FixedWorkerTenantService`; update
+  `WorkerConfigurationTest`, `WebJobsIT`, `OutboxOnlyConfigurationTest`, `WebJobsConfigurationTest` (profile and
+  `tsolve.worker.mock.*` / `TSOLVE_MOCK_ACTIVE_WORKSPACES`).
+
+**Note for KAN-254 (Task 6), not decided here:** the adopted row's `db_user` is staging's app user, which owns the
+tables; routing will connect with it, which conflicts with AC-001.32 (the runtime user must not own the tables). Task 6
+(or Task 1's role split) gives bluefin a runtime user and updates the row.
+
+**Note for identity Task 14 (KAN-247):** `claimEmail` has no caller until then (design R20). Its adapter for
+`WorkspaceEmailRegistry` translates: identity's `claim` returns a boolean (`WorkspaceEmailRegistry.java:6`) while
+`WorkspaceCatalog.claimEmail` returns void and throws `MSG155` (`WorkspaceCatalog.java:16`), so the adapter catches the
+refusal and returns false; it also needs `release` (`UserCreationServiceImpl.java:151-154`), which the contract lacks
+(a contract change by then). The backfill of bluefin's Account emails (lower-case `app_user` emails,
+`INSERT … ON CONFLICT (email) DO NOTHING` for bluefin's id) is done at Task 14 time, in the same deploy as the adapter,
+not in the adopt script: until the adapter is live `AcceptAllWorkspaceEmailRegistry` records nothing.
+
+---
+
+## Task 4a-1: `WorkspaceCatalog` over the Registry: lookups, the Active list and the email rule
 
 **Story:** STORY-004
 **Feature:** workspace-catalog
 **Assignee:** Trần Trung Hiếu (KAN-98); Jira sub-task KAN-252
-**After this task you can:** (plumbing, serves Tasks 7, 10 and 21 and the `identity` sign-in) see the lookups and the
-email rule in `WorkspaceCatalogIT`: one email in one Workspace, whatever the case.
-**Covers:** AC-004.17, AC-004.18, AC-004.25, AC-004.26, AC-004.27, AC-004.28 (no endpoint: asserted with Task 7's source scan).
-**Design:** Registry rules; Interface Contracts.
-**Description:** `WorkspaceCatalog` (`findById`, `findBySiteName` without case, `findByCloudId`, `claimEmail`; no connection
-data returned), `RegistryRepository` (insert, find, update status; `JdbcClient` on `registryDataSource`, moved here from Task 3), `WorkspaceCatalogImpl` over it (`INSERT … ON CONFLICT (email) DO NOTHING`, then read
-the row), `WorkspaceSummary`, `WorkspaceStatus`. `linkJiraSite` is Task 18.
-**Edge rows:** #26 (same email in another case or with spaces in two Workspaces at once → one row, the other `MSG155`).
-**Tests (about 10; `RegistryRepository` is covered by `WorkspaceCatalogIT`):** each lookup finds and returns empty for an unknown key; the summary holds no password or database
-name (AC-004.18); claim: free email recorded lower-case, same Workspace succeeds with no change, another Workspace
-→ `MSG155` on `email` and nothing recorded (AC-004.26); concurrent claim (Edge #26); `WorkspaceCatalog` never binds a Workspace
-(AC-004.27).
+**After this task you can:** (plumbing; serves 4a-2, 4b, 4c and Tasks 7, 10 and 21) see in `WorkspaceCatalogIT` the lookups
+by id, site name and cloud id, the Active list, and the email rule: one email in one Workspace, whatever the case. On
+staging nothing changes yet: the catalog bean exists once `REGISTRY_DB_URL` is set, and the Registry has no row.
+**Covers:** AC-004.17, AC-004.18, AC-004.25, AC-004.26, AC-004.27, AC-004.28 (no endpoint: asserted with Task 7's
+source scan), AC-004.29.
+**Design:** Registry rules; Key Decisions R1, R19; Interface Contracts.
+**Description:** the contract files exist on `main` (`platform/service/WorkspaceCatalog.java`, `dto/WorkspaceSummary.java`,
+`dto/WorkspaceStatus.java`); this task adds `findActive()` to `WorkspaceCatalog` and creates `RegistryRepository` and
+`WorkspaceCatalogImpl`. `RegistryRepository`: `JdbcClient` on `registryJdbcClient`; `insert(row)` (password already
+encrypted), `findById`, `findBySiteName` (on `lower(?)`), `findByCloudId`, `findByStatus(ACTIVE)`, `updateStatus`,
+`insertEmailIfAbsent` (`ON CONFLICT (email) DO NOTHING`), `emailOwner(email)`. `WorkspaceCatalogImpl` maps a row to
+`WorkspaceSummary` with no connection data; `claimEmail` trims and lower-cases, takes the id from
+`TenantContext.requireWorkspaceId()` (nothing bound: `NoTenantException`, `MSG06`, nothing recorded), inserts, then reads
+the owner: the same Workspace succeeds, another throws `BusinessRuleException` `MSG155` on `email`; `linkJiraSite`
+throws `UnsupportedOperationException` until Task 18. Both beans are registered inside the gated
+`RegistryDataSourceConfig` (`registryJdbcClient` and `registryTransactionManager` are not autowire candidates, so the
+config fetches the client by name). The catalog only reads `TenantContext` and never calls `runIn`. Decided in
+planning: no cache; `ObjectFileStorage.signedUrl` already reads the catalog through an `ObjectProvider`.
+**Edge rows:** #26 (race), #76 (`claimEmail` with nothing bound).
+**Tests (13 new, 2 updated):**
+- `WorkspaceCatalogIT` (`PostgresTestBase`, rows inserted through `RegistryRepository`), 11 tests: (1) `findById` returns
+  id, site name, status, Google domain, org id and Jira URL and cloud id, an unknown id is empty (AC-004.17); (2)
+  `findBySiteName("BlueFin")` finds the row, an unknown name is empty (AC-004.17); (3) `findByCloudId` finds the row, an
+  unknown or null cloud id is empty (AC-004.17); (4) `findActive` holds only ACTIVE rows and is empty for an empty
+  Registry (AC-004.29); (5) a free email `" Ann@X.com "` is recorded as `ann@x.com` for the bound Workspace (AC-004.25);
+  (6) the same email in another case for the same Workspace succeeds and changes nothing (AC-004.26); (7) the email in
+  another Workspace gives `MSG155` on `email` and records nothing (AC-004.26); (8) race: two Workspaces claim one email
+  in different cases at once (latch): one row, the other `MSG155`, never `DataIntegrityViolationException` (Edge #26);
+  (9) `claimEmail` with nothing bound throws `NoTenantException` and records nothing (Edge #76, AC-004.25); (10)
+  `updateStatus` changes `status` and `updated_at`, and the Active list follows (repository API, AC-004.29); (11)
+  `findActive` binds no Workspace: `TenantContext.currentWorkspaceId()` is empty before and after (AC-004.29, AC-004.27).
+- `WorkspaceCatalogImplTest` (unit), 2 tests: `WorkspaceSummary` has no component for a password, database or
+  connection (AC-004.18); `linkJiraSite` refuses until Task 18.
+- Update `RegistryChangelogIT`: a blank `REGISTRY_DB_URL` now also means there is no `WorkspaceCatalog` bean.
+- Update `ObjectFileStorageIT`: its private `FakeWorkspaceCatalog` implements `findActive()`.
+**ITs to run:** `-Dit.test=WorkspaceCatalogIT,RegistryChangelogIT,ObjectFileStorageIT`, then `mvn spotless:check test`.
 **Files:**
 - Create: `backend/src/main/java/vn/tsolve/platform/registry/RegistryRepository.java`
-- Create: `backend/src/main/java/vn/tsolve/platform/service/WorkspaceCatalog.java`
 - Create: `backend/src/main/java/vn/tsolve/platform/service/impl/WorkspaceCatalogImpl.java`
-- Create: `backend/src/main/java/vn/tsolve/platform/dto/WorkspaceSummary.java`, `WorkspaceStatus.java`
-- Test: `backend/src/test/java/vn/tsolve/platform/WorkspaceCatalogImplTest.java`, `WorkspaceCatalogIT.java`
-**Wave order (22/11, KAN-384):** wave 2, item 4. Besides the catalog, this task adopts bluefin (one Registry row with
-the env file's Workspace UUID, site, Google domain and org id), and `WorkspaceCatalog` replaces `NoWorkspaceLookup`,
-`ConfigJiraWorkspaceLookup`, `StubWorkspaceStatusLookup`, the worker mock and Task 6a-1's interim `KnownWorkspaces`
-bean. A catalog-backed `WorkerTenantService` (in `worker/service/impl`, using `WorkspaceCatalog` and `TenantContext`, so the dependency runs from worker to platform) replaces `MockWorkerTenantService` and the `worker-mock` profile on staging. `activeWorkspaceIds` comes from a new catalog list of the Active Workspaces, and `enqueueWorkspaceId` returns the bound Workspace only when it is Active, otherwise empty, never the single Active one. Adding that Active-Workspaces list method to `WorkspaceCatalog` is a contract addition needing Hiếu's approval when Task 4 starts. That reaches beyond the Files below; its own plan card plans it in detail before coding (no criterion changes).
-**Dependencies:** Tasks 3a, 6a-1 and 6a-2 (6a-2 merged: this task replaces what it leaves); `be-foundation` Task 1 (`BusinessRuleException` with a code and a field)
-**Estimated size:** small (before the bluefin adoption above)
-**Done when:** `WorkspaceCatalogIT` passes with the race case.
+- Modify: `backend/src/main/java/vn/tsolve/platform/service/WorkspaceCatalog.java` (`findActive()`),
+  `backend/src/main/java/vn/tsolve/platform/registry/RegistryDataSourceConfig.java` (the two beans, inside the gate)
+- Test: `backend/src/test/java/vn/tsolve/platform/WorkspaceCatalogIT.java`, `WorkspaceCatalogImplTest.java`; modify
+  `RegistryChangelogIT.java`, `ObjectFileStorageIT.java`
+**Dependencies:** Tasks 3a, 6a-1 and 6a-2 (merged); `be-foundation` Task 1 (`BusinessRuleException` with a code and a
+field); the platform spec approved (AC-004.29)
+**Estimated size:** small (4 production files, 13 new tests)
+**Done when:** `WorkspaceCatalogIT` passes with the race case and the Active list; the PR says that on staging nothing
+changes until 4a-2.
+
+---
+
+## Task 4a-2: Adopt bluefin: its Registry row, and its wiki files open again
+
+**Story:** STORY-001
+**Feature:** registry-adopt-bluefin
+**Assignee:** Trần Trung Hiếu (KAN-98); Jira sub-task: new, key to be added by the orchestrator
+**After this task you can:** run `infra/scripts/registry-adopt-workspace.sh` on the VPS and see bluefin's row in
+`tenant_workspace` (`psql`: ACTIVE, the site name, the Google domain, the org id, `schema_version` = bluefin's last
+changeset, a `v1:` password that no log shows), then **open a wiki file on bluefin**: `ObjectFileStorage.signedUrl`
+fails today with "No Workspace catalog is available" and works as soon as the catalog bean and the row exist. A second
+run changes nothing. (Add the wiki file view to the staging smoke.)
+**Covers:** AC-001.15 (the row), AC-001.17 (no business data in the row), AC-001.19 (adopting is not creating; nothing
+else writes a Workspace), AC-001.24 (the password is encrypted for this Workspace id only).
+**Design:** Key Decisions R17, R18; Data Model — Tenant Registry DB.
+**Description:**
+- `RegistryPasswordCli`: a plain `main` with no Spring context, run with `java -cp app.jar -Dloader.main=… PropertiesLauncher`;
+  reads `CATALOG_SECRET_KEY`, the Workspace id and `DB_PASSWORD` from the environment and writes only the `v1:` value
+  to stdout (for the script's pipe); a missing variable is named and nothing secret is printed.
+- `infra/scripts/registry-adopt-workspace.sh`, in the style of `registry-db-init.sh` and `seed-first-admin.sh` (reads the
+  env file without sourcing it, prints no secret). Inputs: `TSOLVE_DEMO_WORKSPACE_ID`, the site name,
+  `TSOLVE_DEMO_GOOGLE_DOMAIN`, `TSOLVE_DEMO_ORG_ID`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`. Reads `schema_version` from
+  bluefin's `databasechangelog`. **Jira site (Q8):** it does not ask for it; it copies `jira_site_address` (written as
+  `jira_site_url`) and `jira_cloud_id` from bluefin's tenant `workspace` table when that row exists, **both or neither**,
+  the cloud id in lower case; with no tenant row it writes the row without a Jira site and prints one line saying so.
+  It never writes a cloud id with no tenant row (else AC-004.23 refuses the Admin's Setup in Task 18). It inserts with
+  `ON CONFLICT (workspace_id) DO NOTHING`; a row that exists with other values is refused, the field named, nothing
+  changed.
+- `infra/README.md` runbook line (staging and local), `infra/staging.env.example` (`TSOLVE_DEMO_WORKSPACE_ID`, script only).
+**Edge rows:** #77 (second run changes nothing), #78 (a different existing row is refused, the field named), #79 (no tenant
+row, no cloud id), #14 (no password in any output).
+**Tests (2 Java, 6 script checks):**
+- `RegistryPasswordCliTest` (2): the output decrypts with `PasswordCipher` for that Workspace id only (AC-001.24); a
+  missing variable is named and nothing secret is printed (Edge #14).
+- `infra/tests/registry-adopt.test.sh` (by hand with Docker; the output goes into the PR): A1 refuses without a required
+  variable, names it, writes nothing; A2 writes the row (ACTIVE, the fields above, `schema_version` = last changeset, a
+  `v1:` password that decrypts) and prints no password (AC-001.15, AC-001.24); A3 a second run changes nothing
+  (Edge #77); A4 an existing row with other values is refused, the field named, nothing changed (Edge #78); A5 a tenant
+  `workspace` row with `jira_site_address` and an upper-case `jira_cloud_id` gives both Jira columns, the cloud id in
+  lower case, and a row with an address but no cloud id gives neither (Edge #79); A6 an empty tenant `workspace` table
+  gives both columns NULL and one explaining line (Edge #79).
+**ITs to run:** `-Dtest=RegistryPasswordCliTest` (a unit test), then `bash infra/tests/registry-adopt.test.sh`.
+**Staging after merge:** the checklist above, then run the script on the VPS; smoke: sign-in, a wiki file view, `psql`
+showing the row.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/platform/registry/RegistryPasswordCli.java`
+- Create: `infra/scripts/registry-adopt-workspace.sh`
+- Modify: `infra/README.md`, `infra/staging.env.example`
+- Test: `backend/src/test/java/vn/tsolve/platform/registry/RegistryPasswordCliTest.java`, `infra/tests/registry-adopt.test.sh`
+**Dependencies:** Task 4a-1 merged and deployed; Task 3b (the Registry database on staging)
+**Estimated size:** small (2 production files and 2 docs, 2 tests and 6 checks)
+**Done when:** `bash infra/tests/registry-adopt.test.sh` passes A1 to A6 and its output is in the PR; on staging the
+row exists and a wiki file opens.
+
+---
+
+## Task 4b: Sign-in, Jira App and `/me` read the catalog; the Workspace stand-ins go
+
+**Story:** STORY-004
+**Feature:** catalog-lookups
+**Assignee:** Trần Trung Hiếu (KAN-98); Jira sub-task: new, key to be added by the orchestrator
+**After this task you can:** sign in on `bluefin.tsolve.io.vn` with bluefin found through its Registry row (and `/me`
+answering `workspaceReady` from the real lookup), and, if the row has a cloud id, make a Jira App call that resolves to
+bluefin. The env stand-ins `TSOLVE_STUB_WORKSPACES`, `TSOLVE_STUB_JIRA_SITES` and `TSOLVE_STUB_WORKSPACE_READY` no
+longer exist. Staging smoke: sign-in on bluefin, a review email queued, a wiki upload and view, and a Jira App call only
+if the row has a cloud id.
+**Covers:** AC-004.17 (through the identity and jira-app ports), AC-002.14 (`runIn` accepts the catalog's id and refuses
+another), be-foundation AC-003.4 (once AC-003.7 is retired, the only rule), jira-app AC-001.2 and AC-001.3 (traced
+through the renamed tests below).
+**Design:** Key Decisions R19; Registry rules.
+**Description:**
+- Create `identity/signin/port/PlatformWorkspaceLookup` (`@Profile("!dev")`, over `ObjectProvider<WorkspaceCatalog>`):
+  `findBySiteHost` lower-cases the host, strips the port, gets the label through `TSOLVE_SITE_ORIGIN_TEMPLATE` (`{slug}`)
+  and calls `findBySiteName`; `findById`; a `WorkspaceSummary` maps to `WorkspaceRef(id, host, googleDomain, status,
+  slug = siteName, orgId or null)`; no catalog bean, or a host outside the template, answers empty; a Registry failure is
+  not caught (Edge #80).
+- Create `jiraapp/service/impl/CatalogJiraWorkspaceLookup`: `findByCloudId(cloudId).map(id)`; empty with no catalog or a
+  null cloud id; a Suspended Workspace still resolves (the 403 of AC-006.4 is Task 7/10's). **It stays unconditional and
+  takes `ObjectProvider<WorkspaceCatalog>`**: five jira-app services and `workspace.JiraAppTokenServiceImpl` inject
+  `JiraWorkspaceLookup` in every context, and a required parameter would break every full-context test with the Registry
+  gate off (Edge #83).
+- `identity/signin/SignInConfig`: `KnownWorkspaces` stays over identity's `WorkspaceLookup`, which now reads the catalog
+  outside `dev` (javadoc only). Delete `NoWorkspaceLookup`, `ConfigJiraWorkspaceLookup`, `StubWorkspaceStatusLookup`.
+- Config: `application.yml` loses `tsolve.stub.workspaces` and `workspace-ready`; `.env.example` loses
+  `TSOLVE_STUB_WORKSPACES`, `TSOLVE_STUB_JIRA_SITES`, `TSOLVE_STUB_WORKSPACE_READY` and the comment mentions (line 76
+  too), and points to the local Registry and the adopt script; `infra/staging.env.example` loses `TSOLVE_STUB_WORKSPACES`;
+  `infra/compose.staging.yml` makes `REGISTRY_DB_URL` and `CATALOG_SECRET_KEY` required (`:?`) in `backend` and `worker`
+  (the code gate stays; Task 6 drops it); `infra/README.md`, `infra/keycloak/staging/README.md` (the org id lives in the
+  Registry row), `e2e/README.md` (the READY line).
+**Edge rows:** #80, #81, #83.
+**Tests (14 new, 8 updated or deleted):**
+- `PlatformWorkspaceLookupTest` (6): a host in any case and with a port maps every field; an unknown host, a host outside
+  the template or a blank host is empty (Edge #81); a Suspended Workspace comes through as SUSPENDED; `findById` maps every
+  field; with no catalog bean both methods are empty; a Registry failure propagates, never empty (Edge #80; the QA card
+  checks that the existing handler turns it into 500 `MSG06` and adds the line to a filter or controller test if not).
+- `CatalogJiraWorkspaceLookupTest` (4): keep the method suffixes `_AC_001_2` and `_AC_001_3` of
+  `ConfigJiraWorkspaceLookupTest`, so that `sdd.ts trace jira-app` shows no test fewer: a known cloud id gives its id; an
+  unknown or null one is empty; no catalog is empty; a Spring context with the Registry gate off has exactly one
+  `JiraWorkspaceLookup` (Edge #83).
+- `CatalogLookupsIT` (`PostgresTestBase`, one row; proves all lookups read the catalog), 3: `WorkspaceLookup.findBySiteHost`
+  finds the row; `JiraWorkspaceLookup.workspaceOf(cloudId)` finds it; `TenantContext.runIn` accepts the row's id and
+  refuses another (AC-002.14).
+- `NoWorkspaceFallbacksTest` (1, updated): `REMOVED_NAMES` gets `NoWorkspaceLookup`, `ConfigJiraWorkspaceLookup`,
+  `StubWorkspaceStatusLookup`, `TSOLVE_STUB_WORKSPACES`, `tsolve.stub.workspaces`, `TSOLVE_STUB_JIRA_SITES`,
+  `TSOLVE_STUB_WORKSPACE_READY`, `tsolve.stub.workspace-ready`; the "(kept)" comment goes.
+- Delete and update the others as listed under "Existing tests that name the removed stand-ins" (4b).
+**ITs to run:** `-Dit.test=CatalogLookupsIT,TicketListRepositoryIT`, plus the sign-in and session ITs that start the full
+context (`grep -l WorkspaceLookup` over `*IT.java`).
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/identity/signin/port/PlatformWorkspaceLookup.java`,
+  `backend/src/main/java/vn/tsolve/jiraapp/service/impl/CatalogJiraWorkspaceLookup.java`
+- Modify: `backend/src/main/java/vn/tsolve/identity/signin/SignInConfig.java`, `backend/src/main/resources/application.yml`
+- Delete: `identity/signin/port/NoWorkspaceLookup.java`, `jiraapp/service/impl/ConfigJiraWorkspaceLookup.java`,
+  `common/session/lookup/StubWorkspaceStatusLookup.java`
+- Modify: `.env.example`, `infra/staging.env.example`, `infra/compose.staging.yml`, `infra/README.md`,
+  `infra/keycloak/staging/README.md`, `e2e/README.md`
+- Test: `backend/src/test/java/vn/tsolve/identity/signin/port/PlatformWorkspaceLookupTest.java`,
+  `jiraapp/service/impl/CatalogJiraWorkspaceLookupTest.java`, `platform/CatalogLookupsIT.java`; update the tests listed above
+**Dependencies:** Tasks 4a-1 and 4a-2 merged and deployed (the row exists); `be-foundation` spec re-approved (AC-003.7
+retired)
+**Estimated size:** medium (about 6 production files plus config and docs, 14 new tests, 8 updated)
+**Done when:** the three new test classes and `NoWorkspaceFallbacksTest` pass, the updated tests pass, and the staging
+smoke above passes after the deploy.
+
+---
+
+## Task 4c: The worker reads the catalog; `worker-mock` goes
+
+**Story:** STORY-004
+**Feature:** catalog-worker-tenant
+**Assignee:** Trần Trung Hiếu (KAN-98); Jira sub-task: new, key to be added by the orchestrator
+**After this task you can:** on staging, see the worker container run a tracker suggestion job and send a review email
+for bluefin, with the Workspace taken from the Registry: the profile `worker-mock` and the variables
+`TSOLVE_MOCK_ACTIVE_WORKSPACES` and `TSOLVE_MOCK_SUSPENDED_WORKSPACES` no longer exist, and a Suspended Workspace gets
+no job.
+**Covers:** worker AC-002.12 (reworded: no real `WorkerTenantService` → startup fails), worker AC-003.1 and AC-003.3,
+platform AC-004.29, AC-002.14, AC-002.15 (`runIn` through the holder), GBR-38 (a Suspended Workspace runs no job).
+**Design:** Key Decisions R19; Edge rows.
+**Description:** `CatalogWorkerTenantService` in `worker/service/impl`, `@Service` with
+`@ConditionalOnProperty(prefix="tsolve.worker", name="enabled", havingValue="true")`, over `WorkspaceCatalog` and
+`TenantContext`: `activeWorkspaceIds` comes from `findActive()` (a failure throws, never an empty list, worker
+AC-003.3); `isWorkspaceActive` from `findById` with status ACTIVE; `enqueueWorkspaceId` returns a bound id only if it is
+Active, on any thread, and when nothing is bound the single Active id, or empty when there is none or more than one
+(the rule of Task 6a-2 and BUG-164; this replaces the earlier sentence of this task, "never the single Active one");
+`runIn` and `currentWorkspaceId` delegate to `TenantContext`. A `WorkerTenantService` bean must never exist in the web
+process (`OutboxOnlyConfiguration` and `WebJobsConfiguration` say so), hence the same condition as `WorkerConfiguration`;
+on staging that is the worker container only. Delete `MockWorkerTenantService`, `WorkerMockConfiguration` and
+`application-worker-mock.yml`; the mock moves to test sources as `vn.tsolve.worker.support.FixedWorkerTenantService` with
+the same behaviour (the new name keeps `NoWorkspaceFallbacksTest`'s scan green); `WorkerTenantService` javadoc loses
+"mock"; compose runs the worker with `SPRING_PROFILES_ACTIVE: worker`; `backend/Dockerfile` (comment),
+`backend/README-worker.md`, `.env.example` and `infra/staging.env.example` lose the mock variables.
+**Edge rows:** #82, #84, #85.
+**Tests (12 new, 16 updated or deleted):**
+- `CatalogWorkerTenantServiceTest` (10): `activeWorkspaceIds` equals the Active list and is empty when none (worker
+  AC-003.1); it throws when the catalog cannot list (Edge #84, worker AC-003.3); `isWorkspaceActive` true for Active,
+  false for Suspended or unknown; `enqueueWorkspaceId` with an Active Workspace bound returns it on a request thread and on
+  a plain thread; with a Suspended one bound it is empty (Edge #82); with an unknown one bound it is empty; unbound with a
+  single Active it returns that one (BUG-164); unbound with none or two it is empty; `runIn` refuses an unknown id
+  (AC-002.14) and binds a Suspended one (AC-002.15); `currentWorkspaceId` is the holder's.
+- `WorkerConfigurationTest` (2, replaces `WorkerMockConfigurationTest`): with the worker enabled and a catalog bean there is
+  exactly one `WorkerTenantService`, the catalog one, and without a catalog startup fails (worker AC-002.12); with the web
+  outbox only there is no `WorkerTenantService` bean (Edge #85).
+- Update the 12 users of `MockWorkerTenantService` and the profile or property tests listed under "Existing tests that
+  name the removed stand-ins" (4c). `JobRunrTenantIT`, `WebJobsIT` and `WorkerConfigurationTest` drop the profile and get
+  a test `WorkspaceCatalog` bean.
+**ITs to run:** `-Dit.test=EmailOutboxIT,JobRunrTenantIT,WebJobsIT,ReviewNotificationIT`.
+**Staging after merge:** a tracker suggestion job and a review email sent by the worker.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/worker/service/impl/CatalogWorkerTenantService.java`
+- Modify: `backend/src/main/java/vn/tsolve/worker/service/WorkerTenantService.java` (javadoc), `infra/compose.staging.yml`,
+  `backend/Dockerfile` (comment), `backend/README-worker.md`, `.env.example`, `infra/staging.env.example`
+- Delete: `worker/service/mock/MockWorkerTenantService.java`, `worker/config/WorkerMockConfiguration.java`,
+  `backend/src/main/resources/application-worker-mock.yml`
+- Test: `backend/src/test/java/vn/tsolve/worker/service/impl/CatalogWorkerTenantServiceTest.java`,
+  `worker/support/FixedWorkerTenantService.java`, `worker/config/WorkerConfigurationTest.java`; update the tests listed above
+**Dependencies:** Task 4b merged and deployed (compose requires the Registry variables in the worker); `worker` spec
+re-approved
+**Estimated size:** medium (1 production class plus deletions and config, 12 new tests, 16 updated)
+**Done when:** the new tests and `-Dit.test=EmailOutboxIT,JobRunrTenantIT,WebJobsIT,ReviewNotificationIT` pass, and the
+staging smoke above passes after the deploy.
 
 ---
 
