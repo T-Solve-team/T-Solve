@@ -47,7 +47,9 @@ Items of one wave run in parallel; "after" names the items that must be on `main
   merged (no number yet): backup first; new owner and runtime roles (the app user owns the database today,
   `infra/postgres/init/10-tsolve-dbs.sh:14`); the `tenant_identity` row; the policies; the one-row `workspace` table
   (`035-workspace-info.sql`, primary key `workspace_id`) on the allow-list — bluefin works as before, and `psql` as the
-  runtime user with no tenant setting sees no row.
+  runtime user with no tenant setting sees no row. Before FORCE: re-check the Task 4a-2 adopt script's read of the tenant
+  `workspace` row (jira_site_address, jira_cloud_id) — with the guard forced and no tenant bound, it reads 0 rows and
+  bluefin would silently get no Jira site.
 - **Wave 5.** (8) Task 7, provisioning, in parallel with the rest of `identity` KAN-247 (identity Task 14) — plumbing
   for items 9 and 10; (9) Task 8, the invitation queue; (10) Task 9, the ops script — create a Workspace by hand on
   staging; then Task 12, the demo seed — a second Workspace on staging.
@@ -791,7 +793,8 @@ AC-001.32 (Workspace users), AC-004.28 (no REST endpoint creates a Workspace: so
 **Description:** `WorkspaceProvisioning` (interface), `WorkspaceProvisioningService` (`create` only; steps and compensation of the
 design), `TenantDatabaseProvisioner` (role, `CREATE DATABASE … TEMPLATE tsolve_template`, grants, drop `WITH (FORCE)`),
 `TenantMigrator` (owner user; `apply(workspace)`, `applyAll()` that stops and names the first failing Workspace; reads
-the last changeset id into `schema_version`), `FirstAdminCreator` and `InvitationJobQueue` (ports, no implementation
+the last changeset id into `schema_version`; decide who keeps the adopted row's `schema_version` current after a deploy
+(the adopt script sets it once)), `FirstAdminCreator` and `InvitationJobQueue` (ports, no implementation
 here), `WorkspaceRuleException` (extends `BusinessRuleException`). A start-up check refuses the `ops` and Console profiles
 without a bean for each port (AC-013.15). This task also adds `insert(row)` (password already encrypted) and
 `updateStatus` to `RegistryRepository` (left out of Task 4a-1), with their tests.
