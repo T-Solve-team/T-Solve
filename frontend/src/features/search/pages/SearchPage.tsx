@@ -1,4 +1,7 @@
-/** 6.1 Search — SRS III.6.1, Figma "6.1 Search" (a)–(c). */
+/**
+ * 6.1 Search — SRS III.6.1, laid out as design option C "Search first" (search design.md): a start state before a
+ * query, then the Search box at the top with the results under it.
+ */
 import { SearchOutlined } from '@ant-design/icons';
 import { Flex, Typography } from 'antd';
 import { useSession } from '@/shared/auth';

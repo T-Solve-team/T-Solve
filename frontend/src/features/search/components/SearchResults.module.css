@@ -13,7 +13,7 @@
 .filter {
   display: flex;
   align-items: center;
-  min-height: 36px;
+  min-height: calc(var(--ant-control-height) + var(--ant-padding-xxs));
   max-width: 100%;
   padding-inline-start: var(--ant-padding-xs);
   border: var(--ant-line-width) solid var(--ant-color-border);
@@ -51,21 +51,37 @@
 }
 
 .card {
+  position: relative;
   display: grid;
   justify-items: start;
   gap: var(--ant-margin-xxs);
-  padding: 16px 18px;
-  border-radius: 12px;
+  padding: var(--ant-padding) var(--ant-padding-md);
+  border-radius: var(--ant-border-radius-lg);
   overflow-wrap: anywhere;
 }
 
+/* The whole row opens the ticket: the title link is stretched over the card, so the hover is not a false cue. */
 .card:hover {
   background: var(--ant-color-bg-container);
+}
+
+.card:focus-within {
+  outline: var(--ant-control-outline-width) solid var(--ant-color-primary);
 }
 
 .title {
   font-size: var(--ant-font-size-lg);
   font-weight: 600;
+}
+
+.title::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+}
+
+.title:focus-visible {
+  outline: none;
 }
 
 .helpful {
