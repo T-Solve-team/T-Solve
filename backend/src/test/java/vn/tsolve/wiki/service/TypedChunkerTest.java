@@ -54,6 +54,30 @@ class TypedChunkerTest {
     }
 
     @Test
+    void splitsBoldPolicyArticles_AC_007_4() {
+        assertThat(chunker.split(WikiDocumentType.POLICY, "Policy", """
+                **Điều 1.** Access
+                Request access.
+                __Article 2:__ Removal
+                Revoke access.
+                """))
+                .containsExactly(
+                        "[policy] Policy\n**Điều 1.** Access\nRequest access.",
+                        "[policy] Policy\n__Article 2:__ Removal\nRevoke access.");
+    }
+
+    @Test
+    void keepsAListThatCitesArticlesWithItsArticle_AC_007_4() {
+        assertThat(chunker.split(WikiDocumentType.POLICY, "Policy", """
+                Điều 3. Scope
+                - Article 5 of Decree 13 applies.
+                - Article 6 of Decree 13 applies.
+                """))
+                .containsExactly(
+                        "[policy] Policy\nĐiều 3. Scope\n- Article 5 of Decree 13 applies.\n- Article 6 of Decree 13 applies.");
+    }
+
+    @Test
     void splitsFaqHeadingsAndQuestionMarkers_AC_007_4() {
         assertThat(chunker.split(WikiDocumentType.FAQ, "Help", """
                 # Access
