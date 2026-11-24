@@ -10,20 +10,22 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
+import vn.tsolve.common.tenant.NoTenantException;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.identity.dto.UserListQuery;
 import vn.tsolve.identity.repository.UserListRepository;
-import vn.tsolve.identity.signin.port.LocalTenantScope;
+import vn.tsolve.identity.signin.port.PlatformTenantScope;
 
 class UserListServiceImplTest {
-    private final LocalTenantScope scope = new LocalTenantScope();
+    private final PlatformTenantScope scope = new PlatformTenantScope(new ThreadLocalTenantContext(id -> true));
     private final UserListRepository repository = mock(UserListRepository.class);
     private final UserListServiceImpl service = new UserListServiceImpl(scope, repository);
     private final UserListQuery query = UserListQuery.of(null, null, null, null, null, null, List.of());
 
     @Test
     void refusesUnboundWorkspaceBeforeReadingAccountsOrDepartments_AC_004_16() {
-        assertThatThrownBy(() -> service.list(query)).isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(service::departments).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> service.list(query)).isInstanceOf(NoTenantException.class);
+        assertThatThrownBy(service::departments).isInstanceOf(NoTenantException.class);
         verifyNoInteractions(repository);
     }
 

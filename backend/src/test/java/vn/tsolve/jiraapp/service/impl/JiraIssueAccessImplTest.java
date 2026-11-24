@@ -13,11 +13,16 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import vn.tsolve.common.exception.CodedException;
 import vn.tsolve.common.security.JiraAppPrincipal;
 import vn.tsolve.common.security.TSolveUser;
+import vn.tsolve.common.tenant.TenantContext;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.identity.service.ScopeAccessService;
+import vn.tsolve.identity.signin.SignInConfig;
+import vn.tsolve.identity.signin.port.InMemoryWorkspaceLookup;
 import vn.tsolve.identity.signin.port.TenantScope;
 import vn.tsolve.jiraapp.dto.JiraIssueContext;
 import vn.tsolve.jiraapp.exception.JiraAskerNotLinkedException;
@@ -116,6 +121,22 @@ class JiraIssueAccessImplTest {
         assertThatThrownBy(() -> access.inIssue(null, "ITSUP-12", c -> c))
                 .isInstanceOf(JiraIssueAccessDeniedException.class);
         verifyNoInteractions(workspaces, users);
+    }
+
+    @Test
+    @DisplayName("AC-002.12 a Jira App call bound by its cloudId is seen by TenantContext, and none after it")
+    void aJiraAppCallBoundByItsCloudIdIsSeenByTheHolder_AC_002_12() {
+        UUID acme = InMemoryWorkspaceLookup.ACME.id();
+        SignInConfig config = new SignInConfig();
+        TenantContext holder = new ThreadLocalTenantContext(config.knownWorkspaces(new InMemoryWorkspaceLookup()));
+        JiraIssueAccessImpl real = new JiraIssueAccessImpl(
+                new ConfigJiraWorkspaceLookup("cloud-1=" + acme), config.tenantScope(holder), users, projects, scopes);
+        given(users.find("cloud-1", "jira-acc-1")).willReturn(Optional.of(USER));
+
+        Optional<UUID> seenByWork = real.asUser(CALLER, user -> holder.currentWorkspaceId());
+
+        assertThat(seenByWork).contains(acme);
+        assertThat(holder.currentWorkspaceId()).isEmpty();
     }
 
     @Test

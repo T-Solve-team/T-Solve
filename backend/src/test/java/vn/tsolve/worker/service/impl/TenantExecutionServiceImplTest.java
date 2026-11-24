@@ -12,6 +12,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.worker.service.WorkerTenantService;
 import vn.tsolve.worker.service.mock.MockWorkerTenantService;
 
@@ -19,7 +20,8 @@ class TenantExecutionServiceImplTest {
     private final UUID a = UUID.randomUUID();
     private final UUID b = UUID.randomUUID();
     private final UUID suspended = UUID.randomUUID();
-    private final MockWorkerTenantService context = new MockWorkerTenantService(Set.of(a, b), Set.of(suspended));
+    private final MockWorkerTenantService context =
+            new MockWorkerTenantService(Set.of(a, b), Set.of(suspended), new ThreadLocalTenantContext(id -> true));
     private final TenantExecutionServiceImpl execution = new TenantExecutionServiceImpl(context);
 
     @Test

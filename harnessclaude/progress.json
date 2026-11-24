@@ -492,7 +492,7 @@
         "local-data-plane": "pending",
         "registry-db": "passing",
         "workspace-catalog": "pending",
-        "row-guard": "pending",
+        "row-guard": "passing",
         "tenant-routing": "pending",
         "provisioning-core": "pending",
         "invitation-job-queue": "pending",
@@ -508,9 +508,12 @@
         "load-test": "pending",
         "forge-security-chain": "pending",
         "cross-module-isolation": "passing",
-        "e2e-smoke": "passing"
+        "e2e-smoke": "passing",
+        "one-tenant-holder": "passing",
+        "no-workspace-fallbacks": "passing",
+        "registry-staging-script": "passing"
       },
-      "lastUpdated": "2026-11-22T16:33:10.470Z",
+      "lastUpdated": "2026-11-23T19:52:04.524Z",
       "branch": "feat/platform",
       "repos": [
         "default"

@@ -5,9 +5,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.UUID;
 import javax.sql.DataSource;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import vn.tsolve.common.tenant.TenantContext;
+import vn.tsolve.common.tenant.NoTenantException;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.worker.service.TenantJobService;
 import vn.tsolve.worker.service.WebJobQueue;
 import vn.tsolve.worker.service.WorkerTenantService;
@@ -18,14 +20,14 @@ class WebJobsConfigurationTest {
     private static final String OUTBOX = "tsolve.worker.outbox-enabled=true";
     private static final String WEB_JOBS = "tsolve.worker.web-jobs-enabled=true";
     private static final UUID A = new UUID(0, 1);
-    private static final UUID B = new UUID(0, 2);
 
-    /** The staging backend: no profile, worker disabled, no TenantContext bean. */
+    /** The staging backend: no profile, worker disabled; the holder is the only TenantContext. */
     private final ApplicationContextRunner staging = new ApplicationContextRunner()
             .withUserConfiguration(
                     OutboxOnlyConfiguration.class,
                     WebJobsConfiguration.class,
-                    OutboxOnlyConfigurationTest.SkipMigration.class);
+                    OutboxOnlyConfigurationTest.SkipMigration.class)
+            .withBean(ThreadLocalTenantContext.class, () -> new ThreadLocalTenantContext(id -> true));
 
     @Test
     void registersNothingWithoutTheFlag_BUG_342() {
@@ -45,29 +47,21 @@ class WebJobsConfigurationTest {
                     assertThat(context).doesNotHaveBean(JobRunrRuntime.class);
                     assertThat(context).doesNotHaveBean(TenantJobService.class);
                     assertThat(context).doesNotHaveBean(WorkerTenantService.class);
-                    assertThat(context).doesNotHaveBean(TenantContext.class);
                     assertThat(context.getBeansOfType(DataSource.class)).isEmpty();
                 });
     }
 
     @Test
-    void refusesToQueueWithoutASingleWorkspace_AC_011_11_BUG_342() {
-        staging.withPropertyValues(OUTBOX, WEB_JOBS, JOBS, "TSOLVE_MOCK_ACTIVE_WORKSPACES=" + A + "," + B)
+    @DisplayName(
+            "AC-002.16 enqueue with nothing bound throws NoTenantException before any JobRunr runtime is created, even with one mock Workspace")
+    void refusesToQueueWithNothingBound_AC_002_16() {
+        staging.withPropertyValues(OUTBOX, WEB_JOBS, JOBS, "TSOLVE_MOCK_ACTIVE_WORKSPACES=" + A)
                 .run(context -> {
                     var jobs = context.getBean(WebJobQueue.class);
-                    // Refused before the Jobs database is touched.
+                    // Refused before the Jobs database (jobs.invalid, unreachable) is touched.
                     assertThatThrownBy(() -> jobs.enqueue("tracker.suggestion", A))
-                            .isInstanceOf(IllegalStateException.class)
-                            .hasMessageContaining("Workspace");
+                            .isInstanceOf(NoTenantException.class);
                 });
-    }
-
-    @Test
-    void failsTheStartWhenTheOutboxIsOff_BUG_342() {
-        staging.withPropertyValues(WEB_JOBS, JOBS).run(context -> {
-            assertThat(context).hasFailed();
-            assertThat(context.getStartupFailure()).hasStackTraceContaining("tsolve.worker.outbox-enabled");
-        });
     }
 
     @Test

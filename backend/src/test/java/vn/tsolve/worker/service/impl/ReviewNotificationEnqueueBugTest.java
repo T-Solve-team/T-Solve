@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -25,9 +26,12 @@ import java.util.UUID;
 import org.jobrunr.scheduling.JobRequestScheduler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.identity.service.WorkspaceSiteService;
 import vn.tsolve.ticket.dto.ReviewNotification;
 import vn.tsolve.ticket.event.ReviewFeedbackDecidedEvent;
@@ -36,7 +40,6 @@ import vn.tsolve.worker.dto.OutboundEmail;
 import vn.tsolve.worker.exception.EmailOutboxUnavailableException;
 import vn.tsolve.worker.exception.InvalidOutboundEmailException;
 import vn.tsolve.worker.service.EmailOutboxService;
-import vn.tsolve.worker.service.OutboxWorkspace;
 import vn.tsolve.worker.service.WorkerTenantService;
 import vn.tsolve.worker.service.mock.MockWorkerTenantService;
 
@@ -83,7 +86,7 @@ class ReviewNotificationEnqueueBugTest {
 
     @Test
     void enqueuesOnTheSoleActiveWorkspaceWhenNoneIsBound_BUG_164() {
-        var tenants = new MockWorkerTenantService(Set.of(A), Set.of());
+        var tenants = new MockWorkerTenantService(Set.of(A), Set.of(), new ThreadLocalTenantContext(id -> true));
 
         when(outbox.queue(any())).thenAnswer(call -> {
             assertThat(tenants.currentWorkspaceId()).contains(A);
@@ -97,7 +100,7 @@ class ReviewNotificationEnqueueBugTest {
 
     @Test
     void refusesWhenSeveralWorkspacesAreActiveAndNoneIsBound_BUG_164() {
-        var tenants = new MockWorkerTenantService(Set.of(A, B), Set.of());
+        var tenants = new MockWorkerTenantService(Set.of(A, B), Set.of(), new ThreadLocalTenantContext(id -> true));
         assertThat(tenants.enqueueWorkspaceId()).isEmpty();
 
         enqueuer(outbox, tenants).onDecided(new ReviewFeedbackDecidedEvent(List.of(RECORD_ID)));
@@ -112,7 +115,7 @@ class ReviewNotificationEnqueueBugTest {
 
     @Test
     void directEnqueueStillRejectsAnUnboundThread_AC_002_2_BUG_164() {
-        var tenants = new MockWorkerTenantService(Set.of(A), Set.of());
+        var tenants = new MockWorkerTenantService(Set.of(A), Set.of(), new ThreadLocalTenantContext(id -> true));
         var jobs = new TenantJobServiceImpl(tenants, scheduler, handler);
 
         assertThatThrownBy(() -> jobs.enqueue("test-handler", RECORD_ID))
@@ -124,7 +127,7 @@ class ReviewNotificationEnqueueBugTest {
 
     @Test
     void prefersTheBoundWorkspace_BUG_164() {
-        var tenants = new MockWorkerTenantService(Set.of(A, B), Set.of());
+        var tenants = new MockWorkerTenantService(Set.of(A, B), Set.of(), new ThreadLocalTenantContext(id -> true));
 
         when(outbox.queue(any())).thenAnswer(call -> {
             assertThat(tenants.currentWorkspaceId()).contains(B);
@@ -137,7 +140,7 @@ class ReviewNotificationEnqueueBugTest {
 
     @Test
     void keepsCurrentWorkspaceEmptyOutsideAJob_BUG_164() {
-        var tenants = new MockWorkerTenantService(Set.of(A), Set.of());
+        var tenants = new MockWorkerTenantService(Set.of(A), Set.of(), new ThreadLocalTenantContext(id -> true));
 
         assertThat(tenants.currentWorkspaceId()).isEmpty();
         tenants.runIn(A, () -> assertThat(tenants.currentWorkspaceId()).contains(A));
@@ -217,13 +220,23 @@ class ReviewNotificationEnqueueBugTest {
 
     @Test
     void enqueuesDirectlyOnAnAlreadyBoundThread_BUG_164() {
-        var tenants = spy(new MockWorkerTenantService(Set.of(A, B), Set.of()));
+        var tenants =
+                spy(new MockWorkerTenantService(Set.of(A, B), Set.of(), new ThreadLocalTenantContext(id -> true)));
+
+        var boundWhenQueued = new java.util.ArrayList<Optional<UUID>>();
+        doAnswer(invocation -> {
+                    boundWhenQueued.add(tenants.currentWorkspaceId());
+                    return null;
+                })
+                .when(outbox)
+                .queue(any(OutboundEmail.class));
 
         tenants.runIn(B, () -> enqueuer(outbox, tenants).onDecided(new ReviewFeedbackDecidedEvent(List.of(RECORD_ID))));
 
-        verify(outbox).queue(any(OutboundEmail.class));
-        verify(tenants, never()).enqueueWorkspaceId();
-        verify(tenants).runIn(any(UUID.class), any(Runnable.class));
+        verify(outbox, times(1)).queue(any(OutboundEmail.class));
+        assertThat(boundWhenQueued).containsExactly(Optional.of(B));
+        verify(tenants, times(1)).runIn(any(UUID.class), any(Runnable.class));
+        verify(tenants, never()).runIn(eq(A), any(Runnable.class));
     }
 
     @Test
@@ -264,21 +277,14 @@ class ReviewNotificationEnqueueBugTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    void queuesFromTheWebRequestAndLinksTheSiteWhenOnlyTheOutboxIsEnabled_BUG_339() {
-        ObjectProvider<EmailOutboxService> outboxProvider = mock(ObjectProvider.class);
-        ObjectProvider<WorkerTenantService> noWorker = mock(ObjectProvider.class);
-        ObjectProvider<OutboxWorkspace> requestTenants = mock(ObjectProvider.class);
-        OutboxWorkspace workspace = () -> Optional.of(A);
+    @DisplayName(
+            "AC-002.12 in the web process the enqueuer queues for the Workspace bound in the holder and links its site")
+    void queuesFromTheWebRequestAndLinksTheSiteWhenOnlyTheOutboxIsEnabled_AC_002_12() {
         var sites = mock(WorkspaceSiteService.class);
-        when(outboxProvider.getIfAvailable()).thenReturn(outbox);
-        when(noWorker.getIfAvailable()).thenReturn(null);
-        when(requestTenants.getIfAvailable()).thenReturn(workspace);
         when(sites.siteHost(A)).thenReturn(Optional.of("acme.t-solve.test"));
-        var enqueuer =
-                new ReviewNotificationEnqueuer(outboxProvider, noWorker, notifications, sites, "", requestTenants);
 
-        enqueuer.onDecided(new ReviewFeedbackDecidedEvent(List.of(RECORD_ID)));
+        runInWebProcess(
+                sites, true, enqueuer -> enqueuer.onDecided(new ReviewFeedbackDecidedEvent(List.of(RECORD_ID))));
 
         var queued = org.mockito.ArgumentCaptor.forClass(OutboundEmail.class);
         verify(outbox).queue(queued.capture());
@@ -287,8 +293,12 @@ class ReviewNotificationEnqueueBugTest {
     }
 
     @Test
-    void warnsThatNoWorkspaceIsBoundWhenTheWebOutboxFindsNone_BUG_341() {
-        webEnqueuer(Optional::empty).onDecided(new ReviewFeedbackDecidedEvent(List.of(RECORD_ID)));
+    @DisplayName("AC-002.16 with nothing bound the enqueuer logs the missing Workspace once and queues nothing")
+    void warnsThatNoWorkspaceIsBoundWhenTheWebOutboxFindsNone_AC_002_16() {
+        runInWebProcess(
+                mock(WorkspaceSiteService.class),
+                false,
+                enqueuer -> enqueuer.onDecided(new ReviewFeedbackDecidedEvent(List.of(RECORD_ID))));
 
         verifyNoInteractions(outbox);
         assertThat(enqueuerLog.list)
@@ -302,7 +312,10 @@ class ReviewNotificationEnqueueBugTest {
     void namesTheEmailWhenTheOutboxRejectsIt_BUG_341() {
         when(outbox.queue(any())).thenThrow(new InvalidOutboundEmailException());
 
-        webEnqueuer(() -> Optional.of(A)).onDecided(new ReviewFeedbackDecidedEvent(List.of(RECORD_ID)));
+        runInWebProcess(
+                mock(WorkspaceSiteService.class),
+                true,
+                enqueuer -> enqueuer.onDecided(new ReviewFeedbackDecidedEvent(List.of(RECORD_ID))));
 
         assertThat(enqueuerLog.list)
                 .filteredOn(entry -> entry.getLevel() == Level.WARN)
@@ -312,15 +325,27 @@ class ReviewNotificationEnqueueBugTest {
                         .doesNotContain("writer@example.test"));
     }
 
-    @SuppressWarnings("unchecked")
-    private ReviewNotificationEnqueuer webEnqueuer(OutboxWorkspace workspace) {
-        ObjectProvider<EmailOutboxService> outboxProvider = mock(ObjectProvider.class);
-        ObjectProvider<WorkerTenantService> noWorker = mock(ObjectProvider.class);
-        ObjectProvider<OutboxWorkspace> web = mock(ObjectProvider.class);
-        when(outboxProvider.getIfAvailable()).thenReturn(outbox);
-        when(web.getIfAvailable()).thenReturn(workspace);
-        return new ReviewNotificationEnqueuer(
-                outboxProvider, noWorker, notifications, mock(WorkspaceSiteService.class), "", web);
+    /**
+     * The staging web process: no WorkerTenantService bean, the holder is the only TenantContext. The enqueuer is
+     * wired by Spring, so the test does not depend on how its constructor names the holder.
+     */
+    private void runInWebProcess(
+            WorkspaceSiteService sites, boolean bound, java.util.function.Consumer<ReviewNotificationEnqueuer> action) {
+        var holder = new ThreadLocalTenantContext(id -> true);
+        new ApplicationContextRunner()
+                .withBean(EmailOutboxService.class, () -> outbox)
+                .withBean(ReviewNotificationService.class, () -> notifications)
+                .withBean(WorkspaceSiteService.class, () -> sites)
+                .withBean(ThreadLocalTenantContext.class, () -> holder)
+                .withBean(ReviewNotificationEnqueuer.class)
+                .run(context -> {
+                    var enqueuer = context.getBean(ReviewNotificationEnqueuer.class);
+                    if (bound) {
+                        holder.runIn(A, () -> action.accept(enqueuer));
+                    } else {
+                        action.accept(enqueuer);
+                    }
+                });
     }
 
     @SuppressWarnings("unchecked")

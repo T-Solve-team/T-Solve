@@ -587,8 +587,8 @@
     }
   },
   "platform": {
-    "specHash": "f5bff144498c653f1a304a88390a8e1c1266cc1b4b2510125852a615f4d48d27",
-    "approvedAt": "2026-11-14T05:04:24.631Z",
+    "specHash": "7f8f7b7e9225e1de02900c25a5fbeea0450fc787385874881b3c4d89d3ff959d",
+    "approvedAt": "2026-11-23T16:21:55.934Z",
     "by": "user",
     "acs": {
       "AC-001.15": "THE catalog database (the Platform / Tenant Registry of the HLA, named ) SHALL hold the table  with  (UUID, primary key),  (not null, unique),  ( or , not null),  (not null, unique),  (not null),  (not null, encrypted as AC-001.24 says),  (the tenant changelog version last applied to that database, not null),  (nullable),  (nullable, unique),  and  (, not null) (GBR-24, GBR-37).",
@@ -598,8 +598,8 @@
       "AC-001.18": "THE backend SHALL keep two Liquibase changelogs: the catalog changelog  and the tenant changelog , which every module already extends. A changeset belongs to exactly one of them.",
       "AC-001.19": "WHEN the catalog changelog is applied to an empty catalog database in any environment, THE catalog SHALL contain no row in  or  (GBR-24, D42). Only STORY-013 creates Workspaces.",
       "AC-001.20": "THE tenant-table convention SHALL be, for every table of the tenant changelog that is not on the allow-list of AC-001.21:",
-      "AC-001.21": "THE allow-list SHALL name each tenant-changelog table that does not follow AC-001.20, each with its reason:  and  (Liquibase),  (the one-row table of AC-001.28, which stays on the list), and the legacy tables , ,  (→ ),  (→ ) and  (→ ), which their owning modules bring to AC-001.20 when they are built.",
-      "AC-001.22": "WHEN the convention guard test runs against the applied tenant changelog, THE test SHALL fail for every table that is not on the allow-list and breaks any part of AC-001.20, and name the table and the missing part. IF a table on the allow-list meets AC-001.20, or a table not named in AC-001.21 is added to it, THEN the test SHALL fail and say that the allow-list only shrinks.",
+      "AC-001.21": "THE allow-list SHALL name each tenant-changelog table that does not follow AC-001.20, each with its reason:  and  (Liquibase),  (the one-row table of AC-001.28, which stays on the list), and the legacy tables below, which their owning modules bring to AC-001.20 when they are built. The five tables of the earlier list (, , , , ) are gone: changeset 039 dropped them. The legacy tables are, by owning module (read from the tenant changelog at changeset 050; the first run of the guard test confirms the list):",
+      "AC-001.22": "WHEN the convention guard test runs against the applied tenant changelog, THE test SHALL fail for every table that is not on the allow-list and breaks any part of AC-001.20, and name the table and the missing part. IF a table on the allow-list meets AC-001.20, IF a table not named in AC-001.21 is added to it, or IF an entry names a table that does not exist, THEN the test SHALL fail and say that the allow-list only shrinks.",
       "AC-001.23": "THE primary key  of a tenant table SHALL be generated both by JPA () and by the database (), so that application inserts and raw SQL inserts both get an id (decision X2).",
       "AC-001.24": "THE catalog SHALL store  encrypted with AES-GCM under the key , and the backend SHALL never log it or return it from any API.",
       "AC-001.25": "IF the key  is missing or cannot decrypt a stored password, THEN THE backend SHALL refuse to open that Workspace's database and log which Workspace failed, without the password.",
