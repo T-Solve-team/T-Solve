@@ -18,6 +18,8 @@ import org.springframework.web.client.RestClient;
 
 @Component
 public class DoclingClient {
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
+
     private final RestClient client;
 
     public DoclingClient(
@@ -29,7 +31,9 @@ public class DoclingClient {
             Duration duration = DurationStyle.detectAndParse(timeout);
             var factory = new JdkClientHttpRequestFactory(HttpClient.newBuilder()
                     .version(HttpClient.Version.HTTP_1_1)
-                    .connectTimeout(duration)
+                    // A down docling host fails fast, so the index job falls back without waiting the long read
+                    // timeout.
+                    .connectTimeout(CONNECT_TIMEOUT)
                     .build());
             factory.setReadTimeout(duration);
             client = RestClient.builder()

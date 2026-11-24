@@ -79,7 +79,7 @@ class WikiUploadServiceImplTest {
     private final UUID user = UUID.randomUUID();
     private final UUID space = UUID.randomUUID();
     private final LlmClient llm = mock(LlmClient.class);
-    private final DocumentTypeClassifier classifier = new DocumentTypeClassifier(llm, new ObjectMapper(), "3s");
+    private final DocumentTypeClassifier classifier = new DocumentTypeClassifier(llm, new ObjectMapper(), "3s", "60s");
     private final WikiUploadServiceImpl service = new WikiUploadServiceImpl(
             documents,
             folders,
