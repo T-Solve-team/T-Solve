@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -49,12 +50,18 @@ public class DocumentTypeClassifier {
     private final ObjectReader reader;
     private final ChatMessage instructions;
     private final Duration timeout;
+    private final Duration totalTimeout;
 
     public DocumentTypeClassifier(
-            LlmClient llm, ObjectMapper json, @Value("${tsolve.wiki.classify.timeout:20s}") String timeout) {
+            LlmClient llm,
+            ObjectMapper json,
+            @Value("${tsolve.wiki.classify.timeout:20s}") String timeout,
+            // 45 s leaves room for parsing, upload and the answer under a 60 s proxy timeout (BUG-390).
+            @Value("${tsolve.wiki.classify.total-timeout:45s}") String totalTimeout) {
         this.llm = llm;
         this.reader = json.readerFor(JsonNode.class).with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
         this.timeout = DurationStyle.detectAndParse(timeout);
+        this.totalTimeout = DurationStyle.detectAndParse(totalTimeout);
         try {
             this.instructions = new ChatMessage(
                     ChatMessage.Role.SYSTEM,
@@ -64,16 +71,31 @@ public class DocumentTypeClassifier {
         }
     }
 
-    /** Blocks the caller; a call past the timeout is interrupted so it frees its Ollama slot (AC-007.3, BUG-355). */
+    /** The end of one extract request's classification budget, from now (AC-007.3, BUG-390). */
+    public Instant deadline() {
+        return Instant.now().plus(totalTimeout);
+    }
+
     public WikiDocumentType classify(String title, String text) {
+        return classify(title, text, Instant.now().plus(timeout));
+    }
+
+    /**
+     * Blocks the caller until the per-file timeout or the deadline, whichever comes first; a late call is interrupted
+     * so it frees its Ollama slot (AC-007.3, BUG-355, BUG-390).
+     */
+    public WikiDocumentType classify(String title, String text, Instant deadline) {
         if (text.isBlank()) return WikiDocumentType.OTHER;
+        long waitMillis =
+                Math.min(timeout.toMillis(), Math.max(0, deadline.toEpochMilli() - System.currentTimeMillis()));
+        if (waitMillis == 0) return WikiDocumentType.OTHER;
         String sample = text.substring(0, Math.min(MAX_SAMPLE_LENGTH, text.length()));
         var input = new ChatMessage(ChatMessage.Role.USER, "Title: " + title + "\n\nExtracted text:\n" + sample);
         var call = new FutureTask<>(() -> classify(input));
         // Socket reads on a virtual thread stop on interrupt, so cancel(true) ends the HTTP call and its slot.
         Thread.startVirtualThread(call);
         try {
-            return call.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            return call.get(waitMillis, TimeUnit.MILLISECONDS);
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
             return WikiDocumentType.OTHER;
