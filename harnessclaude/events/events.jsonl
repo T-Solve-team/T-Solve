@@ -2268,3 +2268,5 @@
 {"ts":"2026-11-23T19:31:06.803Z","type":"feature-status","module":"platform","feature":"row-guard","from":"pending","to":"in-progress"}
 {"ts":"2026-11-23T19:31:06.860Z","type":"feature-status","module":"platform","feature":"row-guard","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-23T19:31:06.909Z","type":"feature-status","module":"platform","feature":"row-guard","from":"evaluating","to":"passing"}
+{"ts":"2026-11-24T15:03:14.236Z","type":"quick-opened","what":"Resolve KAN-383 bug-log conflict and keep the Search regression bug ID in sync","files":["docs/bug-log.md","frontend/src/features/search/pages/SearchPage.test.tsx"]}
+{"ts":"2026-11-24T15:42:53.341Z","type":"quick-closed","what":"Resolve KAN-383 bug-log conflict and keep the Search regression bug ID in sync","files":["docs/bug-log.md","frontend/src/features/search/pages/SearchPage.test.tsx"]}
