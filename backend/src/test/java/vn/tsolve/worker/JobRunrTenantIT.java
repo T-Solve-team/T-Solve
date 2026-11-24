@@ -24,6 +24,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
+import vn.tsolve.common.tenant.AcceptingKnownWorkspaces;
 import vn.tsolve.worker.config.JobRunrRuntime;
 import vn.tsolve.worker.config.WorkerConfiguration;
 import vn.tsolve.worker.config.WorkerMockConfiguration;
@@ -122,7 +123,11 @@ class JobRunrTenantIT {
         return new ApplicationContextRunner()
                 .withInitializer(new ConfigDataApplicationContextInitializer())
                 .withConfiguration(AutoConfigurations.of(DataSourceAutoConfiguration.class))
-                .withUserConfiguration(WorkerConfiguration.class, WorkerMockConfiguration.class, Handlers.class)
+                .withUserConfiguration(
+                        WorkerConfiguration.class,
+                        WorkerMockConfiguration.class,
+                        AcceptingKnownWorkspaces.class,
+                        Handlers.class)
                 .withBean(Observations.class, () -> observations)
                 .withPropertyValues(
                         "tsolve.worker.jdbc-url=" + DB.getJdbcUrl(),

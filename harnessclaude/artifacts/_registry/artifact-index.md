@@ -100,6 +100,7 @@ Master registry of all artifacts in this workspace.
 | — | tasks | platform | draft | artifacts/04-plans/platform/iteration-2/tasks.md |
 | — | session-log | platform | passing | artifacts/05-implementation/platform/task-7-kan-317-vps-deploy.md |
 | — | review | platform | pass | artifacts/06-evaluation/platform/kan-317-vps-deploy-review.md |
+| — | review | platform | pass | artifacts/06-evaluation/platform/task-6a-1-one-tenant-holder-review.md |
 | — | session-log | chatbot | passing | artifacts/05-implementation/chatbot/task-1-ask-answer.md |
 | — | session-log | fe-foundation | passing | artifacts/05-implementation/fe-foundation/task-6-placeholder-rule.md |
 | — | review | chatbot | pass | artifacts/06-evaluation/chatbot/task-1-ask-answer-review.md |
@@ -312,3 +313,14 @@ Master registry of all artifacts in this workspace.
 | — | tasks | workspace | approved | artifacts/04-plans/workspace/iteration-1/kan-344/tasks.md |
 | — | tasks | workspace | approved | artifacts/04-plans/workspace/iteration-1/kan-349/tasks.md |
 | — | review | ticket-review | pass | artifacts/06-evaluation/ticket-review/quick-bug-339-review-email-outbox-review.md |
+| — | session-log | platform | passing | artifacts/05-implementation/platform/task-3a-registry-db.md |
+| — | review | platform | pass | artifacts/06-evaluation/platform/task-3a-registry-db-review.md |
+| — | review | platform | pass | artifacts/06-evaluation/platform/task-3a-registry-db-review2.md |
+| — | test-report | platform | pass | artifacts/06-evaluation/platform/task-3a-registry-db-test-report.md |
+| — | review | platform | pass | artifacts/06-evaluation/platform/task-3b-registry-staging-review.md |
+| — | session-log | platform | passing | artifacts/05-implementation/platform/task-5-row-guard.md |
+| — | review | platform | pass | artifacts/06-evaluation/platform/task-5-row-guard-review.md |
+| — | test-report | platform | pass | artifacts/06-evaluation/platform/task-5-row-guard-test-report.md |
+| — | session-log | platform | passing | artifacts/05-implementation/platform/task-6a-2-no-workspace-fallbacks.md |
+| — | review | platform | pass | artifacts/06-evaluation/platform/task-6a-2-no-workspace-fallbacks-review.md |
+| — | test-report | platform | pass | artifacts/06-evaluation/platform/task-6a-2-no-workspace-fallbacks-test-report.md |

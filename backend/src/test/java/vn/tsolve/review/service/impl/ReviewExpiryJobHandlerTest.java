@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.LoggerFactory;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.review.dto.ReviewExpiryDispatchRequest;
 import vn.tsolve.review.dto.ReviewExpiryJobRequest;
 import vn.tsolve.review.service.ReviewExpiryService;
@@ -33,7 +34,8 @@ import vn.tsolve.worker.service.mock.MockWorkerTenantService;
 class ReviewExpiryJobHandlerTest {
     private final UUID workspace = UUID.randomUUID();
     private final UUID suspended = UUID.randomUUID();
-    private final MockWorkerTenantService tenants = new MockWorkerTenantService(Set.of(workspace), Set.of(suspended));
+    private final MockWorkerTenantService tenants =
+            new MockWorkerTenantService(Set.of(workspace), Set.of(suspended), new ThreadLocalTenantContext(id -> true));
     private final Clock clock = Clock.fixed(Instant.parse("2026-11-08T17:30:00Z"), ZoneOffset.UTC);
     private final ReviewExpiryService expiry = mock(ReviewExpiryService.class);
     private final JobRunrRuntime runtime = mock(JobRunrRuntime.class);

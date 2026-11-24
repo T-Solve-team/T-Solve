@@ -479,7 +479,7 @@ describe('SearchPage', () => {
     expect(results().querySelector('img, b, i, script')).toBeNull();
   });
 
-  it('AC-002.15 shows "Resolved —" when a result has no resolved date (BUG-361)', async () => {
+  it('AC-002.15 shows "Resolved —" when a result has no resolved date (BUG-389)', async () => {
     server.use(onePage([{ ...RESULT, resolvedAt: null }]));
     await openResults('/search?q=vpn');
     expect(cardOf(RESULT.title)).toHaveTextContent('ITSUP · IT · Resolved —');

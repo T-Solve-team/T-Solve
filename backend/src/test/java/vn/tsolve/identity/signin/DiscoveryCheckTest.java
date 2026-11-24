@@ -6,6 +6,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import java.io.IOException;
@@ -31,6 +32,9 @@ import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.core.io.ClassPathResource;
+import vn.tsolve.common.tenant.TenantContext;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
+import vn.tsolve.identity.signin.port.WorkspaceLookup;
 
 /**
  * The start-up check that Keycloak's discovery document names the issuer the backend expects
@@ -101,6 +105,8 @@ class DiscoveryCheckTest {
                 .withPropertyValues(env.entrySet().stream()
                         .map(entry -> entry.getKey() + "=" + entry.getValue())
                         .toArray(String[]::new))
+                .withBean(WorkspaceLookup.class, () -> mock(WorkspaceLookup.class))
+                .withBean(TenantContext.class, () -> new ThreadLocalTenantContext(id -> true))
                 .withUserConfiguration(SignInConfig.class);
     }
 

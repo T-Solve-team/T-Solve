@@ -381,9 +381,11 @@
         "combined-answer-prompt": "in-progress",
         "open-solution-citations": "pending",
         "conversation-title-api": "pending",
-        "conversation-title-ui": "pending"
+        "conversation-title-ui": "pending",
+        "clear-box-on-send": "pending",
+        "focus-layout": "pending"
       },
-      "lastUpdated": "2026-11-22T05:20:48.520Z",
+      "lastUpdated": "2026-11-22T09:07:14.736Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
@@ -484,9 +486,9 @@
         "staging-cd": "in-progress",
         "demo-seed-workspaces": "pending",
         "local-data-plane": "pending",
-        "registry-db": "pending",
+        "registry-db": "passing",
         "workspace-catalog": "pending",
-        "row-guard": "pending",
+        "row-guard": "passing",
         "tenant-routing": "pending",
         "provisioning-core": "pending",
         "invitation-job-queue": "pending",
@@ -502,9 +504,12 @@
         "load-test": "pending",
         "forge-security-chain": "pending",
         "cross-module-isolation": "passing",
-        "e2e-smoke": "passing"
+        "e2e-smoke": "passing",
+        "one-tenant-holder": "passing",
+        "no-workspace-fallbacks": "passing",
+        "registry-staging-script": "passing"
       },
-      "lastUpdated": "2026-11-15T19:54:14.488Z",
+      "lastUpdated": "2026-11-23T19:52:04.524Z",
       "branch": "feat/platform",
       "repos": [
         "default"

@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -46,6 +47,7 @@ import vn.tsolve.common.audit.AuditAction;
 import vn.tsolve.common.audit.AuditService;
 import vn.tsolve.common.exception.CodedException;
 import vn.tsolve.common.tenant.TenantContext;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.platform.service.FileStorage;
 import vn.tsolve.wiki.InMemoryFileStorage;
 import vn.tsolve.wiki.dto.WikiDocumentRef;
@@ -467,6 +469,81 @@ class WikiUploadServiceImplTest {
         assertThat(storage.closedReads).isEqualTo(2);
         when(access.findAvailableDocuments(user, List.of(id))).thenReturn(Set.of());
         assertCode(() -> service.download(user, id), "MSG110", null);
+    }
+
+    @Test
+    @DisplayName("AC-002.12 the download body written on another thread reads the file in the request's Workspace")
+    void theDownloadBodyOnAnotherThreadReadsInTheRequestsWorkspace_AC_002_12() throws Exception {
+        UUID workspace = UUID.randomUUID();
+        var holder = new ThreadLocalTenantContext(Set.of(workspace)::contains);
+        var readAt = new java.util.concurrent.atomic.AtomicReference<Optional<UUID>>();
+        var recording = new InMemoryFileStorage() {
+            @Override
+            public java.io.InputStream read(String key) {
+                readAt.set(holder.currentWorkspaceId());
+                return super.read(key);
+            }
+        };
+        var stored = recording.store(file("guide.pdf", "guide.pdf").getInputStream());
+        UUID id = UUID.randomUUID();
+        var document = new WikiDocument(
+                1,
+                null,
+                "Guide",
+                Visibility.DEPARTMENT,
+                WikiDocumentType.OTHER,
+                "text",
+                stored.key(),
+                "guide.pdf",
+                stored.sizeBytes(),
+                "application/pdf",
+                1,
+                user,
+                Instant.now());
+        when(access.findAvailableDocuments(user, List.of(id))).thenReturn(Set.of(id));
+        when(documents.findById(id)).thenReturn(Optional.of(document));
+        var requestScoped = new WikiUploadServiceImpl(
+                documents,
+                folders,
+                access,
+                spaces,
+                new TextExtractor(),
+                classifier,
+                provider(FileStorage.class, recording),
+                audit,
+                provider(TenantJobService.class, jobs),
+                new StaticListableBeanFactory().getBeanProvider(WebJobQueue.class),
+                transactions,
+                provider(TenantContext.class, holder),
+                Mappers.getMapper(WikiDocumentMapper.class),
+                new ObjectMapper());
+
+        var output = new ByteArrayOutputStream();
+        var failure = new java.util.concurrent.atomic.AtomicReference<Throwable>();
+        var unboundAfter = new java.util.concurrent.atomic.AtomicReference<Optional<UUID>>();
+        holder.runIn(workspace, () -> {
+            var download = requestScoped.download(user, id);
+            Thread writer = new Thread(() -> {
+                try {
+                    download.content().writeTo(output);
+                } catch (Throwable error) {
+                    failure.set(error);
+                }
+                unboundAfter.set(holder.currentWorkspaceId());
+            });
+            writer.start();
+            try {
+                writer.join(5000);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+            }
+        });
+
+        assertThat(failure.get()).isNull();
+        assertThat(readAt.get()).contains(workspace);
+        assertThat(output.toByteArray()).isEqualTo(recording.files.get(stored.key()));
+        assertThat(unboundAfter.get()).isEmpty();
+        assertThat(holder.currentWorkspaceId()).isEmpty();
     }
 
     @Test

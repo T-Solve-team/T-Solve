@@ -60,9 +60,14 @@ import vn.tsolve.search.scope.service.impl.MembershipVisibleScope;
             "DB_PASSWORD=unused",
             "OLLAMA_BASE_URL=http://127.0.0.1:11434",
             "OLLAMA_CHAT_MODEL=test",
-            "SEARCH_DEV_SCOPE="
+            "SEARCH_DEV_SCOPE=",
+            // The one holder binds only a known Workspace (AC-002.14); this is the stub's one Workspace.
+            "TSOLVE_STUB_WORKSPACES=it.workspace.test|it|" + TicketListRepositoryIT.WORKSPACE_ID
+                    + "|example.test|it-org"
         })
 class TicketListRepositoryIT {
+    static final String WORKSPACE_ID = "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b";
+
     @ServiceConnection
     static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>(
             DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
@@ -266,7 +271,7 @@ class TicketListRepositoryIT {
         var user = new TSolveUser(accountId, "user@example.test", "Writer", Set.of(role));
         doAnswer(call -> membershipScope.of(call.getArgument(0))).when(scope).of(any());
         return tenantScope.runIn(
-                UUID.randomUUID(),
+                UUID.fromString(WORKSPACE_ID),
                 () -> tickets.list(user, new TicketListQuery(null, null, null, null, null, null, null)).stream()
                         .map(TicketSummaryResponse::sourceTicketId)
                         .toList());

@@ -9,12 +9,11 @@ public interface WorkerTenantService {
     Optional<UUID> currentWorkspaceId();
 
     /**
-     * Workspace a caller on an unbound thread (an after-commit listener of an HTTP request) may bind with
-     * {@link #runIn} before enqueueing; empty means none can be chosen.
+     * Workspace a caller may enqueue for (an after-commit listener of an HTTP request): the bound one, or on an
+     * unbound thread the one to bind with {@link #runIn}. Callers queue no job when it is empty, which includes a
+     * bound Workspace that is not Active.
      */
-    default Optional<UUID> enqueueWorkspaceId() {
-        return Optional.empty();
-    }
+    Optional<UUID> enqueueWorkspaceId();
 
     boolean isWorkspaceActive(UUID workspaceId);
 

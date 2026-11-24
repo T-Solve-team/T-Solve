@@ -2238,3 +2238,33 @@
 {"ts":"2026-11-22T09:07:48.251Z","type":"feature-status","module":"search","feature":"search-start-layout","from":"pending","to":"in-progress"}
 {"ts":"2026-11-22T11:58:11.503Z","type":"feature-status","module":"search","feature":"search-start-layout","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-22T11:58:12.461Z","type":"commit-recorded","module":"search","repo":"default","sha":"2395ae692403866a3f15468c3442690b19a6864f"}
+{"ts":"2026-11-22T15:49:59.423Z","type":"feature-status","module":"platform","feature":"one-tenant-holder","from":null,"to":"pending"}
+{"ts":"2026-11-22T15:49:59.740Z","type":"feature-status","module":"platform","feature":"no-workspace-fallbacks","from":null,"to":"pending"}
+{"ts":"2026-11-23T14:16:42.480Z","type":"feature-status","module":"platform","feature":"one-tenant-holder","from":"pending","to":"in-progress"}
+{"ts":"2026-11-23T14:16:42.798Z","type":"feature-status","module":"platform","feature":"one-tenant-holder","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-23T14:16:43.113Z","type":"feature-status","module":"platform","feature":"one-tenant-holder","from":"evaluating","to":"fixing"}
+{"ts":"2026-11-23T14:16:43.461Z","type":"feature-status","module":"platform","feature":"one-tenant-holder","from":"fixing","to":"evaluating"}
+{"ts":"2026-11-21T23:34:49.842Z","type":"quick-opened","what":"Report 5.4 NFR run (KAN-378): k6 load-test script for the public staging paths, its run report, and the NFR bug-log rows","files":["infra/loadtest/public-paths.js","infra/loadtest/README.md","docs/bug-log.md"]}
+{"ts":"2026-11-21T23:54:42.711Z","type":"quick-closed","what":"Report 5.4 NFR run (KAN-378): k6 load-test script for the public staging paths, its run report, and the NFR bug-log rows","files":["infra/loadtest/public-paths.js","infra/loadtest/README.md","docs/bug-log.md"]}
+{"ts":"2026-11-22T07:05:38.333Z","type":"quick-opened","what":"KAN-378: renumber the bug ids in the load-test results (BUG-355 becomes BUG-363 after the rebase on main)","files":["infra/loadtest/README.md"]}
+{"ts":"2026-11-22T07:06:00.363Z","type":"quick-closed","what":"KAN-378: renumber the bug ids in the load-test results (BUG-355 becomes BUG-363 after the rebase on main)","files":["infra/loadtest/README.md"]}
+{"ts":"2026-11-22T11:23:35.265Z","type":"quick-opened","what":"KAN-378: renumber the NFR bugs to BUG-366..369 (PR #313 uses BUG-361..365)","files":["docs/bug-log.md","infra/loadtest/README.md"]}
+{"ts":"2026-11-22T11:23:59.140Z","type":"quick-closed","what":"KAN-378: renumber the NFR bugs to BUG-366..369 (PR #313 uses BUG-361..365)","files":["docs/bug-log.md","infra/loadtest/README.md"]}
+{"ts":"2026-11-22T16:33:09.970Z","type":"feature-status","module":"platform","feature":"registry-db","from":"pending","to":"in-progress"}
+{"ts":"2026-11-22T16:33:10.233Z","type":"feature-status","module":"platform","feature":"registry-db","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-22T16:33:10.471Z","type":"feature-status","module":"platform","feature":"registry-db","from":"evaluating","to":"passing"}
+{"ts":"2026-11-22T08:49:32.471Z","type":"spec-approved","module":"chatbot","specHash":"d49145324f34803b32e57479bcfa7b7d3112ee5dd0572083f980a13f533014c4"}
+{"ts":"2026-11-22T08:51:09.452Z","type":"feature-status","module":"chatbot","feature":"clear-box-on-send","from":null,"to":"pending"}
+{"ts":"2026-11-22T08:51:10.601Z","type":"feature-status","module":"chatbot","feature":"sources-panel","from":null,"to":"pending"}
+{"ts":"2026-11-22T09:07:14.461Z","type":"feature-status","module":"chatbot","feature":"clear-box-on-send","from":null,"to":"pending"}
+{"ts":"2026-11-22T09:07:14.738Z","type":"feature-status","module":"chatbot","feature":"focus-layout","from":null,"to":"pending"}
+{"ts":"2026-11-22T09:07:42.499Z","type":"spec-approved","module":"chatbot","specHash":"de5bdf00ecfc10f1047e126efff5a993e6f1724ddb391b8ae04ac0cdafebd0b3"}
+{"ts":"2026-11-23T14:47:26.287Z","type":"feature-status","module":"platform","feature":"one-tenant-holder","from":"evaluating","to":"passing"}
+{"ts":"2026-11-23T14:45:05.919Z","type":"feature-status","module":"platform","feature":"registry-staging-script","from":null,"to":"pending"}
+{"ts":"2026-11-23T14:45:06.180Z","type":"feature-status","module":"platform","feature":"registry-staging-script","from":"pending","to":"in-progress"}
+{"ts":"2026-11-23T14:45:06.421Z","type":"feature-status","module":"platform","feature":"registry-staging-script","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-23T14:45:06.663Z","type":"feature-status","module":"platform","feature":"registry-staging-script","from":"evaluating","to":"passing"}
+{"ts":"2026-11-23T16:21:55.942Z","type":"spec-approved","module":"platform","specHash":"7f8f7b7e9225e1de02900c25a5fbeea0450fc787385874881b3c4d89d3ff959d"}
+{"ts":"2026-11-23T19:31:06.803Z","type":"feature-status","module":"platform","feature":"row-guard","from":"pending","to":"in-progress"}
+{"ts":"2026-11-23T19:31:06.860Z","type":"feature-status","module":"platform","feature":"row-guard","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-23T19:31:06.909Z","type":"feature-status","module":"platform","feature":"row-guard","from":"evaluating","to":"passing"}
