@@ -2226,8 +2226,14 @@
 {"ts":"2026-11-22T05:20:48.521Z","type":"feature-status","module":"chatbot","feature":"conversation-title-ui","from":null,"to":"pending"}
 {"ts":"2026-11-22T05:30:29.612Z","type":"feature-status","module":"search","feature":"embed-description","from":"pending","to":"in-progress"}
 {"ts":"2026-11-22T05:13:11.462Z","type":"spec-approved","module":"wiki","specHash":"1ddb373a1b48ec8ce31385d9d5a31d5a3efad60f5f32b02edef85d388e31a8e0"}
+{"ts":"2026-11-22T06:10:03.055Z","type":"spec-approved","module":"wiki","specHash":"de47a1d75406a6020660071fd6bd2d68059a105676f0698a2aa4388fe07e4048"}
+{"ts":"2026-11-22T05:38:36.523Z","type":"quick-opened","what":"Run docling-serve in the staging stack and point DOCLING_BASE_URL at it","files":["infra/compose.staging.yml","infra/staging.env.example","infra/README.md"]}
+{"ts":"2026-11-22T05:40:32.943Z","type":"quick-closed","what":"Run docling-serve in the staging stack and point DOCLING_BASE_URL at it","files":["infra/compose.staging.yml","infra/staging.env.example","infra/README.md"]}
+{"ts":"2026-11-22T05:56:13.580Z","type":"quick-opened","what":"Run Docling on the GPU server through an SSH tunnel service in the staging compose, not on the staging CPU","files":["infra/compose.staging.yml","infra/staging.env.example","infra/README.md"]}
+{"ts":"2026-11-22T05:59:12.015Z","type":"quick-closed","what":"Run Docling on the GPU server through an SSH tunnel service in the staging compose, not on the staging CPU","files":["infra/compose.staging.yml","infra/staging.env.example","infra/README.md"]}
 {"ts":"2026-11-22T05:55:32.155Z","type":"feature-status","module":"search","feature":"embed-description","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-22T05:55:32.497Z","type":"feature-status","module":"search","feature":"embed-description","from":"evaluating","to":"passing"}
+{"ts":"2026-11-22T06:15:40.011Z","type":"spec-approved","module":"wiki","specHash":"ebea1a9a9b5dffbcbc0aac17f81a3b05f2d445ef7ef35a36030c1eee7858c8b8"}
 {"ts":"2026-11-22T06:25:35.592Z","type":"quick-opened","what":"BUG-360: wiki upload/restore queue wiki-index through WebJobQueue on the web process","files":["backend/src/main/java/vn/tsolve/wiki/service/impl/WikiUploadServiceImpl.java","backend/src/main/java/vn/tsolve/wiki/service/impl/WikiTrashServiceImpl.java","backend/src/test/java/vn/tsolve/wiki/service/impl/WikiUploadServiceImplTest.java","backend/src/test/java/vn/tsolve/wiki/service/impl/WikiTrashServiceImplTest.java","docs/bug-log.md"]}
 {"ts":"2026-11-22T06:29:17.354Z","type":"quick-opened","what":"BUG-360: pass the WebJobQueue provider in the wiki ITs","files":["backend/src/test/java/vn/tsolve/wiki/WikiTrashIT.java","backend/src/test/java/vn/tsolve/wiki/WikiUploadIT.java"]}
 {"ts":"2026-11-22T06:33:44.027Z","type":"quick-opened","what":"BUG-360: log the wiki-index web-jobs bug","files":["docs/bug-log.md"]}
@@ -2268,3 +2274,4 @@
 {"ts":"2026-11-23T19:31:06.803Z","type":"feature-status","module":"platform","feature":"row-guard","from":"pending","to":"in-progress"}
 {"ts":"2026-11-23T19:31:06.860Z","type":"feature-status","module":"platform","feature":"row-guard","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-23T19:31:06.909Z","type":"feature-status","module":"platform","feature":"row-guard","from":"evaluating","to":"passing"}
+{"ts":"2026-11-24T12:04:34.368Z","type":"spec-approved","module":"wiki","specHash":"47fb26627301fe7f41ffc78786ff532ed82a0459519a3b8e64709477d4234361"}
