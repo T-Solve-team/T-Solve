@@ -2857,6 +2857,61 @@ paths:
           $ref: '#/components/responses/Problem'
         '404':
           $ref: '#/components/responses/Problem'
+  /api/v1/chatbot/conversations:
+    get:
+      tags: [chatbot]
+      operationId: listChatbotConversations
+      summary: List your saved conversations, newest startedAt first.
+      description: One page of the caller's own conversations (default size 20; a size above 100 is read as 100).
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: That page of exactly the signed-in user's conversations; a page past the end has no rows.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatbotConversationSummaryPage'
+        '401':
+          $ref: '#/components/responses/Problem'
+  /api/v1/chatbot/conversations/{chatSessionId}:
+    parameters:
+      - name: chatSessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [chatbot]
+      operationId: getChatbotConversation
+      summary: Open your saved conversation with every turn and its current rating.
+      responses:
+        '200':
+          description: The conversation, turns oldest first.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatbotConversation'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+    delete:
+      tags: [chatbot]
+      operationId: deleteChatbotConversation
+      summary: Delete your conversation and its disposable answers.
+      description: Unknown, malformed and other users' ids answer 404 MSG04 and change nothing.
+      responses:
+        '204':
+          description: Conversation and messages deleted; rated, NO_SOURCE and INJECTION answers kept.
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
   /api/v1/chatbot/answers:
     post:
       tags: [chatbot]
@@ -2865,13 +2920,14 @@ paths:
       description: >
         Sources are the Solutions of all Published tickets and the Wiki documents the user can view (GBR-31), checked
         on every question. No source → outcome NO_SOURCE (the web app shows MSG109). The AI module unavailable → 503
-        with code MSG06.
+        with code MSG06. The earlier turns come from the conversation `chatSessionId` (the last 10); without one a
+        new conversation is started and its id returned (KAN-183). An unknown `chatSessionId` → 404 code MSG04.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ChatbotQuestion'
+              $ref: '#/components/schemas/ChatbotAsk'
       responses:
         '200':
           description: The answer, or NO_SOURCE.
@@ -2884,6 +2940,8 @@ paths:
         '401':
           $ref: '#/components/responses/Problem'
         '403':
+          $ref: '#/components/responses/Problem'
+        '404':
           $ref: '#/components/responses/Problem'
         '503':
           $ref: '#/components/responses/Problem'
@@ -2971,13 +3029,8 @@ paths:
       description: >
         For an ANSWERED or NO_SOURCE answer of the user. Offers only the Departments with a default Project. When the
         AI fails the draft is empty and the user fills it. Nothing is stored and nothing reaches Jira. A user with no
-        linked Jira account (UC-59) gets 409 code MSG146 instead of the form.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ChatbotIssueDraftRequest'
+        linked Jira account (UC-59) gets 409 code MSG146 instead of the form. The AI reads the turns before the answer
+        in its saved conversation (KAN-183); the request has no body.
       responses:
         '200':
           description: The prefilled form.
@@ -5383,6 +5436,67 @@ components:
         fileSize:
           type: integer
           format: int64
+    ChatbotConversationSummary:
+      type: object
+      required: [chatSessionId, title, startedAt]
+      properties:
+        chatSessionId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+    ChatbotConversationSummaryPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatbotConversationSummary'
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+    ChatbotConversation:
+      type: object
+      required: [chatSessionId, title, startedAt, turns]
+      properties:
+        chatSessionId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+        turns:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatbotConversationTurn'
+    ChatbotConversationTurn:
+      type: object
+      required: [question, answer, rating]
+      properties:
+        question:
+          type: string
+        answer:
+          $ref: '#/components/schemas/ChatbotAnswer'
+        rating:
+          type: [string, 'null']
+          enum: [HELPFUL, NOT_HELPFUL, null]
+    ChatbotAsk:
+      type: object
+      required: [question]
+      properties:
+        question:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        chatSessionId:
+          type: string
+          format: uuid
+          description: The open conversation; absent to start a new one.
     ChatbotQuestion:
       type: object
       required: [question, history]
@@ -5427,12 +5541,16 @@ components:
           description: In number order; empty unless ANSWERED.
           items:
             $ref: '#/components/schemas/ChatbotCitation'
+        chatSessionId:
+          type: string
+          format: uuid
+          description: The conversation of the answer; set on every askChatbot answer, absent for the Jira App.
         title:
           type: string
           maxLength: 60
           description: >-
             A short AI-written name for a new conversation (chatbot AC-009.9); only on the answer to a first
-            question that the classifier named. The web app titles the conversation with it, else with the question.
+            question that the classifier named. The server also stores it as the conversation title (AC-013.1), else the question.
     ChatbotCitation:
       description: A source of an answer. A ticket source carries only its Solution, never the ticket's details (GBR-36).
       oneOf:
@@ -5498,16 +5616,6 @@ components:
           items:
             type: string
             format: uuid
-    ChatbotIssueDraftRequest:
-      type: object
-      required: [history]
-      properties:
-        history:
-          type: array
-          maxItems: 10
-          description: The turns of the conversation before this answer, oldest first, as for askChatbot.
-          items:
-            $ref: '#/components/schemas/ChatbotTurn'
     ChatbotIssueDraft:
       type: object
       required: [summary, description, departmentId, departments]

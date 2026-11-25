@@ -1,58 +1,71 @@
 import { useEffect, useState } from 'react';
-import type { ChatTurn, Conversation } from '../model';
-import { readConversations, writeConversations } from './chatbot-storage';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  getGetChatbotConversationQueryKey,
+  getListChatbotConversationsQueryKey,
+  useDeleteChatbotConversation,
+  useGetChatbotConversation,
+  listChatbotConversations,
+} from '@/shared/api';
+import { showMessage } from '@/shared/messages';
 
-/**
- * The conversations of the session (spec STORY-002), kept in `sessionStorage` and in memory. Local state: it belongs
- * to this screen only (guideline 05 C8). The empty "New conversation" is `openId === null` and is never stored.
- */
-export function useConversations(userId: string) {
-  const [stored, setStored] = useState(() => readConversations(userId));
+const PAGE_SIZE = 10; // KAN-382: "Show more" adds 10 (AC-002.3, AC-002.16)
+
+/** Server conversations stay in the query cache; null selects the unsaved empty conversation. */
+export function useConversations() {
+  const client = useQueryClient();
   const [openId, setOpenId] = useState<string | null>(null);
-
+  // AC-002.16: pages append; an ask or a delete invalidates this key's prefix, so every loaded page is refetched.
+  const list = useInfiniteQuery({
+    queryKey: getListChatbotConversationsQueryKey({ size: PAGE_SIZE }),
+    queryFn: ({ pageParam, signal }) =>
+      listChatbotConversations({ page: pageParam, size: PAGE_SIZE }, { signal }),
+    initialPageParam: 0,
+    getNextPageParam: ({ page }) =>
+      page.number + 1 < page.totalPages ? page.number + 1 : undefined,
+  });
+  const conversation = useGetChatbotConversation(openId ?? '', {
+    query: { enabled: openId !== null, staleTime: 0 },
+  });
+  // BUG-389: a conversation deleted elsewhere (another tab, the retention job) answers 404 MSG04 (AC-013.4).
+  // Leave it for the unsaved empty one, so the next question starts a new conversation.
+  const forget = (chatSessionId: string) => {
+    setOpenId((current) => (current === chatSessionId ? null : current));
+    client.removeQueries({ queryKey: getGetChatbotConversationQueryKey(chatSessionId) });
+    void client.invalidateQueries({ queryKey: getListChatbotConversationsQueryKey() });
+  };
+  const isGone = openId !== null && conversation.error?.status === 404;
   useEffect(() => {
-    if (stored.length > 0) writeConversations(userId, stored);
-  }, [userId, stored]);
-
-  const conversations = [...stored].sort((a, b) => b.startedAt - a.startedAt);
-  const open = stored.find((conversation) => conversation.id === openId);
-
-  /** Adds a turn to its conversation, which is created with its first answer. */
-  function addTurn(conversationId: string, turn: ChatTurn) {
-    setStored((current) =>
-      current.some((c) => c.id === conversationId)
-        ? current.map((c) => (c.id === conversationId ? { ...c, turns: [...c.turns, turn] } : c))
-        : [
-            ...current,
-            { id: conversationId, startedAt: Date.now(), turns: [turn] } satisfies Conversation,
-          ],
-    );
-    setOpenId(conversationId);
-  }
-
-  /** Sets or, with `undefined`, removes the rating of one answer; a conversation or answer that is gone is ignored. */
-  function setRating(conversationId: string, answerId: string, rating: ChatTurn['rating']) {
-    setStored((current) =>
-      current.map((c) =>
-        c.id === conversationId
-          ? {
-              ...c,
-              turns: c.turns.map((turn) =>
-                turn.answer.answerId === answerId ? { ...turn, rating } : turn,
-              ),
-            }
-          : c,
-      ),
-    );
-  }
+    if (isGone) void client.invalidateQueries({ queryKey: getListChatbotConversationsQueryKey() });
+  }, [isGone, client]);
+  const remove = useDeleteChatbotConversation({
+    mutation: {
+      meta: { handlesOwnErrors: true },
+      onSuccess: async (_, { chatSessionId }) => {
+        if (openId === chatSessionId) setOpenId(null);
+        client.removeQueries({ queryKey: getGetChatbotConversationQueryKey(chatSessionId) });
+        await client.invalidateQueries({ queryKey: getListChatbotConversationsQueryKey() });
+      },
+      onError: (error) => {
+        if (error.status !== 401) showMessage('MSG06');
+      },
+    },
+  });
 
   return {
-    conversations,
-    openId,
-    turns: open?.turns ?? [],
+    list,
+    conversation,
+    remove,
+    openId: isGone ? null : openId,
+    conversations: list.data?.pages.flatMap((page) => page.content) ?? [],
+    loadMore: async () => {
+      if (!(await list.fetchNextPage()).isFetchNextPageError) return;
+      showMessage('MSG06');
+    },
+    turns:
+      conversation.data?.turns.map((turn) => ({ ...turn, rating: turn.rating ?? undefined })) ?? [],
     open: setOpenId,
+    forget,
     startNew: () => setOpenId(null),
-    addTurn,
-    setRating,
   };
 }

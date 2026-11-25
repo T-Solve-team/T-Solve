@@ -12,15 +12,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,11 +32,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import vn.tsolve.ai.exception.AiUnavailableException;
 import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse;
 import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse.Outcome;
-import vn.tsolve.chatbot.answer.dto.ChatbotQuestionRequest;
+import vn.tsolve.chatbot.answer.dto.ChatbotAskRequest;
 import vn.tsolve.chatbot.answer.dto.CitedSolution;
 import vn.tsolve.chatbot.answer.dto.TicketSolutionCitation;
 import vn.tsolve.chatbot.answer.dto.WikiDocumentCitation;
 import vn.tsolve.chatbot.answer.service.ChatbotAnswerService;
+import vn.tsolve.chatbot.conversation.exception.ChatbotConversationNotFoundException;
 import vn.tsolve.common.exception.GlobalExceptionHandler;
 import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.SecurityConfig;
@@ -62,9 +60,7 @@ class ChatbotAnswerControllerTest {
     private ChatbotAnswerService answers;
 
     @ParameterizedTest
-    @ValueSource(
-            strings = {"{\"history\":[]}", "{\"question\":null,\"history\":[]}", "{\"question\":\"  \",\"history\":[]}"
-            })
+    @ValueSource(strings = {"{}", "{\"question\":null}", "{\"question\":\"  \"}"})
     @WithTSolveUser
     void rejectsBlankQuestion_AC_005_8(String body) throws Exception {
         mvc.perform(post(PATH)
@@ -83,58 +79,41 @@ class ChatbotAnswerControllerTest {
         mvc.perform(post(PATH)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"question\":\"" + "x".repeat(1001) + "\",\"history\":[]}"))
+                        .content("{\"question\":\"" + "x".repeat(1001) + "\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors[0].field").value("question"))
                 .andExpect(jsonPath("$.fieldErrors[0].code").value("MSG02"));
         verifyNoInteractions(answers);
     }
 
-    @ParameterizedTest
-    @MethodSource("badHistoryBodies")
+    @Test
     @WithTSolveUser
-    void rejectsBadHistory_AC_007_3(String body) throws Exception {
-        mvc.perform(post(PATH)
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("MSG06"))
-                .andExpect(jsonPath("$.fieldErrors").doesNotExist());
-        verifyNoInteractions(answers);
-    }
-
-    private static Stream<String> badHistoryBodies() {
-        String turn = "{\"question\":\"old question\",\"answer\":\"old answer\"}";
-        return Stream.of(
-                "{\"question\":\"question\"}",
-                "{\"question\":\"question\",\"history\":null}",
-                "{\"question\":\"question\",\"history\":[" + String.join(",", Collections.nCopies(11, turn)) + "]}",
-                "{\"question\":\"question\",\"history\":[{\"question\":\"" + "q".repeat(1001)
-                        + "\",\"answer\":\"answer\"}]}",
-                "{\"question\":\"question\",\"history\":[{\"question\":\"old question\",\"answer\":\""
-                        + "a".repeat(10001) + "\"}]}",
-                "{\"question\":\"question\",\"history\":[null]}",
-                "{\"question\":\"question\",\"history\":[{\"question\":null,\"answer\":\"answer\"}]}",
-                "{\"question\":\"question\",\"history\":[{\"question\":\"old question\",\"answer\":null}]}");
-    }
-
-    @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    @WithTSolveUser
-    void acceptsHistoryWithinLimits_AC_007_3(boolean emptyTurns) throws Exception {
-        String turn = "{\"question\":\"" + (emptyTurns ? "" : "q".repeat(1000)) + "\",\"answer\":\""
-                + (emptyTurns ? "" : "a".repeat(10000)) + "\"}";
+    void ignoresHistoryOnAWebQuestionAndPassesTheConversation_AC_007_3_AC_013_2() throws Exception {
+        UUID session = UUID.randomUUID();
         when(answers.ask(any(), any()))
-                .thenReturn(new ChatbotAnswerResponse(ANSWER_ID, Outcome.NO_SOURCE, "", List.of()));
+                .thenReturn(new ChatbotAnswerResponse(ANSWER_ID, Outcome.NO_SOURCE, "", List.of(), session, null));
 
         mvc.perform(post(PATH)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"question\":\"question\",\"history\":["
-                                + String.join(",", Collections.nCopies(10, turn)) + "]}"))
-                .andExpect(status().isOk());
-        verify(answers).ask(any(), any());
+                        .content(
+                                "{\"question\":\"question\",\"chatSessionId\":\"" + session + "\",\"history\":[null]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.chatSessionId").value(session.toString()));
+        verify(answers).ask(any(), eq(new ChatbotAskRequest("question", session.toString())));
+    }
+
+    @Test
+    @WithTSolveUser
+    void answers404ForAnUnknownConversation_AC_013_4() throws Exception {
+        when(answers.ask(any(), any())).thenThrow(new ChatbotConversationNotFoundException());
+
+        mvc.perform(post(PATH)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"question\":\"question\",\"chatSessionId\":\"not-a-uuid\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("MSG04"));
     }
 
     @Test
@@ -142,7 +121,7 @@ class ChatbotAnswerControllerTest {
         mvc.perform(post(PATH)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"question\":\"question\",\"history\":[]}"))
+                        .content("{\"question\":\"question\"}"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("MSG07"));
         verifyNoInteractions(answers);
@@ -166,7 +145,7 @@ class ChatbotAnswerControllerTest {
                         .with(authentication(new UsernamePasswordAuthenticationToken(user, null, user.authorities())))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"question\":\"question\",\"history\":[]}"))
+                        .content("{\"question\":\"question\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.answerId").value(ANSWER_ID.toString()))
                 .andExpect(jsonPath("$.outcome").value("ANSWERED"))
@@ -193,7 +172,7 @@ class ChatbotAnswerControllerTest {
         mvc.perform(post(PATH)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"question\":\"question\",\"history\":[]}"))
+                        .content("{\"question\":\"question\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.citations.length()").value(2))
                 .andExpect(jsonPath("$.citations[0].type").value("WIKI_DOCUMENT"))
@@ -217,11 +196,11 @@ class ChatbotAnswerControllerTest {
                         .header("X-Workspace-Id", "other")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"question\":\"question\",\"history\":[],\"workspaceId\":\"other\"}"))
+                        .content("{\"question\":\"question\",\"workspaceId\":\"other\"}"))
                 .andExpect(status().isOk());
-        ArgumentCaptor<ChatbotQuestionRequest> request = ArgumentCaptor.forClass(ChatbotQuestionRequest.class);
+        ArgumentCaptor<ChatbotAskRequest> request = ArgumentCaptor.forClass(ChatbotAskRequest.class);
         verify(answers).ask(any(), request.capture());
-        assertThat(request.getValue()).isEqualTo(new ChatbotQuestionRequest("question", List.of()));
+        assertThat(request.getValue()).isEqualTo(new ChatbotAskRequest("question", null));
     }
 
     @Test
@@ -231,7 +210,7 @@ class ChatbotAnswerControllerTest {
         mvc.perform(post(PATH)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"question\":\"question\",\"history\":[]}"))
+                        .content("{\"question\":\"question\"}"))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.code").value("MSG06"));
     }

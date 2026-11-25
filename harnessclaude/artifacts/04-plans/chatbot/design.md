@@ -5,7 +5,9 @@ date: 2026-10-23
 
 # Design: chatbot
 
-> **Schema alignment pending (KAN-33, 4/11):** `02_tenant.sql` holds the chat data in `chat_session`, `chat_message` and `chat_feedback`, with no `workspace_id` and no row-level security. The "Tables" row below still names `chatbot_answers` and `chatbot_ratings`. Re-plan it against the DDL before building the backend tables.
+> **KAN-183 (17/11):** conversations live in the database (`chat_session`, `chat_message`); see "Saved conversations"
+> at the end. Earlier rows about `sessionStorage` and "no conversation API" are superseded there. Ratings stay on
+> `chatbot_answer` (no `chat_feedback` table).
 
 Spec: `artifacts/03-modules/chatbot/spec.md` · Module: `artifacts/03-modules/chatbot/module.md` ·
 Rules: `frontend/AGENTS.md` and `frontend/guidelines/` (they win over anything here that contradicts them).
@@ -599,6 +601,86 @@ jira_issue_key VARCHAR(255) NULL`; `--rollback ALTER TABLE chatbot_answer DROP C
 | J7 | Token or content in logs | High | Only status and error keys logged | adapter test |
 | J8 | Jira created the issue but the DB write failed | Low | 500; the issue exists without a stored key, a retry opens a second one | accepted (no test) |
 
+## Saved conversations (change of 2026-11-17, STORY-002, STORY-013, KAN-183)
+
+Replaces the `sessionStorage` design of STORY-002 and the 09/11 row "Conversation history (KAN-183): none on the
+backend". Tasks 16–18 (iteration 3).
+
+### Flow
+
+```
+askChatbot { question, chatSessionId? } ─► ChatbotAnswerController
+   ├─ validate (AC-005.8) ─► chatSessionId given: own chat_session or 404 MSG04 (AC-013.4), before any AI
+   ├─ history = last 10 chat_message of it, oldest first ('' answer unless ANSWERED)   (AC-013.2)
+   ├─ the existing pipeline (classify, embed, search, chat) with that history           (STORY-005..009)
+   └─ one short tx: chatbot_answer + (new chat_session) + chat_message + last_message_at  (AC-013.1, AC-013.3)
+askForProject (Jira App) ─► same pipeline with the request's history; no session      (AC-013.12)
+GET/DELETE /conversations[/{id}] ─► ChatbotConversationController ─► ChatbotConversationService
+ConversationRetentionJob (daily) ─► delete sessions with last_message_at < now − 30d, as a user delete
+```
+
+The session lookup happens before the AI calls, and the save after them, as today: a failed ask stores nothing and
+creates no session. A session is never created empty.
+
+### Key Decisions
+
+| Decision | Chosen | Alternatives | Rationale |
+|----------|--------|--------------|-----------|
+| Where conversations live | `chat_session` + `chat_message` in the Workspace DB | `sessionStorage` (09/11); `chatbot_answer` + `chat_session_id` | User 17/11: survive reload, logout, another device; a separate message table keeps `chatbot_answer` the dashboard's table |
+| Retention | 30 days after `last_message_at`, daily job | Delete at logout; 30 days from start; keep forever | User 17/11 |
+| Earlier turns | Read by the backend from the session (last 10) | Client sends `history` | User 17/11: the client cannot forge them; one source of truth |
+| Delete | User can delete (MSG103 `Delete {title} permanently? This cannot be undone.`) | No delete | User 17/11; MSG103 already in the catalog |
+| Answers of a deleted conversation | Unrated `ANSWERED` / `GREETING` / `OFF_TOPIC` deleted; rated, `NO_SOURCE`, `INJECTION` kept | Keep all | User 17/11: replaces Requirement 7's logout deletion |
+| Web vs Jira request | New `ChatbotAsk` schema for the web; `ChatbotQuestion` stays for the Jira App | One schema with both fields | Decided in planning: no change in `jiraapp/` or the Jira App |
+| Citations on reopen | Stored as JSONB on `chat_message`, as returned | Recompute from sources | Decided in planning: shows what the user saw; the availability check (AC-002.9) still runs |
+| Retention job scope | `@Scheduled` in the process's database, like `PreviewCleanupJob` | Per-Workspace recurring JobRunr job | Decided in planning; `ponytail:` comment, upgrade when `worker` runs recurring jobs per Workspace (Out of Scope) |
+| Old `sessionStorage` values | Never read; removed at logout as every `tsolve.session.*` key | Migrate to the server | Decided in planning: they were session-only |
+
+Decided in planning (builder check, 17/11):
+- `title` is the trimmed first question, full length (≤ 1,000); the list cuts it with CSS ellipsis.
+- A draft for an answer with no `chat_message` (its conversation deleted, a rated answer kept) uses no earlier turns.
+- `ChatbotConversationTurn.answer` has no `chatSessionId`; `rating` comes from `chatbot_answer` at read time.
+- The frontend keeps the open conversation in TanStack Query (`getChatbotConversation`); after an ask it invalidates
+  the list and the open conversation; a rating writes the open conversation's query data (AC-003.4).
+- In mock mode conversations live in the MSW memory and go on a page reload (mock only; AC-004.8).
+- The Delete button is an icon button with `aria-label="Delete"`, one per row.
+- Changeset number 051 (047 to 050 are taken on main; was 047 before the merge of 23/11); `chat_message.outcome` has its own five-value check.
+
+### Edge Cases & Risks
+
+| # | Case | Severity | Handling | Test |
+|---|------|----------|----------|------|
+| C1 | Another user's `chatSessionId` on ask, open or delete | Critical | 404 MSG04, nothing changed, no AI call | `ChatbotConversationStoreIT`, `ChatbotConversationIT` |
+| C2 | AI fails on the first question | High | No session, no message, no answer (AC-013.3) | store IT |
+| C3 | Delete while an answer is pending | Medium | Buttons disabled (AC-002.15); a delete from another tab → next ask 404 MSG06 toast | page test |
+| C4 | Rated answer in a deleted conversation | High | Kept; dashboard unchanged | `ChatbotConversationIT` |
+| C5 | Job deletes a session being used at 02:00 | Low | Only sessions idle 30 days; an ask touches `last_message_at` | job IT |
+| C6 | Content in logs | High | Ids only (AC-013.10) | output-capture test |
+| C7 | Old `sessionStorage` conversations after deploy | Low | Ignored; list from server | — |
+| C8 | Conversation list grows | Low | Paged, 20 per page with Load more (change of 18/11); bounded by 30-day retention; index `(user_id, started_at DESC)` | `ChatbotConversationIT`, page test |
+
+## Paged conversation list (change of 2026-11-18, STORY-002, STORY-013, KAN-183)
+
+The list shows the 20 newest conversations and a Load more button (user, 18/11), with the team's standard paging.
+
+- Backend: `listChatbotConversations(Pageable)` with `@PageableDefault(size = 20)`, sort fixed to `started_at DESC,
+  chat_session_id DESC` (a client `sort` is ignored); a `size` above 100 is read as 100; returns
+  `PagedModel<ChatbotConversationSummaryResponse>` (backend/AGENTS.md section 5). Repository: `Page<ChatSession>
+  findByUserId(UUID, Pageable)` on the existing `(user_id, started_at DESC)` index.
+- Contract: `ChatbotConversationSummaryPage { content, page: PageMetadata }`, `page` and `size` query parameters.
+- Frontend: `useInfiniteQuery` over `listChatbotConversations` (`getNextPageParam`: next `number` while
+  `number + 1 < totalPages`); Load more calls `fetchNextPage`, `isFetchingNextPage` shows the button as loading, a
+  failed next page shows MSG06 as a toast. An ask or a delete invalidates the query, so TanStack refetches every
+  loaded page in order and an offset shift never duplicates or skips a row (AC-002.16).
+- Mock: the in-memory list answers the same page shape.
+
+| # | Edge case | Risk | Handling | Test |
+|---|-----------|------|----------|------|
+| P1 | New conversation while pages 0-1 are loaded | Medium | Invalidate refetches both pages | page test |
+| P2 | Delete on page 0 while page 1 is loaded | Medium | Same refetch; no row skipped | page test |
+| P3 | `size` 500 sent | Low | Read as 100 | controller test |
+| P4 | Two conversations with the same `started_at` | Low | Tie broken by id: stable pages | IT |
+
 ## KAN-382: Focus layout and emptying the box on send
 
 - Decided in planning: the box is emptied when the question is sent and refilled on failure only when still empty
@@ -609,3 +691,13 @@ jira_issue_key VARCHAR(255) NULL`; `--rollback ALTER TABLE chatbot_answer DROP C
   under each answer as KAN-380 decided.
 - Decided in planning: "Show more" pages the list by 10 in page state (not stored); the open conversation is always
   among the shown ones because opening an older one needs "Show more" first.
+
+## Merge of main into KAN-183 (2026-11-23)
+
+- The AI `title` of a first question (KAN-380) is stored as `chat_session.title` when the session is created, the
+  trimmed question when there is none (user, 23/11). No new column: `title` is already `TEXT NOT NULL`.
+- The KAN-382 "Show more" is the server paging of 18/11 with `size` 10 (user, 23/11): `useInfiniteQuery` asks
+  `size=10`; the backend default stays 20.
+- The changeset is renumbered `051-chatbot-chat-session` (047 to 050 are taken on main).
+- The KAN-183 bugs BUG-332 – BUG-343 are renumbered BUG-373 – BUG-384 (main used those ids for other bugs);
+  the earlier test reports of this feature keep the old ids.

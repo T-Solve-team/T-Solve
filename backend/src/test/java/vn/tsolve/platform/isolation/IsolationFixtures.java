@@ -112,6 +112,7 @@ final class IsolationFixtures {
     static void clean(JdbcTemplate db, TenantData data) {
         if (data == null) return;
         db.update("DELETE FROM search_log WHERE user_id IN (?,?)", data.resolver(), data.manager());
+        db.update("DELETE FROM chat_session WHERE user_id IN (?,?)", data.resolver(), data.manager());
         db.update("DELETE FROM chatbot_answer WHERE user_id IN (?,?)", data.resolver(), data.manager());
         db.update("DELETE FROM ticket_feedback WHERE ticket_id IN (?,?)", data.published(), data.pending());
         db.update("DELETE FROM ticket_embedding WHERE ticket_id IN (?,?)", data.published(), data.pending());
