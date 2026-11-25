@@ -21,6 +21,7 @@ owner: BA
 | 2026-11-17 | STORY-001 | AC-001.1, AC-001.3 and AC-001.8 reworded, Requirement 1 follows: the Ticket List table drops the Ticket ID column and starts with a "No." column (the row's position across pages, not sortable); the Title, not the Ticket ID, is the link to 5.5 Ticket Detail; Ticket ID is no longer a sortable column. The keyword still matches the Ticket ID (AC-001.4 unchanged) | KAN-360: ids are noise in the table, users open a ticket from its title (user, 17/11) |
 | 2026-11-17 | STORY-006, STORY-012 (new) | New STORY-012: `MembershipVisibleScope`, the real `VisibleScope` built from the Workspace database, replaces the fail-closed `NoVisibleScope`, which is removed. The user's Departments are the ACTIVE Departments identity's `ScopeAccessService` grants (a Project Manager's own Department and the Departments of the Projects the user is a member of); the managed Projects are the user's `PROJECT_MANAGER` memberships (`ProjectMembershipLookup`); the writer is the user's account id matched against `ticket.writer_id` instead of the `ticket.writer` name. AC-006.1, AC-006.2, AC-006.11 and AC-006.12 reworded; the Visible scope term, Out of Scope, Interface Contracts (`Scope.writerId` is a `UUID`), Required from other modules and Definition of Done follow | KAN-354: on staging the Ticket List was empty for every user because no module implemented `VisibleScope`. User decisions of 17/11: Departments are the union of `app_user.department_id` and the Departments of the user's Projects; match the writer by `writer_id` |
 | 2026-11-22 | STORY-005, STORY-006, STORY-007 | **Backend change.** AC-005.4: the embedded text adds the ticket's description, rows carry `text_version` 2. New AC-005.10: the catch-up job embeds again the rows of `text_version` 1 after the tickets with no row; the old vector serves until then; `ticket_embedding` gains `text_version`. AC-006.4 (Ticket List keyword) and AC-007.2 (search keyword fallback) also match the description. Interface Contracts follow | KAN-380 (the user, 22/11): find tickets by their description too, wherever `ticket_embedding` is used (chatbot, search, suggestions); re-embed without a gap in search (decision log of KAN-380) |
+| 2026-11-25 | STORY-007, STORY-009 | **Backend change.** AC-007.1, AC-007.2: tickets with the same Solution count and appear once, as their best-ranked copy; suggestions (AC-009.1) rank with AC-007.1, so they follow (KAN-447) | BUG-372: 25 copies of one CSV sample Solution filled page 1 and pushed a matching ticket to rank 26; user 25/11 chose to collapse exact duplicates |
 
 ## Requirements
 
@@ -298,12 +299,14 @@ Used by STORY-005 to STORY-009:
     (`GET /api/v1/search/tickets`) with the `EmbeddingClient` and return, as `TicketSearchResultPage`, only
     searchable tickets with a `ticket_embedding` row whose cosine similarity to the query (1 − cosine distance) is at
     least `SEARCH_MIN_SIMILARITY` (default 0.5), most similar first, the internal ticket id as the tie-breaker; page 0
-    of 20 results when no page or size is given.
+    of 20 results when no page or size is given. Tickets with the same Solution (identical Symptoms, Root cause,
+    Resolution steps, Workaround and Scope) SHALL count and appear once, as their first copy in this order (BUG-372).
   - AC-007.2: IF the query embedding fails or times out (`AiUnavailableException`), THEN THE backend SHALL answer
     200 from a keyword match instead: searchable tickets whose title, description (KAN-380), Symptoms or Resolution
     steps contain the trimmed
     `q` (case-insensitive, `%` and `_` taken literally), newest `resolved_date` first with tickets without one last,
-    the internal ticket id descending as the tie-breaker, with the same filters and paging.
+    the internal ticket id descending as the tie-breaker, with the same filters and paging and the same one copy per
+    Solution as AC-007.1.
   - AC-007.3: WHEN `departmentId`, `source`, `resolvedFrom` or `resolvedTo` is given, THE backend SHALL combine them
     with AND inside the searchable tickets; `resolvedFrom` and `resolvedTo` SHALL include both days and SHALL not
     match a ticket without a `resolved_date`; a `departmentId` that is not one of the user's Departments SHALL give an

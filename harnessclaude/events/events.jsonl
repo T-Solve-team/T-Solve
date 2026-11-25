@@ -2306,3 +2306,7 @@
 {"ts":"2026-11-23T19:31:06.909Z","type":"feature-status","module":"platform","feature":"row-guard","from":"evaluating","to":"passing"}
 {"ts":"2026-11-24T12:04:34.368Z","type":"spec-approved","module":"wiki","specHash":"47fb26627301fe7f41ffc78786ff532ed82a0459519a3b8e64709477d4234361"}
 {"ts":"2026-11-24T19:29:55.176Z","type":"spec-approved","module":"wiki","specHash":"f912468f95e47b33f3db76ea16adf6bbe8cd904d611ba98a281d30f098498d30"}
+{"ts":"2026-11-25T14:20:34.166Z","type":"spec-approved","module":"search","specHash":"a3fd0c2a6333a5d8267064eb3da3bafadff6b8f5ac435c0fe3d8221271093067"}
+{"ts":"2026-11-25T14:20:38.032Z","type":"feature-status","module":"search","feature":"collapse-duplicate-solutions","from":null,"to":"pending"}
+{"ts":"2026-11-25T14:20:38.362Z","type":"feature-status","module":"search","feature":"collapse-duplicate-solutions","from":"pending","to":"in-progress"}
+{"ts":"2026-11-25T14:28:30.793Z","type":"feature-status","module":"search","feature":"collapse-duplicate-solutions","from":"in-progress","to":"evaluating"}

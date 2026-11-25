@@ -781,8 +781,8 @@
     }
   },
   "search": {
-    "specHash": "e273f3e90de0fb2b82d43a283b79e539aadc442af53a4f321ff848feff75f4ff",
-    "approvedAt": "2026-11-22T04:50:06.181Z",
+    "specHash": "a3fd0c2a6333a5d8267064eb3da3bafadff6b8f5ac435c0fe3d8221271093067",
+    "approvedAt": "2026-11-25T14:20:34.161Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Ticket Resolver or Project Manager opens , THE web app SHALL show 6.2 Ticket List",
