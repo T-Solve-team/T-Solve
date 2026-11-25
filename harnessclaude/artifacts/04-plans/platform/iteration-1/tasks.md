@@ -769,7 +769,7 @@ staging smoke on bluefin passes (sign-in, a review email queued, a tracker sugge
 
 **Story:** STORY-002
 **Feature:** background-work-bound
-**Assignee:** Trần Trung Hiếu (KAN-99); Jira sub-task KAN-<n> (not created yet); the owners of search, chatbot and
+**Assignee:** Trần Trung Hiếu (KAN-99); Jira sub-task KAN-461; the owners of search, chatbot and
 ticket-repository review the PR
 **After this task you can:** (plumbing, wave 3 item 5, first half; serves Task 6-2) see on staging that bluefin works as
 before, while the publish listener, the embedding catch-up, the conversation retention and the preview cleanup run bound
@@ -815,7 +815,7 @@ unbound run.
   `chatbot/conversation/ConversationRetentionJobIT`, `ticket/service/impl/PreviewCleanupJobTest`
 **Dependencies:** Tasks 4a-1 to 4c and 6a-2 merged and deployed
 **Estimated size:** small (4 production files, about 8 tests). One QA card and one developer card. Own branch and PR:
-`fix/KAN-<n>-platform-bind-background-work`.
+`fix/KAN-461-platform-bind-background-work`.
 **Done when:** the updated test classes pass in the quick local checks, CI is green on the PR, the bug row names the PR,
 and the PR is merged and deployed on staging (Task 6-2 deploys only after this).
 

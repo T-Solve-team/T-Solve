@@ -86,7 +86,7 @@ deploys. Full text in `tasks.md`; the routing design is the master's "Database r
 | Q7 | `TENANT_DB_POOL_MAX` default 5, staging 10 (today's Boot default for bluefin). Both routing processes count (Edge #15). The Review Queue's LISTEN connection holds one slot of a Workspace pool per process. At 10 per process, 25 Workspaces would need 500: lower staging's value before it has that many |
 | Q8 | `common/tenant`: `TenantBinding`, `TenantRoutingDataSource`, `TenantAwareJpaTransactionManager`, port `TenantDataSources`. `platform/registry`: `TenantPoolRegistry`, `TenantDataSourceConfig` (`common/` depends on no module, AGENTS §1) |
 | Q9 | `management.health.db.ignore-routing-data-sources: true`; `TENANT_DB_PORT` (default 5432); `RegistryRepository.findConnection` is platform-internal (AC-004.18); no package-private `bind`/`unbind`, `TenantBinding` stays package-private; spec unchanged; Task 6-2 owns the two-Workspace fixture `TwoWorkspaceDatabases`, Task 10 reuses it |
-| Q10 | Split as above: 6-1 on `fix/KAN-<n>-platform-bind-background-work`, 6-2 on `feat/KAN-254-platform-tenant-routing` |
+| Q10 | Split as above: 6-1 on `fix/KAN-461-platform-bind-background-work`, 6-2 on `feat/KAN-254-platform-tenant-routing` |
 
 Two more answers (Hiếu, 25/11, both the recommendation), full text in Task 6-2:
 
