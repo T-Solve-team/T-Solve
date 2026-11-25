@@ -717,3 +717,26 @@ Spec: STORY-005 to STORY-009 · Design: master section "Backend". Rules: `backen
 **Covers:** AC-005.4, AC-005.10, AC-006.4, AC-007.2
 **Dependencies:** none
 **Estimated size:** medium
+
+---
+
+## Task 24: Give feedback from Ticket Detail
+
+**Story:** STORY-003
+**Feature:** ticket-detail-feedback
+**Jira:** KAN-389 (BUG-361) · branch `fix/KAN-389-search-ticket-detail-feedback` (Task 23 is KAN-383's, PR #315)
+**Description:**
+- `GiveFeedbackButton({ ticketId })` in `features/feedback`: reads the ticket with `useGetReviewTicketDetail` (the
+  query of 5.5 Ticket Detail, same key, so no extra request), renders nothing unless the ticket is `PUBLISHED` and
+  `useSession().hasRole` holds TICKET_RESOLVER or PROJECT_MANAGER (AC-003.12); the button opens
+  `GiveFeedbackModal` with that `ticketId` (AC-003.13). Exported from `features/feedback/index.ts`.
+- `TicketDetailPage` mounts it next to `TicketPublicationActions` (one import, one element).
+**Files:**
+- Create: `frontend/src/features/feedback/components/GiveFeedbackButton.tsx`,
+  `frontend/src/features/feedback/components/GiveFeedbackButton.test.tsx`
+- Modify: `frontend/src/features/feedback/index.ts`, `frontend/src/features/tickets/pages/TicketDetailPage.tsx`
+- Test: `GiveFeedbackButton.test.tsx` (`AC-003.12 …` per role and status, loading and error; `AC-003.13 …` opens the
+  popup and sends the Feedback, named with BUG-361)
+**Covers:** AC-003.12, AC-003.13
+**Dependencies:** Task 3 (the popup)
+**Estimated size:** small

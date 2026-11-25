@@ -21,6 +21,7 @@ owner: BA
 | 2026-11-17 | STORY-001 | AC-001.1, AC-001.3 and AC-001.8 reworded, Requirement 1 follows: the Ticket List table drops the Ticket ID column and starts with a "No." column (the row's position across pages, not sortable); the Title, not the Ticket ID, is the link to 5.5 Ticket Detail; Ticket ID is no longer a sortable column. The keyword still matches the Ticket ID (AC-001.4 unchanged) | KAN-360: ids are noise in the table, users open a ticket from its title (user, 17/11) |
 | 2026-11-17 | STORY-006, STORY-012 (new) | New STORY-012: `MembershipVisibleScope`, the real `VisibleScope` built from the Workspace database, replaces the fail-closed `NoVisibleScope`, which is removed. The user's Departments are the ACTIVE Departments identity's `ScopeAccessService` grants (a Project Manager's own Department and the Departments of the Projects the user is a member of); the managed Projects are the user's `PROJECT_MANAGER` memberships (`ProjectMembershipLookup`); the writer is the user's account id matched against `ticket.writer_id` instead of the `ticket.writer` name. AC-006.1, AC-006.2, AC-006.11 and AC-006.12 reworded; the Visible scope term, Out of Scope, Interface Contracts (`Scope.writerId` is a `UUID`), Required from other modules and Definition of Done follow | KAN-354: on staging the Ticket List was empty for every user because no module implemented `VisibleScope`. User decisions of 17/11: Departments are the union of `app_user.department_id` and the Departments of the user's Projects; match the writer by `writer_id` |
 | 2026-11-22 | STORY-005, STORY-006, STORY-007 | **Backend change.** AC-005.4: the embedded text adds the ticket's description, rows carry `text_version` 2. New AC-005.10: the catch-up job embeds again the rows of `text_version` 1 after the tickets with no row; the old vector serves until then; `ticket_embedding` gains `text_version`. AC-006.4 (Ticket List keyword) and AC-007.2 (search keyword fallback) also match the description. Interface Contracts follow | KAN-380 (the user, 22/11): find tickets by their description too, wherever `ticket_embedding` is used (chatbot, search, suggestions); re-embed without a gap in search (decision log of KAN-380) |
+| 2026-11-25 | STORY-003 | **Frontend change (KAN-389, BUG-361).** New AC-003.12 and AC-003.13: the "Give feedback" button on 5.5 Ticket Detail, shown for a Published ticket to a Ticket Resolver or Project Manager, opens `GiveFeedbackModal`; it is the component `GiveFeedbackButton` of `features/feedback`, which Ticket Detail mounts. Out of Scope no longer lists the button; the screen itself stays `ticket-repository`'s | System test W-2.14 failed (BUG-361): the popup of KAN-148 was never mounted, because ticket-repository and search each left the button out of scope. The user, 25/11: search owns the button as well as the popup, Ticket Detail only mounts it |
 
 ## Requirements
 
@@ -173,6 +174,13 @@ owner: BA
   - AC-003.11: THE popup SHALL be the component `GiveFeedbackModal` exported by `features/feedback/index.ts`,
     with the props `ticketId` (UUID string), `isOpen` and `onClose`, so that 5.5 Ticket Detail can mount it behind
     its "Give feedback" button (decision Q1).
+  - AC-003.12: WHILE Ticket Detail (5.5) shows a `PUBLISHED` ticket, THE web app SHALL show a "Give feedback"
+    button on that screen to a user who holds TICKET_RESOLVER or PROJECT_MANAGER, and no such button for any other
+    status or role or while the ticket is loading or failed to load (KAN-389, BUG-361).
+  - AC-003.13: WHEN the user clicks "Give feedback", THE web app SHALL open the popup of STORY-003 for that ticket's
+    id; the button SHALL be the component `GiveFeedbackButton` exported by `features/feedback/index.ts` with the
+    prop `ticketId`, reading the ticket with the query 5.5 Ticket Detail already uses, so it adds no request
+    (KAN-389).
 
 ### STORY-004: Mocks behind the contract
 - As a developer, I want realistic mocks behind the contract, so that the three screens can be built and shown
@@ -446,8 +454,7 @@ Used by STORY-005 to STORY-009:
   `main` when the changesets are written; then they follow it.
 - Retrieval of Wiki documents (KAN-38); the ticket retrieval for the Chatbot and triage is STORY-010 and STORY-011.
 - Converting or dropping the legacy table `reuse_record` (platform AC-001.21).
-- The "Give feedback" button on 5.5 Ticket Detail and that screen (`ticket-repository`); it mounts
-  `GiveFeedbackModal` (AC-003.11).
+- 5.5 Ticket Detail itself (`ticket-repository`); it only mounts `GiveFeedbackButton` (AC-003.13).
 - Showing the user's previous Feedback in the popup; a new Feedback replaces it on the backend (UC-28).
 - A search before a query or a "latest tickets" list on 6.1 (decision Q3).
 - Row actions, row selection, export and polling of the Ticket List; a Project filter (Report3 §III 6.2).
