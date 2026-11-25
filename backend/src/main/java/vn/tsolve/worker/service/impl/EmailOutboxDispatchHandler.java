@@ -95,7 +95,16 @@ public class EmailOutboxDispatchHandler implements JobRequestHandler<EmailOutbox
             try {
                 try {
                     sender.send(row.email());
-                } catch (RuntimeException ignored) {
+                } catch (RuntimeException failure) {
+                    // Only DeliveryException's fixed message is safe; transport causes can contain mail data.
+                    log.warn(
+                            "Email outbox row {} send failed on attempt {} ({}: {})",
+                            row.id(),
+                            row.attemptCount(),
+                            failure.getClass().getSimpleName(),
+                            failure instanceof SmtpEmailSender.DeliveryException
+                                    ? failure.getMessage()
+                                    : "Email delivery failed");
                     Instant failedAt = clock.instant();
                     if (exhausted(row, failedAt)) fail(row, failedAt);
                     else

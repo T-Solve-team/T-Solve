@@ -94,29 +94,28 @@ class SmtpEmailSenderTest {
 
     @Test
     @DisplayName("AC-001.4 AC-001.6 one safe failure without logging mail data")
-    void reportsSafeFailure(CapturedOutput output) {
+    void retainsCauseWithSafeFailureMessage_BUG_245(CapturedOutput output) {
         message();
-        doThrow(new MailSendException(WRITER + " private-feedback credential"))
-                .when(mail)
-                .send(any(MimeMessage.class));
+        var failure = new MailSendException(WRITER + " private-feedback credential");
+        doThrow(failure).when(mail).send(any(MimeMessage.class));
         assertThatThrownBy(() -> sender.send(new OutboundEmail(WRITER, "Private subject", "private-feedback", null)))
                 .isInstanceOf(SmtpEmailSender.DeliveryException.class)
                 .hasMessage("Email delivery failed")
-                .hasNoCause();
+                .hasCause(failure);
         verify(mail).send(any(MimeMessage.class));
         assertThat(output.getAll()).doesNotContain(WRITER, "Private subject", "private-feedback", "credential");
     }
 
     @Test
     @DisplayName("AC-001.5 configures finite mail timeouts")
-    void configuresTimeouts() {
+    void configuresTimeouts_BUG_245() {
         context.withPropertyValues(
                         "spring.profiles.active=worker", "spring.mail.host=localhost", "TSOLVE_SMTP_FROM=" + FROM)
                 .run(web -> {
                     assertThat(web).hasSingleBean(SmtpEmailSender.class);
                     assertThat(web.getBean(JavaMailSenderImpl.class).getJavaMailProperties())
                             .containsEntry("mail.smtp.connectiontimeout", "5000")
-                            .containsEntry("mail.smtp.timeout", "3000")
+                            .containsEntry("mail.smtp.timeout", "10000")
                             .containsEntry("mail.smtp.writetimeout", "5000");
                 });
     }

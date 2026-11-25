@@ -15,6 +15,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -31,6 +35,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
@@ -276,6 +281,22 @@ class EmailOutboxDispatchHandlerTest {
     }
 
     @Test
+    void redactsUnexpectedSendFailureMessage_BUG_245(CapturedOutput output) {
+        Row row = row(0, NOW, null);
+        due(row);
+        doThrow(new IllegalStateException("private@example.test private subject private body credential"))
+                .when(sender)
+                .send(row.email());
+
+        run();
+
+        assertThat(output.getAll())
+                .contains("WARN", row.id().toString(), "attempt 1", "IllegalStateException", "Email delivery failed")
+                .doesNotContain("private@example.test", "private subject", "private body", "credential", "\tat ");
+        verify(repository).reschedule(row.claimed(NOW), NOW.plusSeconds(300));
+    }
+
+    @Test
     @DisplayName("AC-004.7 failure time determines the hour boundary")
     void failsAfterHour() {
         Row row = row(0, NOW.minusSeconds(3599), null);
@@ -434,6 +455,48 @@ class EmailOutboxDispatchHandlerTest {
                         row.email().subject(),
                         row.email().bodyText());
         verify(repository).reschedule(row.claimed(NOW), NOW.plusSeconds(300));
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0, 1, 2})
+    void warnsForEachFailedSendWithoutPii_BUG_245(int previousAttempts) {
+        Row row = row(previousAttempts, NOW, null);
+        due(row);
+        var failure = new SmtpEmailSender.DeliveryException();
+        failure.initCause(new IllegalStateException("private@example.test private subject private body credential"));
+        doThrow(failure).when(sender).send(row.email());
+        Logger logger = (Logger) LoggerFactory.getLogger(EmailOutboxDispatchHandler.class);
+        var logs = new ListAppender<ILoggingEvent>();
+        logs.start();
+        logger.addAppender(logs);
+        try {
+            run();
+
+            assertThat(logs.list)
+                    .filteredOn(event -> event.getFormattedMessage().contains("attempt " + (previousAttempts + 1)))
+                    .singleElement()
+                    .satisfies(event -> {
+                        assertThat(event.getLevel()).isEqualTo(Level.WARN);
+                        assertThat(event.getFormattedMessage())
+                                .contains(row.id().toString(), "DeliveryException", failure.getMessage());
+                    });
+            assertThat(logs.list).allSatisfy(event -> {
+                assertThat(event.getFormattedMessage())
+                        .doesNotContain("private@example.test", "private subject", "private body", "credential");
+                assertThat(event.getThrowableProxy()).isNull();
+                assertThat(event.getArgumentArray()).doesNotContain(row, row.email(), failure, failure.getCause());
+            });
+            if (previousAttempts < 2) {
+                verify(repository)
+                        .reschedule(
+                                row.claimed(NOW), NOW.plus(properties.backoff().get(previousAttempts)));
+            } else {
+                verify(repository).finish(row.claimed(NOW), "FAILED", NOW);
+            }
+        } finally {
+            logger.detachAppender(logs);
+            logs.stop();
+        }
     }
 
     static class MutableClock extends Clock {
