@@ -781,8 +781,8 @@
     }
   },
   "search": {
-    "specHash": "9050502b5c6dc4aa8ac10502e39d05917a808615d36ec7ec68e82dd98c4e57d4",
-    "approvedAt": "2026-11-22T09:07:03.778Z",
+    "specHash": "d777c9b1d2af6aa529f3a5e1233179aadef0d14bba2e6c955403bec0bd46d7a6",
+    "approvedAt": "2026-11-25T21:05:07.748Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Ticket Resolver or Project Manager opens , THE web app SHALL show 6.2 Ticket List",
@@ -846,7 +846,7 @@
       "AC-006.4": "WHEN , ,  or  is given, THE backend SHALL combine them with AND",
       "AC-006.5": "THE backend SHALL return each row's ,  and  as",
       "AC-006.6": "THE backend SHALL return  as the Project's  (e.g. ITSUP) in every",
-      "AC-006.7": "THE backend SHALL return  as null for every ticket until ticket-review stores a review",
+      "AC-006.7": "THE backend SHALL return  as the start (00:00) in Asia/Ho_Chi_Minh of the ticket's",
       "AC-006.8": "IF the caller has no session, THEN THE backend SHALL answer 401 with MSG07; IF the caller holds neither",
       "AC-006.9": "IF  is longer than 100 characters, THEN THE backend SHALL answer 400 with field error MSG02 on",
       "AC-006.10": "THE endpoints of STORY-006 to STORY-009 SHALL accept no Workspace parameter, header or body field and",
@@ -1025,8 +1025,8 @@
     }
   },
   "ticket-review": {
-    "specHash": "e69cb9f06e5c370a11a27c036624518563dc89c049948212d64403a9538b7cce",
-    "approvedAt": "2026-11-18T06:47:32.326Z",
+    "specHash": "11f0788eca91553116da8c69acf7204c56ef98cc92f764042be456bbbb65d087",
+    "approvedAt": "2026-11-25T21:01:42.999Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the Review Queue loads, THE frontend and mock API SHALL return only Pending review Solution Form tickets in the current Workspace's Projects managed by the signed-in Project Manager, ordered by earliest review due date by default.",
@@ -1094,8 +1094,8 @@
       "AC-010.4": "IF SMTP delivery of a queued review email fails, THEN THE worker email outbox SHALL retry it under worker AC-004.7, and THE committed decision SHALL be unaffected.",
       "AC-010.5": "IF a decided ticket has no writer account, THEN THE backend SHALL queue no email for that ticket and SHALL still queue the emails of the other decided tickets.",
       "AC-010.6": "THE review email queueing SHALL not write the recipient address, reason or comment to application logs.",
-      "AC-010.7": "THE HTML part SHALL show, in this order: a header with a \"T\" mark and the name T-Solve in the brand colour #5577FF; a status badge (\"Rejected\" in red or \"Changes requested\" in amber); a heading and a greeting with the writer's full name (\"Hi there\" when no name is stored); a ticket card with the source ticket key, the Project name, the ticket title, the reviewer's full name (the reviewer's email when the stored name is missing or blank; no \"Reviewed by\" text when the reviewer's account no longer exists) and the decision time in Vietnam time (UTC+7) as \"d MMM yyyy, HH:mm (GMT+7)\"; the stored reason under \"Rejection reason\" or the stored comment under \"Review comment\"; a button \"Open ticket\" (Reject) or \"Update ticket\" (Request Changes); and a footer naming the Workspace and saying the message is automated. It SHALL use table layout with inline styles and no images or external resources.",
-      "AC-010.8": "THE button SHALL link to the ticket's Ticket Detail page on the Workspace's own site, https://<Workspace slug>.<TSOLVE_DOMAIN>/tickets/<ticket id>, and the plain-text part SHALL carry the same link. IF the site address cannot be built (no domain configured or no Workspace slug), THEN THE backend SHALL compose the email without the button and the link.",
+      "AC-010.7": "THE HTML part SHALL show, in this order: a header with a \"T\" mark and the name T-Solve in the brand colour #5577FF; a status badge (\"Rejected\" in red or \"Changes requested\" in amber); a heading and a greeting with the writer's full name (\"Hi there\" when no name is stored); a ticket card with the source ticket key, the Project name, the ticket title, the reviewer's full name (the reviewer's email when the stored name is missing or blank; no \"Reviewed by\" text when the reviewer's account no longer exists) and the decision time in Vietnam time (UTC+7) as \"d MMM yyyy, HH:mm (GMT+7)\"; the stored reason under \"Rejection reason\" or the stored comment under \"Review comment\"; a button \"Open in Jira\" (Reject) or \"Update in Jira\" (Request Changes); and a footer naming the Workspace and saying the message is automated. It SHALL use table layout with inline styles and no images or external resources.",
+      "AC-010.8": "THE button SHALL link to the ticket's Jira issue, <Jira site URL>/browse/<source ticket key>, where the Jira site URL is the site of the Workspace's Jira service account with trailing slashes removed and the key is path-encoded, and the plain-text part SHALL carry the same link. IF the Workspace has no usable Jira service account, its site URL is not an https URL, or the source ticket key is blank, THEN THE backend SHALL compose the email without the button and the link.",
       "AC-010.9": "THE backend SHALL HTML-escape every stored value placed in the HTML part (names, ticket title, Project and Workspace names, reason, comment), keep the line breaks of the reason or comment, and SHALL replace any line break in the subject with a space.",
       "AC-011.1": "WHEN a Project Manager queries Review History, THE API SHALL use the signed-in Workspace and return only review decisions on tickets of Projects they manage, newest first by default with the decision UUID as tie-breaker, paged with the existing page and size conventions.",
       "AC-011.2": "WHEN a stored decision is returned, THE API SHALL report Approve, Reject and Request Changes as APPROVE, REJECT and REQUEST_CHANGES, the stored text as reason only for REJECT and as comment only for REQUEST_CHANGES, the reviewer's full name as actorName (the reviewer's email when no name is stored), the ticket writer as authorName, and the ticket's source key, title and Project.",

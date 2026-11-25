@@ -326,9 +326,10 @@
         "department-solution-retrieval": "passing",
         "membership-visible-scope": "evaluating",
         "embed-description": "passing",
-        "search-start-layout": "evaluating"
+        "search-start-layout": "evaluating",
+        "ticket-list-review-due-date": "pending"
       },
-      "lastUpdated": "2026-11-22T11:58:12.459Z",
+      "lastUpdated": "2026-11-25T21:05:33.533Z",
       "branch": "feat/search",
       "repos": [
         "default"
@@ -630,9 +631,10 @@
         "review-email-html": "passing",
         "review-email-outbox": "passing",
         "review-email-link-fallback": "passing",
-        "jira-rejected-feedback": "passing"
+        "jira-rejected-feedback": "passing",
+        "review-email-jira-link": "in-progress"
       },
-      "lastUpdated": "2026-11-17T10:00:47.548Z",
+      "lastUpdated": "2026-11-25T21:16:00.739Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"

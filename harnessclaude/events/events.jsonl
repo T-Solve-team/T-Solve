@@ -2334,3 +2334,8 @@
 {"ts":"2026-11-25T14:59:52.049Z","type":"feature-status","module":"platform","feature":"catalog-worker-tenant","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-25T14:59:52.341Z","type":"feature-status","module":"platform","feature":"catalog-worker-tenant","from":"evaluating","to":"passing"}
 {"ts":"2026-11-25T16:30:43.844Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":null,"to":"pending"}
+{"ts":"2026-11-25T21:01:43.006Z","type":"spec-approved","module":"ticket-review","specHash":"11f0788eca91553116da8c69acf7204c56ef98cc92f764042be456bbbb65d087"}
+{"ts":"2026-11-25T21:05:07.751Z","type":"spec-approved","module":"search","specHash":"d777c9b1d2af6aa529f3a5e1233179aadef0d14bba2e6c955403bec0bd46d7a6"}
+{"ts":"2026-11-25T21:05:33.249Z","type":"feature-status","module":"ticket-review","feature":"review-email-jira-link","from":null,"to":"pending"}
+{"ts":"2026-11-25T21:05:33.534Z","type":"feature-status","module":"search","feature":"ticket-list-review-due-date","from":null,"to":"pending"}
+{"ts":"2026-11-25T21:16:00.744Z","type":"feature-status","module":"ticket-review","feature":"review-email-jira-link","from":"pending","to":"in-progress"}

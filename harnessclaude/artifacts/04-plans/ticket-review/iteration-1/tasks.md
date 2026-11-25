@@ -224,3 +224,26 @@ feedback when the reviewer's name is missing or blank. MSG64 stays as it is.
   `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`
 **Dependencies:** none (requested by jira-app Task 15)
 **Estimated size:** small
+
+## Task 23: Review email links to the Jira issue (STORY-010 change)
+
+**Story:** STORY-010
+**Feature:** review-email-jira-link
+**Description:** AC-010.8 (changed 2026-11-26): the email button and the plain-text link go to
+`<Jira site>/browse/<source ticket key>` — the site of the Workspace's Jira service account (`JiraServiceAccount.current()`)
+with trailing slashes removed, the key path-encoded — instead of Ticket Detail on the Workspace site. No button and no
+link when there is no usable service account, the site is not https, or the key is blank; the site is read once per
+event, not once per decision. AC-010.7: the button reads "Open in Jira" (Reject) or "Update in Jira" (Request Changes).
+The footer and every other part of the email stay as they are.
+**Files:**
+- Modify: `backend/src/main/java/vn/tsolve/worker/service/impl/ReviewNotificationEnqueuer.java`,
+  `backend/src/main/java/vn/tsolve/worker/client/ReviewEmailRenderer.java`,
+  `backend/src/main/java/vn/tsolve/ticket/service/ReviewNotificationService.java` and its impl (new `jiraSiteUrl()`:
+  worker may not call `tracker` directly, because `tracker` already depends on `worker`; `ticket` already uses
+  `tracker`'s `JiraServiceAccount`)
+- Test: `ReviewNotificationEnqueuerTest`, `ReviewNotificationEnqueueBugTest`, `ReviewEmailRendererTest`,
+  `ReviewNotificationIT`, new `ticket/service/impl/ReviewNotificationServiceImplTest` (`…_AC_010_7`, `…_AC_010_8`)
+**Covers:** AC-010.7, AC-010.8
+**Dependencies:** none
+**Estimated size:** small
+**Verification:** targeted unit tests; `sdd.ts trace ticket-review STORY-010`.
