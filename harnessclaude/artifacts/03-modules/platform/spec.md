@@ -27,6 +27,7 @@ owner: BA
 | 2026-11-14 | new STORY-015 | **Cross-module tenant-isolation tests and E2E smoke (KAN-186).** New STORY-015 with AC-015.1 – AC-015.12: backend tests on two Workspace databases (test routing until STORY-002) for the Ticket List, ticket detail and feedback, Search, Chatbot and the Review Queue; a Playwright suite under `e2e/` on the local stack (sign-in through Keycloak and the fake Google, the main pages, ACME's session refused on the BETA site); the run of 14/11 recorded. The Jira App case waits for STORY-006 (KAN-101) and is Out of Scope here. No other criterion changed | KAN-186 (Phạm Tùng Dương, 14/11): user decisions "do what can be done now", Change Mode on `platform`, Jira App left as a gap until KAN-101, E2E on the local Docker Compose stack; NFR 1 names KAN-186 as the end-to-end run |
 | 2026-11-14 | STORY-015 | AC-015.6 names the Review Queue path the backend serves, `GET /api/v1/review-queue` (ticket-review `ReviewReadController`), instead of `/api/v1/reviews/review-queue`. No behaviour changed | Found while building Task 23: the old path does not exist |
 | 2026-11-23 | STORY-001 | AC-001.21: the stale legacy list (the five tables that changeset 039 dropped) is replaced by the 12 tables that break AC-001.20 today, each with its owning module, so that the guard test of AC-001.22 can pass. AC-001.22: an allow-list entry naming a table that does not exist also fails ("the allow-list only shrinks"). AC-001.20: the key `workspace_id` of the table `workspace` is not a forbidden Workspace-id column (the table still fails the `gen_random_uuid()` default and is listed); the clause "only the timestamp columns `02_tenant.sql` gives the table" becomes a review rule that the guard test does not check. No criterion added or removed | KAN-253 test plan, step 1: the allow-list could not pass whatever Task 5 builds; answers Q1, Q2 and Q7 (all recommended, Hiếu, 23/11) |
+| 2026-11-24 | STORY-004 | New AC-004.29: `WorkspaceCatalog` lists the Active Workspaces (new method `findActive()` in Interface Contracts), without connection data and without binding a Workspace | KAN-252 Task 4 (plan step 2, Q2 answered with the recommended option by Hiếu, 24/11): `worker` needs the Active Workspaces from the catalog to replace `MockWorkerTenantService`; the method returns `WorkspaceSummary`, so AC-004.18 holds |
 
 ## Requirements
 
@@ -194,6 +195,7 @@ owner: BA
   - AC-004.26: IF the email is already recorded for another Workspace, THEN THE catalog SHALL refuse with `code` `MSG155` on field `email` and record nothing; IF it is already recorded for the bound Workspace, THEN it SHALL change nothing and succeed.
   - AC-004.27: THE catalog service SHALL read and write only catalog tables and SHALL never bind a Workspace itself (GBR-37).
   - AC-004.28: THE catalog service SHALL offer no REST endpoint to create, suspend, reactivate or delete a Workspace or to change its site name. The only such endpoint is the Platform Console's, in `platform-console`, on `admin.` for an allow-listed Platform Operator, and it calls the `WorkspaceProvisioning` service of STORY-013; no endpoint deletes a Workspace or changes its site name (GBR-38; decision Q5, 4/11).
+  - AC-004.29: THE `WorkspaceCatalog` SHALL list the Workspaces that are Active at the moment of the call, without connection data (AC-004.18), and SHALL bind no Workspace; it SHALL return an empty list when none is Active (used by `worker`, AC-003.1 there).
 
 ### STORY-005: Verify the Forge Invocation Token (KAN-105)
 - Owner: Trần Trung Hiếu. Sprint S2.
@@ -481,6 +483,7 @@ public interface WorkspaceCatalog {                             // STORY-004
     Optional<WorkspaceSummary> findById(UUID workspaceId);
     Optional<WorkspaceSummary> findBySiteName(String siteName);
     Optional<WorkspaceSummary> findByCloudId(String cloudId);
+    List<WorkspaceSummary> findActive();                        // the Active Workspaces now; AC-004.29
     WorkspaceSummary linkJiraSite(String siteUrl);              // bound Workspace; AC-004.19 – AC-004.24
     void claimEmail(String email);                              // bound Workspace; AC-004.25, AC-004.26
 }
