@@ -130,7 +130,11 @@ class JiraIssueAccessImplTest {
         SignInConfig config = new SignInConfig();
         TenantContext holder = new ThreadLocalTenantContext(config.knownWorkspaces(new InMemoryWorkspaceLookup()));
         JiraIssueAccessImpl real = new JiraIssueAccessImpl(
-                new ConfigJiraWorkspaceLookup("cloud-1=" + acme), config.tenantScope(holder), users, projects, scopes);
+                cloudId -> "cloud-1".equals(cloudId) ? Optional.of(acme) : Optional.empty(),
+                config.tenantScope(holder),
+                users,
+                projects,
+                scopes);
         given(users.find("cloud-1", "jira-acc-1")).willReturn(Optional.of(USER));
 
         Optional<UUID> seenByWork = real.asUser(CALLER, user -> holder.currentWorkspaceId());

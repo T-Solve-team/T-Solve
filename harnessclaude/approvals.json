@@ -193,8 +193,8 @@
     }
   },
   "be-foundation": {
-    "specHash": "045771d2bbca1abf203acc1bc361c2bb5133a937987e910ce56a074869b1c922",
-    "approvedAt": "2026-11-13T16:31:24.803Z",
+    "specHash": "c11bedeba95e6a426a0f12561ab1f63abc0edc2042b62575dd47c3405aaad96c",
+    "approvedAt": "2026-11-24T13:44:27.422Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a request fails with a , THE backend SHALL answer 404 with content type",
@@ -227,7 +227,6 @@
       "AC-003.2": "WHEN  is answered, THE backend SHALL take  from the Department lookup,",
       "AC-003.3": "WHEN  is answered, THE backend SHALL set  to the user's  (if any) plus the",
       "AC-003.4": "WHILE a lookup has no implementation yet (its module is not built), THE backend SHALL answer  with",
-      "AC-003.7": "WHILE the staging stub flag  is true, THE backend SHALL report",
       "AC-003.5": "IF nobody is signed in, THEN THE backend SHALL answer  with 401 and  .",
       "AC-003.6": "THE response of  SHALL match the  schema of",
       "AC-004.1": "THE backend SHALL list the audited actions as : , , ,",
@@ -587,8 +586,8 @@
     }
   },
   "platform": {
-    "specHash": "7f8f7b7e9225e1de02900c25a5fbeea0450fc787385874881b3c4d89d3ff959d",
-    "approvedAt": "2026-11-23T16:21:55.934Z",
+    "specHash": "e234c4a37cb35de53ced5d718bd4261c91ffbe5a4345aba93054ad76242953f4",
+    "approvedAt": "2026-11-24T13:44:24.526Z",
     "by": "user",
     "acs": {
       "AC-001.15": "THE catalog database (the Platform / Tenant Registry of the HLA, named ) SHALL hold the table  with  (UUID, primary key),  (not null, unique),  ( or , not null),  (not null, unique),  (not null),  (not null, encrypted as AC-001.24 says),  (the tenant changelog version last applied to that database, not null),  (nullable),  (nullable, unique),  and  (, not null) (GBR-24, GBR-37).",
@@ -649,6 +648,7 @@
       "AC-004.26": "IF the email is already recorded for another Workspace, THEN THE catalog SHALL refuse with   on field  and record nothing; IF it is already recorded for the bound Workspace, THEN it SHALL change nothing and succeed.",
       "AC-004.27": "THE catalog service SHALL read and write only catalog tables and SHALL never bind a Workspace itself (GBR-37).",
       "AC-004.28": "THE catalog service SHALL offer no REST endpoint to create, suspend, reactivate or delete a Workspace or to change its site name. The only such endpoint is the Platform Console's, in , on  for an allow-listed Platform Operator, and it calls the  service of STORY-013; no endpoint deletes a Workspace or changes its site name (GBR-38; decision Q5, 4/11).",
+      "AC-004.29": "THE  SHALL list the Workspaces that are Active at the moment of the call, without connection data (AC-004.18), and SHALL bind no Workspace; it SHALL return an empty list when none is Active (used by , AC-003.1 there).",
       "AC-005.1": "WHEN a request comes to  (followed by the base domain) on a path under , THE backend SHALL require an  header and verify the token before any Workspace lookup or handler (GBR-14, GBR-19).",
       "AC-005.2": "THE  SHALL accept a token only when it is signed by one of the keys Atlassian publishes for Forge Invocation Tokens (key set from ), has not expired, has issuer , and has audience  followed by .",
       "AC-005.3": "IF the header is missing, the token is unsigned, signed by another key, expired, or has another issuer or audience, THEN THE backend SHALL answer 401 with a  without . It SHALL run no handler and look up no Workspace (TS-022, decision Q8).",
@@ -1209,8 +1209,8 @@
     }
   },
   "worker": {
-    "specHash": "b048853538841e767a735e04aaf1fbe67bc37ce5b082b04a7c4fa825f1065dd1",
-    "approvedAt": "2026-11-14T13:20:12.328Z",
+    "specHash": "5e551b167acd3be6c1132e9387eff52c05bde0d4c5869ac1a311c654747c7de1",
+    "approvedAt": "2026-11-24T13:44:29.405Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the caller submits an email with one recipient, a subject, a plain-text body and an HTML body, THE SMTP sender SHALL send one multipart email holding that plain-text part and that HTML part to the recipient, from the display name \"T-Solve\" at the configured sender address, with that subject. WHEN the submitted email has no HTML body, THE SMTP sender SHALL send it as one plain-text email from the same sender.",
@@ -1230,14 +1230,13 @@
       "AC-002.8": "WHEN the same workspace is already bound, THE boundary SHALL permit nested execution and preserve the outer binding afterwards.",
       "AC-002.9": "WHEN jobs for different workspaces run concurrently or sequentially on a reused thread, THE worker SHALL keep their context bindings isolated.",
       "AC-002.10": "WHEN a handler fails, THE worker SHALL let JobRunr retain and retry the failed job with its original workspace UUID and SHALL recheck workspace eligibility on every attempt.",
-      "AC-002.11": "WHILE the explicit worker-mock profile is active, THE backend SHALL provide a temporary thread-scoped TenantContext mock and a configured allow-list of Active and Suspended workspace UUIDs, treating every unlisted UUID as unknown.",
-      "AC-002.12": "WHILE worker-mock is inactive, THE backend SHALL register no mock platform adapter; IF job processing is enabled without a real adapter, THEN THE backend SHALL fail startup rather than permit jobs using mocked tenancy.",
+      "AC-002.12": "IF job processing is enabled and no real  is registered, THEN THE backend SHALL fail startup rather than run jobs with a stand-in tenancy, and SHALL register no mock platform adapter.",
       "AC-002.13": "WHEN JobRunr integration is enabled, THE backend SHALL use a dedicated Jobs DataSource configured by environment variables and SHALL never fall back to its business or catalog DataSource.",
       "AC-002.14": "THE backend SHALL disable job execution and the JobRunr dashboard by default; WHEN the worker profile is enabled with required configuration, THE backend SHALL enable background processing while keeping the dashboard disabled.",
       "AC-002.15": "IF a persisted job names an unknown handler or has a null workspace or record UUID, THEN THE worker SHALL fail it without invoking a handler.",
       "AC-002.16": "THE test suite SHALL demonstrate enqueue, persisted payload serialization and execution through real JobRunr components, including PostgreSQL-backed job storage, with only platform dependencies mocked.",
       "AC-003.1": "WHEN a caller asks the worker tenant port for the Active Workspaces, THE port SHALL return the UUIDs of the Workspaces that are Active at that moment, without binding a Workspace on the calling thread.",
-      "AC-003.2": "WHILE the worker-mock profile is active, THE mock SHALL return exactly its configured Active allow-list and no Suspended or unlisted Workspace.",
+      "AC-003.3": "IF the Active Workspaces cannot be read from the platform catalog, THEN THE port SHALL throw to the caller and return no partial or empty list, so that a recurring job fails instead of silently skipping every Workspace.",
       "AC-004.1": "WHEN a caller queues an email while a Workspace is bound, THE email outbox SHALL store one PENDING row in the Jobs database with that Workspace UUID, the recipient, the subject, the plain-text body, the optional HTML body, an attempt count of zero and the creation time, and SHALL return the row's UUID.",
       "AC-004.2": "IF a queue call has no bound Workspace, a recipient that is not exactly one mailbox, a blank subject or one containing a line break, or a blank plain-text body, THEN THE email outbox SHALL reject it without storing a row.",
       "AC-004.3": "IF the Jobs database is not configured or cannot store the row, THEN THE email outbox SHALL report the failure to the caller without storing a partial row.",
