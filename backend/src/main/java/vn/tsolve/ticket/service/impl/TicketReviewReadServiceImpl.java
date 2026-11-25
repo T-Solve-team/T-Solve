@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -24,6 +25,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import vn.tsolve.common.exception.BusinessRuleException;
 import vn.tsolve.common.exception.NotFoundException;
 import vn.tsolve.identity.service.ScopeAccessService;
 import vn.tsolve.ticket.dto.TicketReviewView.Department;
@@ -38,9 +40,11 @@ import vn.tsolve.ticket.dto.TicketReviewView.Project;
 import vn.tsolve.ticket.dto.TicketReviewView.ProjectAccess;
 import vn.tsolve.ticket.dto.TicketReviewView.QueueItem;
 import vn.tsolve.ticket.dto.TicketReviewView.QueueRow;
+import vn.tsolve.ticket.dto.TicketReviewView.ReviewText;
 import vn.tsolve.ticket.entity.TicketSource;
 import vn.tsolve.ticket.entity.TicketStatus;
 import vn.tsolve.ticket.exception.InvalidReviewHistoryFilterException;
+import vn.tsolve.ticket.exception.ProjectAccessDeniedException;
 import vn.tsolve.ticket.mapper.TicketReviewMapper;
 import vn.tsolve.ticket.repository.TicketDecisionRepository;
 import vn.tsolve.ticket.repository.TicketDecisionRepository.HistoryRow;
@@ -262,6 +266,22 @@ public class TicketReviewReadServiceImpl implements TicketReviewReadService {
                         && project.managed()
                         && ticket.getSource() == TicketSource.SOLUTION_FORM
                         && ticket.getStatus() == TicketStatus.PENDING_REVIEW);
+    }
+
+    @Override
+    public ReviewText reviewText(Set<UUID> managedProjectIds, UUID ticketId) {
+        // the same checks, in the same order, as TicketDecisionServiceImpl.decide (AC-009.3)
+        if (managedProjectIds.isEmpty()) {
+            throw new ProjectAccessDeniedException();
+        }
+        var ticket = tickets.findForReviewDetail(ticketId).orElseThrow(() -> new NotFoundException("MSG04", Map.of()));
+        if (!managedProjectIds.contains(ticket.getProjectId())) {
+            throw new ProjectAccessDeniedException();
+        }
+        if (ticket.getSource() != TicketSource.SOLUTION_FORM || ticket.getStatus() != TicketStatus.PENDING_REVIEW) {
+            throw new BusinessRuleException("MSG06", Map.of());
+        }
+        return mapper.reviewText(ticket);
     }
 
     @Override
