@@ -23,9 +23,9 @@ value set in the Admin Console).
 
 The backend (`OidcCallbackHandler.namesOrganization`) reads the token's `organization` claim, a map
 `{ "<alias>": { "id": "<organization id>" } }`, and requires some entry's **id** to equal the Workspace's
-`organizationId`. So `TSOLVE_STUB_WORKSPACES` must carry `organizationId = TSOLVE_DEMO_ORG_ID` (the id, not the
-alias). The realm file sets `"id": "${TSOLVE_DEMO_ORG_ID}"`; Keycloak keeps it on import. `hd` must equal
-`TSOLVE_DEMO_GOOGLE_DOMAIN`.
+`organizationId`. So the Registry row (`tenant_workspace.keycloak_organization_id`, copied from `TSOLVE_DEMO_ORG_ID` by
+`infra/scripts/registry-adopt-workspace.sh`) must carry the id, not the alias. The realm file sets
+`"id": "${TSOLVE_DEMO_ORG_ID}"`; Keycloak keeps it on import. `hd` must equal `TSOLVE_DEMO_GOOGLE_DOMAIN`.
 
 ## Google redirect URIs to register (Authorized redirect URIs of the one OAuth client)
 

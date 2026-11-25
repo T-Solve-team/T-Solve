@@ -12,7 +12,7 @@ import org.junit.jupiter.params.provider.EmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import vn.tsolve.identity.dev.DevAccounts.DevAccount;
-import vn.tsolve.identity.signin.port.NoWorkspaceLookup;
+import vn.tsolve.identity.signin.port.PlatformWorkspaceLookup;
 import vn.tsolve.identity.signin.port.WorkspaceLookup;
 import vn.tsolve.identity.signin.port.WorkspaceRef;
 
@@ -105,7 +105,7 @@ class DevWorkspaceLookupTest {
     @DisplayName("edge 128 in the dev profile the WorkspaceLookup is DevWorkspaceLookup")
     void devProfileUsesDevWorkspaceLookup_edge128() {
         new ApplicationContextRunner()
-                .withUserConfiguration(NoWorkspaceLookup.class, DevWorkspaceLookup.class)
+                .withUserConfiguration(PlatformWorkspaceLookup.class, DevWorkspaceLookup.class)
                 .withPropertyValues("spring.profiles.active=dev")
                 .run(context -> {
                     assertThat(context).hasNotFailed();
@@ -122,12 +122,12 @@ class DevWorkspaceLookupTest {
             "edge 128 outside the dev profile there is no DevWorkspaceLookup and acme.localhost resolves to nothing")
     void noDevWorkspaceLookupOutsideDevProfile_edge128(String profile) {
         new ApplicationContextRunner()
-                .withUserConfiguration(NoWorkspaceLookup.class, DevWorkspaceLookup.class)
+                .withUserConfiguration(PlatformWorkspaceLookup.class, DevWorkspaceLookup.class)
                 .withPropertyValues("spring.profiles.active=" + profile)
                 .run(context -> {
                     assertThat(context).hasNotFailed();
                     assertThat(context).doesNotHaveBean(DevWorkspaceLookup.class);
-                    assertThat(context.getBean(WorkspaceLookup.class)).isInstanceOf(NoWorkspaceLookup.class);
+                    assertThat(context.getBean(WorkspaceLookup.class)).isInstanceOf(PlatformWorkspaceLookup.class);
                     assertThat(context.getBean(WorkspaceLookup.class).findBySiteHost("acme.localhost"))
                             .isEmpty();
                 });
