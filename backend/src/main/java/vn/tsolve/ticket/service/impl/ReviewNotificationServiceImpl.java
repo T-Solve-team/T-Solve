@@ -8,14 +8,27 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.tsolve.ticket.dto.ReviewNotification;
 import vn.tsolve.ticket.repository.TicketDecisionRepository;
 import vn.tsolve.ticket.service.ReviewNotificationService;
+import vn.tsolve.tracker.dto.JiraAccount;
+import vn.tsolve.tracker.service.JiraServiceAccount;
 
 @Service
 public class ReviewNotificationServiceImpl implements ReviewNotificationService {
 
     private final TicketDecisionRepository decisions;
+    private final JiraServiceAccount jira;
 
-    public ReviewNotificationServiceImpl(TicketDecisionRepository decisions) {
+    public ReviewNotificationServiceImpl(TicketDecisionRepository decisions, JiraServiceAccount jira) {
         this.decisions = decisions;
+        this.jira = jira;
+    }
+
+    @Override
+    public Optional<String> jiraSiteUrl() {
+        // AC-010.8: only an https site gives the email a link.
+        return jira.current()
+                .map(JiraAccount::siteUrl)
+                .map(site -> site.strip().replaceAll("/+$", ""))
+                .filter(site -> site.startsWith("https://") && site.length() > "https://".length());
     }
 
     @Override

@@ -278,10 +278,11 @@ class ReviewNotificationEnqueueBugTest {
 
     @Test
     @DisplayName(
-            "AC-002.12 in the web process the enqueuer queues for the Workspace bound in the holder and links its site")
-    void queuesFromTheWebRequestAndLinksTheSiteWhenOnlyTheOutboxIsEnabled_AC_002_12() {
+            "AC-002.12 in the web process the enqueuer queues for the Workspace bound in the holder and links the Jira issue")
+    void queuesFromTheWebRequestAndLinksTheJiraIssueWhenOnlyTheOutboxIsEnabled_AC_002_12() {
         var sites = mock(WorkspaceSiteService.class);
         when(sites.siteHost(A)).thenReturn(Optional.of("acme.t-solve.test"));
+        when(notifications.jiraSiteUrl()).thenReturn(Optional.of("https://acme.atlassian.net"));
 
         runInWebProcess(
                 sites, true, enqueuer -> enqueuer.onDecided(new ReviewFeedbackDecidedEvent(List.of(RECORD_ID))));
@@ -289,7 +290,7 @@ class ReviewNotificationEnqueueBugTest {
         var queued = org.mockito.ArgumentCaptor.forClass(OutboundEmail.class);
         verify(outbox).queue(queued.capture());
         assertThat(queued.getValue().recipient()).isEqualTo("writer@example.test");
-        assertThat(queued.getValue().bodyText()).contains("https://acme.t-solve.test/tickets/" + RECORD_ID);
+        assertThat(queued.getValue().bodyText()).contains("https://acme.atlassian.net/browse/ITS-1");
     }
 
     @Test

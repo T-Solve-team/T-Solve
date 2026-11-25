@@ -11,4 +11,10 @@ public interface ReviewNotificationService {
      * or its ticket has no writer account.
      */
     Optional<ReviewNotification> findNotification(UUID decisionId);
+
+    /**
+     * The https site of the bound Workspace's Jira service account, without trailing slashes, for the issue link of
+     * the email (AC-010.8). Empty when there is no usable service account or its site is not https.
+     */
+    Optional<String> jiraSiteUrl();
 }

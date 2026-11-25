@@ -54,8 +54,8 @@ class ReviewNotificationEnqueuerTest {
 
     private final WorkerTenantService tenants = mock(WorkerTenantService.class);
     private final WorkspaceSiteService sites = mock(WorkspaceSiteService.class);
-    private final ReviewNotificationEnqueuer enqueuer = new ReviewNotificationEnqueuer(
-            outboxes, tenantProvider(), notifications, sites, "https://{slug}.example.test");
+    private final ReviewNotificationEnqueuer enqueuer =
+            new ReviewNotificationEnqueuer(outboxes, tenantProvider(), notifications, sites);
 
     @SuppressWarnings("unchecked")
     private ObjectProvider<WorkerTenantService> tenantProvider() {
@@ -84,36 +84,80 @@ class ReviewNotificationEnqueuerTest {
     }
 
     @ParameterizedTest
-    @org.junit.jupiter.params.provider.CsvSource({
-        "http://{slug}.localhost:5173, acme.localhost, http://acme.localhost:5173",
-        "https://{slug}.tsolve.io.vn, acme.tsolve.io.vn, https://acme.tsolve.io.vn"
-    })
-    void linksToTheSiteOrigin_BUG_244(String template, String host, String origin) {
-        var email = enqueueLinkNotification(host, template);
-        String link = origin + "/tickets/00000000-0000-0000-0000-000000000001";
-        assertThat(email.bodyText()).contains(link);
-        assertThat(email.bodyHtml()).contains("href=\"" + link + "\"");
+    @EnumSource(ReviewNotification.Kind.class)
+    void linksTheJiraIssueInBothParts_AC_010_8(ReviewNotification.Kind kind) {
+        var email = enqueueLinkNotification(kind, "ITS-1", Optional.of("https://acme.atlassian.net"));
+        String link = "https://acme.atlassian.net/browse/ITS-1";
+        assertThat(email.bodyText()).contains(link).doesNotContain("/tickets/");
+        assertThat(email.bodyHtml()).contains("href=\"" + link + "\"").doesNotContain("/tickets/");
+    }
+
+    @Test
+    void pathEncodesTheIssueKey_AC_010_8() {
+        var email = enqueueLinkNotification(
+                ReviewNotification.Kind.CHANGES_REQUESTED, "ITS 1", Optional.of("https://acme.atlassian.net"));
+        assertThat(email.bodyText()).contains("https://acme.atlassian.net/browse/ITS%201");
     }
 
     @ParameterizedTest
-    @org.junit.jupiter.params.provider.NullAndEmptySource
-    @org.junit.jupiter.params.provider.ValueSource(strings = "   ")
-    void fallsBackToHttpsWithoutOriginTemplate_BUG_244(String template) {
-        var email = enqueueLinkNotification("acme.tsolve.io.vn", template);
-        String link = "https://acme.tsolve.io.vn/tickets/00000000-0000-0000-0000-000000000001";
-        assertThat(email.bodyText()).contains(link);
-        assertThat(email.bodyHtml()).contains("href=\"" + link + "\"");
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"", "   "})
+    void omitsTheLinkForABlankIssueKey_AC_010_8(String key) {
+        var email = enqueueLinkNotification(
+                ReviewNotification.Kind.CHANGES_REQUESTED, key, Optional.of("https://acme.atlassian.net"));
+        assertThat(email.bodyText()).doesNotContain("/browse/", "Update in Jira");
+        assertThat(email.bodyHtml()).doesNotContain("<a ", "/browse/");
     }
 
-    private OutboundEmail enqueueLinkNotification(String host, String template) {
+    @Test
+    void omitsTheLinkWithoutAJiraSite_AC_010_8() {
+        var email = enqueueLinkNotification(ReviewNotification.Kind.REJECTED, "ITS-1", Optional.empty());
+        assertThat(email.bodyText()).doesNotContain("/browse/", "Open in Jira");
+        assertThat(email.bodyHtml()).doesNotContain("<a ", "/browse/");
+        // The footer still names the Workspace site: only the button depends on Jira.
+        assertThat(email.bodyText()).contains("in the acme.example.test workspace");
+    }
+
+    @Test
+    void readsTheJiraSiteOncePerEventAndQueuesWithoutLinksWhenItThrows_AC_010_8() {
         UUID workspace = UUID.randomUUID();
         bindActiveWorkspace(workspace);
-        when(sites.siteHost(workspace)).thenReturn(Optional.of(host));
+        when(sites.siteHost(workspace)).thenReturn(Optional.of("acme.example.test"));
         when(outboxes.getIfAvailable()).thenReturn(outbox);
+        when(notifications.jiraSiteUrl()).thenThrow(new IllegalStateException());
+        var decisions = List.of(DECISION, UUID.randomUUID(), UUID.randomUUID());
+        for (UUID decision : decisions)
+            when(notifications.findNotification(decision))
+                    .thenReturn(Optional.of(notification(ReviewNotification.Kind.REJECTED)));
+
+        enqueuer.onDecided(new ReviewFeedbackDecidedEvent(decisions));
+
+        var outbound = ArgumentCaptor.forClass(OutboundEmail.class);
+        verify(outbox, times(3)).queue(outbound.capture());
+        verify(notifications).jiraSiteUrl();
+        assertThat(outbound.getAllValues())
+                .allSatisfy(email -> assertThat(email.bodyHtml()).doesNotContain("<a ", "/browse/"));
+    }
+
+    private OutboundEmail enqueueLinkNotification(ReviewNotification.Kind kind, String key, Optional<String> site) {
+        UUID workspace = UUID.randomUUID();
+        bindActiveWorkspace(workspace);
+        when(sites.siteHost(workspace)).thenReturn(Optional.of("acme.example.test"));
+        when(outboxes.getIfAvailable()).thenReturn(outbox);
+        when(notifications.jiraSiteUrl()).thenReturn(site);
+        var base = notification(kind);
         when(notifications.findNotification(DECISION))
-                .thenReturn(Optional.of(notification(ReviewNotification.Kind.REJECTED)));
-        new ReviewNotificationEnqueuer(outboxes, tenantProvider(), notifications, sites, template)
-                .onDecided(new ReviewFeedbackDecidedEvent(List.of(DECISION)));
+                .thenReturn(Optional.of(new ReviewNotification(
+                        base.kind(),
+                        base.recipient(),
+                        key,
+                        base.feedback(),
+                        base.ticketId(),
+                        base.ticketTitle(),
+                        base.projectName(),
+                        base.reviewerName(),
+                        base.writerName(),
+                        base.decidedAt())));
+        enqueuer.onDecided(new ReviewFeedbackDecidedEvent(List.of(DECISION)));
         var outbound = ArgumentCaptor.forClass(OutboundEmail.class);
         verify(outbox).queue(outbound.capture());
         return outbound.getValue();
@@ -126,6 +170,7 @@ class ReviewNotificationEnqueuerTest {
         bindActiveWorkspace(workspace);
         when(sites.siteHost(workspace)).thenReturn(Optional.of("acme.example.test"));
         when(outboxes.getIfAvailable()).thenReturn(outbox);
+        when(notifications.jiraSiteUrl()).thenReturn(Optional.of("https://acme.atlassian.net"));
         when(notifications.findNotification(DECISION)).thenReturn(Optional.of(notification(kind)));
         enqueuer.onDecided(new ReviewFeedbackDecidedEvent(List.of(DECISION)));
         var notification = notification(kind);
@@ -138,7 +183,7 @@ class ReviewNotificationEnqueuerTest {
                 notification.writerName(),
                 notification.decidedAt(),
                 notification.feedback(),
-                "https://acme.example.test/tickets/00000000-0000-0000-0000-000000000001",
+                "https://acme.atlassian.net/browse/ITS-1",
                 "acme.example.test");
         var renderer = new ReviewEmailRenderer();
         verify(outbox)
@@ -195,8 +240,7 @@ class ReviewNotificationEnqueuerTest {
         when(outboxes.getIfAvailable()).thenReturn(outbox);
         when(notifications.findNotification(DECISION))
                 .thenReturn(Optional.of(notification(ReviewNotification.Kind.REJECTED)));
-        var real =
-                new ReviewNotificationEnqueuer(outboxes, provider, notifications, sites, "https://{slug}.example.test");
+        var real = new ReviewNotificationEnqueuer(outboxes, provider, notifications, sites);
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest()));
         try {
             holder.runIn(bound, () -> real.onDecided(new ReviewFeedbackDecidedEvent(List.of(DECISION))));

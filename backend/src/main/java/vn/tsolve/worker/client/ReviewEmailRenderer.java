@@ -95,7 +95,7 @@ public final class ReviewEmailRenderer {
                         ? "a reviewer has rejected your ticket. The reason is below."
                         : "a reviewer asked for changes before your ticket can be approved.");
         values.put("feedbackHeading", rejected ? "Rejection reason" : "Review comment");
-        values.put("buttonText", rejected ? "Open ticket" : "Update ticket");
+        values.put("buttonText", rejected ? "Open in Jira" : "Update in Jira");
         values.put("badgeBackground", rejected ? "#FFF2F0" : "#FFFBE6");
         values.put("badgeBorder", rejected ? "#FFCCC7" : "#FFE58F");
         values.put("badgeColor", rejected ? "#CF1322" : "#AD6800");
