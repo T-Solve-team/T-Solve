@@ -510,6 +510,39 @@ class ChatbotAnswerServiceImplTest {
                 .contains("numbered sources", "cite each source you use as [n]", "say so without citing");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"[1]", " [1] ", "[1].", "[1]\n[1]", "[1][1]!"})
+    @DisplayName("AC-005.5 asks once more when the first reply is only markers, and answers with the second (BUG-364)")
+    void asksOnceMoreWhenTheReplyIsOnlyMarkers_AC_005_5_BUG_364(String firstReply) {
+        withSolution();
+        when(llm.chat(any(), isNull())).thenReturn(firstReply, "Use the VPN web portal [1].");
+
+        var response = service.ask(USER, followUp());
+
+        assertThat(response.outcome()).isEqualTo(Outcome.ANSWERED);
+        assertThat(response.text()).isEqualTo("Use the VPN web portal [1].");
+        assertThat(response.citations()).extracting(ChatbotCitation::number).containsExactly(1);
+        ArgumentCaptor<List<ChatMessage>> prompt = ArgumentCaptor.forClass(List.class);
+        verify(llm, times(2)).chat(prompt.capture(), isNull());
+        var retryMessages = prompt.getValue();
+        assertThat(retryMessages.get(retryMessages.size() - 2)).isEqualTo(new ChatMessage(Role.ASSISTANT, firstReply));
+        assertThat(retryMessages.getLast().content()).contains("in words");
+    }
+
+    @Test
+    @DisplayName("AC-005.5 answers NO_SOURCE when the reply after the reminder is only markers too (BUG-364)")
+    void answersNoSourceWhenBothRepliesAreOnlyMarkers_AC_005_5_BUG_364() {
+        withSolution();
+        when(llm.chat(any(), isNull())).thenReturn("[1]", "[1].");
+
+        var response = service.ask(USER, followUp());
+
+        assertThat(response.outcome()).isEqualTo(Outcome.NO_SOURCE);
+        assertThat(response.text()).isEmpty();
+        assertThat(response.citations()).isEmpty();
+        verify(llm, times(2)).chat(any(), isNull());
+    }
+
     @Test
     @DisplayName("AC-005.5 answers NO_SOURCE when the reply after the reminder cites none either (BUG-246)")
     void answersNoSourceWhenTheRetryAlsoCitesNone_AC_005_5_BUG_246() {

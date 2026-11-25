@@ -314,13 +314,13 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         String text = callAi(() -> llm.chat(messages, null), deadline);
         remaining(deadline);
         var cited = Citations.of(text, kept);
-        if (cited.citations().isEmpty()) {
+        if (!cited.answers()) {
             var retryMessages = AnswerPrompt.retryMessages(messages, text);
             String retryText = callAi(() -> llm.chat(retryMessages, null), deadline);
             remaining(deadline);
             cited = Citations.of(retryText, kept);
         }
-        if (cited.citations().isEmpty()) {
+        if (!cited.answers()) {
             return save(
                     turn,
                     row.of(question, Outcome.NO_SOURCE.name(), ""),
