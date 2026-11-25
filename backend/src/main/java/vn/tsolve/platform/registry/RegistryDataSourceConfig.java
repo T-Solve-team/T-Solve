@@ -2,6 +2,7 @@ package vn.tsolve.platform.registry;
 
 import com.zaxxer.hikari.HikariDataSource;
 import liquibase.integration.spring.SpringLiquibase;
+import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.RootBeanDefinition;
@@ -12,6 +13,9 @@ import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import vn.tsolve.common.tenant.TenantContext;
+import vn.tsolve.platform.service.WorkspaceCatalog;
+import vn.tsolve.platform.service.impl.WorkspaceCatalogImpl;
 
 /**
  * The Registry database: its own pool, transaction manager and changelog, loaded only when REGISTRY_DB_URL is set.
@@ -78,5 +82,15 @@ public class RegistryDataSourceConfig {
     @Bean
     PasswordCipher passwordCipher(Environment environment) {
         return new PasswordCipher(environment);
+    }
+
+    @Bean
+    RegistryRepository registryRepository(BeanFactory beanFactory) {
+        return new RegistryRepository(beanFactory.getBean("registryJdbcClient", JdbcClient.class));
+    }
+
+    @Bean
+    WorkspaceCatalog workspaceCatalog(RegistryRepository registryRepository, TenantContext tenantContext) {
+        return new WorkspaceCatalogImpl(registryRepository, tenantContext);
     }
 }

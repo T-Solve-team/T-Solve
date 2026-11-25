@@ -32,6 +32,8 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.core.io.ClassPathResource;
+import vn.tsolve.common.tenant.AcceptingKnownWorkspaces;
+import vn.tsolve.platform.service.WorkspaceCatalog;
 import vn.tsolve.support.PostgresTestBase;
 
 /**
@@ -269,6 +271,7 @@ class RegistryChangelogIT {
                             .hasBean("registryDataSource")
                             .hasBean("registryTransactionManager")
                             .hasBean("registryJdbcClient");
+                    assertThat(context).hasSingleBean(WorkspaceCatalog.class);
                     try (Connection connection =
                             context.getBean(DataSource.class).getConnection()) {
                         assertThat(scalar(connection, "SELECT current_database()"))
@@ -334,6 +337,7 @@ class RegistryChangelogIT {
                     assertThat(context).doesNotHaveBean("registryTransactionManager");
                     assertThat(context).doesNotHaveBean("registryJdbcClient");
                     assertThat(context).doesNotHaveBean(PasswordCipher.class);
+                    assertThat(context).doesNotHaveBean(WorkspaceCatalog.class);
                 });
     }
 
@@ -368,7 +372,7 @@ class RegistryChangelogIT {
                     }
                     sources.addFirst(new MapPropertySource("registryVariables", new LinkedHashMap<>(variables)));
                 })
-                .withUserConfiguration(RegistryDataSourceConfig.class);
+                .withUserConfiguration(RegistryDataSourceConfig.class, AcceptingKnownWorkspaces.class);
     }
 
     private static Connection registryConnection(String url) throws SQLException {

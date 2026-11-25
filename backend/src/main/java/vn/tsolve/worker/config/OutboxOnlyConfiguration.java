@@ -25,7 +25,7 @@ import vn.tsolve.worker.service.impl.EmailOutboxServiceImpl;
 /**
  * Lets the web process write to the Jobs email outbox without the worker runtime (BUG-339). The review decision is
  * taken in the web process; the worker process only sends. Unlike {@code tsolve.worker.enabled} this starts no
- * JobRunr, registers no job handler and does not change the tracker queue, and it needs no worker-mock profile; the
+ * JobRunr, registers no job handler and does not change the tracker queue, and it needs no worker profile; the
  * Workspace comes from the {@link TenantContext} holder.
  */
 @Configuration(proxyBeanMethods = false)

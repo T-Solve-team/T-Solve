@@ -10,6 +10,7 @@ import jakarta.validation.Validation;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import javax.sql.DataSource;
 import liquibase.integration.spring.SpringLiquibase;
@@ -27,19 +28,38 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import vn.tsolve.common.tenant.TenantContext;
 import vn.tsolve.common.tenant.ThreadLocalTenantContext;
+import vn.tsolve.platform.dto.WorkspaceStatus;
+import vn.tsolve.platform.service.WorkspaceCatalog;
 import vn.tsolve.worker.service.EmailOutboxService;
 import vn.tsolve.worker.service.TenantJobService;
 import vn.tsolve.worker.service.WorkerTenantService;
-import vn.tsolve.worker.service.mock.MockWorkerTenantService;
+import vn.tsolve.worker.service.impl.CatalogWorkerTenantService;
+import vn.tsolve.worker.support.FixedWorkspaceCatalog;
 
 class WorkerConfigurationTest {
+    private static final UUID ACTIVE_ID = UUID.fromString("00000000-0000-4000-8000-0000000000a1");
+    private static final UUID SUSPENDED_ID = UUID.fromString("00000000-0000-4000-8000-0000000000a2");
+
+    /** The catalog the Registry gate provides: ACTIVE_ID is Active, SUSPENDED_ID is Suspended. */
+    private static WorkspaceCatalog catalog() {
+        return new FixedWorkspaceCatalog(
+                Map.of(ACTIVE_ID, WorkspaceStatus.ACTIVE, SUSPENDED_ID, WorkspaceStatus.SUSPENDED));
+    }
+
+    /** The service on its own, over a catalog bean and a holder: no jobs database, no JobRunr. */
+    private final ApplicationContextRunner serviceOnly = new ApplicationContextRunner()
+            .withBean(TenantContext.class, () -> new ThreadLocalTenantContext(id -> true))
+            .withBean(WorkspaceCatalog.class, WorkerConfigurationTest::catalog)
+            .withUserConfiguration(CatalogWorkerTenantService.class);
+
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
             .withBean(TenantContext.class, () -> new ThreadLocalTenantContext(id -> true))
+            .withBean(WorkspaceCatalog.class, WorkerConfigurationTest::catalog)
             .withUserConfiguration(
-                    WorkerConfiguration.class, WorkerMockConfiguration.class, EmailOutboxConfiguration.class);
+                    WorkerConfiguration.class, CatalogWorkerTenantService.class, EmailOutboxConfiguration.class);
 
     @Test
-    void registersNeitherWorkerNorMockByDefault_AC_002_12_AC_002_14() {
+    void registersNoWorkerBeanByDefault_AC_002_12_AC_002_14() {
         runner.run(context -> {
             assertThat(context).hasNotFailed();
             assertThat(context).doesNotHaveBean(JobRunrRuntime.class);
@@ -66,44 +86,45 @@ class WorkerConfigurationTest {
     static class PropertyScan {}
 
     @Test
-    void refusesEnabledIntegrationWithoutPlatformAdapter_AC_002_12() {
-        runner.withPropertyValues("tsolve.worker.enabled=true").run(context -> {
-            assertThat(context).hasFailed();
-            assertThat(context.getStartupFailure()).hasStackTraceContaining("WorkerTenantService");
+    @DisplayName(
+            "AC-002.12 with job processing on, the catalog service is the only WorkerTenantService and answers from the catalog; without a WorkspaceCatalog startup fails naming it")
+    void catalogServiceIsTheOnlyWorkerTenantService_AC_002_12() {
+        serviceOnly.withPropertyValues("tsolve.worker.enabled=true").run(context -> {
+            assertThat(context).hasNotFailed();
+            assertThat(context.getBeansOfType(WorkerTenantService.class))
+                    .hasSize(1)
+                    .allSatisfy((name, bean) -> assertThat(bean).isInstanceOf(CatalogWorkerTenantService.class));
+            WorkerTenantService tenants = context.getBean(WorkerTenantService.class);
+            assertThat(tenants.activeWorkspaceIds()).containsExactly(ACTIVE_ID);
+            assertThat(tenants.isWorkspaceActive(SUSPENDED_ID)).isFalse();
         });
-    }
 
-    @Test
-    void mockRequiresExplicitProfileAndDeniesUnlistedWorkspaces_AC_002_11() {
-        UUID active = UUID.randomUUID();
-        UUID suspended = UUID.randomUUID();
-        runner.withPropertyValues(
-                        "spring.profiles.active=worker-mock",
-                        "tsolve.worker.mock.active-workspaces=" + active,
-                        "tsolve.worker.mock.suspended-workspaces=" + suspended)
+        new ApplicationContextRunner()
+                .withBean(TenantContext.class, () -> new ThreadLocalTenantContext(id -> true))
+                .withUserConfiguration(WorkerConfiguration.class, CatalogWorkerTenantService.class)
+                .withPropertyValues("tsolve.worker.enabled=true")
                 .run(context -> {
-                    assertThat(context).hasNotFailed();
-                    assertThat(context).hasSingleBean(MockWorkerTenantService.class);
-                    WorkerTenantService tenant = context.getBean(WorkerTenantService.class);
-                    assertThat(tenant.isWorkspaceActive(active)).isTrue();
-                    assertThat(tenant.isWorkspaceActive(suspended)).isFalse();
-                    assertThat(tenant.isWorkspaceActive(UUID.randomUUID())).isFalse();
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure()).hasStackTraceContaining("WorkspaceCatalog");
                 });
     }
 
     @Test
-    void acceptsEmptyMockAllowListsAndDeniesEveryWorkspace_BUG_135_AC_002_11() {
-        runner.withPropertyValues("spring.profiles.active=worker-mock").run(context -> {
-            assertThat(context).hasNotFailed();
-            assertThat(context.getBean(WorkerTenantService.class).isWorkspaceActive(UUID.randomUUID()))
-                    .isFalse();
-        });
+    @DisplayName(
+            "edge 85 with job processing off no WorkerTenantService bean exists, even with a WorkspaceCatalog bean")
+    void noWorkerTenantServiceOutsideTheWorker_edge85() {
+        serviceOnly.run(context -> assertThat(context).hasNotFailed().doesNotHaveBean(WorkerTenantService.class));
+        serviceOnly
+                .withPropertyValues("tsolve.worker.enabled=false")
+                .run(context -> assertThat(context).hasNotFailed().doesNotHaveBean(WorkerTenantService.class));
+        serviceOnly
+                .withPropertyValues("tsolve.worker.outbox-enabled=true", "tsolve.worker.web-jobs-enabled=true")
+                .run(context -> assertThat(context).hasNotFailed().doesNotHaveBean(WorkerTenantService.class));
     }
 
     @Test
     void rejectsMissingJobsConfigurationInsteadOfFallingBack_AC_002_13() {
         runner.withPropertyValues(
-                        "spring.profiles.active=worker-mock",
                         "tsolve.worker.enabled=true",
                         "spring.datasource.url=jdbc:postgresql://business.invalid/business")
                 .run(context -> {
