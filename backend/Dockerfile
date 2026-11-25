@@ -2,7 +2,7 @@
 # T-Solve backend image: Maven builds the jar, a slim Java 21 JRE runs it. One image for the web and the worker.
 #   docker build -t tsolve-backend .
 #   docker run --rm -p 8080:8080 --env-file .env tsolve-backend
-# The Spring profile comes from SPRING_PROFILES_ACTIVE at run time (web: none; worker: worker,worker-mock).
+# The Spring profile comes from SPRING_PROFILES_ACTIVE at run time (web: none; worker: worker).
 # No secrets and no .env are baked in: every setting comes from the environment when the container starts.
 # Base image versions are pinned; Dependabot (DevOps) proposes the updates.
 

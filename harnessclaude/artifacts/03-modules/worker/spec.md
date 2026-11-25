@@ -10,6 +10,7 @@ owner: BA
 
 | Date | Story | Change | Reason |
 |---|---|---|---|
+| 2026-11-24 | STORY-002, STORY-003 | New AC-003.3 (the Active list that cannot be read throws, never an empty list). AC-002.11 and AC-003.2 are retired (ids never reused): the `worker-mock` profile and `MockWorkerTenantService` are removed, because the worker now reads the platform catalog. AC-002.12 reworded: no `worker-mock` wording; job processing without a real `WorkerTenantService` still fails startup. Goal 5, Out of Scope, Required from other modules and Definition of Done lose the mock wording | KAN-252 Task 4 (plan step 2, Q5 answered with the recommended option by Hiếu, 24/11): `platform` `WorkspaceCatalog` (AC-004.29) replaces the mock; the retired criteria could never be true again and would show as untested in `sdd.ts trace` |
 | 2026-11-14 | STORY-001 | Merge of KAN-333 and KAN-162: AC-001.1 keeps the KAN-333 multipart email from the display name T-Solve and adds a plain-text email when no HTML body is submitted; AC-001.2 is the KAN-333 text (KAN-162) | PR #230 merged into main while KAN-162 was open; the outbox allows an email without an HTML body (user chose plain text with optional HTML) |
 | 2026-11-14 | STORY-004, STORY-001, NFR-5 | Add a shared email outbox in the Jobs database with a recurring dispatcher (3 attempts within 1 hour, 30-day retention, plain text with optional HTML); the SMTP sender takes a ready-made message instead of a review decision; NFR-5 allows the outbox to hold recipient and content (KAN-162) | User wants any backend feature to send email by storing a ready-made row, with no business-database lookup at send time; user chose the Jobs database, insert-only callers with a polling dispatcher, 3 attempts in 1 hour, 30-day retention, optional HTML, and holding rows of a Suspended Workspace PENDING within the hour; builder check: a lease-expired attempt counts as a failed one (user) |
 | 2026-11-14 | STORY-001 | The sender replaces line breaks in the subject with a space (AC-001.2 reworded) (KAN-333) | Review finding on PR #230: the sender already guards against header injection, but the criterion said "exactly as submitted"; user chose to keep the guard |
@@ -28,7 +29,7 @@ owner: BA
 2. Report delivery failure to the caller so the outbox dispatcher can retry it.
 3. Enqueue workspace-scoped jobs through JobRunr OSS and execute their handlers within runInTenant.
 4. Capture the workspace at enqueue time; check its current eligibility before each execution.
-5. Provide an explicit development mock for the missing platform TenantContext and workspace catalog.
+5. Bind the platform TenantContext and read the Active Workspaces from the platform catalog through the worker tenant port.
 6. Provide one shared email outbox in the Jobs database: any backend feature queues a ready-made email by storing one row, and a recurring dispatcher sends due rows, retries failures and deletes old rows.
 
 ### Non-Functional
@@ -68,8 +69,7 @@ owner: BA
   - AC-002.8: WHEN the same workspace is already bound, THE boundary SHALL permit nested execution and preserve the outer binding afterwards.
   - AC-002.9: WHEN jobs for different workspaces run concurrently or sequentially on a reused thread, THE worker SHALL keep their context bindings isolated.
   - AC-002.10: WHEN a handler fails, THE worker SHALL let JobRunr retain and retry the failed job with its original workspace UUID and SHALL recheck workspace eligibility on every attempt.
-  - AC-002.11: WHILE the explicit worker-mock profile is active, THE backend SHALL provide a temporary thread-scoped TenantContext mock and a configured allow-list of Active and Suspended workspace UUIDs, treating every unlisted UUID as unknown.
-  - AC-002.12: WHILE worker-mock is inactive, THE backend SHALL register no mock platform adapter; IF job processing is enabled without a real adapter, THEN THE backend SHALL fail startup rather than permit jobs using mocked tenancy.
+  - AC-002.12: IF job processing is enabled and no real `WorkerTenantService` is registered, THEN THE backend SHALL fail startup rather than run jobs with a stand-in tenancy, and SHALL register no mock platform adapter.
   - AC-002.13: WHEN JobRunr integration is enabled, THE backend SHALL use a dedicated Jobs DataSource configured by environment variables and SHALL never fall back to its business or catalog DataSource.
   - AC-002.14: THE backend SHALL disable job execution and the JobRunr dashboard by default; WHEN the worker profile is enabled with required configuration, THE backend SHALL enable background processing while keeping the dashboard disabled.
   - AC-002.15: IF a persisted job names an unknown handler or has a null workspace or record UUID, THEN THE worker SHALL fail it without invoking a handler.
@@ -80,7 +80,7 @@ owner: BA
 - As a recurring job such as JOB-02, I want the Workspaces that are Active right now so that I run once in each of them and in no Suspended one (GBR-37, GBR-38).
 - Acceptance:
   - AC-003.1: WHEN a caller asks the worker tenant port for the Active Workspaces, THE port SHALL return the UUIDs of the Workspaces that are Active at that moment, without binding a Workspace on the calling thread.
-  - AC-003.2: WHILE the worker-mock profile is active, THE mock SHALL return exactly its configured Active allow-list and no Suspended or unlisted Workspace.
+  - AC-003.3: IF the Active Workspaces cannot be read from the platform catalog, THEN THE port SHALL throw to the caller and return no partial or empty list, so that a recurring job fails instead of silently skipping every Workspace.
 
 ### STORY-004: Queue any email in a shared outbox (KAN-162)
 
@@ -103,7 +103,7 @@ owner: BA
 
 - STORY-001 / STORY-004: retry and delivery are STORY-004. Callers own the content: the module that queues an email composes its recipient, subject and bodies from its own data and escapes user text in the HTML body; the worker does not template or check that content. KAN-155 and KAN-333 (ticket-review STORY-010) own the review email, its HTML layout and its content, and verifies that email failure cannot roll back the decision. First Admin invitation, production SMTP provider setup, attachments, several recipients, CC/BCC and a screen for outbox rows are outside this slice.
 - STORY-004: queueing is not in the business transaction, because the Jobs database is separate; a row lost between the business commit and the insert is not recovered. Delivery is at least once: if the worker stops after SMTP accepts a message and before the row is marked SENT, the message can be sent again.
-- STORY-002: real platform TenantContext, catalog persistence, tenant database routing and row guards (KAN-99 / platform). The mock proves context propagation only, not physical database isolation.
+- STORY-002: real platform TenantContext, catalog persistence, tenant database routing and row guards (KAN-99 / platform). Physical database isolation is proved in platform.
 - STORY-002: production container provisioning, dashboard rollout, per-Workspace recurring job registration on provisioning and per-workspace concurrency caps (KAN-161). JOB-02 itself (one recurring job fanning out per Active Workspace) is ticket-review STORY-014.
 - STORY-002: first-Admin invitation email (a later caller of STORY-004).
 - REST endpoints, frontend changes, changes to tenant business tables and a new custom queue implementation.
@@ -124,7 +124,7 @@ owner: BA
 ### Required from other modules
 
 - Callers of the email outbox supply a ready-made email composed from their own committed data in their Workspace, and queue it after their transaction commits. Local tests use synthetic recipients and a local SMTP endpoint.
-- Platform adapter contract: current workspace lookup, scoped binding with restoration, and workspace eligibility lookup. Until platform exists, a worker-owned mock adapter is enabled only by `worker-mock`; do not install a pretend production class in `common.tenant`.
+- Platform adapter contract: current workspace lookup, scoped binding with restoration, and workspace eligibility lookup, implemented in `worker` over `platform`'s `WorkspaceCatalog` (including `findActive()`, platform AC-004.29) and `TenantContext`; no mock adapter exists.
 - Workspace and record ids are Java UUIDs, following backend/AGENTS.md rather than the reference SQL's BIGINT ids.
 - JobRunr owns its dedicated Jobs database tables; the worker owns the email outbox table there; tenant Liquibase changelogs remain unchanged.
 - Reference: architecture.md, Background Jobs; platform/spec.md AC-002.1, AC-002.12 through AC-002.14.
@@ -136,5 +136,5 @@ owner: BA
 - [ ] Focused scope, concurrency, retry and JobRunr storage/execution tests pass.
 - [ ] `mvn spotless:apply`, `mvn verify` and `mvn spotless:check` pass; unavailable infrastructure is reported explicitly.
 - [ ] `bun harnessclaude/hooks/sdd.ts check worker` and `trace worker STORY-001` / `STORY-002` / `STORY-004` pass.
-- [ ] Mock profile and Jobs DB environment variables are documented without credentials.
+- [ ] Jobs DB environment variables are documented without credentials.
 - [ ] User reviews code and verification evidence before the feature commit.

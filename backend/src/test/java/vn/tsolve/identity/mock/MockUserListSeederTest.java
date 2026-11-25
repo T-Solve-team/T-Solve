@@ -19,7 +19,7 @@ import vn.tsolve.identity.signin.port.TenantScope;
 
 /**
  * Q1 (a): {@code KnownWorkspaces} answers from {@code WorkspaceLookup.findById} only, so the identity-mock Workspace
- * must be listed in {@code TSOLVE_STUB_WORKSPACES}; the seeder refuses an id that is not.
+ * must be known to the Workspace catalog; the seeder refuses an id that is not.
  */
 class MockUserListSeederTest {
 

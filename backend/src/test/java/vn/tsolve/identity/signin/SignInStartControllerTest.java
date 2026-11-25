@@ -3,6 +3,7 @@ package vn.tsolve.identity.signin;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
@@ -24,6 +25,7 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -292,5 +294,20 @@ class SignInStartControllerTest {
         assertThat(response.getStatus()).isEqualTo(404);
         assertThat(requests.saved()).isEmpty();
         assertThat(response.getHeaders(HttpHeaders.SET_COOKIE)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("edge 80 a Registry failure at sign-in start answers 500 MSG06, never 404")
+    void registryDownAtSignInStart_edge80() throws Exception {
+        workspaces.failWith(new DataAccessResourceFailureException("registry down"));
+
+        MockHttpServletResponse response = perform(start("acme.localhost"));
+
+        assertThat(response.getStatus()).isEqualTo(500);
+        assertThat(new ObjectMapper()
+                        .readTree(response.getContentAsString())
+                        .path("code")
+                        .asText())
+                .isEqualTo("MSG06");
     }
 }
