@@ -41,7 +41,7 @@ import vn.tsolve.worker.exception.EmailOutboxUnavailableException;
 import vn.tsolve.worker.exception.InvalidOutboundEmailException;
 import vn.tsolve.worker.service.EmailOutboxService;
 import vn.tsolve.worker.service.WorkerTenantService;
-import vn.tsolve.worker.service.mock.MockWorkerTenantService;
+import vn.tsolve.worker.support.FixedWorkerTenantService;
 
 class ReviewNotificationEnqueueBugTest {
 
@@ -86,7 +86,7 @@ class ReviewNotificationEnqueueBugTest {
 
     @Test
     void enqueuesOnTheSoleActiveWorkspaceWhenNoneIsBound_BUG_164() {
-        var tenants = new MockWorkerTenantService(Set.of(A), Set.of(), new ThreadLocalTenantContext(id -> true));
+        var tenants = new FixedWorkerTenantService(Set.of(A), Set.of(), new ThreadLocalTenantContext(id -> true));
 
         when(outbox.queue(any())).thenAnswer(call -> {
             assertThat(tenants.currentWorkspaceId()).contains(A);
@@ -100,7 +100,7 @@ class ReviewNotificationEnqueueBugTest {
 
     @Test
     void refusesWhenSeveralWorkspacesAreActiveAndNoneIsBound_BUG_164() {
-        var tenants = new MockWorkerTenantService(Set.of(A, B), Set.of(), new ThreadLocalTenantContext(id -> true));
+        var tenants = new FixedWorkerTenantService(Set.of(A, B), Set.of(), new ThreadLocalTenantContext(id -> true));
         assertThat(tenants.enqueueWorkspaceId()).isEmpty();
 
         enqueuer(outbox, tenants).onDecided(new ReviewFeedbackDecidedEvent(List.of(RECORD_ID)));
@@ -115,7 +115,7 @@ class ReviewNotificationEnqueueBugTest {
 
     @Test
     void directEnqueueStillRejectsAnUnboundThread_AC_002_2_BUG_164() {
-        var tenants = new MockWorkerTenantService(Set.of(A), Set.of(), new ThreadLocalTenantContext(id -> true));
+        var tenants = new FixedWorkerTenantService(Set.of(A), Set.of(), new ThreadLocalTenantContext(id -> true));
         var jobs = new TenantJobServiceImpl(tenants, scheduler, handler);
 
         assertThatThrownBy(() -> jobs.enqueue("test-handler", RECORD_ID))
@@ -127,7 +127,7 @@ class ReviewNotificationEnqueueBugTest {
 
     @Test
     void prefersTheBoundWorkspace_BUG_164() {
-        var tenants = new MockWorkerTenantService(Set.of(A, B), Set.of(), new ThreadLocalTenantContext(id -> true));
+        var tenants = new FixedWorkerTenantService(Set.of(A, B), Set.of(), new ThreadLocalTenantContext(id -> true));
 
         when(outbox.queue(any())).thenAnswer(call -> {
             assertThat(tenants.currentWorkspaceId()).contains(B);
@@ -140,7 +140,7 @@ class ReviewNotificationEnqueueBugTest {
 
     @Test
     void keepsCurrentWorkspaceEmptyOutsideAJob_BUG_164() {
-        var tenants = new MockWorkerTenantService(Set.of(A), Set.of(), new ThreadLocalTenantContext(id -> true));
+        var tenants = new FixedWorkerTenantService(Set.of(A), Set.of(), new ThreadLocalTenantContext(id -> true));
 
         assertThat(tenants.currentWorkspaceId()).isEmpty();
         tenants.runIn(A, () -> assertThat(tenants.currentWorkspaceId()).contains(A));
@@ -221,7 +221,7 @@ class ReviewNotificationEnqueueBugTest {
     @Test
     void enqueuesDirectlyOnAnAlreadyBoundThread_BUG_164() {
         var tenants =
-                spy(new MockWorkerTenantService(Set.of(A, B), Set.of(), new ThreadLocalTenantContext(id -> true)));
+                spy(new FixedWorkerTenantService(Set.of(A, B), Set.of(), new ThreadLocalTenantContext(id -> true)));
 
         var boundWhenQueued = new java.util.ArrayList<Optional<UUID>>();
         doAnswer(invocation -> {
