@@ -3,6 +3,7 @@ import { Button, Checkbox, Flex, Form, Input, Select, Typography } from 'antd';
 import { useRef } from 'react';
 import { useNavigate } from 'react-router';
 import {
+  isUnauthorizedError,
   Role,
   useGetUserCreationOptions,
   useGetUserDepartments,
@@ -41,6 +42,7 @@ export function CreateUserForm() {
       {
         onSuccess: () => void navigate(paths.userList),
         onError: (error) => {
+          if (isUnauthorizedError(error)) return;
           if (!applyApiErrors(form, error)) showMessage(error.code, error.params);
         },
         onSettled: () => {

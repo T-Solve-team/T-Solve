@@ -1,6 +1,6 @@
 import { Form, Input } from 'antd';
 import { useRef } from 'react';
-import type { RequestChangesRequest } from '@/shared/api';
+import { isUnauthorizedError, type RequestChangesRequest } from '@/shared/api';
 import { applyApiErrors, rules } from '@/shared/forms';
 import { showMessage } from '@/shared/messages';
 import { FormField, FormModal } from '@/shared/ui';
@@ -44,6 +44,7 @@ export function RequestChangesModal({
           submitting.current = false;
         },
         onError: (error) => {
+          if (isUnauthorizedError(error)) return;
           if (!applyApiErrors(form, error)) showMessage(error.code, error.params);
         },
       },
