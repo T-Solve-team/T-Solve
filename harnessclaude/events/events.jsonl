@@ -2309,3 +2309,4 @@
 {"ts":"2026-11-25T07:49:23.990Z","type":"spec-approved","module":"search","specHash":"0d107008fb98b61204196cf9b526ec616748fff60195d3932b92acedf07c8801"}
 {"ts":"2026-11-25T07:49:24.739Z","type":"feature-status","module":"search","feature":"ticket-detail-feedback","from":null,"to":"pending"}
 {"ts":"2026-11-25T07:49:26.449Z","type":"feature-status","module":"search","feature":"ticket-detail-feedback","from":"pending","to":"in-progress"}
+{"ts":"2026-11-25T08:03:19.920Z","type":"feature-status","module":"search","feature":"ticket-detail-feedback","from":"in-progress","to":"evaluating"}

@@ -326,9 +326,9 @@
         "department-solution-retrieval": "passing",
         "membership-visible-scope": "evaluating",
         "embed-description": "passing",
-        "ticket-detail-feedback": "in-progress"
+        "ticket-detail-feedback": "evaluating"
       },
-      "lastUpdated": "2026-11-25T07:49:26.445Z",
+      "lastUpdated": "2026-11-25T08:03:19.913Z",
       "branch": "feat/search",
       "repos": [
         "default"
