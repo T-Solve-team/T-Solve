@@ -372,3 +372,15 @@ All three tasks are Jira KAN-243, so one branch `feat/KAN-243-chatbot-classify-q
 **Dependencies:** Task 26
 **Estimated size:** small
 
+## Task 31: Name the answer language after the question
+
+**Story:** STORY-005
+**Feature:** answer-language
+**Jira:** KAN-432 (BUG-247) · branch `fix/KAN-432-chatbot-answer-language` (stacked on Task 29)
+**Description:**
+- `AnswerPrompt.messages`: after `</question>`, one line that names the answer language: Vietnamese when the
+  question (NFC) has `đ` or a vowel with a Vietnamese mark, otherwise the language of the question.
+**Covers:** AC-005.3
+**Dependencies:** Task 29
+**Estimated size:** small
+
