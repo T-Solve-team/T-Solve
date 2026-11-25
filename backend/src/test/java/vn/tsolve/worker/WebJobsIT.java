@@ -21,14 +21,17 @@ import vn.tsolve.common.tenant.AcceptingKnownWorkspaces;
 import vn.tsolve.common.tenant.KnownWorkspaces;
 import vn.tsolve.common.tenant.TenantContext;
 import vn.tsolve.common.tenant.ThreadLocalTenantContext;
+import vn.tsolve.platform.dto.WorkspaceStatus;
+import vn.tsolve.platform.service.WorkspaceCatalog;
 import vn.tsolve.worker.config.OutboxOnlyConfiguration;
 import vn.tsolve.worker.config.WebJobsConfiguration;
 import vn.tsolve.worker.config.WorkerConfiguration;
-import vn.tsolve.worker.config.WorkerMockConfiguration;
 import vn.tsolve.worker.dto.TenantJobRequest;
 import vn.tsolve.worker.service.TenantJobHandler;
 import vn.tsolve.worker.service.WebJobQueue;
 import vn.tsolve.worker.service.WorkerTenantService;
+import vn.tsolve.worker.service.impl.CatalogWorkerTenantService;
+import vn.tsolve.worker.support.FixedWorkspaceCatalog;
 
 /** BUG-342: a job the web process queues is run by the worker process inside the job's Workspace. */
 class WebJobsIT {
@@ -68,12 +71,12 @@ class WebJobsIT {
                 .withInitializer(new ConfigDataApplicationContextInitializer())
                 .withUserConfiguration(
                         WorkerConfiguration.class,
-                        WorkerMockConfiguration.class,
+                        CatalogWorkerTenantService.class,
                         AcceptingKnownWorkspaces.class,
                         Handler.class)
+                .withBean(WorkspaceCatalog.class, () -> new FixedWorkspaceCatalog(Map.of(A, WorkspaceStatus.ACTIVE)))
                 .withPropertyValues(jobsDatabase())
-                .withPropertyValues(
-                        "spring.profiles.active=worker,worker-mock", "tsolve.worker.mock.active-workspaces=" + A)
+                .withPropertyValues("spring.profiles.active=worker")
                 .run(context -> {
                     assertThat(context).hasNotFailed();
                     await().atMost(Duration.ofSeconds(75))

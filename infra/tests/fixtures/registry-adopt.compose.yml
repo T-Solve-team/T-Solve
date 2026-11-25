@@ -1,0 +1,32 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      DB_NAME: ${DB_NAME:?set DB_NAME}
+      DB_USER: ${DB_USER:?set DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+      REGISTRY_DB_NAME: ${REGISTRY_DB_NAME:-tsolve_staging_registry}
+      REGISTRY_DB_USER: ${REGISTRY_DB_USER:?set REGISTRY_DB_USER}
+      REGISTRY_DB_PASSWORD: ${REGISTRY_DB_PASSWORD:?set REGISTRY_DB_PASSWORD}
+    networks:
+      - regadopttest
+
+  backend:
+    image: eclipse-temurin:21-jdk
+    command: ["sleep", "infinity"]
+    env_file:
+      - ${TSOLVE_ENV_FILE:?set TSOLVE_ENV_FILE}
+    environment:
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=65"
+    volumes:
+      - ${BACKEND_JAR:?set BACKEND_JAR}:/app/app.jar:ro
+      - ./DecryptV1.java:/app/DecryptV1.java:ro
+    depends_on:
+      - db
+    networks:
+      - regadopttest
+
+networks:
+  regadopttest:
