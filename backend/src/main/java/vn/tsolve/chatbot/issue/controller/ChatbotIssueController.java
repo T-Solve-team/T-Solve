@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import vn.tsolve.chatbot.issue.dto.ChatbotIssueDraftRequest;
 import vn.tsolve.chatbot.issue.dto.ChatbotIssueDraftResponse;
 import vn.tsolve.chatbot.issue.dto.ChatbotIssueRequest;
 import vn.tsolve.chatbot.issue.dto.ChatbotJiraIssueResponse;
@@ -37,10 +36,8 @@ public class ChatbotIssueController {
     @ApiResponse(responseCode = "404", description = "MSG04")
     @ApiResponse(responseCode = "409", description = "MSG146")
     public ResponseEntity<ChatbotIssueDraftResponse> draftChatbotIssue(
-            @AuthenticationPrincipal TSolveUser user,
-            @PathVariable String answerId,
-            @RequestBody ChatbotIssueDraftRequest request) {
-        return ResponseEntity.ok(issues.draft(user, answerId, request));
+            @AuthenticationPrincipal TSolveUser user, @PathVariable String answerId) {
+        return ResponseEntity.ok(issues.draft(user, answerId));
     }
 
     @PostMapping("/jira-issue")

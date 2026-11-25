@@ -6,12 +6,14 @@
  *
  * OpenAPI spec version: 0.1.0-stub
  */
-import type { ChatbotTurn } from './chatbotTurn';
 
-export interface ChatbotIssueDraftRequest {
-  /**
-   * The turns of the conversation before this answer, oldest first, as for askChatbot.
-   * @maxItems 10
-   */
-  history: ChatbotTurn[];
-}
+/**
+ * @nullable
+ */
+export type ChatbotConversationTurnRating =
+  (typeof ChatbotConversationTurnRating)[keyof typeof ChatbotConversationTurnRating] | null;
+
+export const ChatbotConversationTurnRating = {
+  HELPFUL: 'HELPFUL',
+  NOT_HELPFUL: 'NOT_HELPFUL',
+} as const;

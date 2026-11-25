@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse;
-import vn.tsolve.chatbot.answer.dto.ChatbotQuestionRequest;
+import vn.tsolve.chatbot.answer.dto.ChatbotAskRequest;
 import vn.tsolve.chatbot.answer.service.ChatbotAnswerService;
 import vn.tsolve.common.security.TSolveUser;
 
@@ -32,9 +32,10 @@ public class ChatbotAnswerController {
     @ApiResponse(responseCode = "400", description = "MSG01 or MSG02")
     @ApiResponse(responseCode = "401", description = "MSG07")
     @ApiResponse(responseCode = "403", description = "MSG08")
+    @ApiResponse(responseCode = "404", description = "MSG04")
     @ApiResponse(responseCode = "503", description = "MSG06")
     public ResponseEntity<ChatbotAnswerResponse> askChatbot(
-            @AuthenticationPrincipal TSolveUser user, @Valid @RequestBody ChatbotQuestionRequest request) {
+            @AuthenticationPrincipal TSolveUser user, @Valid @RequestBody ChatbotAskRequest request) {
         return ResponseEntity.ok(answers.ask(user, request));
     }
 }

@@ -32,8 +32,8 @@ import org.springframework.orm.jpa.SharedEntityManagerCreator;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import vn.tsolve.ai.client.LlmClient;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
+import vn.tsolve.chatbot.conversation.service.ChatConversationService;
 import vn.tsolve.chatbot.issue.client.JiraIssueCreator;
-import vn.tsolve.chatbot.issue.dto.ChatbotIssueDraftRequest;
 import vn.tsolve.chatbot.issue.dto.ChatbotIssueDraftResponse;
 import vn.tsolve.chatbot.issue.dto.IssueDepartment;
 import vn.tsolve.chatbot.issue.repository.IssueTargetRepository;
@@ -127,6 +127,7 @@ class IssueTargetRepositoryIT {
         when(llm.chat(any(), any())).thenReturn("{\"summary\":\"Help\",\"description\":\"Details\",\"department\":1}");
         var service = new ChatbotIssueServiceImpl(
                 answers,
+                mock(ChatConversationService.class),
                 targets,
                 llm,
                 new ObjectMapper(),
@@ -135,12 +136,12 @@ class IssueTargetRepositoryIT {
                 mock(JiraServiceAccount.class),
                 mock(JiraIssueCreator.class));
         var before = snapshot();
-        assertThatThrownBy(() -> service.draft(other, id.toString(), new ChatbotIssueDraftRequest(List.of())))
+        assertThatThrownBy(() -> service.draft(other, id.toString()))
                 .isInstanceOf(NotFoundException.class)
                 .hasMessage("MSG04");
         verifyNoInteractions(llm);
         for (int attempt = 0; attempt < 2; attempt++) {
-            assertThat(service.draft(owner, id.toString(), new ChatbotIssueDraftRequest(List.of())))
+            assertThat(service.draft(owner, id.toString()))
                     .isEqualTo(new ChatbotIssueDraftResponse(
                             "Help", "Details", department, List.of(new IssueDepartment(department, "Support"))));
         }
@@ -163,6 +164,7 @@ class IssueTargetRepositoryIT {
                 .withUserConfiguration(ChatbotIssueServiceImpl.class)
                 .withPropertyValues("CHATBOT_ASK_TIMEOUT=1s")
                 .withBean(ChatbotAnswerRepository.class, () -> answers)
+                .withBean(ChatConversationService.class, () -> mock(ChatConversationService.class))
                 .withBean(IssueTargetRepository.class, () -> targets)
                 .withBean(LlmClient.class, () -> llm)
                 .withBean(JiraServiceAccount.class, () -> mock(JiraServiceAccount.class))
@@ -173,7 +175,7 @@ class IssueTargetRepositoryIT {
                     assertThat(context).hasNotFailed();
                     assertThat(assertTimeoutPreemptively(
                                     Duration.ofSeconds(5), () -> context.getBean(ChatbotIssueService.class)
-                                            .draft(owner, id.toString(), new ChatbotIssueDraftRequest(List.of()))))
+                                            .draft(owner, id.toString())))
                             .isEqualTo(new ChatbotIssueDraftResponse(
                                     "", "", null, List.of(new IssueDepartment(department, "Support"))));
                 });

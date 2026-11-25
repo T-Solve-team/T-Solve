@@ -52,6 +52,7 @@ import org.springframework.transaction.annotation.AnnotationTransactionAttribute
 import org.springframework.transaction.interceptor.TransactionInterceptor;
 import vn.tsolve.ai.client.LlmClient;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
+import vn.tsolve.chatbot.conversation.service.ChatConversationService;
 import vn.tsolve.chatbot.issue.client.JiraIssueCreator;
 import vn.tsolve.chatbot.issue.client.JiraIssueCreator.CreatedIssue;
 import vn.tsolve.chatbot.issue.client.JiraIssueCreator.NewIssue;
@@ -130,6 +131,7 @@ class ChatbotIssueIT {
         when(creator.create(any(), any())).thenReturn(CREATED);
         var target = new ChatbotIssueServiceImpl(
                 answers,
+                mock(ChatConversationService.class),
                 new IssueTargetRepository(jdbc),
                 mock(LlmClient.class),
                 new ObjectMapper(),

@@ -26,12 +26,12 @@ import vn.tsolve.ai.exception.AiUnavailableException;
 import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse.Outcome;
 import vn.tsolve.chatbot.answer.entity.ChatbotAnswer;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
+import vn.tsolve.chatbot.conversation.service.ChatConversationService;
 import vn.tsolve.chatbot.exception.ChatbotJiraException;
 import vn.tsolve.chatbot.exception.InvalidChatbotRequestException;
 import vn.tsolve.chatbot.issue.client.JiraIssueCreator;
 import vn.tsolve.chatbot.issue.client.JiraIssueCreator.NewIssue;
 import vn.tsolve.chatbot.issue.dto.ChatbotIssueCreateResult;
-import vn.tsolve.chatbot.issue.dto.ChatbotIssueDraftRequest;
 import vn.tsolve.chatbot.issue.dto.ChatbotIssueDraftResponse;
 import vn.tsolve.chatbot.issue.dto.ChatbotIssueRequest;
 import vn.tsolve.chatbot.issue.dto.ChatbotJiraIssueResponse;
@@ -48,6 +48,7 @@ import vn.tsolve.tracker.service.JiraServiceAccount;
 public class ChatbotIssueServiceImpl implements ChatbotIssueService {
     private static final Set<String> SEARCHED = Set.of(Outcome.ANSWERED.name(), Outcome.NO_SOURCE.name());
     private final ChatbotAnswerRepository answers;
+    private final ChatConversationService conversations;
     private final IssueTargetRepository targets;
     private final LlmClient llm;
     private final ObjectMapper mapper;
@@ -59,6 +60,7 @@ public class ChatbotIssueServiceImpl implements ChatbotIssueService {
     @Autowired
     public ChatbotIssueServiceImpl(
             ChatbotAnswerRepository answers,
+            ChatConversationService conversations,
             IssueTargetRepository targets,
             LlmClient llm,
             ObjectMapper mapper,
@@ -66,11 +68,21 @@ public class ChatbotIssueServiceImpl implements ChatbotIssueService {
             @Value("${CHATBOT_ASK_TIMEOUT:60s}") String timeout,
             JiraServiceAccount accounts,
             JiraIssueCreator creator) {
-        this(answers, targets, llm, mapper, executor, DurationStyle.detectAndParse(timeout), accounts, creator);
+        this(
+                answers,
+                conversations,
+                targets,
+                llm,
+                mapper,
+                executor,
+                DurationStyle.detectAndParse(timeout),
+                accounts,
+                creator);
     }
 
     ChatbotIssueServiceImpl(
             ChatbotAnswerRepository answers,
+            ChatConversationService conversations,
             IssueTargetRepository targets,
             LlmClient llm,
             ObjectMapper mapper,
@@ -82,6 +94,7 @@ public class ChatbotIssueServiceImpl implements ChatbotIssueService {
             throw new IllegalArgumentException("Invalid chatbot settings");
         }
         this.answers = answers;
+        this.conversations = conversations;
         this.targets = targets;
         this.llm = llm;
         this.mapper = mapper;
@@ -92,7 +105,7 @@ public class ChatbotIssueServiceImpl implements ChatbotIssueService {
     }
 
     @Override
-    public ChatbotIssueDraftResponse draft(TSolveUser user, String answerId, ChatbotIssueDraftRequest request) {
+    public ChatbotIssueDraftResponse draft(TSolveUser user, String answerId) {
         long deadline = System.nanoTime() + timeoutNanos;
         UUID id;
         try {
@@ -108,6 +121,7 @@ public class ChatbotIssueServiceImpl implements ChatbotIssueService {
         }
         // All database reads stay on the request thread, before the AI call, to retain the Workspace routing.
         var offered = targets.offeredDepartments();
+        var history = conversations.turnsBefore(answer.getId());
         var departments = offered.stream()
                 .map(target -> new IssueDepartment(target.departmentId(), target.name()))
                 .toList();
@@ -116,8 +130,7 @@ public class ChatbotIssueServiceImpl implements ChatbotIssueService {
             return empty;
         }
         try {
-            var messages =
-                    IssueDraftPrompt.messages(answer.getQuestion(), answer.getAnswerText(), request.history(), offered);
+            var messages = IssueDraftPrompt.messages(answer.getQuestion(), answer.getAnswerText(), history, offered);
             String reply = callAi(() -> llm.chat(messages, IssueDraftPrompt.SCHEMA), deadline);
             JsonNode root = reply == null
                     ? null
