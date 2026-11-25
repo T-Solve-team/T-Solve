@@ -2306,3 +2306,7 @@
 {"ts":"2026-11-23T19:31:06.909Z","type":"feature-status","module":"platform","feature":"row-guard","from":"evaluating","to":"passing"}
 {"ts":"2026-11-24T12:04:34.368Z","type":"spec-approved","module":"wiki","specHash":"47fb26627301fe7f41ffc78786ff532ed82a0459519a3b8e64709477d4234361"}
 {"ts":"2026-11-24T19:29:55.176Z","type":"spec-approved","module":"wiki","specHash":"f912468f95e47b33f3db76ea16adf6bbe8cd904d611ba98a281d30f098498d30"}
+{"ts":"2026-11-25T13:55:16.417Z","type":"spec-approved","module":"search","specHash":"3169177412d8e1d1d788834954801587a8570b037d83bd8c3b901f8ea266a671"}
+{"ts":"2026-11-25T13:55:27.577Z","type":"feature-status","module":"search","feature":"list-review-due-date","from":null,"to":"pending"}
+{"ts":"2026-11-25T13:55:28.061Z","type":"feature-status","module":"search","feature":"list-review-due-date","from":"pending","to":"in-progress"}
+{"ts":"2026-11-25T14:03:47.807Z","type":"feature-status","module":"search","feature":"list-review-due-date","from":"in-progress","to":"evaluating"}

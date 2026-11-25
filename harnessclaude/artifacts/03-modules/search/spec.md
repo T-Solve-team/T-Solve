@@ -21,6 +21,7 @@ owner: BA
 | 2026-11-17 | STORY-001 | AC-001.1, AC-001.3 and AC-001.8 reworded, Requirement 1 follows: the Ticket List table drops the Ticket ID column and starts with a "No." column (the row's position across pages, not sortable); the Title, not the Ticket ID, is the link to 5.5 Ticket Detail; Ticket ID is no longer a sortable column. The keyword still matches the Ticket ID (AC-001.4 unchanged) | KAN-360: ids are noise in the table, users open a ticket from its title (user, 17/11) |
 | 2026-11-17 | STORY-006, STORY-012 (new) | New STORY-012: `MembershipVisibleScope`, the real `VisibleScope` built from the Workspace database, replaces the fail-closed `NoVisibleScope`, which is removed. The user's Departments are the ACTIVE Departments identity's `ScopeAccessService` grants (a Project Manager's own Department and the Departments of the Projects the user is a member of); the managed Projects are the user's `PROJECT_MANAGER` memberships (`ProjectMembershipLookup`); the writer is the user's account id matched against `ticket.writer_id` instead of the `ticket.writer` name. AC-006.1, AC-006.2, AC-006.11 and AC-006.12 reworded; the Visible scope term, Out of Scope, Interface Contracts (`Scope.writerId` is a `UUID`), Required from other modules and Definition of Done follow | KAN-354: on staging the Ticket List was empty for every user because no module implemented `VisibleScope`. User decisions of 17/11: Departments are the union of `app_user.department_id` and the Departments of the user's Projects; match the writer by `writer_id` |
 | 2026-11-22 | STORY-005, STORY-006, STORY-007 | **Backend change.** AC-005.4: the embedded text adds the ticket's description, rows carry `text_version` 2. New AC-005.10: the catch-up job embeds again the rows of `text_version` 1 after the tickets with no row; the old vector serves until then; `ticket_embedding` gains `text_version`. AC-006.4 (Ticket List keyword) and AC-007.2 (search keyword fallback) also match the description. Interface Contracts follow | KAN-380 (the user, 22/11): find tickets by their description too, wherever `ticket_embedding` is used (chatbot, search, suggestions); re-embed without a gap in search (decision log of KAN-380) |
+| 2026-11-25 | STORY-006 | **Backend change.** AC-006.7: `reviewDueDate` is the start of `ticket.review_due_date` in Asia/Ho_Chi_Minh while the ticket is Pending review or Changes requested, null otherwise, and its sort key sorts by it (KAN-454) | BUG-392: ticket-review now stores the due date, so the Ticket List shows "—" where the Review Queue shows a date |
 
 ## Requirements
 
@@ -271,8 +272,9 @@ Used by STORY-005 to STORY-009:
   - AC-006.6: THE backend SHALL return `project.name` as the Project's `jira_project_key` (e.g. ITSUP) in every
     `TicketProject` it answers (Ticket List, search, suggestions), and the `project` sort key SHALL sort by it; this
     is a stand-in until project-integration adds a Project name column.
-  - AC-006.7: THE backend SHALL return `reviewDueDate` as null for every ticket until ticket-review stores a review
-    due date; THE sort key `reviewDueDate` SHALL be accepted and order the rows by the tie-breaker of AC-006.3 alone.
+  - AC-006.7: WHILE a ticket is `PENDING_REVIEW` or `CHANGES_REQUESTED`, THE backend SHALL return `reviewDueDate`
+    as the start of `ticket.review_due_date` in Asia/Ho_Chi_Minh (null without one), and null in any other status;
+    THE sort key `reviewDueDate` SHALL sort by that value, then by the tie-breaker of AC-006.3 (BUG-392).
   - AC-006.8: IF the caller has no session, THEN THE backend SHALL answer 401 with MSG07; IF the caller holds neither
     TICKET_RESOLVER nor PROJECT_MANAGER, THEN THE backend SHALL answer 403 with MSG08 and return no ticket.
   - AC-006.9: IF `keyword` is longer than 100 characters, THEN THE backend SHALL answer 400 with field error MSG02 on
@@ -628,7 +630,7 @@ public record RetrievedTicketSolution(
   `MembershipVisibleScope` reads (STORY-012); the session principal `TSolveUser` (its `id` is `app_user.id`).
 - `project-integration` / `workspace`: the `project` and `department` tables of changeset `002` (search adds only
   `public_id`); the session `departments` of the web app carry `department.public_id` as `departmentId`.
-- `ticket-review` (later): the review due date; until then `reviewDueDate` is null (AC-006.7).
+- `ticket-review` (done): `ticket.review_due_date`, set when a ticket enters review (AC-006.7).
 - `project-integration` (later): a Project name column; until then `project.name` is `jira_project_key` (AC-006.6),
   changed in one mapping line (the `project_name` expression).
 - `platform`: `TenantContext` and the tenant row guard; the search tables follow them when they reach `main`.
