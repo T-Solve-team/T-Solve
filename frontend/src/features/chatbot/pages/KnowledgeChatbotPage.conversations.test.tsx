@@ -108,7 +108,13 @@ describe('KnowledgeChatbotPage saved conversations', () => {
     const saved = (await listChatbotConversations()).content[0];
     expect(saved?.chatSessionId).toMatch(UUID);
     expect(
-      await within(await screen.findByRole('region', { name: 'Conversation' })).findByText(VPN),
+      await within(await screen.findByRole('region', { name: 'Conversation' })).findByRole(
+        'heading',
+        {
+          level: 3,
+          name: VPN,
+        },
+      ),
     ).toBeInTheDocument();
     expect(sessionStorage.getItem(STORED_KEY)).toBeNull();
   });
@@ -306,7 +312,7 @@ describe('KnowledgeChatbotPage saved conversations', () => {
     await view.user.click(deleteButton(LEAVE));
     await view.user.click(screen.getByRole('button', { name: 'OK' }));
     await waitFor(() => expect(titles()).toEqual([VPN]));
-    expect(within(thread()).getByText(VPN)).toBeInTheDocument();
+    expect(within(thread()).getByRole('heading', { level: 3, name: VPN })).toBeInTheDocument();
   });
 
   it('AC-002.14 shows MSG06 and keeps the conversation after delete fails', async () => {
@@ -321,7 +327,7 @@ describe('KnowledgeChatbotPage saved conversations', () => {
     await view.user.click(screen.getByRole('button', { name: 'OK' }));
     expect(await screen.findByText(msg('MSG06'))).toBeInTheDocument();
     expect(titles()).toEqual([VPN]);
-    expect(within(thread()).getByText(VPN)).toBeInTheDocument();
+    expect(within(thread()).getByRole('heading', { level: 3, name: VPN })).toBeInTheDocument();
   });
 
   it('AC-013.4 leaves a conversation deleted elsewhere when a question gets 404 (BUG-389)', async () => {
