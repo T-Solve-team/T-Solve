@@ -16,6 +16,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -36,6 +37,7 @@ import vn.tsolve.chatbot.answer.dto.ChatbotCitation;
 import vn.tsolve.chatbot.answer.dto.ChatbotQuestionRequest;
 import vn.tsolve.chatbot.answer.dto.ChatbotTurnRequest;
 import vn.tsolve.chatbot.answer.dto.TicketSolutionCitation;
+import vn.tsolve.chatbot.answer.entity.AnswerSource;
 import vn.tsolve.chatbot.answer.entity.ChatbotAnswer;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
 import vn.tsolve.chatbot.answer.service.ChatbotAnswerService;
@@ -314,10 +316,15 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         String text = callAi(() -> llm.chat(messages, null), deadline);
         remaining(deadline);
         var cited = Citations.of(text, kept);
+        var citedNumbers =
+                cited.citations().stream().map(ChatbotCitation::number).collect(Collectors.toSet());
+        List<AnswerSource> stored = kept.stream()
+                .map(source -> source.stored(citedNumbers.contains(source.number())))
+                .toList();
         if (cited.citations().isEmpty()) {
             return save(
                     turn,
-                    row.of(question, Outcome.NO_SOURCE.name(), ""),
+                    row.of(question, Outcome.NO_SOURCE.name(), "").withSources(stored),
                     Outcome.NO_SOURCE,
                     List.of(),
                     title,
@@ -325,7 +332,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         }
         return save(
                 turn,
-                row.of(question, Outcome.ANSWERED.name(), cited.text()),
+                row.of(question, Outcome.ANSWERED.name(), cited.text()).withSources(stored),
                 Outcome.ANSWERED,
                 cited.citations(),
                 title,
