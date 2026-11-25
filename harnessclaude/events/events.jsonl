@@ -2309,3 +2309,4 @@
 {"ts":"2026-11-25T09:16:01.748Z","type":"spec-approved","module":"chatbot","specHash":"cff5581497e36376e36f98207cd491b456695f33a2fd981563374f513af1fb8e"}
 {"ts":"2026-11-25T09:16:08.479Z","type":"feature-status","module":"chatbot","feature":"paraphrase-sources","from":null,"to":"pending"}
 {"ts":"2026-11-25T09:16:08.958Z","type":"feature-status","module":"chatbot","feature":"paraphrase-sources","from":"pending","to":"in-progress"}
+{"ts":"2026-11-25T09:47:14.538Z","type":"feature-status","module":"chatbot","feature":"paraphrase-sources","from":"in-progress","to":"evaluating"}

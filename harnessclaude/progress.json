@@ -389,9 +389,9 @@
         "conversation-ui": "passing",
         "conversation-paging": "passing",
         "merge-title-paging": "evaluating",
-        "paraphrase-sources": "in-progress"
+        "paraphrase-sources": "evaluating"
       },
-      "lastUpdated": "2026-11-25T09:16:08.955Z",
+      "lastUpdated": "2026-11-25T09:47:14.527Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
