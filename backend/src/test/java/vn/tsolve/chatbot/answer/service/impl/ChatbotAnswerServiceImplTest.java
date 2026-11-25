@@ -51,6 +51,7 @@ import vn.tsolve.ai.client.EmbeddingClient;
 import vn.tsolve.ai.client.LlmClient;
 import vn.tsolve.ai.exception.AiUnavailableException;
 import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse.Outcome;
+import vn.tsolve.chatbot.answer.dto.ChatbotAskRequest;
 import vn.tsolve.chatbot.answer.dto.ChatbotCitation;
 import vn.tsolve.chatbot.answer.dto.ChatbotQuestionRequest;
 import vn.tsolve.chatbot.answer.dto.ChatbotTurnRequest;
@@ -58,6 +59,8 @@ import vn.tsolve.chatbot.answer.dto.TicketSolutionCitation;
 import vn.tsolve.chatbot.answer.dto.WikiDocumentCitation;
 import vn.tsolve.chatbot.answer.entity.ChatbotAnswer;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
+import vn.tsolve.chatbot.conversation.exception.ChatbotConversationNotFoundException;
+import vn.tsolve.chatbot.conversation.service.ChatConversationService;
 import vn.tsolve.chatbot.exception.ChatbotProjectNotActiveException;
 import vn.tsolve.chatbot.rating.entity.ChatbotRating;
 import vn.tsolve.chatbot.rating.exception.ChatbotAnswerNotFoundException;
@@ -72,6 +75,7 @@ import vn.tsolve.ticket.service.ProjectAccess;
 @ExtendWith(OutputCaptureExtension.class)
 class ChatbotAnswerServiceImplTest {
     private static final UUID ANSWER_ID = UUID.fromString("70000000-0000-0000-0000-000000000001");
+    private static final UUID SESSION = UUID.fromString("71000000-0000-0000-0000-000000000001");
     private static final Instant NOW = Instant.parse("2026-11-17T10:00:00Z");
     private static final TSolveUser USER = new TSolveUser(UUID.randomUUID(), "asker@example.test", "Asker", Set.of());
     private final EmbeddingClient embeddings = mock(EmbeddingClient.class);
@@ -79,6 +83,7 @@ class ChatbotAnswerServiceImplTest {
     private final SolutionRetrieval solutions = mock(SolutionRetrieval.class);
     private final WikiSources wiki = mock(WikiSources.class);
     private final ChatbotAnswerRepository answers = mock(ChatbotAnswerRepository.class);
+    private final ChatConversationService conversations = mock(ChatConversationService.class);
     private final PlatformTransactionManager transactions = mock(PlatformTransactionManager.class);
     private final ExecutorService executor = Executors.newFixedThreadPool(2);
     private final float[] vector = new float[1024];
@@ -95,6 +100,8 @@ class ChatbotAnswerServiceImplTest {
             ReflectionTestUtils.setField(answer, "id", ANSWER_ID);
             return answer;
         });
+        when(conversations.record(any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(SESSION);
     }
 
     @AfterEach
@@ -106,7 +113,7 @@ class ChatbotAnswerServiceImplTest {
     @ParameterizedTest
     @ValueSource(strings = {"  HELLO!! 👋🏽 ", "Cảm ơn!! 🙏", "thank-you", "ca\u0309m o\u031bn"})
     void greetingCallsNoAi_AC_009_1(String question) {
-        var response = service.ask(USER, new ChatbotQuestionRequest(question, List.of()));
+        var response = service.ask(USER, new ChatbotAskRequest(question, null));
         assertThat(response.outcome()).isEqualTo(Outcome.GREETING);
         assertThat(response.text()).isEmpty();
         assertThat(response.citations()).isEmpty();
@@ -118,7 +125,7 @@ class ChatbotAnswerServiceImplTest {
     @ValueSource(strings = {"OFF_TOPIC", "INJECTION"})
     void refusesOffTopicAndInjectionWithoutSearch_AC_009_3(String category) {
         when(llm.chat(any(), notNull())).thenReturn("{\"category\":\"" + category + "\",\"query\":\"\"}");
-        var response = service.ask(USER, question());
+        var response = service.ask(USER, newAsk());
         assertThat(response.outcome()).isEqualTo(Outcome.valueOf(category));
         assertThat(response.text()).isEmpty();
         assertThat(response.citations()).isEmpty();
@@ -140,7 +147,7 @@ class ChatbotAnswerServiceImplTest {
                 })
                 .when(answers)
                 .save(any());
-        var response = service.ask(USER, new ChatbotQuestionRequest("  message  ", List.of()));
+        var response = service.ask(USER, new ChatbotAskRequest("  message  ", null));
         ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
         verify(answers).save(saved.capture());
         assertThat(saved.getValue().getUserId()).isEqualTo(USER.id());
@@ -160,7 +167,7 @@ class ChatbotAnswerServiceImplTest {
         when(llm.chat(any(), isNull())).thenReturn("Answer [1]");
         var response = service.ask(
                 USER,
-                new ChatbotQuestionRequest(
+                inSession(
                         "  What about Windows?  ",
                         List.of(new ChatbotTurnRequest("How do I connect to VPN?", "earlier answer"))));
         verify(embeddings).embed(List.of("VPN Windows setup"));
@@ -187,7 +194,7 @@ class ChatbotAnswerServiceImplTest {
     void fallsBackToTodaysRetrievalText_AC_009_6(String json) {
         when(llm.chat(any(), notNull())).thenReturn(json);
         when(embeddings.embed(any())).thenReturn(List.of(vector));
-        var response = service.ask(USER, new ChatbotQuestionRequest("  VPN question  ", List.of()));
+        var response = service.ask(USER, new ChatbotAskRequest("  VPN question  ", null));
         verify(embeddings).embed(List.of("VPN question"));
         assertThat(response.outcome()).isEqualTo(Outcome.NO_SOURCE);
         verify(llm).chat(any(), notNull());
@@ -200,7 +207,7 @@ class ChatbotAnswerServiceImplTest {
         when(llm.chat(any(), isNull())).thenReturn("Answer [1]");
         var response = service.ask(
                 USER,
-                new ChatbotQuestionRequest(
+                inSession(
                         "  new question  ",
                         List.of(new ChatbotTurnRequest("  previous question  ", "earlier answer"))));
         assertThat(response.outcome()).isEqualTo(Outcome.ANSWERED);
@@ -216,7 +223,7 @@ class ChatbotAnswerServiceImplTest {
         when(llm.chat(any(), notNull())).thenAnswer(invocation -> {
             throw new TimeoutException();
         });
-        var response = service.ask(USER, question());
+        var response = service.ask(USER, newAsk());
         assertThat(response.outcome()).isEqualTo(Outcome.NO_SOURCE);
         verify(embeddings).embed(List.of("question"));
     }
@@ -224,7 +231,7 @@ class ChatbotAnswerServiceImplTest {
     @Test
     void classifierUnexpectedFailureFailsOpen_AC_009_6_BUG_330() {
         when(llm.chat(any(), notNull())).thenThrow(new IllegalStateException("unexpected response shape"));
-        var response = service.ask(USER, question());
+        var response = service.ask(USER, newAsk());
         assertThat(response.outcome()).isEqualTo(Outcome.NO_SOURCE);
         verify(embeddings).embed(List.of("question"));
     }
@@ -232,7 +239,7 @@ class ChatbotAnswerServiceImplTest {
     @Test
     void firstQuestionIsEmbeddedAsAsked_AC_009_5_BUG_331() {
         when(llm.chat(any(), notNull())).thenReturn("{\"category\":\"QUESTION\",\"query\":\"VPN connection error\"}");
-        service.ask(USER, new ChatbotQuestionRequest("  lỗi VPN 809 khi kết nối  ", List.of()));
+        service.ask(USER, new ChatbotAskRequest("  lỗi VPN 809 khi kết nối  ", null));
         verify(embeddings).embed(List.of("lỗi VPN 809 khi kết nối"));
     }
 
@@ -245,15 +252,19 @@ class ChatbotAnswerServiceImplTest {
                 .thenReturn(question, question, "{\"category\":\"GREETING\",\"query\":\"\",\"title\":\"Hello\"}");
         when(llm.chat(any(), isNull())).thenReturn("Answer [1]");
 
-        var first = service.ask(USER, new ChatbotQuestionRequest("lỗi VPN 809", List.of()));
-        var followUp = service.ask(
-                USER, new ChatbotQuestionRequest("còn lỗi 812?", List.of(new ChatbotTurnRequest("lỗi VPN 809", "a"))));
+        var first = service.ask(USER, new ChatbotAskRequest("lỗi VPN 809", null));
+        var followUp =
+                service.ask(USER, inSession("còn lỗi 812?", List.of(new ChatbotTurnRequest("lỗi VPN 809", "a"))));
 
         assertThat(first.title()).startsWith("Lỗi VPN 809 x").hasSize(60);
         assertThat(followUp.title()).isNull();
-        assertThat(service.ask(USER, new ChatbotQuestionRequest("hello", List.of()))
-                        .title())
+        assertThat(service.ask(USER, new ChatbotAskRequest("hello", null)).title())
                 .isNull();
+        // Merge of 23/11: the title of a first question is the stored conversation title (AC-013.1).
+        verify(conversations)
+                .record(eq(USER.id()), isNull(), eq(first.title()), any(), eq("lỗi VPN 809"), any(), any(), any());
+        verify(conversations)
+                .record(eq(USER.id()), eq(SESSION), isNull(), any(), eq("còn lỗi 812?"), any(), any(), any());
     }
 
     @Test
@@ -265,7 +276,7 @@ class ChatbotAnswerServiceImplTest {
             return "{\"category\":\"QUESTION\",\"query\":\"VPN reset\"}";
         });
         when(llm.chat(any(), isNull())).thenReturn("Answer [1]");
-        var response = service.ask(USER, new ChatbotQuestionRequest("hi, how do I reset my VPN?", List.of()));
+        var response = service.ask(USER, new ChatbotAskRequest("hi, how do I reset my VPN?", null));
         assertThat(response.outcome()).isEqualTo(Outcome.ANSWERED);
         var ordered = inOrder(llm, embeddings, solutions, wiki);
         ArgumentCaptor<List<ChatMessage>> prompt = ArgumentCaptor.forClass(List.class);
@@ -281,7 +292,7 @@ class ChatbotAnswerServiceImplTest {
     @Test
     void classifierGreetingAnswersGreeting_AC_009_3() {
         when(llm.chat(any(), notNull())).thenReturn("{\"category\":\" greeting \",\"query\":\"\"}");
-        var response = service.ask(USER, new ChatbotQuestionRequest("How are you today?", List.of()));
+        var response = service.ask(USER, new ChatbotAskRequest("How are you today?", null));
         assertThat(response.outcome()).isEqualTo(Outcome.GREETING);
         assertThat(response.text()).isEmpty();
         assertThat(response.citations()).isEmpty();
@@ -324,7 +335,7 @@ class ChatbotAnswerServiceImplTest {
         when(embeddings.embed(any())).thenReturn(List.of(vector));
         service.ask(
                 USER,
-                new ChatbotQuestionRequest(
+                inSession(
                         "  new question  ",
                         List.of(
                                 new ChatbotTurnRequest("first question", "first answer"),
@@ -352,7 +363,7 @@ class ChatbotAnswerServiceImplTest {
             assertThat(Thread.currentThread()).isNotSameAs(requestThread);
             return "Answer [1]";
         });
-        var response = service.ask(USER, new ChatbotQuestionRequest("  question  ", List.of()));
+        var response = service.ask(USER, new ChatbotAskRequest("  question  ", null));
         assertThat(response.outcome()).isEqualTo(Outcome.ANSWERED);
         verify(embeddings).embed(List.of("question"));
         verify(solutions).nearest(vector, 0.7, 5);
@@ -369,7 +380,7 @@ class ChatbotAnswerServiceImplTest {
 
         service.ask(
                 USER,
-                new ChatbotQuestionRequest(
+                inSession(
                         "  What about Windows?  ",
                         List.of(
                                 new ChatbotTurnRequest("first question", "first answer"),
@@ -395,7 +406,7 @@ class ChatbotAnswerServiceImplTest {
 
         var response = service.ask(
                 USER,
-                new ChatbotQuestionRequest(
+                inSession(
                         "  new question  ", List.of(new ChatbotTurnRequest("earlier question", "earlier answer [1]"))));
 
         ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
@@ -419,7 +430,7 @@ class ChatbotAnswerServiceImplTest {
         when(wiki.nearest(USER, vector, 0.7, 3)).thenReturn(List.of(new WikiPassage(document, "Wiki", "passage", 0.9)));
         when(llm.chat(any(), isNull())).thenReturn("Answer [1] [2] [3]");
 
-        var response = service.ask(USER, question());
+        var response = service.ask(USER, newAsk());
 
         assertThat(response.citations()).hasSize(3);
         var first = (TicketSolutionCitation) response.citations().get(0);
@@ -444,7 +455,7 @@ class ChatbotAnswerServiceImplTest {
         when(embeddings.embed(any())).thenReturn(List.of(vector));
         when(solutions.nearest(any(), anyDouble(), anyInt())).thenReturn(List.of());
         when(wiki.nearest(any(), any(), anyDouble(), anyInt())).thenReturn(List.of());
-        var response = service.ask(USER, question());
+        var response = service.ask(USER, newAsk());
         assertThat(response.outcome()).isEqualTo(Outcome.NO_SOURCE);
         assertThat(response.text()).isEmpty();
         assertThat(response.citations()).isEmpty();
@@ -461,9 +472,8 @@ class ChatbotAnswerServiceImplTest {
     void answersNoSourceWhenNoMarker_AC_005_5(String text) {
         withSolution();
         when(llm.chat(any(), isNull())).thenReturn(text);
-        var response = service.ask(
-                USER,
-                new ChatbotQuestionRequest("question", List.of(new ChatbotTurnRequest("old question", "Old [9]"))));
+        var response =
+                service.ask(USER, inSession("question", List.of(new ChatbotTurnRequest("old question", "Old [9]"))));
         assertThat(response.outcome()).isEqualTo(Outcome.NO_SOURCE);
         assertThat(response.text()).isEmpty();
         assertThat(response.citations()).isEmpty();
@@ -482,7 +492,7 @@ class ChatbotAnswerServiceImplTest {
                 })
                 .when(answers)
                 .save(any());
-        var response = service.ask(USER, new ChatbotQuestionRequest("  question  ", List.of()));
+        var response = service.ask(USER, new ChatbotAskRequest("  question  ", null));
         assertThat(response.answerId()).isEqualTo(ANSWER_ID);
         assertThat(response.text()).isEqualTo("Answer [1]");
         assertThat(response.outcome()).isEqualTo(Outcome.ANSWERED);
@@ -504,7 +514,7 @@ class ChatbotAnswerServiceImplTest {
                 .thenReturn(List.of(solution("first", 0.95), solution("second", 0.9)));
         when(llm.chat(any(), isNull())).thenReturn("Use the second fix [2].");
 
-        var response = service.ask(USER, question());
+        var response = service.ask(USER, newAsk());
 
         assertThat(response.outcome()).isEqualTo(Outcome.ANSWERED);
         assertThat(response.citations()).hasSize(1);
@@ -520,7 +530,7 @@ class ChatbotAnswerServiceImplTest {
                 .thenReturn(List.of(solution("first", 0.95), solution("second", 0.9)));
         when(llm.chat(any(), isNull())).thenReturn("Map the drive again [1, 2].");
 
-        var response = service.ask(USER, question());
+        var response = service.ask(USER, newAsk());
 
         assertThat(response.outcome()).isEqualTo(Outcome.ANSWERED);
         assertThat(response.text()).isEqualTo("Map the drive again [1][2].");
@@ -535,7 +545,7 @@ class ChatbotAnswerServiceImplTest {
         withSolution();
         when(llm.chat(any(), isNull())).thenReturn("Restart [7] the service [1].");
 
-        var response = service.ask(USER, question());
+        var response = service.ask(USER, newAsk());
 
         assertThat(response.text()).isEqualTo("Restart the service [1].");
         ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
@@ -552,7 +562,7 @@ class ChatbotAnswerServiceImplTest {
             withSolution();
             when(llm.chat(any(), isNull())).thenThrow(new AiUnavailableException());
         }
-        assertThatThrownBy(() -> service.ask(USER, question()))
+        assertThatThrownBy(() -> service.ask(USER, newAsk()))
                 .isInstanceOf(AiUnavailableException.class)
                 .hasMessage("MSG06");
         verifyNoInteractions(answers);
@@ -590,7 +600,7 @@ class ChatbotAnswerServiceImplTest {
         }
         long start = System.nanoTime();
         try {
-            assertThatThrownBy(() -> service.ask(USER, question())).isInstanceOf(AiUnavailableException.class);
+            assertThatThrownBy(() -> service.ask(USER, newAsk())).isInstanceOf(AiUnavailableException.class);
             assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofMillis(900));
             verifyNoInteractions(answers);
         } finally {
@@ -604,7 +614,7 @@ class ChatbotAnswerServiceImplTest {
         when(llm.chat(any(), isNull())).thenReturn("private-answer [1]");
         service.ask(
                 USER,
-                new ChatbotQuestionRequest(
+                inSession(
                         "private-question", List.of(new ChatbotTurnRequest("private-history", "private-turn-answer"))));
         assertThat(output.getAll())
                 .doesNotContain(
@@ -650,7 +660,7 @@ class ChatbotAnswerServiceImplTest {
                 .when(answers)
                 .flush();
 
-        assertThatThrownBy(() -> service.ask(USER, question()))
+        assertThatThrownBy(() -> service.ask(USER, newAsk()))
                 .isInstanceOf(AiUnavailableException.class)
                 .hasMessage("MSG06")
                 .hasNoCause();
@@ -736,7 +746,7 @@ class ChatbotAnswerServiceImplTest {
         withSolution();
         when(llm.chat(any(), isNull())).thenReturn("Answer [1]");
 
-        service.ask(USER, question());
+        service.ask(USER, newAsk());
 
         ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
         verify(answers).save(saved.capture());
@@ -777,6 +787,83 @@ class ChatbotAnswerServiceImplTest {
                 .isInstanceOf(ChatbotAnswerNotFoundException.class);
     }
 
+    @Test
+    void startsAConversationAndStoresTheTurnWithTheAnswer_AC_013_1_AC_013_3() {
+        withSolution();
+        when(llm.chat(any(), isNull())).thenReturn("Reconnect [1]");
+
+        var response = service.ask(USER, new ChatbotAskRequest("  VPN fails  ", null));
+
+        assertThat(response.chatSessionId()).isEqualTo(SESSION);
+        verify(conversations, never()).history(any(), any());
+        var order = inOrder(answers, conversations, transactions);
+        order.verify(transactions).getTransaction(any());
+        order.verify(answers).save(any());
+        order.verify(conversations)
+                .record(
+                        eq(USER.id()),
+                        isNull(),
+                        isNull(),
+                        eq(ANSWER_ID),
+                        eq("VPN fails"),
+                        eq("ANSWERED"),
+                        eq("Reconnect [1]"),
+                        eq(response.citations()));
+        order.verify(transactions).commit(any());
+    }
+
+    @Test
+    void asksWithTheStoredTurnsOfTheConversation_AC_013_2_AC_007_1() {
+        when(llm.chat(any(), notNull())).thenReturn("{\"category\":\"QUESTION\",\"query\":\"\"}");
+
+        var response =
+                service.ask(USER, inSession("  and Windows?  ", List.of(new ChatbotTurnRequest("VPN setup", ""))));
+
+        assertThat(response.chatSessionId()).isEqualTo(SESSION);
+        verify(embeddings).embed(List.of("VPN setup\nand Windows?"));
+        verify(conversations)
+                .record(
+                        eq(USER.id()),
+                        eq(SESSION),
+                        isNull(),
+                        eq(ANSWER_ID),
+                        eq("and Windows?"),
+                        eq("NO_SOURCE"),
+                        eq(""),
+                        any());
+    }
+
+    @Test
+    void refusesAnUnknownConversationBeforeAnyAiCall_AC_013_4() {
+        when(conversations.history(USER.id(), "not-mine")).thenThrow(new ChatbotConversationNotFoundException());
+
+        assertThatThrownBy(() -> service.ask(USER, new ChatbotAskRequest("question", "not-mine")))
+                .isInstanceOf(ChatbotConversationNotFoundException.class)
+                .hasMessage("MSG04");
+        verifyNoInteractions(llm, embeddings, solutions, wiki, answers, transactions);
+        verify(conversations, never()).record(any(), any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void storesNoTurnWhenTheAskFails_AC_013_3() {
+        withSolution();
+        when(llm.chat(any(), isNull())).thenThrow(new IllegalStateException("provider down"));
+
+        assertThatThrownBy(() -> service.ask(USER, newAsk())).isInstanceOf(AiUnavailableException.class);
+        verify(conversations, never()).record(any(), any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void aJiraQuestionHasNoConversation_AC_013_12() {
+        UUID project = UUID.randomUUID();
+        var service = projectService(project, true);
+
+        var response = service.askForProject(project, Optional.empty(), new ChatbotQuestionRequest("hi", List.of()));
+
+        assertThat(response.chatSessionId()).isNull();
+        verifyNoInteractions(conversations);
+    }
+
     private ChatbotAnswerServiceImpl projectService(UUID activeProject, boolean active) {
         ProjectAccess projects = mock(ProjectAccess.class);
         when(projects.isActive(activeProject)).thenReturn(active);
@@ -786,6 +873,7 @@ class ChatbotAnswerServiceImplTest {
                 solutions,
                 wiki,
                 answers,
+                conversations,
                 transactions,
                 new ObjectMapper(),
                 executor,
@@ -803,6 +891,7 @@ class ChatbotAnswerServiceImplTest {
                 solutions,
                 wiki,
                 answers,
+                conversations,
                 transactions,
                 new ObjectMapper(),
                 executor,
@@ -820,11 +909,31 @@ class ChatbotAnswerServiceImplTest {
         return new RetrievedSolution(symptoms, "cause", "steps", null, "scope", similarity);
     }
 
+    @Test
+    void followUpAfterALongStoredAnswer_AC_013_2_BUG_373() {
+        var response =
+                service.ask(USER, inSession("question", List.of(new ChatbotTurnRequest("earlier", "a".repeat(10001)))));
+
+        assertThat(response.outcome()).isEqualTo(Outcome.NO_SOURCE);
+        assertThat(response.chatSessionId()).isEqualTo(SESSION);
+        verify(embeddings).embed(List.of("earlier\nquestion"));
+    }
+
     private static ChatbotQuestionRequest question() {
         return new ChatbotQuestionRequest("question", List.of());
     }
 
-    private static ChatbotQuestionRequest followUp() {
-        return new ChatbotQuestionRequest("question", List.of(new ChatbotTurnRequest("earlier", "earlier answer")));
+    private ChatbotAskRequest followUp() {
+        return inSession("question", List.of(new ChatbotTurnRequest("earlier", "earlier answer")));
+    }
+
+    private static ChatbotAskRequest newAsk() {
+        return new ChatbotAskRequest("question", null);
+    }
+
+    /** A question in the user's conversation SESSION, whose stored turns are these. */
+    private ChatbotAskRequest inSession(String question, List<ChatbotTurnRequest> turns) {
+        when(conversations.history(USER.id(), SESSION.toString())).thenReturn(turns);
+        return new ChatbotAskRequest(question, SESSION.toString());
     }
 }

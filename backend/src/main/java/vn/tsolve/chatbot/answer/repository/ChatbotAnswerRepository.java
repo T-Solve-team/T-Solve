@@ -2,6 +2,7 @@ package vn.tsolve.chatbot.answer.repository;
 
 import jakarta.persistence.LockModeType;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,6 +15,11 @@ import vn.tsolve.chatbot.rating.entity.ChatbotRating;
 
 public interface ChatbotAnswerRepository extends JpaRepository<ChatbotAnswer, UUID> {
     Optional<ChatbotAnswer> findByIdAndUserId(UUID id, UUID userId);
+
+    @Modifying
+    @Query("DELETE FROM ChatbotAnswer a WHERE a.id IN :ids AND a.rating IS NULL "
+            + "AND a.outcome IN ('ANSWERED', 'GREETING', 'OFF_TOPIC')")
+    int deleteDisposableByIds(@Param("ids") List<UUID> ids);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT a FROM ChatbotAnswer a WHERE a.id = :id AND a.userId = :userId")

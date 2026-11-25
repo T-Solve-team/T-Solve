@@ -58,8 +58,19 @@ const detail = (summary: WikiDocumentSummary): WikiDocumentDetail => ({
   inTrash: false,
 });
 
+const renderDocx = vi.hoisted(() => vi.fn());
+vi.mock('docx-preview', () => ({ renderAsync: renderDocx }));
+
 beforeEach(() => {
+  URL.createObjectURL = vi.fn(() => 'blob:file');
+  URL.revokeObjectURL = vi.fn();
+  renderDocx.mockResolvedValue(undefined);
   server.use(
+    // The preview pane loads the original file (AC-002.24); msw cannot stream a jsdom Blob.
+    http.get(
+      '*/api/v1/wiki/documents/:documentId/file',
+      () => new HttpResponse(new TextEncoder().encode('%PDF-1.1')),
+    ),
     getListWikiSpacesMockHandler(spaces),
     getListCompanyWideDocumentsMockHandler([{ ...document, visibility: 'COMPANY_WIDE' }, handbook]),
     getListWikiFoldersMockHandler([
@@ -493,9 +504,11 @@ describe('WikiHomePage', () => {
       ['File', 'guide.pdf'],
       ['Size', '24 KB'],
     ]);
-    const content = detail(handbook).content;
-    expect(within(pane).getByText(content.slice(0, 420))).toBeInTheDocument();
-    expect(pane).not.toHaveTextContent(content.slice(0, 421));
+    expect(await within(pane).findByTitle('Employee handbook')).toHaveAttribute(
+      'src',
+      'blob:file#page=1&view=FitH&zoom=page-width&toolbar=0',
+    );
+    expect(pane).not.toHaveTextContent(detail(handbook).content.slice(0, 40));
     expect(within(pane).getByRole('link', { name: /Download/ })).toHaveAttribute(
       'href',
       expect.stringMatching(new RegExp(`/wiki/documents/${handbook.documentId}/file$`)),
@@ -504,6 +517,57 @@ describe('WikiHomePage', () => {
     await waitFor(() =>
       expect(router.state.location.pathname).toBe(paths.wikiDocument(handbook.documentId)),
     );
+  });
+
+  it('AC-002.24 previews only the first page of a DOCX', async () => {
+    renderDocx.mockImplementation((_blob: Blob, container: HTMLElement) => {
+      container.innerHTML =
+        '<div class="docx-wrapper"><section>Page one</section><section>Page two</section></div>';
+      return Promise.resolve();
+    });
+    server.use(getGetWikiDocumentMockHandler({ ...detail(document), fileName: 'guide.docx' }));
+    await openHome();
+    const page = await within(preview()).findByLabelText('VPN guide');
+    await waitFor(() => expect(page).toHaveTextContent('Page one'));
+    expect(page).not.toHaveTextContent('Page two');
+  });
+
+  it('AC-002.27 shows the first 420 characters when the file cannot be loaded', async () => {
+    server.use(http.get('*/api/v1/wiki/documents/:documentId/file', () => problem(404, 'MSG110')));
+    await openHome();
+    const pane = preview();
+    const content = detail(document).content;
+    expect(await within(pane).findByText(content.slice(0, 420))).toBeInTheDocument();
+    expect(pane).not.toHaveTextContent(content.slice(0, 421));
+    expect(within(pane).queryByTitle('VPN guide')).not.toBeInTheDocument();
+  });
+
+  it('AC-002.27 shows the first 420 characters when the PDF has no %PDF- header (BUG-391)', async () => {
+    const createUrl = vi.fn(() => 'blob:file');
+    URL.createObjectURL = createUrl;
+    server.use(
+      http.get(
+        '*/api/v1/wiki/documents/:documentId/file',
+        () => new HttpResponse(new TextEncoder().encode('<html>not a pdf</html>')),
+      ),
+    );
+    await openHome();
+    const pane = preview();
+    const content = detail(document).content;
+    expect(await within(pane).findByText(content.slice(0, 420))).toBeInTheDocument();
+    expect(within(pane).queryByTitle('VPN guide')).not.toBeInTheDocument();
+    expect(createUrl).not.toHaveBeenCalled();
+  });
+
+  it('AC-002.27 shows the first 420 characters when the DOCX cannot be rendered', async () => {
+    renderDocx.mockRejectedValue(new Error('bad docx'));
+    server.use(getGetWikiDocumentMockHandler({ ...detail(document), fileName: 'guide.docx' }));
+    await openHome();
+    const pane = preview();
+    const content = detail(document).content;
+    expect(await within(pane).findByText(content.slice(0, 420))).toBeInTheDocument();
+    expect(pane).not.toHaveTextContent(content.slice(0, 421));
+    expect(within(pane).queryByLabelText('VPN guide')).not.toBeInTheDocument();
   });
 
   it('AC-002.25 shows "This document is no longer available." when the preview answers 404 MSG110', async () => {

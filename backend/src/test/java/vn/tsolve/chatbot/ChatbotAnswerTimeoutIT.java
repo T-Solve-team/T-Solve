@@ -43,11 +43,12 @@ import vn.tsolve.ai.client.EmbeddingClient;
 import vn.tsolve.ai.client.LlmClient;
 import vn.tsolve.ai.exception.AiUnavailableException;
 import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse.Outcome;
-import vn.tsolve.chatbot.answer.dto.ChatbotQuestionRequest;
+import vn.tsolve.chatbot.answer.dto.ChatbotAskRequest;
 import vn.tsolve.chatbot.answer.entity.ChatbotAnswer;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
 import vn.tsolve.chatbot.answer.service.ChatbotAnswerService;
 import vn.tsolve.chatbot.answer.service.impl.ChatbotAnswerServiceImpl;
+import vn.tsolve.chatbot.conversation.service.ChatConversationService;
 import vn.tsolve.chatbot.source.service.WikiSources;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.search.retrieval.service.SolutionRetrieval;
@@ -135,12 +136,13 @@ class ChatbotAnswerTimeoutIT {
                 .withBean(SolutionRetrieval.class, () -> mock(SolutionRetrieval.class))
                 .withBean(WikiSources.class, () -> mock(WikiSources.class))
                 .withBean(ChatbotAnswerRepository.class, () -> slowAnswers)
+                .withBean(ChatConversationService.class, () -> mock(ChatConversationService.class))
                 .withBean(PlatformTransactionManager.class, () -> new JpaTransactionManager(factory.getObject()))
                 .withBean("applicationTaskExecutor", Executor.class, () -> Runnable::run)
                 .run(context -> {
                     assertThat(context).hasNotFailed();
                     var service = context.getBean(ChatbotAnswerService.class);
-                    assertThatThrownBy(() -> service.ask(user, new ChatbotQuestionRequest("question", List.of())))
+                    assertThatThrownBy(() -> service.ask(user, new ChatbotAskRequest("question", null)))
                             .isInstanceOf(AiUnavailableException.class)
                             .hasMessage("MSG06")
                             .hasNoCause();
@@ -187,13 +189,14 @@ class ChatbotAnswerTimeoutIT {
                     .withBean(SolutionRetrieval.class, () -> solutions)
                     .withBean(WikiSources.class, () -> wiki)
                     .withBean(ChatbotAnswerRepository.class, () -> repository)
+                    .withBean(ChatConversationService.class, () -> mock(ChatConversationService.class))
                     .withBean(PlatformTransactionManager.class, () -> new JpaTransactionManager(factory.getObject()))
                     .withBean("applicationTaskExecutor", Executor.class, () -> executor)
                     .run(context -> {
                         assertThat(context).hasNotFailed();
                         var service = context.getBean(ChatbotAnswerService.class);
                         // The classifier gets a third of the 3 s deadline, then the question is searched as asked.
-                        var response = service.ask(user, new ChatbotQuestionRequest("question", List.of()));
+                        var response = service.ask(user, new ChatbotAskRequest("question", null));
                         assertThat(response.outcome()).isEqualTo(Outcome.NO_SOURCE);
                         verify(embeddings).embed(List.of("question"));
                         assertThat(jdbc.queryForObject("SELECT outcome FROM chatbot_answer", String.class))
