@@ -243,8 +243,8 @@
     }
   },
   "chatbot": {
-    "specHash": "d3511c437410a179a13205bd4b04b9b9b0f2cd831b8a80233178387813eb5e12",
-    "approvedAt": "2026-11-22T19:35:45.864Z",
+    "specHash": "cff5581497e36376e36f98207cd491b456695f33a2fd981563374f513af1fb8e",
+    "approvedAt": "2026-11-25T09:16:01.737Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",

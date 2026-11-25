@@ -2306,3 +2306,6 @@
 {"ts":"2026-11-23T19:31:06.909Z","type":"feature-status","module":"platform","feature":"row-guard","from":"evaluating","to":"passing"}
 {"ts":"2026-11-24T12:04:34.368Z","type":"spec-approved","module":"wiki","specHash":"47fb26627301fe7f41ffc78786ff532ed82a0459519a3b8e64709477d4234361"}
 {"ts":"2026-11-24T19:29:55.176Z","type":"spec-approved","module":"wiki","specHash":"f912468f95e47b33f3db76ea16adf6bbe8cd904d611ba98a281d30f098498d30"}
+{"ts":"2026-11-25T09:16:01.748Z","type":"spec-approved","module":"chatbot","specHash":"cff5581497e36376e36f98207cd491b456695f33a2fd981563374f513af1fb8e"}
+{"ts":"2026-11-25T09:16:08.479Z","type":"feature-status","module":"chatbot","feature":"paraphrase-sources","from":null,"to":"pending"}
+{"ts":"2026-11-25T09:16:08.958Z","type":"feature-status","module":"chatbot","feature":"paraphrase-sources","from":"pending","to":"in-progress"}

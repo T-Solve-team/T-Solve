@@ -34,6 +34,7 @@ owner: BA
 | 2026-11-17 | STORY-002, STORY-013 (new), STORY-001, STORY-003, STORY-007, STORY-010 | **Backend and frontend change (KAN-183).** The conversations move from `sessionStorage` to the Workspace database: new STORY-013 (tables `chat_session` and `chat_message`, list, open, delete, a 30-day retention job; the backend reads the earlier turns itself). STORY-002 renamed "Saved conversations": AC-002.2–AC-002.5, AC-002.7, AC-002.8 and AC-002.12 reworded, AC-002.11 removed, new AC-002.13–AC-002.15 (delete with MSG103, list errors). Reworded AC-001.6 (`chatSessionId` instead of `history`), AC-003.4 (rating from the server), AC-007.1–AC-007.3 (history from the conversation; the request `history` only for `askForProject`), AC-010.3 and AC-010.8 (draft takes no body). Requirements 5, 7 and 9 reworded. Out of Scope, Interface Contracts and Definition of Done follow. The Jira App path (STORY-012) is unchanged | User decisions of 17/11 (replace the 09/11 decision): keep a conversation 30 days after its last message, a daily job deletes older ones; separate `chat_session` and `chat_message` tables (every outcome, linked to its `chatbot_answer`); the backend reads the last 10 turns from the database, the web request sends `chatSessionId`; the user can delete a conversation (MSG103); when a conversation is deleted its unrated `ANSWERED`, `GREETING` and `OFF_TOPIC` answers are deleted too, rated, `NO_SOURCE` and `INJECTION` answers are kept (replaces the logout-event deletion) |
 | 2026-11-18 | STORY-002, STORY-013, STORY-004 | **Backend and frontend change (KAN-183).** The conversation list is paged: AC-013.5 answers one `PagedModel` page (`page` from 0, `size` default 20, above 100 read as 100); AC-002.3 shows the 20 newest; new AC-002.16 adds a Load more button that appends the next page and reloads the loaded pages after an ask or a delete; AC-004.8 pages the mock list too. Out of Scope no longer excludes paging; Interface Contracts follow | User, 18/11: show the 20 newest conversations, with a Load more button; standard team paging (`page`/`size`, `PagedModel`) |
 | 2026-11-23 | STORY-001, STORY-002, STORY-009, STORY-013 | **Merge of main into KAN-183.** AC-001.6 sends `chatSessionId` and empties the box on send. AC-002.2, AC-009.9 and AC-013.1: the AI `title` of a first question (no `chatSessionId`) is stored as `chat_session.title`, the trimmed question when there is none. AC-002.3 and AC-002.16: the server list is paged by 10 with a "Show more" button (main's session-only AC-002.14 is folded in). Main's AC-002.13 (one-line title) is now AC-002.17, since AC-002.13–AC-002.16 are KAN-183's. Interface Contracts: `ChatbotAnswer` has both `chatSessionId` and `title` | User, 23/11: store the AI title in the database; keep server paging with 10 per page and "Show more" (KAN-380, KAN-382 merged into main on 22/11) |
+| 2026-11-25 | STORY-005 | AC-005.1: `CHATBOT_MIN_SIMILARITY` defaults to 0.5 (was 0.7), as Search's `SEARCH_MIN_SIMILARITY` | BUG-387 (KAN-394), BUG-246 (KAN-431): 7 of 10 paraphrased golden-set questions and G-23 / G-24 got `NO_SOURCE` in 2–3 s, before any answer call, so no source reached 0.7 although Search ranks the right ticket first at 0.5; AC-005.5 still answers `NO_SOURCE` when the model cites nothing |
 
 ## Requirements
 
@@ -242,7 +243,8 @@ owner: BA
   - AC-005.1: WHEN STORY-009 classifies a valid `POST /api/v1/chatbot/answers` as a question, THE backend SHALL embed
     the retrieval text (AC-009.5) once with the `ai` module's
     `EmbeddingClient` and SHALL take the sources from search's `SolutionRetrieval.nearest` and from
-    `WikiSources.nearest`, both with `CHATBOT_MIN_SIMILARITY` (default 0.7).
+    `WikiSources.nearest`, both with `CHATBOT_MIN_SIMILARITY` (default 0.5, the value of Search's
+    `SEARCH_MIN_SIMILARITY`, so a question asked in other words still finds its source; BUG-387).
   - AC-005.2: THE backend SHALL keep at most `CHATBOT_SOURCE_LIMIT` (default 5) sources of both kinds together, most
     similar first, and number them 1, 2, … in that order.
   - AC-005.3: WHEN at least one source is kept, THE backend SHALL call the `ai` module's `LlmClient.chat` once with a
@@ -743,7 +745,7 @@ public interface WikiSources {
 // vn.tsolve.chatbot.source.service.impl.NoWikiSources: no passage; every given id unavailable (fail closed)
 ```
 
-Backend settings (`.env.example`): `CHATBOT_MIN_SIMILARITY=0.7`, `CHATBOT_SOURCE_LIMIT=5`, `CHATBOT_ASK_TIMEOUT=60s`,
+Backend settings (`.env.example`): `CHATBOT_MIN_SIMILARITY=0.5`, `CHATBOT_SOURCE_LIMIT=5`, `CHATBOT_ASK_TIMEOUT=60s`,
 `CHATBOT_CONVERSATION_RETENTION=30d`, `CHATBOT_CONVERSATION_CLEANUP_CRON=0 0 2 * * *` (zone Asia/Ho_Chi_Minh).
 
 ### Required from other modules
