@@ -29,20 +29,24 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.core.env.StandardEnvironment;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.SimpleTransactionStatus;
@@ -59,6 +63,7 @@ import vn.tsolve.chatbot.answer.dto.TicketSolutionCitation;
 import vn.tsolve.chatbot.answer.dto.WikiDocumentCitation;
 import vn.tsolve.chatbot.answer.entity.ChatbotAnswer;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
+import vn.tsolve.chatbot.answer.service.ChatbotAnswerService;
 import vn.tsolve.chatbot.conversation.exception.ChatbotConversationNotFoundException;
 import vn.tsolve.chatbot.conversation.service.ChatConversationService;
 import vn.tsolve.chatbot.exception.ChatbotProjectNotActiveException;
@@ -108,6 +113,33 @@ class ChatbotAnswerServiceImplTest {
     void stopExecutor() throws InterruptedException {
         executor.shutdownNow();
         assertThat(executor.awaitTermination(2, TimeUnit.SECONDS)).isTrue();
+    }
+
+    @Test
+    @DisplayName("AC-005.1 defaults the source similarity to 0.5 for Solutions and Wiki (BUG-387)")
+    void defaultsSourceSimilarity_AC_005_1_BUG_387() {
+        new ApplicationContextRunner()
+                .withInitializer(context -> {
+                    var sources = context.getEnvironment().getPropertySources();
+                    sources.remove(StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME);
+                    sources.remove(StandardEnvironment.SYSTEM_PROPERTIES_PROPERTY_SOURCE_NAME);
+                })
+                .withUserConfiguration(ChatbotAnswerServiceImpl.class)
+                .withBean(EmbeddingClient.class, () -> embeddings)
+                .withBean(LlmClient.class, () -> llm)
+                .withBean(SolutionRetrieval.class, () -> solutions)
+                .withBean(WikiSources.class, () -> wiki)
+                .withBean(ChatbotAnswerRepository.class, () -> answers)
+                .withBean(ChatConversationService.class, () -> conversations)
+                .withBean(PlatformTransactionManager.class, () -> transactions)
+                .withBean(ObjectMapper.class, ObjectMapper::new)
+                .withBean("applicationTaskExecutor", Executor.class, () -> Runnable::run)
+                .run(context -> {
+                    context.getBean(ChatbotAnswerService.class).ask(USER, newAsk());
+
+                    verify(solutions).nearest(eq(vector), eq(0.5), anyInt());
+                    verify(wiki).nearest(eq(USER), eq(vector), eq(0.5), anyInt());
+                });
     }
 
     @ParameterizedTest

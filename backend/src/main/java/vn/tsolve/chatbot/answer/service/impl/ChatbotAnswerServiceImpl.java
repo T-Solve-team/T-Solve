@@ -81,7 +81,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
             PlatformTransactionManager transactionManager,
             ObjectMapper json,
             @Qualifier("applicationTaskExecutor") Executor executor,
-            @Value("${CHATBOT_MIN_SIMILARITY:0.7}") double minSimilarity,
+            @Value("${CHATBOT_MIN_SIMILARITY:0.5}") double minSimilarity,
             @Value("${CHATBOT_SOURCE_LIMIT:5}") int sourceLimit,
             @Value("${CHATBOT_ASK_TIMEOUT:60s}") String timeout,
             // Optional, so a context without the ticket module or a Clock bean still answers web questions (BUG-320).
