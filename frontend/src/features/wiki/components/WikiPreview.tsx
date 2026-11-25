@@ -7,6 +7,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/shared/ui';
 import { documentTypeLabels } from '../documentTypes';
 import { useWikiDocument, wikiDocumentFileUrl } from '../hooks/useWikiDocument';
 import styles from '../pages/WikiHomePage.module.css';
+import { WikiFileView } from './WikiFileView';
 
 type WikiPreviewProps = {
   /** The previewed row; undefined when the list is empty (MSG04) or not loaded yet. */
@@ -14,7 +15,7 @@ type WikiPreviewProps = {
   isListPending: boolean;
 };
 
-/** 11.1 preview pane (AC-002.24, AC-002.25). */
+/** 11.1 preview pane (AC-002.24, AC-002.25, AC-002.27). */
 export function WikiPreview({ documentId, isListPending }: WikiPreviewProps) {
   const navigate = useNavigate();
   const document = useWikiDocument(documentId ?? '');
@@ -53,7 +54,14 @@ export function WikiPreview({ documentId, isListPending }: WikiPreviewProps) {
         <dt>Size</dt>
         <dd>{`${Math.max(1, Math.round(data.fileSize / 1024))} KB`}</dd>
       </dl>
-      <div className={styles.excerpt}>{data.content.slice(0, 420)}</div>
+      <WikiFileView
+        key={data.documentId}
+        documentId={data.documentId}
+        fileName={data.fileName}
+        title={data.title}
+        variant="preview"
+        fallback={<div className={styles.excerpt}>{data.content.slice(0, 420)}</div>}
+      />
       <Flex gap="small">
         <Button
           type="primary"

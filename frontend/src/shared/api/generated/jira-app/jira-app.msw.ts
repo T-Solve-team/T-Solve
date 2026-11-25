@@ -153,6 +153,7 @@ export const getGetJiraAppQuestionJobResponseMock = (
             { ...getGetJiraAppQuestionJobResponseTicketSolutionCitationMock() },
           ]),
         ),
+        chatSessionId: faker.helpers.arrayElement([faker.string.uuid(), undefined]),
         title: faker.helpers.arrayElement([
           faker.string.alpha({ length: { min: 10, max: 60 } }),
           undefined,

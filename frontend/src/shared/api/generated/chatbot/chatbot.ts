@@ -24,12 +24,14 @@ import type {
 
 import type {
   ChatbotAnswer,
+  ChatbotAsk,
+  ChatbotConversation,
+  ChatbotConversationSummaryPage,
   ChatbotIssueDraft,
-  ChatbotIssueDraftRequest,
   ChatbotIssueRequest,
   ChatbotJiraIssue,
-  ChatbotQuestion,
   ChatbotRating,
+  ListChatbotConversationsParams,
   ListUnavailableCitedDocumentsParams,
   ProblemResponse,
   UnavailableDocuments,
@@ -56,16 +58,393 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
+export const getListChatbotConversationsUrl = (params?: ListChatbotConversationsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/chatbot/conversations?${stringifiedParams}`
+    : `/api/v1/chatbot/conversations`;
+};
+
+/**
+ * One page of the caller's own conversations (default size 20; a size above 100 is read as 100).
+ * @summary List your saved conversations, newest startedAt first.
+ */
+export const listChatbotConversations = async (
+  params?: ListChatbotConversationsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<ChatbotConversationSummaryPage> => {
+  return http<ChatbotConversationSummaryPage>(getListChatbotConversationsUrl(params), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getListChatbotConversationsQueryKey = (params?: ListChatbotConversationsParams) => {
+  return [`/api/v1/chatbot/conversations`, ...(params ? [params] : [])] as const;
+};
+
+export const getListChatbotConversationsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listChatbotConversations>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: ListChatbotConversationsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listChatbotConversations>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListChatbotConversationsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listChatbotConversations>>> = ({
+    signal,
+  }) => listChatbotConversations(params, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({ queryKey, queryFn, ...queryOptions });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof listChatbotConversations>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListChatbotConversationsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listChatbotConversations>>
+>;
+export type ListChatbotConversationsQueryError = ErrorType<ProblemResponse>;
+
+export function useListChatbotConversations<
+  TData = Awaited<ReturnType<typeof listChatbotConversations>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params: undefined | ListChatbotConversationsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listChatbotConversations>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listChatbotConversations>>,
+          TError,
+          Awaited<ReturnType<typeof listChatbotConversations>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListChatbotConversations<
+  TData = Awaited<ReturnType<typeof listChatbotConversations>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: ListChatbotConversationsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listChatbotConversations>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listChatbotConversations>>,
+          TError,
+          Awaited<ReturnType<typeof listChatbotConversations>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListChatbotConversations<
+  TData = Awaited<ReturnType<typeof listChatbotConversations>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: ListChatbotConversationsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listChatbotConversations>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List your saved conversations, newest startedAt first.
+ */
+
+export function useListChatbotConversations<
+  TData = Awaited<ReturnType<typeof listChatbotConversations>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  params?: ListChatbotConversationsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listChatbotConversations>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListChatbotConversationsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetChatbotConversationUrl = (chatSessionId: string) => {
+  return `/api/v1/chatbot/conversations/${chatSessionId}`;
+};
+
+/**
+ * @summary Open your saved conversation with every turn and its current rating.
+ */
+export const getChatbotConversation = async (
+  chatSessionId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<ChatbotConversation> => {
+  return http<ChatbotConversation>(getGetChatbotConversationUrl(chatSessionId), {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const getGetChatbotConversationQueryKey = (chatSessionId: string) => {
+  return [`/api/v1/chatbot/conversations/${chatSessionId}`] as const;
+};
+
+export const getGetChatbotConversationQueryOptions = <
+  TData = Awaited<ReturnType<typeof getChatbotConversation>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  chatSessionId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getChatbotConversation>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetChatbotConversationQueryKey(chatSessionId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getChatbotConversation>>> = ({ signal }) =>
+    getChatbotConversation(chatSessionId, { signal, ...requestOptions });
+
+  const customOptions = withBackgroundMarking({
+    queryKey,
+    queryFn,
+    enabled: chatSessionId !== null && chatSessionId !== undefined,
+    ...queryOptions,
+  });
+
+  return customOptions as UseQueryOptions<
+    Awaited<ReturnType<typeof getChatbotConversation>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetChatbotConversationQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getChatbotConversation>>
+>;
+export type GetChatbotConversationQueryError = ErrorType<ProblemResponse>;
+
+export function useGetChatbotConversation<
+  TData = Awaited<ReturnType<typeof getChatbotConversation>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  chatSessionId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getChatbotConversation>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getChatbotConversation>>,
+          TError,
+          Awaited<ReturnType<typeof getChatbotConversation>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetChatbotConversation<
+  TData = Awaited<ReturnType<typeof getChatbotConversation>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  chatSessionId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getChatbotConversation>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getChatbotConversation>>,
+          TError,
+          Awaited<ReturnType<typeof getChatbotConversation>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetChatbotConversation<
+  TData = Awaited<ReturnType<typeof getChatbotConversation>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  chatSessionId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getChatbotConversation>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Open your saved conversation with every turn and its current rating.
+ */
+
+export function useGetChatbotConversation<
+  TData = Awaited<ReturnType<typeof getChatbotConversation>>,
+  TError = ErrorType<ProblemResponse>,
+>(
+  chatSessionId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getChatbotConversation>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetChatbotConversationQueryOptions(chatSessionId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getDeleteChatbotConversationUrl = (chatSessionId: string) => {
+  return `/api/v1/chatbot/conversations/${chatSessionId}`;
+};
+
+/**
+ * Unknown, malformed and other users' ids answer 404 MSG04 and change nothing.
+ * @summary Delete your conversation and its disposable answers.
+ */
+export const deleteChatbotConversation = async (
+  chatSessionId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDeleteChatbotConversationUrl(chatSessionId), {
+    ...options,
+    method: 'DELETE',
+  });
+};
+
+export const getDeleteChatbotConversationMutationKey = () => ['deleteChatbotConversation'] as const;
+
+export const getDeleteChatbotConversationMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteChatbotConversation>>,
+    TError,
+    DeleteChatbotConversationMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteChatbotConversation>>,
+  TError,
+  DeleteChatbotConversationMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteChatbotConversationMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteChatbotConversation>>,
+    DeleteChatbotConversationMutationVariables
+  > = (props) => {
+    const { chatSessionId } = props ?? {};
+
+    return deleteChatbotConversation(chatSessionId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteChatbotConversationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteChatbotConversation>>
+>;
+
+export type DeleteChatbotConversationMutationError = ErrorType<ProblemResponse>;
+export type DeleteChatbotConversationMutationVariables = { chatSessionId: string };
+
+/**
+ * @summary Delete your conversation and its disposable answers.
+ */
+export const useDeleteChatbotConversation = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteChatbotConversation>>,
+      TError,
+      DeleteChatbotConversationMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteChatbotConversation>>,
+  TError,
+  DeleteChatbotConversationMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteChatbotConversationMutationOptions(options), queryClient);
+};
 export const getAskChatbotUrl = () => {
   return `/api/v1/chatbot/answers`;
 };
 
 /**
- * Sources are the Solutions of all Published tickets and the Wiki documents the user can view (GBR-31), checked on every question. No source → outcome NO_SOURCE (the web app shows MSG109). The AI module unavailable → 503 with code MSG06.
+ * Sources are the Solutions of all Published tickets and the Wiki documents the user can view (GBR-31), checked on every question. No source → outcome NO_SOURCE (the web app shows MSG109). The AI module unavailable → 503 with code MSG06. The earlier turns come from the conversation `chatSessionId` (the last 10); without one a new conversation is started and its id returned (KAN-183). An unknown `chatSessionId` → 404 code MSG04.
  * @summary Answers a question from the knowledge the user may see, with numbered citations (GBR-36).
  */
 export const askChatbot = async (
-  chatbotQuestion: ChatbotQuestion,
+  chatbotAsk: ChatbotAsk,
   options?: Parameters<typeof http>[1],
 ): Promise<ChatbotAnswer> => {
   const getHeaders = (
@@ -91,7 +470,7 @@ export const askChatbot = async (
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(chatbotQuestion),
+    body: JSON.stringify(chatbotAsk),
   });
 };
 
@@ -134,9 +513,9 @@ export const getAskChatbotMutationOptions = <
 };
 
 export type AskChatbotMutationResult = NonNullable<Awaited<ReturnType<typeof askChatbot>>>;
-export type AskChatbotMutationBody = ChatbotQuestion;
+export type AskChatbotMutationBody = ChatbotAsk;
 export type AskChatbotMutationError = ErrorType<ProblemResponse>;
-export type AskChatbotMutationVariables = { data: ChatbotQuestion };
+export type AskChatbotMutationVariables = { data: ChatbotAsk };
 
 /**
  * @summary Answers a question from the knowledge the user may see, with numbered citations (GBR-36).
@@ -515,38 +894,16 @@ export const getDraftChatbotIssueUrl = (answerId: string) => {
 };
 
 /**
- * For an ANSWERED or NO_SOURCE answer of the user. Offers only the Departments with a default Project. When the AI fails the draft is empty and the user fills it. Nothing is stored and nothing reaches Jira. A user with no linked Jira account (UC-59) gets 409 code MSG146 instead of the form.
+ * For an ANSWERED or NO_SOURCE answer of the user. Offers only the Departments with a default Project. When the AI fails the draft is empty and the user fills it. Nothing is stored and nothing reaches Jira. A user with no linked Jira account (UC-59) gets 409 code MSG146 instead of the form. The AI reads the turns before the answer in its saved conversation (KAN-183); the request has no body.
  * @summary The Jira issue form of an own answer, prefilled by the AI from the conversation (UC-58, MSG144).
  */
 export const draftChatbotIssue = async (
   answerId: string,
-  chatbotIssueDraftRequest: ChatbotIssueDraftRequest,
   options?: Parameters<typeof http>[1],
 ): Promise<ChatbotIssueDraft> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit['headers']>,
-  ): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(
-          h as Iterable<Iterable<string>>,
-          (entry) => Array.from(entry) as [string, string],
-        ),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
   return http<ChatbotIssueDraft>(getDraftChatbotIssueUrl(answerId), {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(chatbotIssueDraftRequest),
   });
 };
 
@@ -580,9 +937,9 @@ export const getDraftChatbotIssueMutationOptions = <
     Awaited<ReturnType<typeof draftChatbotIssue>>,
     DraftChatbotIssueMutationVariables
   > = (props) => {
-    const { answerId, data } = props ?? {};
+    const { answerId } = props ?? {};
 
-    return draftChatbotIssue(answerId, data, requestOptions);
+    return draftChatbotIssue(answerId, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -591,12 +948,9 @@ export const getDraftChatbotIssueMutationOptions = <
 export type DraftChatbotIssueMutationResult = NonNullable<
   Awaited<ReturnType<typeof draftChatbotIssue>>
 >;
-export type DraftChatbotIssueMutationBody = ChatbotIssueDraftRequest;
+
 export type DraftChatbotIssueMutationError = ErrorType<ProblemResponse>;
-export type DraftChatbotIssueMutationVariables = {
-  answerId: string;
-  data: ChatbotIssueDraftRequest;
-};
+export type DraftChatbotIssueMutationVariables = { answerId: string };
 
 /**
  * @summary The Jira issue form of an own answer, prefilled by the AI from the conversation (UC-58, MSG144).

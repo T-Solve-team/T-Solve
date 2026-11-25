@@ -1,49 +1,65 @@
-import { MessageOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Tooltip } from 'antd';
+import { DeleteOutlined, MessageOutlined, PlusOutlined } from '@ant-design/icons';
+import { Alert, Button, Flex, Spin, Tooltip } from 'antd';
 import { useState } from 'react';
-import type { Conversation } from '../model';
+import type { ChatbotConversationSummary } from '@/shared/api';
+import { msg } from '@/shared/messages';
+import { ConfirmDialog } from '@/shared/ui';
+import type { useConversations } from '../hooks/useConversations';
 import styles from './Conversation.module.css';
 
 type ConversationListProps = {
-  conversations: readonly Conversation[];
-  /** The open conversation; null is the empty "New conversation". */
+  conversations: readonly ChatbotConversationSummary[];
   openId: string | null;
-  /** True while an answer is pending: the answer lands in the conversation that asked (edge 17). */
   disabled: boolean;
+  list: ReturnType<typeof useConversations>['list'];
+  remove: ReturnType<typeof useConversations>['remove'];
+  onLoadMore: () => void;
   onOpen: (id: string) => void;
   onNew: () => void;
 };
 
 const NEW_TITLE = 'New conversation';
-const PAGE_SIZE = 10;
 
-/** AC-002.2: the AI title of the first answer, else the first question. */
-function titleOf(conversation: Conversation): string {
-  const first = conversation.turns[0];
-  return first?.answer.title ?? first?.question ?? '';
-}
-
-/** 12.1 sidebar: New conversation, one-line titles, and the session history in batches (AC-002.3, AC-002.13, AC-002.14). */
+/**
+ * 12.1 sidebar: the server's saved conversations by pages of 10 with "Show more", one-line titles, and confirmation
+ * before deleting one (UC-52; AC-002.3, AC-002.13 – AC-002.17).
+ */
 export function ConversationList({
   conversations,
   openId,
   disabled,
+  list,
+  remove,
+  onLoadMore,
   onOpen,
   onNew,
 }: ConversationListProps) {
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-
+  const [deleting, setDeleting] = useState<ChatbotConversationSummary | null>(null);
+  const isDisabled = disabled || remove.isPending;
   return (
     <aside aria-label="Conversations" className={styles.list}>
       <Button
         type="primary"
         icon={<PlusOutlined aria-hidden />}
-        disabled={disabled}
+        disabled={isDisabled}
         onClick={onNew}
       >
         {NEW_TITLE}
       </Button>
       <div className={styles.history}>
+        {list.isPending && (
+          <div role="status" aria-label="Loading conversations">
+            <Spin />
+          </div>
+        )}
+        {list.isError && !list.isFetchNextPageError && (
+          <Flex vertical gap="small">
+            <Alert type="error" title={msg('MSG06')} />
+            <Button disabled={isDisabled} onClick={() => void list.refetch()}>
+              Retry
+            </Button>
+          </Flex>
+        )}
         <ul aria-label="Conversations" className={styles.entries}>
           {openId === null && (
             <li>
@@ -52,47 +68,79 @@ export function ConversationList({
                 block
                 icon={<MessageOutlined aria-hidden />}
                 aria-current="true"
-                disabled={disabled}
+                disabled={isDisabled}
                 className={styles.entry}
               >
                 {NEW_TITLE}
               </Button>
             </li>
           )}
-          {conversations.slice(0, visibleCount).map((conversation) => {
-            const title = titleOf(conversation);
-            return (
-              <li key={conversation.id}>
-                <Tooltip title={title} placement="right" trigger={['hover', 'focus']}>
+          {(!list.isError || list.isFetchNextPageError) &&
+            conversations.map((conversation) => (
+              <li key={conversation.chatSessionId}>
+                <Flex align="center">
+                  <Tooltip
+                    title={conversation.title}
+                    placement="right"
+                    trigger={['hover', 'focus']}
+                  >
+                    <Button
+                      type="text"
+                      block
+                      icon={<MessageOutlined aria-hidden />}
+                      disabled={isDisabled}
+                      aria-current={conversation.chatSessionId === openId ? 'true' : undefined}
+                      className={styles.entry}
+                      onClick={() => onOpen(conversation.chatSessionId)}
+                    >
+                      <span data-title-line className={styles.title}>
+                        {conversation.title}
+                      </span>
+                    </Button>
+                  </Tooltip>
                   <Button
                     type="text"
-                    block
-                    icon={<MessageOutlined aria-hidden />}
-                    disabled={disabled}
-                    aria-current={conversation.id === openId ? 'true' : undefined}
-                    className={styles.entry}
-                    onClick={() => onOpen(conversation.id)}
-                  >
-                    <span data-title-line className={styles.title}>
-                      {title}
-                    </span>
-                  </Button>
-                </Tooltip>
+                    icon={<DeleteOutlined />}
+                    aria-label="Delete"
+                    disabled={isDisabled}
+                    onClick={() => setDeleting(conversation)}
+                  />
+                </Flex>
               </li>
-            );
-          })}
+            ))}
         </ul>
-        {conversations.length > visibleCount && (
+        {list.hasNextPage && (
           <Button
             type="text"
             block
             className={styles.showMore}
-            onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
+            loading={list.isFetchingNextPage}
+            disabled={isDisabled}
+            onClick={onLoadMore}
           >
             Show more
           </Button>
         )}
       </div>
+      <ConfirmDialog
+        isOpen={deleting !== null}
+        code="MSG103"
+        isDanger
+        params={{ title: deleting?.title ?? '' }}
+        isConfirming={remove.isPending}
+        onCancel={() => {
+          if (!remove.isPending) setDeleting(null);
+        }}
+        onConfirm={() => {
+          if (!deleting || isDisabled) return;
+          remove.mutate(
+            { chatSessionId: deleting.chatSessionId },
+            {
+              onSuccess: () => setDeleting(null),
+            },
+          );
+        }}
+      />
     </aside>
   );
 }

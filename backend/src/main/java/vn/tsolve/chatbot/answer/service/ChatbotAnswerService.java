@@ -3,12 +3,17 @@ package vn.tsolve.chatbot.answer.service;
 import java.util.Optional;
 import java.util.UUID;
 import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse;
+import vn.tsolve.chatbot.answer.dto.ChatbotAskRequest;
 import vn.tsolve.chatbot.answer.dto.ChatbotQuestionRequest;
 import vn.tsolve.chatbot.rating.entity.ChatbotRating;
 import vn.tsolve.common.security.TSolveUser;
 
 public interface ChatbotAnswerService {
-    ChatbotAnswerResponse ask(TSolveUser user, ChatbotQuestionRequest request);
+    /**
+     * Answers a web question in the user's conversation {@code chatSessionId}, or in a new one (STORY-013); 404 MSG04
+     * for an unknown conversation, before any AI call.
+     */
+    ChatbotAnswerResponse ask(TSolveUser user, ChatbotAskRequest request);
 
     /**
      * Answers a question asked in Jira for the Active Project with this public id, from its Department's Solutions and
