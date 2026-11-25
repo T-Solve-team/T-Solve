@@ -11,6 +11,7 @@ worker and the web app. Ollama and Docling run on a separate GPU server, reached
 | `caddy/Caddyfile` | hosts and routing |
 | `keycloak/staging/` | realm files and the Google redirect URIs (`README.md`) |
 | `postgres/init/10-tsolve-dbs.sh` | creates the databases and users |
+| `scripts/registry-adopt-workspace.sh` | adopts the existing Workspace into the Tenant Registry |
 | `scripts/seed-first-admin.sh` | creates the first admin Account |
 
 Hosts (all under `TSOLVE_DOMAIN`): `<slug>.<domain>` (company site and `/api`), `admin.<domain>` (Platform Console and
@@ -47,9 +48,10 @@ chmod 600 /srv/tsolve/staging/.env
 ```
 
 Edit it: the `[GEN]` values are secrets you generate (`openssl rand -hex 32`; the UUIDs with `uuidgen`; `WORKSPACE_SECRET_KEY` with `openssl rand -base64 32`, which the backend needs to start and which encrypts the Jira token, so back it up), the `[FILL]`
-values are yours (domain, slug, Google client, emails). Keep `SEARCH_DEV_SCOPE` empty. The Workspace UUID is the same
-in `TSOLVE_STUB_WORKSPACES` (field 3) and `TSOLVE_MOCK_ACTIVE_WORKSPACES`; field 4
-of the stub is the Google domain and field 5 equals `TSOLVE_DEMO_ORG_ID`. Compose reads this one file.
+values are yours (domain, slug, Google client, emails). Keep `SEARCH_DEV_SCOPE` empty. The Workspace UUID in
+`TSOLVE_DEMO_WORKSPACE_ID` (used by `infra/scripts/registry-adopt-workspace.sh`) is the Workspace's Registry id and must
+equal `workspace.workspace_id` in the Workspace's own database (the script refuses a mismatch),
+and the Workspace's Google domain and `TSOLVE_DEMO_ORG_ID` live in its Registry row. Compose reads this one file.
 
 To keep the file elsewhere, also run `export TSOLVE_ENV_FILE=/path/to/.env` in your shell. Shorthand used below:
 
@@ -76,6 +78,13 @@ once on the VPS (after the merge, before the deploy that sets `REGISTRY_DB_*` an
 first so it holds the variables): `dc up -d db && dc exec -T db sh -s < infra/scripts/registry-db-init.sh`. It is
 idempotent and leaves an existing role (and its password) as it is. A developer runs the same script against the local
 `db`; there is no separate local compose file.
+
+Once `backend` has started with `REGISTRY_DB_URL` and `CATALOG_SECRET_KEY` (so Liquibase has created `tenant_workspace`)
+and `TSOLVE_DEMO_WORKSPACE_ID` is set in `/srv/tsolve/staging/.env`, adopt the existing Workspace into the Registry with
+`infra/scripts/registry-adopt-workspace.sh`. It is idempotent and copies the Jira site from the tenant `workspace` table
+when present (never typed by hand). Locally, `docker-compose.yml` has no `backend` container yet, so point the same
+script at a compose file with `db` and `backend` services and an env file holding `CATALOG_SECRET_KEY` and the other
+required variables: `TSOLVE_COMPOSE_FILE=<compose-file> TSOLVE_ENV_FILE=<env-file> infra/scripts/registry-adopt-workspace.sh`.
 
 ## 5. AI: the GPU server
 
@@ -189,7 +198,7 @@ dc restart keycloak
 
 Deleting a realm deletes its users and sessions. This stack has no company provisioning (the web process runs without
 the `ops` profile): a new company means editing the env file, the realm file and the Caddy hosts by hand, and this
-stack serves exactly one company (`TSOLVE_STUB_WORKSPACES` accepts one entry).
+stack serves one Workspace (adopted into the Registry with `infra/scripts/registry-adopt-workspace.sh`).
 
 ## 11. Logs and housekeeping
 

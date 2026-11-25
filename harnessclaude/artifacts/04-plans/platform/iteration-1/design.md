@@ -44,6 +44,7 @@ Iteration 2 holds only the seed's module data and the reset (Task 23) and the re
 | R11 – R13 | Signed URLs on the Workspace's own site; objects stored as `application/octet-stream`; in-memory upload |
 | R14 | The web process migrates the Registry and every Workspace database at startup; CD also runs a `migrate` step |
 | R16 | One Redis container with persistence and `noeviction` |
+| R17 – R20 | Task 4: bluefin adopted by an idempotent script (no creation, AC-001.19 untouched); its Jira site copied from the tenant `workspace` row or left empty; identity, jira-app and worker lookups read `WorkspaceCatalog` outside `dev` (no cache, host to site name through `TSOLVE_SITE_ORIGIN_TEMPLATE`); `claimEmail` has no caller until identity Task 14 |
 | W1, W2 | AWS SDK v2 `s3`; `caddy-ratelimit` in the custom Caddy image |
 | Forge | `ForgeSecurityConfig` `@Order(1)` on the `api.` host; stateless, no CSRF, no cookie; the claim paths of `cloudId`, principal and lifecycle `eventType` are confirmed against Atlassian's Forge Remote documentation first (Task 19) and recorded in the master |
 | Planning | `ThreadLocal` binding; no resolver cache; `/actuator/health` passes every host; staging basic auth except `api.`; GHCR under the repository owner |
@@ -61,7 +62,7 @@ Task 6a (6a-1 the holder, 6a-2 the removal of the fallbacks) builds the master's
 already uses:
 - **Now (Tasks 6a-1 and 6a-2):** Task 6a-1: `ThreadLocalTenantContext` in `common/tenant` is the only per-thread binding. identity
   `TenantScope` (`PlatformTenantScope`) and the worker's `WorkerTenantService.runIn` delegate to it; requests bind it
-  through `WebSessionFilter`, Jira App calls through `ConfigJiraWorkspaceLookup`'s cloudId path, jobs through
+  through `WebSessionFilter`, Jira App calls through the cloudId path of the Jira lookup (`ConfigJiraWorkspaceLookup`; replaced by `CatalogJiraWorkspaceLookup` in Task 4b), jobs through
   `TenantExecutionServiceImpl`; the holder is `@Primary`, so the stub is not injected from then on. Task 6a-2 then removes `StubTenantContext`, the `OutboxWorkspace` fallback, `TSOLVE_STUB_WORKSPACE_ID`,
   `TSOLVE_TRACKER_DEV_WORKSPACE_ID` and the request-thread check of `MockWorkerTenantService`. `runIn` opens no
   transaction. The existence check (AC-002.14) goes through the port `KnownWorkspaces`, answered until Task 4 by
@@ -89,7 +90,7 @@ all as in the master's Data Model.
 
 ## Edge cases covered here
 
-Master rows 1 – 55, 57 – 64 and 69 – 71 (STORY-001, STORY-002, STORY-004, STORY-005, STORY-006, STORY-007, STORY-008,
+Master rows 1 – 55, 57 – 64, 69 – 71 and 72 – 85 (STORY-001, STORY-002, STORY-004, STORY-005, STORY-006, STORY-007, STORY-008,
 STORY-009, STORY-010, STORY-011, STORY-012 without the contributors, STORY-013 and the edge limits of STORY-014). Rows 45
 (also in Task 25), 56 and 65 – 68 belong to iteration 2.
 
