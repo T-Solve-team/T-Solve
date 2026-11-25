@@ -2324,3 +2324,5 @@
 {"ts":"2026-11-25T14:59:51.756Z","type":"feature-status","module":"platform","feature":"catalog-worker-tenant","from":"pending","to":"in-progress"}
 {"ts":"2026-11-25T14:59:52.049Z","type":"feature-status","module":"platform","feature":"catalog-worker-tenant","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-25T14:59:52.341Z","type":"feature-status","module":"platform","feature":"catalog-worker-tenant","from":"evaluating","to":"passing"}
+{"ts":"2026-11-25T16:28:45.664Z","type":"spec-approved","module":"platform","specHash":"fd8881657a2452ae9cb0e3c13fad76cad7f046acb43c974150b51e452c5aa039"}
+{"ts":"2026-11-25T16:29:47.956Z","type":"feature-status","module":"platform","feature":"web-tenant-isolation","from":null,"to":"pending"}

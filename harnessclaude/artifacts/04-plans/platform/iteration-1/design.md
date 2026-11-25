@@ -58,6 +58,11 @@ bluefin adopted); wave 3 = Task 6 (routing) ∥ Task 10 (resolver rest, `TenantI
 row guard switched on for bluefin on staging; wave 5 = Task 7 ∥ `identity` KAN-247, Task 8, Task 9, then Task 12. The
 Jira App Tasks 18 – 21 are a separate lane after Tasks 4 and 6.
 
+Task 10 (planned 25/11, KAN-258) is two PRs: 10a the web resolver (master, "The web resolver (Task 10)": base domain
+from `TSOLVE_SITE_ORIGIN_TEMPLATE`, active only with a catalog bean, the raw `Host` header, the public `bindRequest`
+that only the resolver calls, no existence check in `runIn` for the bound id, no cache) and 10b `TenantIsolationIT`
+after Task 6.
+
 Task 6a (6a-1 the holder, 6a-2 the removal of the fallbacks) builds the master's "The binding" in two steps, so that routing (Task 6) lands on a binding that every entry
 already uses:
 - **Now (Tasks 6a-1 and 6a-2):** Task 6a-1: `ThreadLocalTenantContext` in `common/tenant` is the only per-thread binding. identity
@@ -68,7 +73,7 @@ already uses:
   transaction. The existence check (AC-002.14) goes through the port `KnownWorkspaces`, answered until Task 4 by
   identity's `WorkspaceLookup.findById` over the env stubs (Decided in planning, builder check). No database change.
 - **Later:** Task 4 answers `KnownWorkspaces` from `WorkspaceCatalog.findById`; Task 6 adds `TenantBinding`,
-  `REQUIRES_NEW` (P5) and the routing; Task 10 adds the resolver's own bind for anonymous site requests.
+  `REQUIRES_NEW` (P5) and the routing; Task 10 adds the resolver's own bind (`bindRequest`) for site requests.
 
 ## Data model in this iteration
 
@@ -90,7 +95,7 @@ all as in the master's Data Model.
 
 ## Edge cases covered here
 
-Master rows 1 – 55, 57 – 64, 69 – 71 and 72 – 85 (STORY-001, STORY-002, STORY-004, STORY-005, STORY-006, STORY-007, STORY-008,
+Master rows 1 – 55, 57 – 64, 69 – 71, 72 – 85, 90 and 91 (STORY-001, STORY-002, STORY-004, STORY-005, STORY-006, STORY-007, STORY-008,
 STORY-009, STORY-010, STORY-011, STORY-012 without the contributors, STORY-013 and the edge limits of STORY-014). Rows 45
 (also in Task 25), 56 and 65 – 68 belong to iteration 2.
 
