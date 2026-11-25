@@ -158,7 +158,7 @@
   color: var(--ant-color-text-secondary);
 }
 
-/* 12.1 sidebar and one-line titles (AC-002.13, AC-002.14). */
+/* 12.1 sidebar, one-line titles and Show more (AC-002.16, AC-002.17). */
 .list {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -184,6 +184,7 @@
   height: auto;
   padding-block: var(--ant-padding-xs);
   text-align: left;
+  min-width: 0;
 }
 
 .title {

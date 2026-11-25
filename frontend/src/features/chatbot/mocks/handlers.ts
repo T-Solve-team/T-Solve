@@ -1,8 +1,27 @@
 import { delay, http, HttpResponse, type HttpHandler } from 'msw';
-import type { ChatbotAnswer, ChatbotQuestion, UnavailableDocuments } from '@/shared/api';
+import type {
+  ChatbotAnswer,
+  ChatbotAsk,
+  ChatbotConversation,
+  ChatbotConversationSummaryPage,
+  ChatbotRating,
+  UnavailableDocuments,
+} from '@/shared/api';
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
+import { getDevUser } from '@/shared/auth';
 import { QUESTION_MAX_LENGTH } from '../model';
 import { classifyMockQuestion, findMockAnswer, UNAVAILABLE_DOCUMENT_IDS } from './data';
+
+const users = new Map<string | null, Map<string, ChatbotConversation>>();
+function userConversations() {
+  const user = getDevUser();
+  let conversations = users.get(user);
+  if (!conversations) {
+    conversations = new Map<string, ChatbotConversation>();
+    users.set(user, conversations);
+  }
+  return conversations;
+}
 
 /**
  * MSW mock handlers of the "chatbot" feature (guideline 10 §5). Hand-written handlers with realistic data go here;
@@ -10,8 +29,9 @@ import { classifyMockQuestion, findMockAnswer, UNAVAILABLE_DOCUMENT_IDS } from '
  */
 export const handlers: HttpHandler[] = [
   http.post('*/api/v1/chatbot/answers', async ({ request }) => {
+    const conversations = userConversations();
     await delay(MOCK_DELAY_MS);
-    const { question } = (await request.json()) as ChatbotQuestion;
+    const { question, chatSessionId: asked } = (await request.json()) as ChatbotAsk;
     if (question.trim() === '') {
       return problem(400, 'MSG01', {
         fieldErrors: [{ field: 'question', code: 'MSG01', params: { field_name: 'Question' } }],
@@ -28,22 +48,60 @@ export const handlers: HttpHandler[] = [
         ],
       });
     }
+    if (asked && !conversations.has(asked)) return problem(404, 'MSG04');
+    const chatSessionId = asked ?? crypto.randomUUID();
     const outcome = classifyMockQuestion(question);
-    if (outcome) {
-      return HttpResponse.json<ChatbotAnswer>({
-        answerId: crypto.randomUUID(),
-        outcome,
-        text: '',
-        citations: [],
-      });
-    }
     const match = findMockAnswer(question);
-    return HttpResponse.json<ChatbotAnswer>({
+    const answer: ChatbotAnswer = {
       answerId: crypto.randomUUID(),
-      outcome: match ? 'ANSWERED' : 'NO_SOURCE',
-      text: match?.text ?? '',
-      citations: match?.citations ?? [],
+      outcome: outcome ?? (match ? 'ANSWERED' : 'NO_SOURCE'),
+      text: outcome ? '' : (match?.text ?? ''),
+      citations: outcome ? [] : structuredClone(match?.citations ?? []),
+    };
+    const conversation = conversations.get(chatSessionId) ?? {
+      chatSessionId,
+      title: question.trim(),
+      startedAt: new Date().toISOString(),
+      turns: [],
+    };
+    conversation.turns.push({ question: question.trim(), answer, rating: null });
+    conversations.set(chatSessionId, conversation);
+    return HttpResponse.json<ChatbotAnswer>({ ...answer, chatSessionId });
+  }),
+
+  http.get('*/api/v1/chatbot/conversations', async ({ request }) => {
+    const conversations = userConversations();
+    await delay(MOCK_DELAY_MS);
+    const query = new URL(request.url).searchParams;
+    const number = Math.max(0, Number(query.get('page') ?? 0) || 0);
+    const size = Math.min(100, Math.max(1, Number(query.get('size') ?? 20) || 20));
+    const summaries = [...conversations.values()]
+      .reverse()
+      .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+      .map(({ chatSessionId, title, startedAt }) => ({ chatSessionId, title, startedAt }));
+    return HttpResponse.json<ChatbotConversationSummaryPage>({
+      content: summaries.slice(number * size, (number + 1) * size),
+      page: {
+        size,
+        number,
+        totalElements: summaries.length,
+        totalPages: Math.ceil(summaries.length / size),
+      },
     });
+  }),
+
+  http.get('*/api/v1/chatbot/conversations/:chatSessionId', async ({ params }) => {
+    const conversations = userConversations();
+    await delay(MOCK_DELAY_MS);
+    const conversation = conversations.get(String(params.chatSessionId));
+    return conversation ? HttpResponse.json(conversation) : problem(404, 'MSG04');
+  }),
+
+  http.delete('*/api/v1/chatbot/conversations/:chatSessionId', async ({ params }) => {
+    const conversations = userConversations();
+    await delay(MOCK_DELAY_MS);
+    if (!conversations.delete(String(params.chatSessionId))) return problem(404, 'MSG04');
+    return new HttpResponse(null, { status: 204 });
   }),
 
   http.get('*/api/v1/chatbot/unavailable-documents', async ({ request }) => {
@@ -54,19 +112,28 @@ export const handlers: HttpHandler[] = [
     });
   }),
 
-  // Stateless (spec AC-004.6): the page keeps the rating, the mock only confirms it.
-  http.put('*/api/v1/chatbot/answers/:answerId/rating', async () => {
+  http.put('*/api/v1/chatbot/answers/:answerId/rating', async ({ params, request }) => {
     await delay(MOCK_DELAY_MS);
+    const { rating } = (await request.json()) as ChatbotRating;
+    setRating(String(params.answerId), rating);
     return new HttpResponse(null, { status: 204 });
   }),
 
-  http.delete('*/api/v1/chatbot/answers/:answerId/rating', async () => {
+  http.delete('*/api/v1/chatbot/answers/:answerId/rating', async ({ params }) => {
     await delay(MOCK_DELAY_MS);
+    setRating(String(params.answerId), null);
     return new HttpResponse(null, { status: 204 });
   }),
 ];
 
 /** Restores this feature's mock data to its starting state — called after every test (src/test/setup.ts). */
 export function resetMockData(): void {
-  // The answers and the unavailable Wiki documents never change.
+  users.clear();
+}
+
+function setRating(answerId: string, rating: ChatbotConversation['turns'][number]['rating']) {
+  for (const conversation of userConversations().values()) {
+    const turn = conversation.turns.find((turn) => turn.answer.answerId === answerId);
+    if (turn) turn.rating = rating;
+  }
 }

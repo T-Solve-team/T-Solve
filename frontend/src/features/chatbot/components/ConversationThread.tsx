@@ -13,6 +13,8 @@ type ConversationThreadProps = {
   /** A rating request is running (AC-003.2). */
   isRating: boolean;
   onRate: (answerId: string, rating: ChatTurn['rating']) => void;
+  /** Shown in place of the turns while the open conversation loads or fails to load (AC-002.4, AC-002.8). */
+  status?: ReactNode;
   children: ReactNode;
 };
 
@@ -23,12 +25,13 @@ export function ConversationThread({
   pendingQuestion,
   isRating,
   onRate,
+  status,
   children,
 }: ConversationThreadProps) {
   const end = useRef<HTMLDivElement>(null);
   const [highlightedCitationId, setHighlightedCitationId] = useState<string>();
   const latestAnswer = turns.at(-1)?.answer;
-  const isEmpty = turns.length === 0 && pendingQuestion === undefined;
+  const isEmpty = turns.length === 0 && pendingQuestion === undefined && status === undefined;
   const initials = askerName
     .trim()
     .split(/\s+/)
@@ -51,20 +54,22 @@ export function ConversationThread({
     >
       <div className={styles.thread} hidden={isEmpty}>
         <div className={`${styles.column} ${styles.turns}`}>
-          {turns.map((turn, index) => (
-            <article key={`${index}-${turn.answer.answerId}`} className={styles.turn}>
-              <QuestionHeading question={turn.question} initials={initials} />
-              <ChatAnswer
-                answer={turn.answer}
-                unavailableIds={unavailableIds}
-                rating={turn.rating}
-                isRating={isRating}
-                onRate={(rating) => onRate(turn.answer.answerId, rating)}
-                highlightedCitationId={highlightedCitationId}
-                onHighlightCitation={setHighlightedCitationId}
-              />
-            </article>
-          ))}
+          {status}
+          {status === undefined &&
+            turns.map((turn, index) => (
+              <article key={`${index}-${turn.answer.answerId}`} className={styles.turn}>
+                <QuestionHeading question={turn.question} initials={initials} />
+                <ChatAnswer
+                  answer={turn.answer}
+                  unavailableIds={unavailableIds}
+                  rating={turn.rating}
+                  isRating={isRating}
+                  onRate={(rating) => onRate(turn.answer.answerId, rating)}
+                  highlightedCitationId={highlightedCitationId}
+                  onHighlightCitation={setHighlightedCitationId}
+                />
+              </article>
+            ))}
           {pendingQuestion !== undefined && (
             <article className={styles.turn}>
               <QuestionHeading question={pendingQuestion} initials={initials} />

@@ -14,16 +14,101 @@ import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'ms
 import { ChatbotAnswerOutcome } from '../model';
 import type {
   ChatbotAnswer,
+  ChatbotAsk,
+  ChatbotConversation,
+  ChatbotConversationSummaryPage,
   ChatbotIssueDraft,
-  ChatbotIssueDraftRequest,
   ChatbotIssueRequest,
   ChatbotJiraIssue,
-  ChatbotQuestion,
   ChatbotRating,
   TicketSolutionCitation,
   UnavailableDocuments,
   WikiDocumentCitation,
 } from '../model';
+
+export const getListChatbotConversationsResponseMock = (
+  overrideResponse: Partial<Extract<ChatbotConversationSummaryPage, object>> = {},
+): ChatbotConversationSummaryPage => ({
+  content: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      chatSessionId: faker.string.uuid(),
+      title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      startedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+    }),
+  ),
+  page: {
+    size: faker.number.int(),
+    number: faker.number.int(),
+    totalElements: faker.number.int(),
+    totalPages: faker.number.int(),
+  },
+  ...overrideResponse,
+});
+
+export const getGetChatbotConversationResponseWikiDocumentCitationMock = (
+  overrideResponse: Partial<WikiDocumentCitation> = {},
+): WikiDocumentCitation => ({
+  ...{
+    number: faker.number.int(),
+    type: faker.helpers.arrayElement(['WIKI_DOCUMENT'] as const),
+    wikiDocumentId: faker.string.uuid(),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getGetChatbotConversationResponseTicketSolutionCitationMock = (
+  overrideResponse: Partial<TicketSolutionCitation> = {},
+): TicketSolutionCitation => ({
+  ...{
+    number: faker.number.int(),
+    type: faker.helpers.arrayElement(['TICKET_SOLUTION'] as const),
+    solution: {
+      symptoms: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      rootCause: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      resolutionSteps: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      workaround: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      scopeOfApplicability: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getGetChatbotConversationResponseMock = (
+  overrideResponse: Partial<Extract<ChatbotConversation, object>> = {},
+): ChatbotConversation => ({
+  chatSessionId: faker.string.uuid(),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  startedAt: faker.date.past().toISOString().slice(0, 19) + 'Z',
+  turns: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    question: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    answer: {
+      answerId: faker.string.uuid(),
+      outcome: faker.helpers.arrayElement(Object.values(ChatbotAnswerOutcome)),
+      text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      citations: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () =>
+          faker.helpers.arrayElement([
+            { ...getGetChatbotConversationResponseWikiDocumentCitationMock() },
+            { ...getGetChatbotConversationResponseTicketSolutionCitationMock() },
+          ]),
+      ),
+      chatSessionId: faker.helpers.arrayElement([faker.string.uuid(), undefined]),
+      title: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 60 } }),
+        undefined,
+      ]),
+    },
+    rating: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(['HELPFUL', 'NOT_HELPFUL'] as const),
+      null,
+    ]),
+  })),
+  ...overrideResponse,
+});
 
 export const getAskChatbotResponseWikiDocumentCitationMock = (
   overrideResponse: Partial<WikiDocumentCitation> = {},
@@ -70,6 +155,7 @@ export const getAskChatbotResponseMock = (
         { ...getAskChatbotResponseTicketSolutionCitationMock() },
       ]),
   ),
+  chatSessionId: faker.helpers.arrayElement([faker.string.uuid(), undefined]),
   title: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 60 } }),
     undefined,
@@ -118,17 +204,86 @@ export const getCreateChatbotIssueResponseMock = (
     },
   ]);
 
+export const getListChatbotConversationsMockHandler = (
+  overrideResponse?:
+    | ChatbotConversationSummaryPage
+    | ((
+        info: Parameters<HttpResponseResolver>[0],
+      ) => Promise<ChatbotConversationSummaryPage> | ChatbotConversationSummaryPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    '*/api/v1/chatbot/conversations',
+    async (info: Parameters<HttpResponseResolver>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListChatbotConversationsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetChatbotConversationMockHandler = (
+  overrideResponse?:
+    | ChatbotConversation
+    | ((
+        info: Parameters<HttpResponseResolver<{ chatSessionId: string }>>[0],
+      ) => Promise<ChatbotConversation> | ChatbotConversation),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get<{ chatSessionId: string }>(
+    '*/api/v1/chatbot/conversations/:chatSessionId',
+    async (info: Parameters<HttpResponseResolver<{ chatSessionId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetChatbotConversationResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteChatbotConversationMockHandler = (
+  overrideResponse?:
+    | void
+    | ((
+        info: Parameters<HttpResponseResolver<{ chatSessionId: string }>>[0],
+      ) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete<{ chatSessionId: string }>(
+    '*/api/v1/chatbot/conversations/:chatSessionId',
+    async (info: Parameters<HttpResponseResolver<{ chatSessionId: string }>>[0]) => {
+      if (typeof overrideResponse === 'function') {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
 export const getAskChatbotMockHandler = (
   overrideResponse?:
     | ChatbotAnswer
     | ((
-        info: Parameters<HttpResponseResolver<PathParams, ChatbotQuestion>>[0],
+        info: Parameters<HttpResponseResolver<PathParams, ChatbotAsk>>[0],
       ) => Promise<ChatbotAnswer> | ChatbotAnswer),
   options?: RequestHandlerOptions,
 ) => {
-  return http.post<PathParams, ChatbotQuestion>(
+  return http.post<PathParams, ChatbotAsk>(
     '*/api/v1/chatbot/answers',
-    async (info: Parameters<HttpResponseResolver<PathParams, ChatbotQuestion>>[0]) => {
+    async (info: Parameters<HttpResponseResolver<PathParams, ChatbotAsk>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -210,15 +365,13 @@ export const getDraftChatbotIssueMockHandler = (
   overrideResponse?:
     | ChatbotIssueDraft
     | ((
-        info: Parameters<HttpResponseResolver<{ answerId: string }, ChatbotIssueDraftRequest>>[0],
+        info: Parameters<HttpResponseResolver<{ answerId: string }>>[0],
       ) => Promise<ChatbotIssueDraft> | ChatbotIssueDraft),
   options?: RequestHandlerOptions,
 ) => {
-  return http.post<{ answerId: string }, ChatbotIssueDraftRequest>(
+  return http.post<{ answerId: string }>(
     '*/api/v1/chatbot/answers/:answerId/issue-draft',
-    async (
-      info: Parameters<HttpResponseResolver<{ answerId: string }, ChatbotIssueDraftRequest>>[0],
-    ) => {
+    async (info: Parameters<HttpResponseResolver<{ answerId: string }>>[0]) => {
       return HttpResponse.json(
         overrideResponse !== undefined
           ? typeof overrideResponse === 'function'
@@ -258,6 +411,9 @@ export const getCreateChatbotIssueMockHandler = (
   );
 };
 export const getChatbotMock = () => [
+  getListChatbotConversationsMockHandler(),
+  getGetChatbotConversationMockHandler(),
+  getDeleteChatbotConversationMockHandler(),
   getAskChatbotMockHandler(),
   getListUnavailableCitedDocumentsMockHandler(),
   getRateChatbotAnswerMockHandler(),
