@@ -52,3 +52,9 @@ User review and commit of ai-review-assist.
 
 ### Next up
 Evaluate ai-review-assist (evaluate skill).
+
+## Session 2026-11-26 — review findings
+
+- Fixed review findings 1 and 2 test-first: BUG-398 (escape `& < >` in the prompt's ticket fields), BUG-399 (strip again after the 500-character cut). Logged in docs/bug-log.md.
+- Full `mvn -B -Dapi.version=1.44 verify`: BUILD SUCCESS, unit 3293/0/0, integration 1016/0/0.
+- Code commit: default@980c5116. Finding 3 (no server-side throttle) left: not in the spec.

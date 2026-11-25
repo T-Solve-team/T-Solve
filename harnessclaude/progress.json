@@ -632,13 +632,13 @@
         "jira-rejected-feedback": "passing",
         "ai-review-assist": "passing"
       },
-      "lastUpdated": "2026-11-25T19:27:37.344Z",
+      "lastUpdated": "2026-11-25T19:53:24.445Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "5946758dd12c3d43d817c00cc157cdcf91aad80a"
+        "default": "980c5116550bcd8d7e7ce1a54b0cf2940d6607ca"
       }
     }
   },
