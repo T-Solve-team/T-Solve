@@ -5,7 +5,7 @@ JobRunr OSS stores requests in a **separate PostgreSQL Jobs database**. The work
 ## Run locally
 
 1. Prepare a separate Jobs database and a user allowed to create tables there. Set `JOBS_DB_URL` (a PostgreSQL JDBC URL), `JOBS_DB_USER` and `JOBS_DB_PASSWORD` in the existing git-ignored `.env` alongside the backend's other required settings. Do not point these at a tenant or catalog database. JobRunr manages its job tables; a separate Liquibase changelog manages `email_outbox` in the same Jobs database. The tenant changelog stays separate.
-2. Point the worker at the Registry (`REGISTRY_DB_URL`, `CATALOG_SECRET_KEY`): the Workspaces and their status come from the Registry catalog, never from environment variables.
+2. Point the worker at the Registry (`REGISTRY_DB_URL`, `REGISTRY_DB_USER`, `REGISTRY_DB_PASSWORD`, `CATALOG_SECRET_KEY`, `TSOLVE_SITE_ORIGIN_TEMPLATE`): the Workspaces and their status come from the Registry catalog, never from environment variables.
 3. From `backend/`, start the existing application with `mvn spring-boot:run "-Dspring-boot.run.profiles=worker"`. The worker profile enables JobRunr processing. The dashboard is never started. Dedicated non-web container deployment is KAN-161; the existing web configuration is retained here.
 
 Without the worker profile, processing is disabled. `TSOLVE_WORKER_ENABLED=true` enables the enqueue/storage integration for a web process; it does not enable processing. Missing Jobs DB configuration is a startup error when integration is enabled; there is no fallback to Spring's business DataSource. The private Jobs pool is not registered as a DataSource bean, so it cannot replace the business pool.

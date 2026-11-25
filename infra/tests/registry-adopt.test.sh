@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # KAN-252 Task 4a-2: infra/scripts/registry-adopt-workspace.sh adopts bluefin into the Tenant Registry DB.
-# Check names start with the id A1..A8.
+# Check names start with the id A1..A9.
 #
 #   A1 edge 14               refuses without a required variable (or with an invalid one), names it, writes nothing
 #   A2 AC-001.15 AC-001.24   writes the bluefin row with an encrypted password and prints no password
@@ -10,6 +10,7 @@
 #   A6 edge 79               an empty tenant workspace table gives no Jira site and one line saying so
 #   A7 AC-001.17 AC-001.19   adopting creates nothing else and copies no business data
 #   A8 edge 14               no secret on any docker command line or in any output
+#   A9 edge 78               a tenant workspace_id other than TSOLVE_DEMO_WORKSPACE_ID is refused, nothing written
 #
 # Run by hand (not in CI), Git Bash on Windows, Docker running:
 #   MSYS_NO_PATHCONV=1 bash infra/tests/registry-adopt.test.sh
@@ -611,6 +612,25 @@ if [[ $a8_ok -eq 1 ]]; then
   pass "A8 edge 14 no secret on any docker command line or in any output"
 else
   bad "A8 edge 14 no secret on any docker command line or in any output"
+fi
+
+# ---- A9 edge 78 ------------------------------------------------------------------------------------------------------
+a9_ok=1
+reset_state
+seed_tenant_workspace "https://bluefin.atlassian.net" "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+sql_tenant "UPDATE workspace SET workspace_id = '$OTHER_WS_ID';" >/dev/null
+out="$(run_script)"
+rc=$?
+if [[ $rc -eq 0 ]] || ! grep -q "workspace_id" <<<"$out" ||
+   [[ "$(sql_reg "SELECT count(*) FROM tenant_workspace;")" != "0" ]] || ! no_secrets_in "$out"; then
+  a9_ok=0
+  note "A9 tenant workspace_id mismatch: rc=$rc, last line: $(safe_tail "$out")"
+fi
+
+if [[ $a9_ok -eq 1 ]]; then
+  pass "A9 edge 78 a tenant workspace_id other than TSOLVE_DEMO_WORKSPACE_ID is refused, nothing written"
+else
+  bad "A9 edge 78 a tenant workspace_id other than TSOLVE_DEMO_WORKSPACE_ID is refused, nothing written"
 fi
 
 # ---- result ----------------------------------------------------------------------------------------------------------

@@ -32,7 +32,10 @@ mvn spring-boot:run
 ```
 
 `dev` seeds Alice (Admin) and Bob. `SEARCH_DEV_SCOPE=all` is the existing local demo adapter needed for the ticket
-to be visible. `/me` reads company-information readiness from the Workspace module's lookup. These settings are for this local smoke only.
+to be visible. `/me` reads company-information readiness from the Workspace module's lookup, and a fresh dev database
+has no company information, so `dev` does not make Alice ready. Once per database, before the first `npm run e2e`,
+sign in as `alice@acme.test` in the browser, open Workspace Setup (`/workspace-setup`), fill the form (company name,
+Jira site address) and click Save; the smoke then passes the setup guard. These settings are for this local smoke only.
 The fixture uses the current single `DB_*` dev database; it is not a two-database isolation fixture. It adds missing
 Ticket Resolver / Project Manager roles, the `E2E ACME` Department and `E2EACME` Project, and a Published ticket if
 none exists. It preserves existing accounts, roles and data, and never upgrades an existing draft ticket.

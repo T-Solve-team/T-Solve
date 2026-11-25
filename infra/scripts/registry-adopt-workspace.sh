@@ -2,7 +2,8 @@
 # Adopts an existing Workspace (staging bluefin, or a local Workspace) into the Tenant Registry database
 # (tenant_workspace). Reads variables from the environment, else from TSOLVE_ENV_FILE without sourcing it, encrypts
 # DB_PASSWORD inside the backend container with RegistryPasswordCli, and copies the Jira site (both columns or neither,
-# cloud id lower-cased) from the tenant workspace table when present. Idempotent: a rerun with matching fields changes
+# cloud id lower-cased) from the tenant workspace table when present; a tenant row whose workspace_id differs from
+# TSOLVE_DEMO_WORKSPACE_ID is refused, nothing written. Idempotent: a rerun with matching fields changes
 # nothing; a mismatch on any of the five identity fields (site_name, google_domain, keycloak_organization_id, db_name,
 # jira_site_url/jira_cloud_id) is refused without modifying the row. Prints no secret and passes no secret on argv.
 #
@@ -82,11 +83,12 @@ cleanup() {
 trap cleanup EXIT
 
 read_tenant_jira() {
-    local row count addr cloud _end
+    local row count tenant_id addr cloud _end
     export PGPASSWORD="$db_password"
     row="$("${compose[@]}" exec -T -e PGPASSWORD db \
         psql -X -v ON_ERROR_STOP=1 -U "$db_user" -d "$db_name" -Atq -F '|' <<'SQL'
 SELECT count(*)::text,
+       coalesce(max(workspace_id::text), ''),
        coalesce(max(btrim(jira_site_address)), ''),
        coalesce(max(btrim(jira_cloud_id)), ''),
        'END'
@@ -95,8 +97,12 @@ SQL
     )"
     unset PGPASSWORD
     row="${row%$'\r'}"
-    IFS='|' read -r count addr cloud _end <<<"$row"
+    IFS='|' read -r count tenant_id addr cloud _end <<<"$row"
     tenant_ws_count="${count:-0}"
+    if [[ -n "$tenant_id" && "$tenant_id" != "$ws_id" ]]; then
+        echo "registry-adopt-workspace: tenant workspace.workspace_id differs from TSOLVE_DEMO_WORKSPACE_ID; nothing written" >&2
+        exit 1
+    fi
     if [[ -n "$addr" && -n "$cloud" ]]; then
         jira_site_url="$addr"
         jira_cloud_id="$(printf '%s' "$cloud" | tr '[:upper:]' '[:lower:]')"
