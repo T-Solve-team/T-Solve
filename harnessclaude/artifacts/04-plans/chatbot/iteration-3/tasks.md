@@ -358,3 +358,17 @@ All three tasks are Jira KAN-243, so one branch `feat/KAN-243-chatbot-classify-q
 **Covers:** AC-001.6, AC-002.2, AC-002.3, AC-002.16, AC-002.17, AC-009.9, AC-013.1
 **Dependencies:** Task 21, Task 25
 **Estimated size:** medium
+
+## Task 29: Ask once more when the answer cites no source
+
+**Story:** STORY-005
+**Feature:** cite-retry
+**Jira:** KAN-431 (BUG-246) · branch `fix/KAN-431-chatbot-cite-retry`
+**Description:**
+- `ChatbotAnswerServiceImpl`: when the answer has no `[n]` marker of a kept source, call the chat model once more
+  with the same messages, the first reply and a reminder to cite (`AnswerPrompt`); `NO_SOURCE` only when the second
+  reply has no marker either. Web and Jira App paths alike (both use the same answer step).
+**Covers:** AC-005.3, AC-005.5
+**Dependencies:** Task 26
+**Estimated size:** small
+

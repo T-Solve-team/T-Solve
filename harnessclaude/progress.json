@@ -388,9 +388,10 @@
         "conversation-api": "passing",
         "conversation-ui": "passing",
         "conversation-paging": "passing",
-        "merge-title-paging": "evaluating"
+        "merge-title-paging": "evaluating",
+        "cite-retry": "in-progress"
       },
-      "lastUpdated": "2026-11-22T20:09:35.119Z",
+      "lastUpdated": "2026-11-25T10:53:16.307Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
