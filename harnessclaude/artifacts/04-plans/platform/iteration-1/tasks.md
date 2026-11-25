@@ -321,6 +321,7 @@ throws `UnsupportedOperationException` until Task 18. Both beans are registered 
 `RegistryDataSourceConfig` (`registryJdbcClient` and `registryTransactionManager` are not autowire candidates, so the
 config fetches the client by name). The catalog only reads `TenantContext` and never calls `runIn`. Decided in
 planning: no cache; `ObjectFileStorage.signedUrl` already reads the catalog through an `ObjectProvider`.
+**Not covered:** `claimEmail` with a null or blank email: not validated here; identity Task 14 precondition (PR #324 review Minor 4).
 **Edge rows:** #26 (race), #76 (`claimEmail` with nothing bound).
 **Tests (13 new, 2 updated):**
 - `WorkspaceCatalogIT` (`PostgresTestBase`; fixture rows written with plain JDBC; the context has no business

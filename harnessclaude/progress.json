@@ -492,7 +492,7 @@
         "demo-seed-workspaces": "pending",
         "local-data-plane": "pending",
         "registry-db": "passing",
-        "workspace-catalog": "pending",
+        "workspace-catalog": "passing",
         "row-guard": "passing",
         "tenant-routing": "pending",
         "provisioning-core": "pending",
@@ -512,9 +512,12 @@
         "e2e-smoke": "passing",
         "one-tenant-holder": "passing",
         "no-workspace-fallbacks": "passing",
-        "registry-staging-script": "passing"
+        "registry-staging-script": "passing",
+        "registry-adopt-bluefin": "passing",
+        "catalog-lookups": "passing",
+        "catalog-worker-tenant": "passing"
       },
-      "lastUpdated": "2026-11-23T19:52:04.524Z",
+      "lastUpdated": "2026-11-25T14:59:52.340Z",
       "branch": "feat/platform",
       "repos": [
         "default"
