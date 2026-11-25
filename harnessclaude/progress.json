@@ -389,15 +389,17 @@
         "conversation-api": "passing",
         "conversation-ui": "passing",
         "conversation-paging": "passing",
-        "merge-title-paging": "evaluating"
+        "merge-title-paging": "evaluating",
+        "answer-sources": "evaluating",
+        "rag-eval-runner": "pending"
       },
-      "lastUpdated": "2026-11-22T20:09:35.119Z",
+      "lastUpdated": "2026-11-25T19:43:38.954Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "e77bdca21be69c8a5fc5170e4fa295c71eab3cde"
+        "default": "112f6f2859c4e3ef906dfbd08c988aedcf17f394"
       }
     },
     "jira-app": {

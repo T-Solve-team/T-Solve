@@ -2334,3 +2334,10 @@
 {"ts":"2026-11-25T14:59:52.049Z","type":"feature-status","module":"platform","feature":"catalog-worker-tenant","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-25T14:59:52.341Z","type":"feature-status","module":"platform","feature":"catalog-worker-tenant","from":"evaluating","to":"passing"}
 {"ts":"2026-11-25T16:30:43.844Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":null,"to":"pending"}
+{"ts":"2026-11-25T19:25:39.101Z","type":"spec-approved","module":"chatbot","specHash":"d7d2afb2dd0a77f29fae2b4e7df0c56e84f4ed6acd36bdebe94a55e6d928253d"}
+{"ts":"2026-11-25T19:30:01.707Z","type":"spec-approved","module":"search","specHash":"62cd2a15a53433604a6be742bc999577cab9ba49d293680dd9e42812d62c8de0"}
+{"ts":"2026-11-25T19:30:03.098Z","type":"feature-status","module":"chatbot","feature":"answer-sources","from":null,"to":"pending"}
+{"ts":"2026-11-25T19:30:03.399Z","type":"feature-status","module":"chatbot","feature":"rag-eval-runner","from":null,"to":"pending"}
+{"ts":"2026-11-25T19:30:03.699Z","type":"feature-status","module":"chatbot","feature":"answer-sources","from":"pending","to":"in-progress"}
+{"ts":"2026-11-25T19:43:38.648Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"112f6f2859c4e3ef906dfbd08c988aedcf17f394"}
+{"ts":"2026-11-25T19:43:38.956Z","type":"feature-status","module":"chatbot","feature":"answer-sources","from":"in-progress","to":"evaluating"}
