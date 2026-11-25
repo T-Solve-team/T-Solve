@@ -50,7 +50,7 @@ class ProvisioningProfileTest {
                 @ComponentScan.Filter(
                         type = FilterType.REGEX,
                         pattern =
-                                ".*\\.(NoWorkspaceLookup|PlatformTenantScope|InMemoryWorkspaceLookup|FakeWorkspaceSignInProvisioner|KeycloakProvisioningFixture.*|.*Test|.*IT)"),
+                                ".*\\.(PlatformWorkspaceLookup|PlatformTenantScope|InMemoryWorkspaceLookup|FakeWorkspaceSignInProvisioner|KeycloakProvisioningFixture.*|.*Test|.*IT)"),
             })
     @ConfigurationPropertiesScan("vn.tsolve.identity.keycloak")
     static class ProvisioningPackages {}
