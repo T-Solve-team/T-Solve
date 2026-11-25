@@ -8,3 +8,28 @@
 .docx {
   overflow-x: auto;
 }
+
+/* 11.1 preview pane: one A4 page tall at the pane's width (AC-002.24). */
+.pdfPreview {
+  width: 100%;
+  aspect-ratio: 1 / 1.414;
+  border: var(--ant-line-width) solid var(--ant-color-border-secondary);
+}
+
+/* The first page only; WikiFileView zooms it to this box's width, so no gutter around it. */
+.docxPreview {
+  /* One A4 page tall even when the DOCX has no saved page break (one long <section>). */
+  aspect-ratio: 1 / 1.414;
+  overflow: hidden;
+  border: var(--ant-line-width) solid var(--ant-color-border-secondary);
+}
+
+.docxPreview :global(.docx-wrapper) {
+  padding: 0;
+  background: none;
+}
+
+.docxPreview :global(.docx-wrapper) > section {
+  margin: 0;
+  box-shadow: none;
+}

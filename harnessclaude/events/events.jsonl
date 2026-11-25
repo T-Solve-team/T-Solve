@@ -2286,6 +2286,11 @@
 {"ts":"2026-11-22T09:07:14.461Z","type":"feature-status","module":"chatbot","feature":"clear-box-on-send","from":null,"to":"pending"}
 {"ts":"2026-11-22T09:07:14.738Z","type":"feature-status","module":"chatbot","feature":"focus-layout","from":null,"to":"pending"}
 {"ts":"2026-11-22T09:07:42.499Z","type":"spec-approved","module":"chatbot","specHash":"de5bdf00ecfc10f1047e126efff5a993e6f1724ddb391b8ae04ac0cdafebd0b3"}
+{"ts":"2026-11-23T07:35:56.572Z","type":"spec-approved","module":"wiki","specHash":"4e73d9afa2ba714cb87479bed730aebb5c9f4ea522a44c15069d6ecff988e7a2"}
+{"ts":"2026-11-23T07:36:05.774Z","type":"feature-status","module":"wiki","feature":"wiki-preview-file","from":null,"to":"pending"}
+{"ts":"2026-11-23T08:00:14.064Z","type":"feature-status","module":"wiki","feature":"wiki-preview-file","from":"pending","to":"in-progress"}
+{"ts":"2026-11-23T08:02:19.001Z","type":"feature-status","module":"wiki","feature":"wiki-preview-file","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-23T08:12:44.154Z","type":"feature-status","module":"wiki","feature":"wiki-preview-file","from":"evaluating","to":"passing"}
 {"ts":"2026-11-22T19:35:12.846Z","type":"feature-status","module":"chatbot","feature":"merge-title-paging","from":null,"to":"pending"}
 {"ts":"2026-11-22T19:35:13.114Z","type":"feature-status","module":"chatbot","feature":"merge-title-paging","from":"pending","to":"in-progress"}
 {"ts":"2026-11-22T19:35:45.867Z","type":"spec-approved","module":"chatbot","specHash":"d3511c437410a179a13205bd4b04b9b9b0f2cd831b8a80233178387813eb5e12"}
@@ -2300,3 +2305,4 @@
 {"ts":"2026-11-23T19:31:06.860Z","type":"feature-status","module":"platform","feature":"row-guard","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-23T19:31:06.909Z","type":"feature-status","module":"platform","feature":"row-guard","from":"evaluating","to":"passing"}
 {"ts":"2026-11-24T12:04:34.368Z","type":"spec-approved","module":"wiki","specHash":"47fb26627301fe7f41ffc78786ff532ed82a0459519a3b8e64709477d4234361"}
+{"ts":"2026-11-24T19:29:55.176Z","type":"spec-approved","module":"wiki","specHash":"f912468f95e47b33f3db76ea16adf6bbe8cd904d611ba98a281d30f098498d30"}

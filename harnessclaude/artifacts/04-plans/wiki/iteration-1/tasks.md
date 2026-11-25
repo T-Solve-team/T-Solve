@@ -1,7 +1,7 @@
 ---
 module: wiki
 date: 2026-11-13
-total_tasks: 12
+total_tasks: 20
 owner: Dev
 ---
 
@@ -274,3 +274,19 @@ Also: Delete folder popup disables Delete after a 409 MSG87 answer (AC-003.16 sh
 **Tests:** AC-007.11, AC-002.14, AC-002.19, AC-002.24, AC-004.20, each test name prefixed with its id.
 **Estimated size:** small
 **Verification:** frontend `format:check`, `lint`, `typecheck`, `test`, `build`; `sdd.ts trace wiki`.
+
+## Task 20: First page of the original file in the 11.1 preview pane (KAN-372)
+
+**Story:** STORY-002
+**Feature:** wiki-preview-file
+**Branch:** `feat/KAN-372-wiki-preview-file`
+**Decisions owned:** `view-images-decisions.md` rows 5, 5a, 5b
+**Acceptance criteria:** AC-002.24, AC-002.27
+**Dependencies:** none (reuses `WikiFileView` of AC-002.19)
+**Description:** `WikiFileView` gains `variant?: 'full' | 'preview'` (default `full`, 11.2 unchanged). `preview`: a PDF iframe gets `#page=1&view=FitH&toolbar=0` on its `blob:` URL and is about one page tall; a DOCX keeps only the first `section` that `docx-preview` renders and scales it to the pane width (CSS `zoom`, never above 1, width measured with a `ResizeObserver`). `WikiPreview` renders `<WikiFileView key={documentId} variant="preview" fallback={excerpt} />` in place of the 420-character excerpt, which becomes the fallback (AC-002.27).
+**Files:**
+- Modify: `frontend/src/features/wiki/components/WikiFileView.tsx`, `frontend/src/features/wiki/components/WikiFileView.module.css`, `frontend/src/features/wiki/components/WikiPreview.tsx`
+- Test: `frontend/src/features/wiki/pages/WikiHomePage.test.tsx`
+**Tests:** `it('AC-002.24 ...')` the pane shows the file view; `it('AC-002.27 ...')` the first 420 characters when the file download fails.
+**Estimated size:** small
+**Verification:** frontend `format:check`, `lint`, `typecheck`, `test`, `build`, `generate:api` no diff; `sdd.ts trace wiki`.
