@@ -123,8 +123,8 @@ public class AiReviewServiceImpl implements AiReviewService {
             findings.add(new AiReviewFinding(
                     Field.valueOf(text(item, "field")),
                     Severity.valueOf(text(item, "severity")),
-                    cut(text(item, "issue").strip()),
-                    cut(text(item, "suggestion").strip())));
+                    cut(text(item, "issue")),
+                    cut(text(item, "suggestion"))));
         }
         return findings.stream()
                 .sorted(Comparator.comparing(AiReviewFinding::severity))
@@ -140,27 +140,33 @@ public class AiReviewServiceImpl implements AiReviewService {
         return value.asText();
     }
 
+    /** Trimmed, at most 500 characters, and trimmed again after the cut (BUG-399). */
     private static String cut(String text) {
-        if (text.length() <= MAX_TEXT) {
-            return text;
+        String trimmed = text.strip();
+        if (trimmed.length() <= MAX_TEXT) {
+            return trimmed;
         }
-        return text.substring(0, Character.isHighSurrogate(text.charAt(MAX_TEXT - 1)) ? MAX_TEXT - 1 : MAX_TEXT);
+        int end = Character.isHighSurrogate(trimmed.charAt(MAX_TEXT - 1)) ? MAX_TEXT - 1 : MAX_TEXT;
+        return trimmed.substring(0, end).strip();
     }
 
     private static String userPrompt(ReviewText text) {
         var solution = text.solution();
         return USER_PROMPT.formatted(
-                orEmpty(text.title()),
-                orEmpty(text.description()),
-                orEmpty(solution.symptoms()),
-                orEmpty(solution.rootCause()),
-                orEmpty(solution.resolutionSteps()),
-                orEmpty(solution.workaround()),
-                orEmpty(solution.scope()));
+                escape(text.title()),
+                escape(text.description()),
+                escape(solution.symptoms()),
+                escape(solution.rootCause()),
+                escape(solution.resolutionSteps()),
+                escape(solution.workaround()),
+                escape(solution.scope()));
     }
 
-    private static String orEmpty(String value) {
-        return value == null ? "" : value;
+    /** Ticket text cannot close or open the prompt's data tags (BUG-398). */
+    private static String escape(String value) {
+        return value == null
+                ? ""
+                : value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 
     private static List<String> names(Enum<?>[] values) {
