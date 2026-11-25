@@ -629,9 +629,10 @@
         "review-email-html": "passing",
         "review-email-outbox": "passing",
         "review-email-link-fallback": "passing",
-        "jira-rejected-feedback": "passing"
+        "jira-rejected-feedback": "passing",
+        "ai-review-assist": "pending"
       },
-      "lastUpdated": "2026-11-17T10:00:47.548Z",
+      "lastUpdated": "2026-11-25T17:44:08.252Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"

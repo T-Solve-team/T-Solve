@@ -2325,3 +2325,5 @@
 {"ts":"2026-11-25T14:59:52.049Z","type":"feature-status","module":"platform","feature":"catalog-worker-tenant","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-25T14:59:52.341Z","type":"feature-status","module":"platform","feature":"catalog-worker-tenant","from":"evaluating","to":"passing"}
 {"ts":"2026-11-25T16:30:43.844Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":null,"to":"pending"}
+{"ts":"2026-11-25T17:44:07.670Z","type":"spec-approved","module":"ticket-review","specHash":"47edc7d47960cc5f9988cf3a34523d52fe542fe89f014a07684d7be6b1e6c499"}
+{"ts":"2026-11-25T17:44:08.256Z","type":"feature-status","module":"ticket-review","feature":"ai-review-assist","from":null,"to":"pending"}
