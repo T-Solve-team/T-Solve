@@ -515,9 +515,10 @@
         "registry-staging-script": "passing",
         "registry-adopt-bluefin": "passing",
         "catalog-lookups": "passing",
-        "catalog-worker-tenant": "passing"
+        "catalog-worker-tenant": "passing",
+        "background-work-bound": "pending"
       },
-      "lastUpdated": "2026-11-25T14:59:52.340Z",
+      "lastUpdated": "2026-11-25T16:30:43.841Z",
       "branch": "feat/platform",
       "repos": [
         "default"

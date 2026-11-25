@@ -2324,3 +2324,4 @@
 {"ts":"2026-11-25T14:59:51.756Z","type":"feature-status","module":"platform","feature":"catalog-worker-tenant","from":"pending","to":"in-progress"}
 {"ts":"2026-11-25T14:59:52.049Z","type":"feature-status","module":"platform","feature":"catalog-worker-tenant","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-25T14:59:52.341Z","type":"feature-status","module":"platform","feature":"catalog-worker-tenant","from":"evaluating","to":"passing"}
+{"ts":"2026-11-25T16:30:43.844Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":null,"to":"pending"}

@@ -1,7 +1,7 @@
 ---
 module: platform
 date: 2026-11-04
-total_tasks: 29
+total_tasks: 30
 owner: Dev
 iteration: 1
 ---
@@ -38,8 +38,10 @@ Items of one wave run in parallel; "after" names the items that must be on `main
   `workspace` table; wiki files open), 4b sign-in, Jira App and `/me` read the catalog (`NoWorkspaceLookup`,
   `ConfigJiraWorkspaceLookup`, `StubWorkspaceStatusLookup` go), 4c the worker reads the catalog (`worker-mock` goes) —
   bluefin still signs in, answers Jira App calls and runs its jobs, now found through its Registry row.
-- **Wave 3** (both after items 1 and 4). (5) The rest of Task 6: the routing `DataSource` and the per-Workspace pools
-  (KAN-254) — nothing visible on staging (bluefin keeps its one database); `TenantRoutingIT` shows two databases.
+- **Wave 3** (both after items 1 and 4). (5) The rest of Task 6, as two tasks merged and deployed in this order: 6-1,
+  the background database work bound to a Workspace (new sub-task), then 6-2, the routing `DataSource` and the
+  per-Workspace pools (KAN-254) — nothing visible on staging (bluefin keeps its one database); `TenantRoutingIT` shows
+  two databases.
   (6) The rest of the web resolver, Task 10 (KAN-258): `MSG151` / `MSG150` before `MSG07`, anonymous site requests
   bound, `TenantIsolationIT` — on staging an unknown site answers 404 `MSG151`. `TenantIsolationIT` needs item 5's two
   databases, so that part merges after item 5.
@@ -49,7 +51,9 @@ Items of one wave run in parallel; "after" names the items that must be on `main
   (`035-workspace-info.sql`, primary key `workspace_id`) on the allow-list — bluefin works as before, and `psql` as the
   runtime user with no tenant setting sees no row. Before FORCE: re-check the Task 4a-2 adopt script's read of the tenant
   `workspace` row (jira_site_address, jira_cloud_id) — with the guard forced and no tenant bound, it reads 0 rows and
-  bluefin would silently get no Jira site.
+  bluefin would silently get no Jira site. Also here: bluefin's Registry `db_user` is still staging's app user, which owns
+  the tables (Task 6-2 routes with the row as it is, so AC-001.32 stays unmet on staging until this task): create
+  bluefin's runtime user and update the row (password re-encrypted) before the guard is switched on.
 - **Wave 5.** (8) Task 7, provisioning, in parallel with the rest of `identity` KAN-247 (identity Task 14) — plumbing
   for items 9 and 10; (9) Task 8, the invitation queue; (10) Task 9, the ops script — create a Workspace by hand on
   staging; then Task 12, the demo seed — a second Workspace on staging.
@@ -61,7 +65,7 @@ Items of one wave run in parallel; "after" names the items that must be on `main
   Task 7 declares both ports and tests with doubles in test sources only. Tasks 9, 12 and 15 start the real backend in
   the `ops` / `seed` profile, which refuses to start without both beans (AC-013.15), so they wait for Task 8 and for
   `identity` KAN-247.
-- `docker-compose.yml` and `.env.example` are edited by Tasks 1, 6a-2, 8, 10, 11, 14, 16 and 19 here (Tasks 8, 14 and 19 only add names to `.env.example`; Task 6a-2 only removes names) and by `identity` Task 10 (Redis
+- `docker-compose.yml` and `.env.example` are edited by Tasks 1, 6a-2, 8, 10, 11, 14, 16 and 19 here (Tasks 8, 14 and 19 only add names to `.env.example`; Task 6a-2 only removes names), by Task 6-2 (`.env.example`, `TENANT_DB_*`) and by `identity` Task 10 (Redis
   host, session variables): rebase on each other's branch and do not overwrite another module's variable.
 - The Spring Boot bump to 3.5.x (DevOps A2) is not a task of this module.
 
@@ -159,7 +163,7 @@ tenant `liquibase` bean in place (edge #72; see `EmailOutboxConfiguration`). `Re
 `infra/postgres/init` script; the existing Jobs and tenant fixtures cannot be reused). Adds `spring-boot-starter-jdbc`
 and the Testcontainers artifacts to `backend/pom.xml` if missing.
 **Edge rows:** #13 (key missing → startup refuses; wrong key → only that Workspace fails), #14 (no password in any log
-line; the log-capture test is finished in Task 6), #72 (the Registry beans leave the primary `DataSource` and the tenant
+line; the log-capture test is finished in Task 6-2), #72 (the Registry beans leave the primary `DataSource` and the tenant
 Liquibase in place).
 **Tests (13):** `PasswordCipherTest` (4): round trip with a `v1:` value and no plaintext, a ciphertext copied to another
 row does not decrypt, wrong key or tampered or malformed value refuses with a message holding no secret, missing or
@@ -244,7 +248,7 @@ method `findActive()` (Q2); `worker` AC-002.11 and AC-003.2 retired, AC-002.12 r
 
 **Decisions of the plan (design R17 to R20, Edge rows #76 to #85):** the adopt script is idempotent and runs once per
 environment; its Jira site is copied from bluefin's own tenant `workspace` table, never typed (Q8); the lookups answer
-empty when no Registry bean exists and the code gate stays until Task 6 (Q4); no cache (Task 10 may add one); `dev`
+empty when no Registry bean exists and the code gate stays (Q4; dropping it is a later task, see Task 6-2); no cache (Task 10 may add one); `dev`
 keeps `DevWorkspaceLookup`; `MockWorkerTenantService` moves to test sources as `FixedWorkerTenantService` (Q7).
 
 **Pre-deploy checklist (Hiếu, on the VPS, before 4a-2 is run; a checklist, not a blocker for coding):**
@@ -282,9 +286,7 @@ dev card runs `grep -rn` for each removed name over `backend/src/test` before it
   `WorkerConfigurationTest`, `WebJobsIT`, `OutboxOnlyConfigurationTest`, `WebJobsConfigurationTest` (profile and
   `tsolve.worker.mock.*` / `TSOLVE_MOCK_ACTIVE_WORKSPACES`).
 
-**Note for KAN-254 (Task 6), not decided here:** the adopted row's `db_user` is staging's app user, which owns the
-tables; routing will connect with it, which conflicts with AC-001.32 (the runtime user must not own the tables). Task 6
-(or Task 1's role split) gives bluefin a runtime user and updates the row.
+**The adopted row's `db_user`** owns the tables (AC-001.32): decided for Task 6, see the wave-4 bullet above.
 
 **Note for identity Task 14 (KAN-247):** `claimEmail` has no caller until then (design R20). Its adapter for
 `WorkspaceEmailRegistry` translates: identity's `claim` returns a boolean (`WorkspaceEmailRegistry.java:6`) while
@@ -449,9 +451,9 @@ through the renamed tests below).
   `TSOLVE_STUB_WORKSPACES`, `TSOLVE_STUB_JIRA_SITES`, `TSOLVE_STUB_WORKSPACE_READY` and the comment mentions (line 76
   too), and points to the local Registry and the adopt script; `infra/staging.env.example` loses `TSOLVE_STUB_WORKSPACES`;
   `infra/compose.staging.yml` makes `REGISTRY_DB_URL` and `CATALOG_SECRET_KEY` required (`:?`) in `backend` and `worker`
-  (the code gate stays; Task 6 drops it); `infra/README.md`, `infra/keycloak/staging/README.md` (the org id lives in the
+  (the code gate stays; dropping it is a later task, after the ITs run on production routing); `infra/README.md`, `infra/keycloak/staging/README.md` (the org id lives in the
   Registry row), `e2e/README.md` (the READY line).
-**Edge rows:** #80, #81, #83, #86; #87 is an accepted risk until Task 6 (no test here).
+**Edge rows:** #80, #81, #83, #86; #87 is an accepted risk until Task 6-2 (no test here).
 **Tests (15 new with #86 and the two pins, 8 updated or deleted):**
 - `PlatformWorkspaceLookupTest` also holds `blankTemplateWithACatalogFailsStartup_edge86` (Edge #86): an
   `ApplicationContextRunner` with the real cycle (catalog, `TenantContext`, `KnownWorkspaces`, `WorkspaceLookup`) fails
@@ -496,7 +498,7 @@ all three env names at once, so there is no deploy where the Jira App reads the 
 **Skeletons (QA step 2, Q5 = A):** QA adds `PlatformWorkspaceLookup` and `CatalogJiraWorkspaceLookup` as unannotated
 skeletons (no Spring annotation, no `@Profile`; constructors as above; methods throw `UnsupportedOperationException("4b")`)
 so the tests fail for the real reason; the dev adds the annotations and the behaviour.
-**Not covered here:** the callback's answer to a Registry failure (Task 10, Q3 = A); the single-database guard (#87, Task 6).
+**Not covered here:** the callback's answer to a Registry failure (Task 10, Q3 = A); the single-database guard (#87, Task 6-2).
 **Done when:** the three new test classes and `NoWorkspaceFallbacksTest` pass, the updated tests pass, and the staging
 smoke above passes after the deploy.
 
@@ -596,7 +598,7 @@ Staging does not change: Liquibase runs there as the table owner and there is no
 until wave 4 (the three changesets do run at the next deploy; they fail only if a staging table has another owner).
 **Edge rows (Critical/High):** #6 (runtime user cannot disable RLS, drop the policy or write `tenant_identity`),
 #7 (role attributes), #8 (missing, renamed or second policy), #9 (empty setting is "unset"), #10 (no row or a second row
-in `tenant_identity`), #12 (the allow-list only shrinks). #3 and #5 are in Task 6.
+in `tenant_identity`), #12 (the allow-list only shrinks). #3 and #5 are in Task 6-2.
 **Tests (12: 9 in `ConventionGuardIT`, 3 in `RowGuardIT`; the test plan is `prompts/handoffs/KAN-253-task-5-qa.md`):** guard fails for a scratch table with no policy, a policy named otherwise, another condition, a
 second policy (AC-001.31, Edge #8); a table breaking AC-001.20 is named (AC-001.22); allow-list rule (Edge #12);
 `id` defaulted by SQL and by JPA (AC-001.23); runtime user: no rows and refused writes when the setting is unset, empty
@@ -614,7 +616,7 @@ a malformed setting reads no row or raises 22P02, never a row (Edge #9, Q4); ref
   `TenantGuardDatabase.java` (the fixture), `backend/src/test/resources/db/changelog/guard-order-test.xml` (includes the
   main master, then one changeSet that creates a probe table, to prove the installer runs last)
 **Wave order (22/11, KAN-384):** wave 2, item 3 — built and tested here, not switched on. It is switched on for
-bluefin on staging in wave 4, after routing (Task 6).
+bluefin on staging in wave 4, after routing (Task 6-2).
 **Dependencies:** Tasks 1 and 3 (init script, `PostgresTestBase`)
 **Estimated size:** medium
 **Done when:** both ITs pass and `isolation_probes` appears nowhere in `src/main`.
@@ -632,7 +634,7 @@ request, the Jira App call and the job read their Workspace from the one holder.
 **Covers:** AC-002.11 (holder side: the binding is restored in `finally`, so a request that ends with an exception
 leaves none; the filter side stays in Task 10), AC-002.12, AC-002.13, AC-002.14 (against the interim Workspace list,
 see the description), AC-002.15, AC-002.16.
-**Design:** The binding; iteration-1 design "Wave order and Task 6a"; Key Decision P5 (comes with Task 6).
+**Design:** The binding; iteration-1 design "Wave order and Task 6a"; Key Decision P5 (`runIn` binds only).
 **Description:**
 - **One holder.** `ThreadLocalTenantContext` (bean in `common/tenant`, implements the existing `TenantContext`, keeps
   the id in a static `ThreadLocal`; `@Primary`, so every injection of `TenantContext` gets it) is the only per-thread
@@ -640,8 +642,8 @@ see the description), AC-002.15, AC-002.16.
   that `KnownWorkspaces` does not know (AC-002.14), binds, runs, and restores the previous binding in `finally`, also
   when the action throws (AC-002.12); a Suspended Workspace binds (AC-002.15). `requireWorkspaceId()` with none bound
   throws `NoTenantException` and logs the calling class and method (AC-002.16; the global handler answers 500 `MSG06`).
-  No transaction in `runIn` and no package-private `bind`/`unbind` yet: they come with routing (Task 6) and the
-  resolver (Task 10).
+  No transaction in `runIn` and no package-private `bind`/`unbind` (P5 as changed for Task 6: `runIn` stays bind
+  only).
 - **Delegates.** identity `TenantScope` is implemented by `PlatformTenantScope`, which calls `TenantContext`; it
   replaces `LocalTenantScope` (bean in `SignInConfig`; the ~30 callers keep their `runIn` calls). The worker's
   `MockWorkerTenantService.runIn` and `currentWorkspaceId` call `TenantContext`; its own `ThreadLocal` goes. Its
@@ -763,45 +765,164 @@ staging smoke on bluefin passes (sign-in, a review email queued, a tracker sugge
 
 ---
 
-## Task 6: Tenant routing: one pool per Workspace, the tenant setting
+## Task 6-1: Bind the background database work to a Workspace
 
 **Story:** STORY-002
+**Feature:** background-work-bound
+**Assignee:** Trần Trung Hiếu (KAN-99); Jira sub-task KAN-461; the owners of search, chatbot and
+ticket-repository review the PR
+**After this task you can:** (plumbing, wave 3 item 5, first half; serves Task 6-2) see on staging that bluefin works as
+before, while the publish listener, the embedding catch-up, the conversation retention and the preview cleanup run bound
+to bluefin.
+**Covers:** no criterion of its own. It uses `runIn` (AC-002.12) so that no background work reaches the tenant database
+unbound once routing is on (AC-002.20 and AC-002.21 are delivered by Task 6-2). One `docs/bug-log.md` row,
+`BUG-<next free id>`: "background database work runs with no Workspace bound and fails once routing is on". The tests
+carry that bug id, not a `platform` AC id: they live in other modules' test paths, where AC ids mean those modules'
+criteria.
+**Design:** iteration-1 design "Task 6: background work bound, then routing"; The binding.
+**Description:**
+- `TicketsPublishedListener`: read `currentWorkspaceId()` in `on()` (the publishing thread), then run the embedding
+  inside `runIn` of that id on the executor thread; with nothing bound it behaves as today. A failure stays the existing
+  warn line.
+- `EmbeddingCatchUpJob`, `ConversationRetentionJob`, `PreviewCleanupJob`: one run per Active Workspace
+  (`WorkspaceCatalog.findActive()` through `ObjectProvider`), each inside `TenantContext.runIn`. With no catalog bean
+  (ITs, local runs without a Registry) one unbound run, as today. A failure in one Workspace is logged without ids and
+  the loop goes on. The `ponytail:` comment of `ConversationRetentionJob` goes.
+- **Decided in planning:** a failure of `findActive()` itself propagates (the run fails and the next one retries); it is
+  never read as an empty list (as Edge #84).
+- **Decided in planning (builder check):** in `dev` with a Registry set, `runIn` refuses an id that
+  `DevWorkspaceLookup` does not know; that Workspace's run is logged and skipped, with no extra code.
+- **Unchanged, reasons in the PR text:** `InProcessSuggestionJobQueue` (the bean exists only with the worker and web jobs
+  off, so it never runs on staging, and its webhook caller binds no Workspace either, BUG-342); the rewrite pool of
+  `SolutionFormAiImpl` (`rewrite` uses only the AI client and Redis, no tenant database work).
+- **Check (QA card, before coding):** no other background thread and no unbound HTTP path (Jira App chain and webhook,
+  sign-in chain, anonymous site requests) reaches the tenant database; report any to the orchestrator, because it would
+  fail after Task 6-2. Check too that the code gate allows the four files (search, chatbot and ticket-repository paths:
+  each module's status and approved spec).
+**Edge rows (Critical/High):** #88.
+**Tests (about 8, in the existing test classes, each named with the bug id):** `TicketsPublishedListenerTest`: the
+executor thread sees the publisher's Workspace; unbound behaves as before. For each of the three jobs: one bound run per
+Active Workspace (a Suspended one is not listed), a failing Workspace does not stop the next; with no catalog bean one
+unbound run.
+**Files:**
+- Modify: `backend/src/main/java/vn/tsolve/search/embedding/service/impl/TicketsPublishedListener.java`,
+  `backend/src/main/java/vn/tsolve/search/embedding/service/impl/EmbeddingCatchUpJob.java`,
+  `backend/src/main/java/vn/tsolve/chatbot/conversation/service/impl/ConversationRetentionJob.java`,
+  `backend/src/main/java/vn/tsolve/ticket/service/impl/PreviewCleanupJob.java`; `docs/bug-log.md`
+- Test (update for the new constructors and add the cases): under `backend/src/test/java/vn/tsolve/`:
+  `search/embedding/service/impl/TicketsPublishedListenerTest`, `EmbeddingCatchUpJobTest`,
+  `TicketEmbeddingServiceImplTest` (it builds the listener), `chatbot/conversation/service/impl/ConversationRetentionJobTest`,
+  `chatbot/conversation/ConversationRetentionJobIT`, `ticket/service/impl/PreviewCleanupJobTest`
+**Dependencies:** Tasks 4a-1 to 4c and 6a-2 merged and deployed
+**Estimated size:** small (4 production files, about 8 tests). One QA card and one developer card. Own branch and PR:
+`fix/KAN-461-platform-bind-background-work`.
+**Done when:** the updated test classes pass in the quick local checks, CI is green on the PR, the bug row names the PR,
+and the PR is merged and deployed on staging (Task 6-2 deploys only after this).
+
+---
+
+## Task 6-2: Tenant routing: one pool per Workspace, the tenant setting
+
+**Story:** STORY-002, STORY-001
 **Feature:** tenant-routing
 **Assignee:** Trần Trung Hiếu (KAN-99); Jira sub-task KAN-254
-**After this task you can:** (plumbing, wave 3 item 5; serves Tasks 7–10 and the wave-4 switch-on) run
+**After this task you can:** (plumbing, wave 3 item 5, second half; serves Tasks 7–10 and the wave-4 switch-on) run
 `TenantRoutingIT` and see one JPA query go to Workspace A's database and another to B's, and a misrouted connection
 read nothing.
 **Covers:** AC-002.1 (`TenantContext` stays the one interface; its holder is Task 6a-1), AC-002.20 – AC-002.25,
 AC-001.25 (the pool of a Workspace with a bad key is refused).
-**Design:** The binding; Database routing; Key Decisions P5, R2, R3, R15.
-**Description:** routing only — the binding itself is Task 6a-1. `TenantBinding` (the static holder that Task 6a-1's
-`ThreadLocal` moves into, so non-bean code reads it), `runIn` of `ThreadLocalTenantContext` gains
-`TransactionTemplate(PROPAGATION_REQUIRES_NEW)` (decision P5; see iteration-1 design "Open before coding" for
-`WebSessionFilter`, which wraps the whole request in `runIn`), `TenantRoutingDataSource` (primary `DataSource`; throws
-before opening a connection when none is bound; connection checkout outside a transaction sets and resets
-`app.tenant_id`), `TenantPoolRegistry` (lazy Hikari pools, `TENANT_DB_POOL_MAX` default 5, `minimumIdle 0`),
-`TenantAwareJpaTransactionManager` (`set_config('app.tenant_id', ?, true)` in `doBegin`), `TenantDataSourceConfig`
-(JPA properties of R15: `allow_jdbc_metadata_access=false`, explicit dialect, `open-in-view=false`).
+**Design:** iteration-1 design "Task 6: background work bound, then routing"; The binding; Database routing; Key
+Decisions P5, R2, R3, R15.
+**Description:** routing only.
+- `common/tenant`: `TenantBinding` (package-private static holder; Task 6a-1's `ThreadLocal` moves into it), the port
+  `TenantDataSources` (`DataSource poolOf(UUID)`), `TenantRoutingDataSource` (throws `NoTenantException` before opening a
+  connection when none is bound; a checkout outside a transaction sets `app.tenant_id` and resets it on close),
+  `TenantAwareJpaTransactionManager` (`set_config('app.tenant_id', ?, true)` in `doBegin`).
+- `runIn` stays **bind only**: no transaction (P5 as changed); transactions stay with the services' `@Transactional`.
+  `WebSessionFilter` is not edited. No package-private `bind`/`unbind`.
+- `platform/registry`: `TenantPoolRegistry` implements the port (lazy Hikari pools, `TENANT_DB_POOL_MAX` default 5,
+  `minimumIdle 0`, `idleTimeout` 10 minutes; a pool that fails to open is not cached and the log names the site name,
+  never the password); `TenantDataSourceConfig` (the primary `DataSource`, the `transactionManager`, the JPA
+  properties of R15 and `ddl-auto: none`). `RegistryRepository.findConnection(UUID)` returns `db_name`, `db_user`,
+  `db_password` and `site_name`; it is platform-internal, not on `WorkspaceCatalog` (AC-004.18).
+- **Where routing is on:** only when the Registry is configured **and** the profile is not `dev`. Otherwise Boot's single
+  `DataSource` and `ddl-auto: validate` stay, and `TwoTenantDatabases` keeps serving the ITs. The Registry gate stays;
+  moving the ITs to production routing and dropping the gate is a later task (not numbered).
+- **Tenant Liquibase:** where routing is on, `spring.liquibase.url`, `user` and `password` come from `DB_HOST`,
+  `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, so bluefin migrates as today. **Decided in planning (builder
+  check):** they apply under the same gate, never unconditionally in `application.yml`: the ITs set
+  `DB_HOST=unused` and are migrated through the primary `DataSource`.
+- Configuration: `TENANT_DB_HOST` (required where routing is on; startup fails naming it, AC-008.5), `TENANT_DB_PORT`
+  (default 5432), `TENANT_DB_POOL_MAX` (default 5; staging 10), for backend and worker;
+  `management.health.db.ignore-routing-data-sources: true`.
+- bluefin is routed with its Registry row as it is (its `db_user` owns the tables; wave 4 changes that).
+- **Password check (N1, Hiếu, 25/11):** `RegistryPasswordCli` gets a `verify` mode (argument `verify`; a ninth
+  production file, accepted over the size guide). It decrypts the stored value for the Workspace id, compares it with
+  `DB_PASSWORD` and prints only `OK` (exit 0) or `FAIL` (exit non-zero). It never prints the password, the key or the
+  stored value, including on an error. Without the argument it encrypts as today (the adopt script is unchanged).
+  **Decided in planning (builder check):** it stays a plain `main` with no database access; the stored value comes in
+  the variable `STORED_DB_PASSWORD` beside `CATALOG_SECRET_KEY`, `TSOLVE_DEMO_WORKSPACE_ID` and `DB_PASSWORD`; a
+  missing variable is named; a wrong key or a malformed value prints `FAIL` with no exception message.
+- **`max_connections` (N2, Hiếu, 25/11):** `infra/compose.staging.yml` goes from `max_connections=100` to 300 (R2,
+  Edge #15).
 **Edge rows (Critical/High):** #3 (pooled connection of a finished transaction shows no row to a request with no
 Workspace), #5 (injected misroute reads and writes nothing), #13 (wrong `CATALOG_SECRET_KEY`: only that Workspace
-fails, others work), #14 (no password in any log line, log capture), #15 (25 Workspaces open pools below
-`max_connections`), #17 (one Workspace database down, Registry down), #23 (Hibernate starts with nothing bound). #2 and
-#4 are in Task 6a-1.
+fails, others work), #14 (no password in any log line, log capture), #15 (25 Workspaces, backend and worker, stay below
+`max_connections`), #17 (one Workspace database down, Registry down), #20 (health does not ask the router), #23
+(the context starts with nothing bound), #89 (bluefin's row password, pre-deploy check). #2 and #4 are in Task 6a-1,
+#88 in Task 6-1.
 **Must close #87 (accepted Critical risk since Task 4b):** with routing in place, a second Registry row must reach only
-its own database (edge #5 in `TenantRoutingIT`); the Task 6 hand-off repeats "one Registry row until routing; do not
-insert a row by hand before Task 6".
-**Tests (about 10):** `ThreadLocalTenantContextTest` extended: `runIn` runs the action in a new transaction (P5);
-`TenantRoutingIT`: two Workspaces on two databases, no Workspace → throws before a connection (AC-002.21), pool size
-and lazy open, two first requests open one pool, transaction stays on its database (AC-002.23), Edge #3, #5, #13, #14,
-#15, #17, #23.
+its own database (edge #5 in `TenantRoutingIT`, with two rows); this task's hand-off repeats "one Registry row until
+routing; do not insert a row by hand before Task 6-2".
+**Tests (about 13):** `RegistryPasswordCliTest` (+1, Edge #89): `verify` prints only `OK` for the matching password
+and only `FAIL` with a non-zero exit for another password, a wrong key or a malformed value; no output holds the
+password, the key or the stored value. `ThreadLocalTenantContextTest` (+1): `runIn` opens no transaction and the
+routing reads the same binding. `TenantPoolRegistryTest` (2): pool settings and the #15 arithmetic; without a Registry, or in `dev`, no routing
+bean exists. `TenantRoutingIT` (about 9) on `TwoWorkspaceDatabases`: a JPA and a JDBC query of A reach A's database and
+B's reach B's (AC-002.20, closes #87); nothing bound → throws before a connection and the port is never called
+(AC-002.21); lazy open, maximum size, two concurrent first uses share one pool (AC-002.22, #16); a transaction stays on
+its database and `runIn(B)` inside it is refused (AC-002.23); `app.tenant_id` is set inside and outside a transaction
+and cleared after, with a pool of one (AC-002.24, #3); an injected misroute reads nothing and its write is refused
+(AC-002.25, #5); a wrong key for one Workspace refuses only that pool and logs the site name without the password
+(AC-001.25, #13, #14); one Workspace database down, Registry down (#17); the context starts with nothing bound and
+Hibernate opens no connection (#23).
+**Shared fixture (Task 10's `TenantIsolationIT` reuses it):** `common/tenant/TwoWorkspaceDatabases`. **Decided in
+planning (builder check):** it builds two `TenantGuardDatabase`s (non-owner runtime role, Task 5's policies,
+`tenant_identity` rows) and a Registry database from `PostgresTestBase` with the two rows and encrypted passwords.
 **Files:**
-- Create: `backend/src/main/java/vn/tsolve/common/tenant/TenantBinding.java`, `TenantRoutingDataSource.java`,
-  `TenantPoolRegistry.java`, `TenantAwareJpaTransactionManager.java`, `TenantDataSourceConfig.java`
-- Modify: `backend/src/main/java/vn/tsolve/common/tenant/ThreadLocalTenantContext.java` (Task 6a-1)
-- Test: `backend/src/test/java/vn/tsolve/common/tenant/ThreadLocalTenantContextTest.java` (extend), `TenantRoutingIT.java`
-**Dependencies:** Tasks 3a, 4, 6a-1 and 6a-2 (wave 3; the row guard of Task 5 is switched on after this task, in wave 4)
-**Estimated size:** medium
-**Done when:** `TenantRoutingIT` passes with a pool of one connection and with two databases.
+- Create (6): `backend/src/main/java/vn/tsolve/common/tenant/TenantBinding.java`, `TenantDataSources.java`,
+  `TenantRoutingDataSource.java`, `TenantAwareJpaTransactionManager.java`;
+  `backend/src/main/java/vn/tsolve/platform/registry/TenantPoolRegistry.java`, `TenantDataSourceConfig.java`
+- Modify (3): `backend/src/main/java/vn/tsolve/common/tenant/ThreadLocalTenantContext.java`,
+  `backend/src/main/java/vn/tsolve/platform/registry/RegistryRepository.java`,
+  `backend/src/main/java/vn/tsolve/platform/registry/RegistryPasswordCli.java` (`verify`)
+- Config: `backend/src/main/resources/application.yml`, `.env.example`, `infra/staging.env.example`,
+  `infra/compose.staging.yml` (`TENANT_DB_HOST: db` and the pool size for backend and worker; `max_connections=300`
+  for `db`), `infra/README.md` (the pre-deploy check of #89 and the `db` restart, see Pre-deploy and Staging notes)
+- Test: create `backend/src/test/java/vn/tsolve/common/tenant/TenantRoutingIT.java`, `TwoWorkspaceDatabases.java`,
+  `backend/src/test/java/vn/tsolve/platform/registry/TenantPoolRegistryTest.java`; extend
+  `common/tenant/ThreadLocalTenantContextTest.java`; update `platform/registry/RegistryChangelogIT`
+  (`keepsPrimaryDataSourceAndTenantLiquibase_edge_72`: with routing the primary is the router and the tenant Liquibase
+  still runs through `spring.liquibase.url`) and give `TENANT_DB_HOST` to any runner that loads the routing config
+  (`CatalogLookupsIT`, `WorkspaceCatalogIT`); extend `platform/registry/RegistryPasswordCliTest.java`
+**Pre-deploy (Hiếu, on the VPS, before the merge, because CD deploys every merge to `main`):** Task 6-1 is deployed;
+`TENANT_DB_HOST` reaches backend and worker (set in the compose file); the env file has every new name of
+`infra/staging.env.example` (CD fails otherwise); bluefin's row password passes `verify` with the deployed
+`CATALOG_SECRET_KEY` (#89; on `FAIL` do not merge); still one Registry row. **Decided in planning (builder check):**
+the running image has no `verify`, so the `infra/README.md` step builds the PR head from a separate checkout (not
+`/srv/tsolve/src`) as `tsolve-backend:verify`, reads the stored value with `psql` from `tenant_workspace` into
+`STORED_DB_PASSWORD`, and runs the CLI once (`docker run --rm --network none --entrypoint java`, variables passed by
+name with `-e NAME`, never as `NAME=value` arguments), then removes the image and the checkout.
+**Staging notes:** CD does not recreate `db`; it only warns "manual step needed" for the compose file. Right after the
+CD run, on the VPS: `dc up -d --wait db`. **The database restarts** (a short outage for the app and Keycloak on
+staging); then `SHOW max_connections` gives 300, and sign in on bluefin again.
+**Dependencies:** Tasks 3a, 4a-1 to 4c, 5, 6a-2; **Task 6-1 merged and deployed on staging** (the row guard of Task 5 is
+switched on after this task, in wave 4)
+**Estimated size:** medium (9 production files plus config, about 13 tests; over the size guide, accepted in N1). One
+QA card and one developer card. Branch `feat/KAN-254-platform-tenant-routing`.
+**Done when:** `TenantRoutingIT` and `RegistryPasswordCliTest` pass (routing with a pool of one connection and with two
+databases), CI is green on the PR, `verify` printed `OK` before the merge, and after the deploy and the `db` restart
+bluefin signs in and works as before.
 
 ---
 
@@ -844,7 +965,7 @@ log capture (Edge #62); a source scan fails when a class outside the Console, `o
 - Create: `backend/src/main/java/vn/tsolve/platform/exception/WorkspaceRuleException.java`
 - Modify: `backend/src/main/java/vn/tsolve/platform/registry/RegistryRepository.java` (`insert`, `updateStatus`)
 - Test: `backend/src/test/java/vn/tsolve/platform/WorkspaceProvisioningIT.java`, `ProvisioningSourceScanTest.java`
-**Dependencies:** Tasks 3a, 4, 5, 6; `be-foundation` Task 1. The real `FirstAdminCreator` (`identity`, KAN-247) and
+**Dependencies:** Tasks 3a, 4, 5, 6-2; `be-foundation` Task 1. The real `FirstAdminCreator` (`identity`, KAN-247) and
 `InvitationJobQueue` (`platform`, JobRunr; Task 8) are needed from Task 9 on.
 **Estimated size:** medium
 **Done when:** `WorkspaceProvisioningIT` passes including the compensation at every step and the race.
