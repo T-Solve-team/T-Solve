@@ -1,4 +1,34 @@
-/* Figma 6.1: the results area keeps its place under the filters, even when empty. */
+.start {
+  --search-box-width: 680px;
+  --search-filter-alignment: center;
+
+  width: 100%;
+  max-width: 720px;
+  margin-inline: auto;
+  padding-block-start: clamp(48px, 12vh, 120px);
+}
+
+.intro {
+  display: grid;
+  justify-items: center;
+  gap: var(--ant-margin-xs);
+  margin-block-end: var(--ant-margin-lg);
+  text-align: center;
+}
+
+.iconTile {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  margin-block-end: var(--ant-margin-xs);
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-primary-bg);
+  color: var(--ant-color-primary);
+  font-size: var(--ant-font-size-heading-1);
+}
+
+.top,
 .results {
-  min-height: 200px;
+  max-width: 860px;
 }
