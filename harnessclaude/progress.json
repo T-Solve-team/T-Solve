@@ -389,9 +389,10 @@
         "conversation-ui": "passing",
         "conversation-paging": "passing",
         "merge-title-paging": "evaluating",
-        "cite-retry": "evaluating"
+        "cite-retry": "evaluating",
+        "marker-only-answer": "in-progress"
       },
-      "lastUpdated": "2026-11-25T11:06:31.116Z",
+      "lastUpdated": "2026-11-25T11:47:31.031Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"

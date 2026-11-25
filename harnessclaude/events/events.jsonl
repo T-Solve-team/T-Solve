@@ -2310,3 +2310,8 @@
 {"ts":"2026-11-25T10:53:15.749Z","type":"feature-status","module":"chatbot","feature":"cite-retry","from":null,"to":"pending"}
 {"ts":"2026-11-25T10:53:16.311Z","type":"feature-status","module":"chatbot","feature":"cite-retry","from":"pending","to":"in-progress"}
 {"ts":"2026-11-25T11:06:31.126Z","type":"feature-status","module":"chatbot","feature":"cite-retry","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-25T11:47:28.615Z","type":"spec-approved","module":"chatbot","specHash":"317f71b09aca2002319fa695f2b6aaa0ae70162c231c04621ed32e791b629753"}
+{"ts":"2026-11-25T11:47:29.631Z","type":"feature-status","module":"chatbot","feature":"marker-only-answer","from":null,"to":"pending"}
+{"ts":"2026-11-25T11:47:31.036Z","type":"feature-status","module":"chatbot","feature":"marker-only-answer","from":"pending","to":"in-progress"}
+{"ts":"2026-11-25T11:56:12.666Z","type":"spec-approved","module":"chatbot","specHash":"680097bacdfa3ec3822440d8d99f3f38389c0e9bc8b4b4bca6a91bf4cf4ce9a6"}
+{"ts":"2026-11-25T12:10:29.876Z","type":"spec-approved","module":"chatbot","specHash":"e0d3d59ada333e403db4fa985ca89a845abf22d271c33d26a5e50b554549ba9c"}

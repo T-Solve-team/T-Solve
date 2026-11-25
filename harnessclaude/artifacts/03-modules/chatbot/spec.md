@@ -35,6 +35,7 @@ owner: BA
 | 2026-11-18 | STORY-002, STORY-013, STORY-004 | **Backend and frontend change (KAN-183).** The conversation list is paged: AC-013.5 answers one `PagedModel` page (`page` from 0, `size` default 20, above 100 read as 100); AC-002.3 shows the 20 newest; new AC-002.16 adds a Load more button that appends the next page and reloads the loaded pages after an ask or a delete; AC-004.8 pages the mock list too. Out of Scope no longer excludes paging; Interface Contracts follow | User, 18/11: show the 20 newest conversations, with a Load more button; standard team paging (`page`/`size`, `PagedModel`) |
 | 2026-11-23 | STORY-001, STORY-002, STORY-009, STORY-013 | **Merge of main into KAN-183.** AC-001.6 sends `chatSessionId` and empties the box on send. AC-002.2, AC-009.9 and AC-013.1: the AI `title` of a first question (no `chatSessionId`) is stored as `chat_session.title`, the trimmed question when there is none. AC-002.3 and AC-002.16: the server list is paged by 10 with a "Show more" button (main's session-only AC-002.14 is folded in). Main's AC-002.13 (one-line title) is now AC-002.17, since AC-002.13–AC-002.16 are KAN-183's. Interface Contracts: `ChatbotAnswer` has both `chatSessionId` and `title` | User, 23/11: store the AI title in the database; keep server paging with 10 per page and "Show more" (KAN-380, KAN-382 merged into main on 22/11) |
 | 2026-11-25 | STORY-005 | AC-005.5: a reply with no `[n]` marker of a kept source gets one more chat call with a reminder to cite; only a second reply without a marker answers `NO_SOURCE`. AC-005.3 follows | BUG-246 (KAN-431): the same answerable question was ANSWERED or `NO_SOURCE` at random because the model sometimes wrote no marker. The user, 25/11: ask once more rather than cite the passed sources, so GBR-36 holds; a question with no answer takes one more call |
+| 2026-11-25 | STORY-005 | AC-005.5: a reply with no letter or digit outside its `[n]` markers (only `[2]` or `[2].`) counts as no answer, like a reply with no marker: one more chat call, then `NO_SOURCE`. The reminder asks for an answer in words | BUG-364 (KAN-390, W-3.04): a follow-up was ANSWERED with the text `[2]` and one citation, so the user saw no answer |
 
 ## Requirements
 
@@ -255,11 +256,12 @@ owner: BA
     question inside a tag.
   - AC-005.4: IF no source reaches `CHATBOT_MIN_SIMILARITY`, THEN THE backend SHALL not call the chat model and
     SHALL answer `outcome` `NO_SOURCE` with an empty `text` and no `citations`.
-  - AC-005.5: IF the model's text has no `[n]` marker of a kept source, THEN THE backend SHALL call `LlmClient.chat`
-    once more with the same messages, the first reply as an assistant message and a user reminder (cite each used
-    source as `[n]`; if the sources do not answer the question, say so without citing), and SHALL answer `NO_SOURCE`
-    as in AC-005.4 when that reply has no marker of a kept source either (never an answer without a source, GBR-36;
-    BUG-246). This second call is not a retry of AC-005.7 and runs inside the same `CHATBOT_ASK_TIMEOUT`.
+  - AC-005.5: IF the model's text has no kept `[n]` marker or no letter or digit outside its markers, THEN THE backend SHALL
+    call `LlmClient.chat` once more with the same messages, the first reply as an assistant message and a user reminder (answer the question in words and cite each used source as `[n]`; if the sources do
+    not answer the question, say so without citing), and SHALL answer `NO_SOURCE` as in AC-005.4 when that reply has
+    no marker of a kept source or no letter or digit outside its markers either (never an answer without a source,
+    GBR-36; BUG-246, BUG-364). This second call is not a retry of AC-005.7 and runs inside the same
+    `CHATBOT_ASK_TIMEOUT`.
   - AC-005.6: WHEN an answer is returned, THE backend SHALL store one `chatbot_answer` row (the user's id, the
     trimmed question, the outcome, the answer text, the time) and SHALL return its `chatbot_answer_id` as
     `answerId`; a `NO_SOURCE` row is the knowledge gap of Requirement 4.

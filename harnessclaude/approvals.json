@@ -243,8 +243,8 @@
     }
   },
   "chatbot": {
-    "specHash": "cfff82423fefeac92f305aa228d956cbc8d2a55164bc5ec91b09709dd01d2714",
-    "approvedAt": "2026-11-25T10:53:15.191Z",
+    "specHash": "e0d3d59ada333e403db4fa985ca89a845abf22d271c33d26a5e50b554549ba9c",
+    "approvedAt": "2026-11-25T12:10:29.868Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",
@@ -298,7 +298,7 @@
       "AC-005.2": "THE backend SHALL keep at most  (default 5) sources of both kinds together, most",
       "AC-005.3": "WHEN at least one source is kept, THE backend SHALL call the  module's  once (once more only as in",
       "AC-005.4": "IF no source reaches , THEN THE backend SHALL not call the chat model and",
-      "AC-005.5": "IF the model's text has no  marker of a kept source, THEN THE backend SHALL call",
+      "AC-005.5": "IF the model's text has no kept  marker or no letter or digit outside its markers, THEN THE backend SHALL",
       "AC-005.6": "WHEN an answer is returned, THE backend SHALL store one  row (the user's id, the",
       "AC-005.7": "IF the AI fails or the ask is too slow, THEN THE backend SHALL answer 503 with MSG06, store no row",
       "AC-005.8": "IF  is missing or blank, THEN THE backend SHALL answer 400 with field error MSG01 on",
