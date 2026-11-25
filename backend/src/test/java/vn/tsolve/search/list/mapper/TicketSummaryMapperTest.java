@@ -5,6 +5,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
@@ -37,5 +38,15 @@ class TicketSummaryMapperTest {
         assertThat(row.department().name()).isEqualTo("IT");
         assertThat(row.reviewDueDate()).isNull();
         assertThat(row.updatedAt()).isEqualTo(updatedAt);
+    }
+
+    @Test
+    void mapsTheReviewDueDateToItsStartInVietnam_AC_006_7_BUG_392() {
+        SearchTicket ticket = mock(SearchTicket.class);
+        when(ticket.getReviewDueDate()).thenReturn(LocalDate.of(2026, 11, 26));
+
+        var row = Mappers.getMapper(TicketSummaryMapper.class).toResponse(ticket);
+
+        assertThat(row.reviewDueDate()).isEqualTo(Instant.parse("2026-11-25T17:00:00Z"));
     }
 }
