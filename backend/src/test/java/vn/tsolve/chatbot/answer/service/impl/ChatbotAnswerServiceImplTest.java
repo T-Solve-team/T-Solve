@@ -513,6 +513,11 @@ class ChatbotAnswerServiceImplTest {
         assertThat(retryMessages.getLast().role()).isEqualTo(Role.USER);
         assertThat(retryMessages.getLast().content())
                 .contains("numbered sources", "cite each source you use as [n]", "say so without citing");
+        // AC-014.1: `cited` follows the stored text, so a source cited only on the retry is stored as cited.
+        ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
+        verify(answers).save(saved.capture());
+        assertThat(saved.getValue().getSources())
+                .containsExactly(new AnswerSource(1, "TICKET", ticketId("private-source"), 0.9, true));
     }
 
     @Test
