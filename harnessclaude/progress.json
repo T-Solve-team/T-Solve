@@ -327,6 +327,7 @@
         "membership-visible-scope": "evaluating",
         "embed-description": "passing",
         "collapse-duplicate-solutions": "evaluating",
+        "list-review-due-date": "evaluating",
         "search-start-layout": "evaluating"
       },
       "lastUpdated": "2026-11-25T14:28:30.791Z",

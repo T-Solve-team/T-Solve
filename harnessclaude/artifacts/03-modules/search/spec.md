@@ -24,6 +24,7 @@ owner: BA
 | 2026-11-22 | STORY-002 | 6.1 Search gets two layouts: AC-002.2 reworded (before a query the start state shows the heading "Find a Solution", one line on what is searched, and the Search box and filters centred; still no API call and no result message), AC-002.4 adds the Search box placeholder, new AC-002.16 (a query moves the Search box and filters to the top, above the results, with the focus kept in the box; removing it brings the start state back). No other criterion changes | KAN-383: the screen looked bare before a search; design option C "Search first" chosen by the user (22/11) |
 | 2026-11-25 | STORY-010 | AC-010.2 reworded: each hit also carries the ticket's `public_id` (`ticketId`) for the server side; the chatbot still returns no ticket id to a client (chatbot AC-006.3). Interface Contracts: `RetrievedSolution` gains `ticketId` | chatbot STORY-014 and STORY-015 (RAG measurement) need to know which ticket a source is; decisions logged in `04-plans/chatbot/rag-eval-decisions.md` |
 | 2026-11-25 | STORY-007, STORY-009 | **Backend change.** AC-007.1, AC-007.2: tickets with the same Solution count and appear once, as their best-ranked copy; suggestions (AC-009.1) rank with AC-007.1, so they follow (KAN-447) | BUG-372: 25 copies of one CSV sample Solution filled page 1 and pushed a matching ticket to rank 26; user 25/11 chose to collapse exact duplicates |
+| 2026-11-25 | STORY-006 | **Backend change.** AC-006.7: `reviewDueDate` is the start of `ticket.review_due_date` in Asia/Ho_Chi_Minh while the ticket is Pending review or Changes requested, null otherwise, and its sort key sorts by it (KAN-454) | BUG-401: ticket-review now stores the due date, so the Ticket List shows "—" where the Review Queue shows a date |
 
 ## Requirements
 
@@ -280,8 +281,9 @@ Used by STORY-005 to STORY-009:
   - AC-006.6: THE backend SHALL return `project.name` as the Project's `jira_project_key` (e.g. ITSUP) in every
     `TicketProject` it answers (Ticket List, search, suggestions), and the `project` sort key SHALL sort by it; this
     is a stand-in until project-integration adds a Project name column.
-  - AC-006.7: THE backend SHALL return `reviewDueDate` as null for every ticket until ticket-review stores a review
-    due date; THE sort key `reviewDueDate` SHALL be accepted and order the rows by the tie-breaker of AC-006.3 alone.
+  - AC-006.7: WHILE a ticket is `PENDING_REVIEW` or `CHANGES_REQUESTED`, THE backend SHALL return `reviewDueDate`
+    as the start of `ticket.review_due_date` in Asia/Ho_Chi_Minh (null without one), and null in any other status;
+    THE sort key `reviewDueDate` SHALL sort by that value, then by the tie-breaker of AC-006.3 (BUG-401).
   - AC-006.8: IF the caller has no session, THEN THE backend SHALL answer 401 with MSG07; IF the caller holds neither
     TICKET_RESOLVER nor PROJECT_MANAGER, THEN THE backend SHALL answer 403 with MSG08 and return no ticket.
   - AC-006.9: IF `keyword` is longer than 100 characters, THEN THE backend SHALL answer 400 with field error MSG02 on
@@ -641,7 +643,7 @@ public record RetrievedTicketSolution(
   `MembershipVisibleScope` reads (STORY-012); the session principal `TSolveUser` (its `id` is `app_user.id`).
 - `project-integration` / `workspace`: the `project` and `department` tables of changeset `002` (search adds only
   `public_id`); the session `departments` of the web app carry `department.public_id` as `departmentId`.
-- `ticket-review` (later): the review due date; until then `reviewDueDate` is null (AC-006.7).
+- `ticket-review` (done): `ticket.review_due_date`, set when a ticket enters review (AC-006.7).
 - `project-integration` (later): a Project name column; until then `project.name` is `jira_project_key` (AC-006.6),
   changed in one mapping line (the `project_name` expression).
 - `platform`: `TenantContext` and the tenant row guard; the search tables follow them when they reach `main`.
