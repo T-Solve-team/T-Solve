@@ -781,8 +781,8 @@
     }
   },
   "search": {
-    "specHash": "e273f3e90de0fb2b82d43a283b79e539aadc442af53a4f321ff848feff75f4ff",
-    "approvedAt": "2026-11-22T04:50:06.181Z",
+    "specHash": "9050502b5c6dc4aa8ac10502e39d05917a808615d36ec7ec68e82dd98c4e57d4",
+    "approvedAt": "2026-11-22T09:07:03.778Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Ticket Resolver or Project Manager opens , THE web app SHALL show 6.2 Ticket List",
@@ -802,7 +802,7 @@
       "AC-002.1": "WHEN a Ticket Resolver or Project Manager opens , THE web app SHALL show 6.1 Search with",
       "AC-002.2": "WHILE the URL has no query, or only white space, THE web app SHALL not call the search API and",
       "AC-002.3": "WHEN the user presses Enter in the Search box with a non-blank text, THE web app SHALL call",
-      "AC-002.4": "THE Search box SHALL accept at most 200 characters.",
+      "AC-002.4": "THE Search box SHALL accept at most 200 characters. The box's placeholder is \"For example: VPN drops",
       "AC-002.5": "THE Department filter SHALL offer \"All Departments\" (the default) and each Department of the",
       "AC-002.6": "WHEN the user changes a filter while the URL has a query, THE web app SHALL search again from page",
       "AC-002.7": "THE web app SHALL show each result, in the order the API returns them, as a card with the title as",
@@ -814,6 +814,7 @@
       "AC-002.13": "IF the search fails with an error other than 401, THEN THE web app SHALL show the error state in",
       "AC-002.14": "THE web app SHALL show the title, the excerpt and every text field as plain text, never as HTML.",
       "AC-002.15": "IF a result's  is null (the ticket has no resolved date), THEN THE web app SHALL show",
+      "AC-002.16": "WHEN the URL gets a query, THE web app SHALL show the Search box and the filters at the top of the",
       "AC-003.1": "WHEN the popup is opened for a ticket, THE web app SHALL show 8.1 Give Feedback with the required",
       "AC-003.2": "WHEN the user clicks Helpful or Not helpful, THE web app SHALL show that button as selected and the",
       "AC-003.3": "IF the user clicks Send with neither button selected, THEN THE web app SHALL show MSG01 (\"The",

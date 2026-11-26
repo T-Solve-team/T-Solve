@@ -325,15 +325,16 @@
         "solution-retrieval": "passing",
         "department-solution-retrieval": "passing",
         "membership-visible-scope": "evaluating",
-        "embed-description": "passing"
+        "embed-description": "passing",
+        "search-start-layout": "evaluating"
       },
-      "lastUpdated": "2026-11-22T05:55:32.495Z",
+      "lastUpdated": "2026-11-22T11:58:12.459Z",
       "branch": "feat/search",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "2cdb750e142857df28d5e567b6e25c66ea169fa9"
+        "default": "2395ae692403866a3f15468c3442690b19a6864f"
       }
     },
     "triage": {
