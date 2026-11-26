@@ -56,6 +56,9 @@ from an up-to-date `main`, one commit per task. Paths: `…/` is `backend/src/ma
   `…/eval/RagEvalRunner.java`, `backend/src/main/resources/application-rag-eval.yml`,
   `backend/rag-eval/gold.example.jsonl`
 - Modify: `…/answer/service/impl/ChatbotAnswerServiceImpl.java`, `…/answer/service/impl/ChatbotSource.java`
+- Modify (off switches for the `rag-eval` run, AC-015.7; see decisions.md): `identity/dev/DevAccountSeeder.java`,
+  `identity/mock/MockUserListSeeder.java`, `platform/registry/RegistryDataSourceConfig.java`,
+  `search/embedding/service/impl/EmbeddingCatchUpJob.java`, `ticket/service/impl/PreviewCleanupJob.java`
 - Test: `…/eval/GoldFileTest.java` (`parsesLinesAndGroups_AC_015_2`, `rejectsInvalidLineByNumberOnly_AC_015_5`,
   `rejectsEmptyFile_AC_015_5`, `exampleFileIsValid_AC_015_8`), `…/eval/RagEvalReportTest.java`
   (`reportsRankSimilarityAndTop_AC_015_3`, `scoresRecallWithinKeptSources_AC_015_4`,
