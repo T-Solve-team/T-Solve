@@ -8,6 +8,7 @@ import vn.tsolve.ticket.dto.TicketReviewView.Department;
 import vn.tsolve.ticket.dto.TicketReviewView.Detail;
 import vn.tsolve.ticket.dto.TicketReviewView.Evidence;
 import vn.tsolve.ticket.dto.TicketReviewView.Project;
+import vn.tsolve.ticket.dto.TicketReviewView.ReviewText;
 import vn.tsolve.ticket.entity.Ticket;
 import vn.tsolve.ticket.entity.TicketEvidence;
 
@@ -33,4 +34,6 @@ public interface TicketReviewMapper {
             List<Evidence> evidence,
             String lastReviewComment,
             boolean canDecide);
+
+    ReviewText reviewText(Ticket ticket);
 }
