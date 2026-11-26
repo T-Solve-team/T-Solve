@@ -43,8 +43,8 @@ Items of one wave run in parallel; "after" names the items that must be on `main
   per-Workspace pools (KAN-254) — nothing visible on staging (bluefin keeps its one database); `TenantRoutingIT` shows
   two databases.
   (6) The rest of the web resolver, Task 10 (KAN-258): `MSG151` / `MSG150` before `MSG07`, anonymous site requests
-  bound, `TenantIsolationIT` — on staging an unknown site answers 404 `MSG151`. `TenantIsolationIT` needs item 5's two
-  databases, so that part merges after item 5.
+  bound (10a) — on staging an unknown site answers 404 `MSG151`. `TenantIsolationIT` (10b) needs item 5's two
+  databases, so it merges after item 5.
 - **Wave 4** (after waves 2 and 3). (7) The row guard switched on for bluefin on staging, a task planned when wave 3 is
   merged (no number yet): backup first; new owner and runtime roles (the app user owns the database today,
   `infra/postgres/init/10-tsolve-dbs.sh:14`); the `tenant_identity` row; the policies; the one-row `workspace` table
@@ -1059,40 +1059,136 @@ exist; they are not build dependencies of this task (Task 11 depends on Task 9)
 
 ---
 
-## Task 10: Tenant Resolver of the web app and the isolation test
+## Task 10: Tenant Resolver of the web app and the isolation test (split into 10a and 10b)
+
+Planned in two steps on 25/11 (KAN-258; step-1 questions Q1 to Q10 answered by Hiếu, all with the recommended option).
+Two PRs (Q1), each one QA card and one developer card: **10a** the resolver, on KAN-258 and branch
+`feat/KAN-258-platform-web-resolver`, now; **10b** `TenantIsolationIT`, on KAN-460, a sub-task of KAN-99,
+with its own branch, after Task 6-2 is merged. A dependency line of another task that says "Task 10" means 10a unless it
+names 10b.
+
+**Story:** STORY-002, STORY-005 (10a); STORY-002 (10b)
+**Spec changed first (Change Mode, 25/11; Hiếu approves it before the code):** `platform` AC-002.2 names the base domain
+of `TSOLVE_SITE_ORIGIN_TEMPLATE` (Q4). No `PlatformProperties`, no `TSOLVE_BASE_DOMAIN` and no `TSOLVE_ENVIRONMENT` in
+this task.
+
+## Task 10a: Tenant Resolver of the web app
 
 **Story:** STORY-002, STORY-005
 **Feature:** web-tenant-resolver
 **Assignee:** Trần Trung Hiếu (KAN-99); Jira sub-task KAN-258
-**After this task you can:** run the backend and `curl -H 'Host: acme.localhost' localhost:8080/api/v1/me` → 401 `MSG07` for a
-real Workspace, 404 `MSG151` for an unknown one, 403 `MSG150` for a Suspended one.
-**Covers:** AC-002.2 – AC-002.10, AC-002.11 (the filter unbinds when a request ends; the holder side is Task 6a-1), AC-002.17, AC-002.18, AC-002.19, AC-013.11, AC-005.7 and the host part of AC-005.8
-(`/api/v1/jira-app/**` on any host but `api.` → 404 `MSG06`; the chain itself is Task 20).
-**Design:** How a request or job gets its Workspace; Security chains (1); Key Decisions P5, R2.
-**Description:** `PlatformProperties` (`tsolve.base-domain`, `tsolve.environment`), `HostClassifier` / `HostKind`,
-`TenantResolverFilter` + `TenantFilterConfig` (order before Spring Security), `ProblemResponses`
-(`application/problem+json`, `code`); `/actuator/health`, `/v3/api-docs*`, Swagger UI pass on any host (AC-002.19);
-`admin.`, `login.`, `api.` bind nothing (AC-002.10).
+**After this task you can:** on staging, from the VPS, run `docker compose exec backend wget -S -O- --header
+'Host: nosuch.tsolve.io.vn' http://127.0.0.1:8080/api/v1/me` and see 404 `MSG151` instead of 401, while bluefin works as
+before (Q10). With a local Registry, `curl -H 'Host: <site>.localhost' localhost:8080/api/v1/me` answers 401 `MSG07` for
+an Active Workspace, 404 `MSG151` for an unknown one and 403 `MSG150` for a Suspended one.
+**Covers:** AC-002.2 – AC-002.10, AC-002.11 (the filter unbinds when a request ends; the holder side is Task 6a-1),
+AC-002.13 (a differing `X-Forwarded-Host` fails closed), AC-002.17, AC-002.19, AC-013.11 (the next request after a
+create), AC-005.7 (except the AC-002.19 paths on `api.`, which Task 20's chain closes) and the host part of AC-005.8
+(`/api/v1/jira-app/**` on any host but `api.` is closed; the chain itself is Task 20).
+**Design:** How a request or job gets its Workspace; The binding; The web resolver (Task 10); Security chains (1); Key
+Decisions "Resolver cache", "T10 request binding", "T10 resolver activation", "T10 base domain", "T10 host header",
+"T10 refusals", "T10 Jira App paths".
+**Description:**
+- `HostClassifier` / `HostKind` (`platform/web`): takes the base domain from `TSOLVE_SITE_ORIGIN_TEMPLATE` (the host part
+  after `{slug}.`: `localhost` locally, `tsolve.io.vn` on staging) and classifies the raw `Host` header, without case and
+  port: a site label, `login.` / `api.` / `admin.`, or no Workspace site (404 `MSG151` without a lookup: bare, `www.`,
+  `staging.`, deep, foreign or missing host, invalid label).
+- `TenantResolverFilter` + `TenantFilterConfig`: registered before Spring Security (order in Security chains (1)).
+  Active only when the `WorkspaceCatalog` bean exists (`ObjectProvider`, Q3); with no catalog it passes every request
+  through and logs one line at start-up. With a catalog and a template that gives no base domain, start-up fails naming
+  `TSOLVE_SITE_ORIGIN_TEMPLATE` (as Edge #86).
+- Order of the checks: AC-002.19 paths pass; `Host` classified; for a site label one `findBySiteName` (no cache, Q9):
+  unknown → 404 `MSG151`, Suspended → 403 `MSG150`; then `/api/v1/jira-app/**` on any host but `api.` → 404 `MSG06`
+  (Q8; a host that is no Workspace site has already answered `MSG151`, AC-002.6); on `api.` any other path → 404
+  `MSG06`; else a site binds with `bindRequest` for the whole request and unbinds in `finally`; `login.`, `api.` and
+  `admin.` bind nothing.
+- Every refusal is `application/problem+json` on every path, sign-in and callback included (Q6). A Registry failure
+  answers 500 `MSG06` with no JDBC URL in the body or the log (From Task 4b, Q3 = A).
+- Raw `Host` only (Q5): `X-Forwarded-Host`, `Forwarded` and Workspace ids are ignored. If another component then binds
+  or checks a different Workspace from `X-Forwarded-Host`, `runIn` refuses (AC-002.13) or the session check answers
+  `MSG123`. No identity change.
+- `ThreadLocalTenantContext` (Q2, Q9): public `bindRequest(UUID)` returning an `AutoCloseable` that unbinds; no
+  transaction, no existence check; it throws when a Workspace is already bound. Only `TenantResolverFilter` may call it
+  (source-scan test). `runIn` skips the `KnownWorkspaces` check when the same id is already bound.
+- `SecurityProblemWriter` gets the two codes with the SRS texts (Q7; no `ProblemResponses`). Source:
+  `Documents\Report\UpdatedFiles\System_Messages.docx` (8/11), rows 116 and 117:
+  - `MSG150`: "This workspace is suspended. Please contact your company administrator."
+  - `MSG151`: "This workspace does not exist. Check the address."
+- Contract: the description of the shared `Problem` response names `MSG150` (403) and `MSG151` (404);
+  `npm run generate:api` leaves no diff.
+- `README.md` (local run): with a local Registry, `dev`'s `acme` and `beta` answer 404 `MSG151` unless adopted with
+  `infra/scripts/registry-adopt-workspace.sh`.
 **Edge rows (Critical/High):** #1 (forwarded headers and Workspace ids ignored), #2 (unbound after an exception), #18
-(404 / 403 before any 401), #19 (host variants), #20 (health on `localhost:8080`). Medium: #22 (logs hold host and code only).
-**From Task 4b (Q3 = A):** a Registry failure at the Keycloak callback (`/api/v1/auth/callback`) is answered here, since
-the resolver runs before Spring Security and looks up the catalog first: with the Registry down the callback answers
-`MSG06` (a test pins it); the body holds no JDBC URL (no `server.error.include-message` or `include-stacktrace`).
-**Tests (about 12):** `HostClassifierTest`: Edge #19, `www.`/`staging.`/bare/deep hosts, reserved labels; `TenantResolverFilterTest`: Edge
-#1, #2, #18, #20, #22, no Registry lookup for a bad label (AC-002.4, AC-002.6), `MSG150` for Suspended; `TenantIsolationIT`
-(Workspaces A and B on two databases, JPA and native query through the filter, AC-002.18).
-**Files:**
-- Create: `backend/src/main/java/vn/tsolve/platform/config/PlatformProperties.java`, `TenantFilterConfig.java`
-- Create: `backend/src/main/java/vn/tsolve/platform/web/HostClassifier.java`, `HostKind.java`, `TenantResolverFilter.java`,
-  `ProblemResponses.java`
-- Modify: `backend/src/main/resources/application.yml`, `.env.example` (`TSOLVE_BASE_DOMAIN`, `TSOLVE_ENVIRONMENT`)
-- Test: `backend/src/test/java/vn/tsolve/platform/HostClassifierTest.java`, `TenantResolverFilterTest.java`,
-  `backend/src/test/java/vn/tsolve/common/tenant/TenantIsolationIT.java`
-**Dependencies:** Tasks 4, 6a-1 and 6a-2 (wave 3 item 6, parallel with Task 6). `TenantIsolationIT` needs Task 6's two
-databases, so that part merges after Task 6. Task 7 comes later (wave 5): the isolation test creates its two Workspace
-databases with the test base, not through provisioning (wave order, 22/11).
+(404 / 403 before any 401), #19 (host variants), #20 (health on `localhost:8080`), #86 (template, resolver side), #90
+(Jira App paths and the `api.` host, encoded paths included). #17 (Registry down → `MSG06`; shared with Task 6, this
+task owns the resolver's answer). Medium: #22 (logs hold host and code only), #91 (no catalog bean).
+**Tests (12):**
+- `HostClassifierTest` (3, parameterized): `classifiesHostVariants_AC_002_3_AC_002_4` (Edge #19: upper case, port,
+  trailing dot, 64-char label, `-acme`; an `xn--` label is allowed); `classifiesNonSiteHosts_AC_002_6_AC_002_10_AC_002_17`
+  (bare, `www.`, `staging.`, deep, foreign, missing host; `login.`, `api.`, `admin.`; `<site>.localhost` with any port);
+  `readsTheBaseDomainFromTheTemplate_AC_002_2` (staging and local templates; blank, no `{slug}`, `{slug}` not the first
+  label refused, Edge #86).
+- `TenantResolverFilterTest` (6): binds from `Host` only, `login.` / `api.` / `admin.` bind nothing, and with
+  `X-Forwarded-Host: b.` the request stays in A where `runIn(B)` throws (AC-002.2, AC-002.3, AC-002.10, AC-002.13,
+  Edge #1); a chain that throws leaves the thread unbound for the next request (AC-002.11, Edge #2); unknown, bad label
+  and Suspended answer the problem body with the SRS text, the chain is never called, no lookup for a bad label, the
+  callback path too, and a row added after a first refusal resolves on the next request (AC-002.4 – AC-002.7, AC-002.9,
+  AC-013.11, Edge #18); health and API-docs paths pass on any host without a lookup, and with no catalog bean every
+  request passes (AC-002.19, Edge #20, #91); Registry down at `/api/v1/auth/callback` → 500 `MSG06`, no JDBC URL in body
+  or log, refusal logs hold host and code only (Edge #17, #22); `/api/v1/jira-app/**` on a site, `login.` or `admin.`
+  host and any other path on `api.` → 404 `MSG06`, percent-encoded variants included (AC-005.7, AC-005.8, Edge #90).
+- `TenantFilterOrderTest` (1): the registration order is below Spring Security's, and a POST with no CSRF token on an
+  unknown host answers `MSG151`, not `MSG07` (AC-002.8).
+- `ThreadLocalTenantContextTest` (+1): `bindRequest` binds, refuses a second bind and unbinds on `close`; `runIn` with
+  the bound id does not ask `KnownWorkspaces` (Edge #2).
+- `RequestBindingSourceScanTest` (1): only `TenantResolverFilter` calls `bindRequest`.
+**ITs to run:** none new; the existing full-context ITs run without a catalog bean and must stay green on CI.
+**Files (6 production Java, 1 contract, 1 README):**
+- Create: `backend/src/main/java/vn/tsolve/platform/web/HostClassifier.java`, `HostKind.java`, `TenantResolverFilter.java`
+- Create: `backend/src/main/java/vn/tsolve/platform/config/TenantFilterConfig.java`
+- Modify: `backend/src/main/java/vn/tsolve/common/tenant/ThreadLocalTenantContext.java` (**shared with Task 6**, which
+  moves the static into `TenantBinding` and keeps `bindRequest`; whoever merges second rebases)
+- Modify: `backend/src/main/java/vn/tsolve/common/security/SecurityProblemWriter.java`
+- Modify: `frontend/openapi/tsolve-api.yaml`, `README.md`
+- Test: `backend/src/test/java/vn/tsolve/platform/web/HostClassifierTest.java`, `TenantResolverFilterTest.java`,
+  `TenantFilterOrderTest.java`, `RequestBindingSourceScanTest.java`;
+  `backend/src/test/java/vn/tsolve/common/tenant/ThreadLocalTenantContextTest.java` (extend)
+**Staging pre-deploy checklist (Hiếu, on the VPS, before the merge deploys; not a blocker for coding):**
+1. The bluefin adopt script has run (Task 4a-2): `tenant_workspace` has bluefin's row. With 0 rows bluefin itself
+   answers 404 `MSG151`.
+2. `TSOLVE_SITE_ORIGIN_TEMPLATE` has the form `https://{slug}.tsolve.io.vn`.
+3. Hiếu or Đặng Tấn Bình confirms that the staging Forge `baseUrl` is `https://api.tsolve.io.vn`, and re-points it if
+   not (Q8): on bluefin's host the Jira App paths answer 404 `MSG06` after this task.
+4. After the deploy: the `wget` of "After this task you can" answers 404 `MSG151`, then the bluefin smoke (sign-in, a
+   wiki upload).
+**Dependencies:** Tasks 4, 6a-1 and 6a-2 (merged; wave 3 item 6, parallel with Task 6)
 **Estimated size:** medium
-**Done when:** the three `curl` answers above are what the tests assert and `TenantIsolationIT` passes.
+**Done when:** the 12 tests and the existing ones pass (full suite on CI), `generate:api` leaves no diff, and the staging
+checks of item 4 pass.
+
+## Task 10b: Tenant isolation through the web resolver
+
+**Story:** STORY-002
+**Feature:** web-tenant-isolation
+**Assignee:** Trần Trung Hiếu (KAN-99); Jira sub-task KAN-460, its own branch
+`test/KAN-460-platform-web-isolation`
+**After this task you can:** see CI green on `TenantIsolationIT`: a request on A's Workspace site reads only A's row from
+A's database, by a JPA query and by a native query.
+**Covers:** AC-002.18.
+**Design:** Database routing; The web resolver (Task 10).
+**Description:** a test only. `TenantIsolationIT` creates two databases with the `PostgresTestBase` test base (not
+through provisioning; wave order, 22/11), applies the tenant changelog, writes the two Registry rows, and starts the
+application with Task 6-2's production routing, so the path is `Host` → `TenantResolverFilter` → routing `DataSource`.
+If Task 6-2 brings a two-Workspace test fixture, this test reuses it.
+**Edge rows:** #1 through real routing (a request on A's host naming B in a header or parameter reads only A's row).
+**Tests (2):** `TenantIsolationIT`: `aSiteRequestReadsOnlyItsRow_byJpa_AC_002_18`,
+`aSiteRequestReadsOnlyItsRow_byNativeQuery_AC_002_18`, each for A and for B.
+**Files (no production file):**
+- Test: `backend/src/test/java/vn/tsolve/common/tenant/TenantIsolationIT.java` (plus a probe endpoint in test sources
+  only)
+**Dependencies:** Tasks 10a and 6-2 (merged)
+**Estimated size:** small
+**Done when:** `TenantIsolationIT` passes on CI.
 
 ---
 
@@ -1168,7 +1264,7 @@ skips and says so (AC-012.5); a provisioning failure names the Workspace (AC-012
 **Assignee:** Trần Trung Hiếu (KAN-10, KAN-11, KAN-12); Jira sub-task KAN-261
 **After this task you can:** SSH to the application VPS with a key, see the staging stack's containers healthy on the private
 network, and see from the internet that only 22, 80 and 443 answer.
-**Covers:** AC-008.8, AC-010.6 (hosts through `TSOLVE_BASE_DOMAIN`), AC-010.7, AC-010.8, AC-010.9, AC-010.10, AC-010.11,
+**Covers:** AC-008.8, AC-010.6 (hosts through `TSOLVE_SITE_ORIGIN_TEMPLATE`), AC-010.7, AC-010.8, AC-010.9, AC-010.10, AC-010.11,
 AC-010.12, AC-001.33 and AC-001.26 (users reach only their own database, checked on the server).
 **Design:** Infrastructure — Application VPS; Redis; Key Decisions P9, R14.
 **Description:** Manual first (Hiếu): buy the application VPS (KVM, Ubuntu LTS, snapshots). `infra/scripts/bootstrap.sh`

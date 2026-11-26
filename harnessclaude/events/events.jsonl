@@ -2357,6 +2357,8 @@
 {"ts":"2026-11-25T14:59:51.756Z","type":"feature-status","module":"platform","feature":"catalog-worker-tenant","from":"pending","to":"in-progress"}
 {"ts":"2026-11-25T14:59:52.049Z","type":"feature-status","module":"platform","feature":"catalog-worker-tenant","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-25T14:59:52.341Z","type":"feature-status","module":"platform","feature":"catalog-worker-tenant","from":"evaluating","to":"passing"}
+{"ts":"2026-11-25T16:28:45.664Z","type":"spec-approved","module":"platform","specHash":"fd8881657a2452ae9cb0e3c13fad76cad7f046acb43c974150b51e452c5aa039"}
+{"ts":"2026-11-25T16:29:47.956Z","type":"feature-status","module":"platform","feature":"web-tenant-isolation","from":null,"to":"pending"}
 {"ts":"2026-11-25T16:30:43.844Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":null,"to":"pending"}
 {"ts":"2026-11-25T17:44:07.670Z","type":"spec-approved","module":"ticket-review","specHash":"47edc7d47960cc5f9988cf3a34523d52fe542fe89f014a07684d7be6b1e6c499"}
 {"ts":"2026-11-25T17:44:08.256Z","type":"feature-status","module":"ticket-review","feature":"ai-review-assist","from":null,"to":"pending"}
@@ -2391,3 +2393,7 @@
 {"ts":"2026-11-26T16:12:40.836Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":"pending","to":"in-progress"}
 {"ts":"2026-11-26T16:12:44.035Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-26T16:12:44.335Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":"evaluating","to":"passing"}
+{"ts":"2026-11-26T16:04:26.299Z","type":"feature-status","module":"platform","feature":"web-tenant-isolation","from":null,"to":"pending"}
+{"ts":"2026-11-26T16:15:47.522Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":"pending","to":"in-progress"}
+{"ts":"2026-11-26T16:15:50.672Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-26T16:15:53.357Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":"evaluating","to":"passing"}
