@@ -13,6 +13,7 @@ import type { HttpResponseResolver, PathParams, RequestHandlerOptions } from 'ms
 
 import { ReviewHistoryDecision, TicketSource, TicketStatus } from '../model';
 import type {
+  AiReviewResult,
   ApproveTicketsRequest,
   ExpiredTicketPage,
   RejectTicketsRequest,
@@ -78,6 +79,29 @@ export const getGetReviewTicketDetailResponseMock = (
     null,
   ]),
   canDecide: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  ...overrideResponse,
+});
+
+export const getRunAiReviewResponseMock = (
+  overrideResponse: Partial<Extract<AiReviewResult, object>> = {},
+): AiReviewResult => ({
+  findings: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      field: faker.helpers.arrayElement([
+        'TITLE',
+        'DESCRIPTION',
+        'SYMPTOMS',
+        'ROOT_CAUSE',
+        'RESOLUTION_STEPS',
+        'WORKAROUND',
+        'SCOPE',
+        'GENERAL',
+      ] as const),
+      severity: faker.helpers.arrayElement(['HIGH', 'MEDIUM', 'LOW'] as const),
+      issue: faker.string.alpha({ length: { min: 10, max: 500 } }),
+      suggestion: faker.string.alpha({ length: { min: 10, max: 500 } }),
+    }),
+  ),
   ...overrideResponse,
 });
 
@@ -257,6 +281,30 @@ export const getGetReviewTicketDetailMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getGetReviewTicketDetailResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRunAiReviewMockHandler = (
+  overrideResponse?:
+    | AiReviewResult
+    | ((
+        info: Parameters<HttpResponseResolver<{ ticketId: string }>>[0],
+      ) => Promise<AiReviewResult> | AiReviewResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post<{ ticketId: string }>(
+    '*/api/v1/tickets/:ticketId/ai-review',
+    async (info: Parameters<HttpResponseResolver<{ ticketId: string }>>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === 'function'
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRunAiReviewResponseMock(),
         { status: 200 },
       );
     },
@@ -548,6 +596,7 @@ export const getRequestTicketChangesMockHandler = (
 };
 export const getReviewMock = () => [
   getGetReviewTicketDetailMockHandler(),
+  getRunAiReviewMockHandler(),
   getGetReviewHistoryMockHandler(),
   getGetExpiredTicketsMockHandler(),
   getGetExpiredTicketIdsMockHandler(),

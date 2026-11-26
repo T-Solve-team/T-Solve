@@ -1038,8 +1038,8 @@
     }
   },
   "ticket-review": {
-    "specHash": "e69cb9f06e5c370a11a27c036624518563dc89c049948212d64403a9538b7cce",
-    "approvedAt": "2026-11-18T06:47:32.326Z",
+    "specHash": "47edc7d47960cc5f9988cf3a34523d52fe542fe89f014a07684d7be6b1e6c499",
+    "approvedAt": "2026-11-25T17:44:07.662Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the Review Queue loads, THE frontend and mock API SHALL return only Pending review Solution Form tickets in the current Workspace's Projects managed by the signed-in Project Manager, ordered by earliest review due date by default.",
@@ -1139,7 +1139,15 @@
       "AC-014.5": "WHEN the expiry transaction commits, THE expired tickets SHALL no longer appear in the Review Queue or its eligible ids, and THE worker SHALL log one line per Project with expired tickets, carrying only the Workspace UUID, the Project UUID and the count. IF no ticket is overdue, THEN THE worker SHALL end without changing any ticket.",
       "AC-014.6": "IF the expiry transaction fails, THEN THE worker SHALL roll back every ticket change of that attempt, log the failure without ticket content, and schedule another expiry job for that Workspace 15 minutes later with the next attempt number. IF attempt 3 fails, THEN THE worker SHALL schedule no further attempt and the overdue tickets SHALL wait for the next scheduled run.",
       "AC-014.7": "IF the Workspace is Suspended or unknown when an expiry job runs, THEN THE worker SHALL change no ticket and schedule no further attempt (GBR-38).",
-      "AC-014.8": "THE expiry job payload SHALL hold only the Workspace UUID and the attempt number, and JOB-02 SHALL record no review decision and no audit entry. THE tenant changelog SHALL add nullable ticket.expired_at as TIMESTAMPTZ and nullable ticket.status_before_expiry as VARCHAR(20) limited to PENDING_REVIEW and CHANGES_REQUESTED."
+      "AC-014.8": "THE expiry job payload SHALL hold only the Workspace UUID and the attempt number, and JOB-02 SHALL record no review decision and no audit entry. THE tenant changelog SHALL add nullable ticket.expired_at as TIMESTAMPTZ and nullable ticket.status_before_expiry as VARCHAR(20) limited to PENDING_REVIEW and CHANGES_REQUESTED.",
+      "AC-015.1": "WHEN a Project Manager who manages the ticket's Project opens Ticket Detail of a Pending review Solution Form ticket, THE frontend SHALL offer an \"AI check\" action; IF the user does not manage the Project or the ticket is not Pending review, THEN THE frontend SHALL not offer it.",
+      "AC-015.2": "WHEN the Project Manager runs AI check, THE backend SHALL send the ticket's title, description, symptoms, root cause, resolution steps, workaround and scope to  in one chat call constrained to the findings JSON schema, with the ticket text in the user message as data and a system prompt that tells the model to ignore instructions inside it.",
+      "AC-015.3": "THE system prompt SHALL ask the model to report, per Solution field, missing or vague information, a root cause that does not explain the symptoms, resolution steps that are not actionable, out of order or do not address the root cause, a workaround presented as the fix, a risky action without a warning, and contradictions between fields, in the language of the Solution text.",
+      "AC-015.4": "WHEN the AI answer matches the schema, THE API SHALL return 200 with at most 10 findings, each with  (one of TITLE, DESCRIPTION, SYMPTOMS, ROOT_CAUSE, RESOLUTION_STEPS, WORKAROUND, SCOPE, GENERAL),  (HIGH, MEDIUM or LOW),  and  (each trimmed, at most 500 characters), ordered HIGH first; THE API SHALL drop findings beyond 10 and truncate longer texts.",
+      "AC-015.5": "WHEN findings are returned, THE frontend SHALL show them grouped by severity with the field name, as plain text; WHEN the list is empty, THE frontend SHALL show MSG_NEW_AI_REVIEW_2 (\"No issues found\"). WHILE the request is pending, THE frontend SHALL show a loading state and disable the action.",
+      "AC-015.6": "IF the AI call fails, times out or returns an answer that does not match the schema, THEN THE API SHALL return 503 with code MSG_NEW_AI_REVIEW_1 and THE frontend SHALL show that message with retry; THE Approve, Reject and Request Changes controls SHALL keep working.",
+      "AC-015.7": "IF the caller is unauthenticated, does not manage the ticket's Project, the ticket is in another Workspace, or the ticket is not a Pending review Solution Form ticket, THEN THE API SHALL return 401, 403, 404 or 409 respectively without calling the AI.",
+      "AC-015.8": "THE backend SHALL store no finding, record no review decision and no audit entry, and log no ticket text or AI answer; findings SHALL not be shown to the writer."
     }
   },
   "ai": {
