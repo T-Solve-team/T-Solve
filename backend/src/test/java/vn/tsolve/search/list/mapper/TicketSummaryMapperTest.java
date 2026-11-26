@@ -41,7 +41,7 @@ class TicketSummaryMapperTest {
     }
 
     @Test
-    void mapsTheReviewDueDateToItsStartInVietnam_AC_006_7_BUG_392() {
+    void mapsTheReviewDueDateToItsStartInVietnam_AC_006_7_BUG_401() {
         SearchTicket ticket = mock(SearchTicket.class);
         when(ticket.getReviewDueDate()).thenReturn(LocalDate.of(2026, 11, 26));
 

@@ -214,7 +214,7 @@ class TicketListRepositoryIT {
     }
 
     @Test
-    void returnsAndSortsTheReviewDueDateOnlyWhileInReview_AC_006_7_BUG_392() {
+    void returnsAndSortsTheReviewDueDateOnlyWhileInReview_AC_006_7_BUG_401() {
         jdbc.update("UPDATE ticket SET review_due_date = '2026-11-27' WHERE source_ticket_id = 'HR-3'");
         jdbc.update("UPDATE ticket SET review_due_date = '2026-11-26' WHERE source_ticket_id = 'HR-1'");
         // A Published ticket keeps the column from its review; the list must not show it.

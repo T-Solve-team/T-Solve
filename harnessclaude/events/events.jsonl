@@ -2359,3 +2359,4 @@
 {"ts":"2026-11-26T05:15:41.979Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"1484dc0e248f25084ed46d10b9c31f9308f21640"}
 {"ts":"2026-11-26T05:15:42.279Z","type":"feature-status","module":"chatbot","feature":"rag-eval-runner","from":"evaluating","to":"passing"}
 {"ts":"2026-11-26T10:24:20.280Z","type":"spec-approved","module":"search","specHash":"9cbdac64a32638c6b01a0873a737f9d7ec1563865e8b452bc7bb7f3e52427427"}
+{"ts":"2026-11-26T11:24:01.134Z","type":"spec-approved","module":"search","specHash":"eafe9e623fdd550e1c8420d0677b195e6b7f464a0dfdc104e5e44c7bb775c0eb"}

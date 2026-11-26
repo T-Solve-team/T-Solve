@@ -752,11 +752,11 @@ Spec: STORY-005 to STORY-009 · Design: master section "Backend". Rules: `backen
 - `SearchTicket`'s subselect adds `review_due_date`, only while `t.status` is `PENDING_REVIEW` or
   `CHANGES_REQUESTED` (the column keeps its value after review ends).
 - `TicketSummaryMapper` maps it to the start of that day in Asia/Ho_Chi_Minh; the `reviewDueDate` sort key sorts by
-  it instead of being skipped (AC-006.7, BUG-392).
+  it instead of being skipped (AC-006.7, BUG-401).
 **Files:**
 - Modify: `backend/src/main/java/vn/tsolve/search/scope/entity/SearchTicket.java`,
   `…/search/list/mapper/TicketSummaryMapper.java`, `…/search/list/service/impl/TicketListServiceImpl.java`
-- Test: `TicketSummaryMapperTest`, `TicketListServiceImplTest`, `TicketListRepositoryIT` (names end `_AC_006_7_BUG_392`)
+- Test: `TicketSummaryMapperTest`, `TicketListServiceImplTest`, `TicketListRepositoryIT` (names end `_AC_006_7_BUG_401`)
 **Covers:** AC-006.7
 **Dependencies:** none
 **Estimated size:** small

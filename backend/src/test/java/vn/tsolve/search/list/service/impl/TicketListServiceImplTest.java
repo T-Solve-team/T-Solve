@@ -80,7 +80,7 @@ class TicketListServiceImplTest {
     }
 
     @Test
-    void sortsByReviewDueDateThenId_AC_006_7_BUG_392() {
+    void sortsByReviewDueDateThenId_AC_006_7_BUG_401() {
         when(repository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(new PageImpl<SearchTicket>(List.of()));
         service.list(user, query(null, null, null, null, null, null, "reviewDueDate,asc"));
@@ -133,7 +133,7 @@ class TicketListServiceImplTest {
                         Sort.by(
                                 Sort.Order.desc("projectName"), Sort.Order.asc("sourceTicketId"),
                                 Sort.Order.desc("title"), Sort.Order.desc("id"))),
-                // BUG-392: reviewDueDate sorts where it stands instead of being skipped.
+                // BUG-401: reviewDueDate sorts where it stands instead of being skipped.
                 Arguments.of(
                         "reviewDueDate,desc,title,asc,updatedAt,desc",
                         Sort.by(Sort.Order.desc("reviewDueDate")).and(titleUpdated)),
