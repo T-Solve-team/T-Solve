@@ -1,12 +1,21 @@
 package vn.tsolve.chatbot.answer.service.impl;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 import vn.tsolve.ai.client.ChatMessage;
 import vn.tsolve.ai.client.ChatMessage.Role;
 import vn.tsolve.chatbot.answer.dto.ChatbotTurnRequest;
 
 final class AnswerPrompt {
+    // BUG-247: a small model follows an English source's language unless the last line names the answer language.
+    // ponytail: these marks also occur in French or Spanish, which then get "Vietnamese"; a language detector would
+    // be the upgrade if such questions ever matter. A question typed without marks keeps the general rule.
+    private static final Pattern VIETNAMESE_LETTER = Pattern.compile(
+            "[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+
     private static final String SYSTEM = """
             You answer questions of employees of one company. Answer only from the numbered sources below.
             Write one answer to the question that merges what the sources say: the steps to take, in order.
@@ -38,7 +47,13 @@ final class AnswerPrompt {
                     .append(escape(source.text()))
                     .append("</source>\n");
         }
-        data.append("<question>").append(escape(question)).append("</question>");
+        data.append("<question>").append(escape(question)).append("</question>\n");
+        data.append(
+                VIETNAMESE_LETTER
+                                .matcher(Normalizer.normalize(question, Normalizer.Form.NFC))
+                                .find()
+                        ? "Write the answer in Vietnamese."
+                        : "Write the answer in the language of the question.");
         messages.add(new ChatMessage(Role.USER, data.toString()));
         return List.copyOf(messages);
     }

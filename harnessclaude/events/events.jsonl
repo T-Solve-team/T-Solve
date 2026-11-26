@@ -2322,6 +2322,10 @@
 {"ts":"2026-11-25T10:53:15.749Z","type":"feature-status","module":"chatbot","feature":"cite-retry","from":null,"to":"pending"}
 {"ts":"2026-11-25T10:53:16.311Z","type":"feature-status","module":"chatbot","feature":"cite-retry","from":"pending","to":"in-progress"}
 {"ts":"2026-11-25T11:06:31.126Z","type":"feature-status","module":"chatbot","feature":"cite-retry","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-25T12:28:54.094Z","type":"spec-approved","module":"chatbot","specHash":"87618eebd4bcbd1d9562c67cb1016a2c0263eef605bf48240a03f1f43075ec48"}
+{"ts":"2026-11-25T12:28:54.661Z","type":"feature-status","module":"chatbot","feature":"answer-language","from":null,"to":"pending"}
+{"ts":"2026-11-25T12:28:55.437Z","type":"feature-status","module":"chatbot","feature":"answer-language","from":"pending","to":"in-progress"}
+{"ts":"2026-11-25T12:35:32.961Z","type":"feature-status","module":"chatbot","feature":"answer-language","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-25T11:47:28.615Z","type":"spec-approved","module":"chatbot","specHash":"317f71b09aca2002319fa695f2b6aaa0ae70162c231c04621ed32e791b629753"}
 {"ts":"2026-11-25T11:47:29.631Z","type":"feature-status","module":"chatbot","feature":"marker-only-answer","from":null,"to":"pending"}
 {"ts":"2026-11-25T11:47:31.036Z","type":"feature-status","module":"chatbot","feature":"marker-only-answer","from":"pending","to":"in-progress"}
@@ -2367,6 +2371,8 @@
 {"ts":"2026-11-26T05:15:41.979Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"1484dc0e248f25084ed46d10b9c31f9308f21640"}
 {"ts":"2026-11-26T05:15:42.279Z","type":"feature-status","module":"chatbot","feature":"rag-eval-runner","from":"evaluating","to":"passing"}
 {"ts":"2026-11-26T08:26:38.374Z","type":"spec-approved","module":"chatbot","specHash":"da1ed552477e4b9a5e401b19ddc76a8a4554d2783dacffcb30f2f8c651e50565"}
+{"ts":"2026-11-26T10:39:04.412Z","type":"spec-approved","module":"chatbot","specHash":"3b1d85cf764dc474bb96843215a3c56ccf179708960adc8e0c79afb208290f51"}
 {"ts":"2026-11-26T10:37:30.949Z","type":"spec-approved","module":"chatbot","specHash":"6d9da370c0b66d9adef9edcc8dcabefb745ccc7fcbaec9bc53826172928c58fa"}
 {"ts":"2026-11-26T11:30:46.057Z","type":"quick-opened","what":"multi-IP k6 load test workflow","files":[".github/workflows/loadtest.yml","infra/loadtest/README.md","infra/loadtest/merge-summaries.js"]}
 {"ts":"2026-11-26T11:43:17.639Z","type":"quick-closed","what":"multi-IP k6 load test workflow","files":[".github/workflows/loadtest.yml","infra/loadtest/README.md","infra/loadtest/merge-summaries.js"]}
+{"ts":"2026-11-26T13:39:20.194Z","type":"spec-approved","module":"chatbot","specHash":"4464849b10a04325eeae1cb545d5f5819bb4035a49323ba9aff74961545b9bb6"}
