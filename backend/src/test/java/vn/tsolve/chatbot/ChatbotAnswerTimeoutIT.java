@@ -47,6 +47,7 @@ import vn.tsolve.chatbot.answer.dto.ChatbotAskRequest;
 import vn.tsolve.chatbot.answer.entity.ChatbotAnswer;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
 import vn.tsolve.chatbot.answer.service.ChatbotAnswerService;
+import vn.tsolve.chatbot.answer.service.ChatbotRetrieval;
 import vn.tsolve.chatbot.answer.service.impl.ChatbotAnswerServiceImpl;
 import vn.tsolve.chatbot.conversation.service.ChatConversationService;
 import vn.tsolve.chatbot.source.service.WikiSources;
@@ -128,7 +129,7 @@ class ChatbotAnswerTimeoutIT {
         when(embeddings.embed(any())).thenReturn(List.of(new float[1024]));
 
         new ApplicationContextRunner()
-                .withUserConfiguration(ChatbotAnswerServiceImpl.class)
+                .withUserConfiguration(ChatbotRetrieval.class, ChatbotAnswerServiceImpl.class)
                 .withPropertyValues("CHATBOT_ASK_TIMEOUT=" + ASK_TIMEOUT)
                 .withBean(EmbeddingClient.class, () -> embeddings)
                 .withBean(LlmClient.class, () -> mock(LlmClient.class))
@@ -181,7 +182,7 @@ class ChatbotAnswerTimeoutIT {
         var executor = Executors.newFixedThreadPool(2);
         try {
             new ApplicationContextRunner()
-                    .withUserConfiguration(ChatbotAnswerServiceImpl.class)
+                    .withUserConfiguration(ChatbotRetrieval.class, ChatbotAnswerServiceImpl.class)
                     .withPropertyValues("CHATBOT_ASK_TIMEOUT=" + ASK_TIMEOUT)
                     .withBean(EmbeddingClient.class, () -> embeddings)
                     .withBean(LlmClient.class, () -> llm)
