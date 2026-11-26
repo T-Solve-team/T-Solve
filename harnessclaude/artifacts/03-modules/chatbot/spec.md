@@ -35,6 +35,7 @@ owner: BA
 | 2026-11-18 | STORY-002, STORY-013, STORY-004 | **Backend and frontend change (KAN-183).** The conversation list is paged: AC-013.5 answers one `PagedModel` page (`page` from 0, `size` default 20, above 100 read as 100); AC-002.3 shows the 20 newest; new AC-002.16 adds a Load more button that appends the next page and reloads the loaded pages after an ask or a delete; AC-004.8 pages the mock list too. Out of Scope no longer excludes paging; Interface Contracts follow | User, 18/11: show the 20 newest conversations, with a Load more button; standard team paging (`page`/`size`, `PagedModel`) |
 | 2026-11-23 | STORY-001, STORY-002, STORY-009, STORY-013 | **Merge of main into KAN-183.** AC-001.6 sends `chatSessionId` and empties the box on send. AC-002.2, AC-009.9 and AC-013.1: the AI `title` of a first question (no `chatSessionId`) is stored as `chat_session.title`, the trimmed question when there is none. AC-002.3 and AC-002.16: the server list is paged by 10 with a "Show more" button (main's session-only AC-002.14 is folded in). Main's AC-002.13 (one-line title) is now AC-002.17, since AC-002.13–AC-002.16 are KAN-183's. Interface Contracts: `ChatbotAnswer` has both `chatSessionId` and `title` | User, 23/11: store the AI title in the database; keep server paging with 10 per page and "Show more" (KAN-380, KAN-382 merged into main on 22/11) |
 | 2026-11-25 | STORY-005 | AC-005.5: a reply with no `[n]` marker of a kept source gets one more chat call with a reminder to cite; only a second reply without a marker answers `NO_SOURCE`. AC-005.3 follows | BUG-246 (KAN-431): the same answerable question was ANSWERED or `NO_SOURCE` at random because the model sometimes wrote no marker. The user, 25/11: ask once more rather than cite the passed sources, so GBR-36 holds; a question with no answer takes one more call |
+| 2026-11-25 | STORY-005 | AC-005.1: `CHATBOT_MIN_SIMILARITY` defaults to 0.5 (was 0.7), as Search's `SEARCH_MIN_SIMILARITY` | BUG-387 (KAN-394), BUG-246 (KAN-431): 7 of 10 paraphrased golden-set questions and G-23 / G-24 got `NO_SOURCE` in 2–3 s, before any answer call, so no source reached 0.7 although Search ranks the right ticket first at 0.5; AC-005.5 still answers `NO_SOURCE` when the model cites nothing |
 | 2026-11-25 | STORY-014, STORY-015 (new), Requirement 12 | **Backend change (RAG measurement).** New STORY-014: every answer stores the sources it kept, with kind, id, similarity and whether it was cited, in a new `chatbot_answer.sources` JSONB column, never returned. New STORY-015: an offline `rag-eval` run measures retrieval (recall within the kept sources, MRR, no-source rate, per group) against a gold file, with no chat model. Requirement 12 added; Out of Scope, Interface Contracts, Required from other modules (search `nearest` returns the ticket's public id) and Definition of Done follow. Earlier criteria unchanged | RAG review of 21/11: every retrieval change (hybrid search, per-source thresholds, embedding text) needs a measurement first; decisions logged in `04-plans/chatbot/rag-eval-decisions.md` |
 | 2026-11-25 | STORY-005 | AC-005.5: a reply with no letter or digit outside its `[n]` markers (only `[2]` or `[2].`) counts as no answer, like a reply with no marker: one more chat call, then `NO_SOURCE`. The reminder asks for an answer in words | BUG-364 (KAN-390, W-3.04): a follow-up was ANSWERED with the text `[2]` and one citation, so the user saw no answer |
 
@@ -249,7 +250,8 @@ owner: BA
   - AC-005.1: WHEN STORY-009 classifies a valid `POST /api/v1/chatbot/answers` as a question, THE backend SHALL embed
     the retrieval text (AC-009.5) once with the `ai` module's
     `EmbeddingClient` and SHALL take the sources from search's `SolutionRetrieval.nearest` and from
-    `WikiSources.nearest`, both with `CHATBOT_MIN_SIMILARITY` (default 0.7).
+    `WikiSources.nearest`, both with `CHATBOT_MIN_SIMILARITY` (default 0.5, the value of Search's
+    `SEARCH_MIN_SIMILARITY`, so a question asked in other words still finds its source; BUG-387).
   - AC-005.2: THE backend SHALL keep at most `CHATBOT_SOURCE_LIMIT` (default 5) sources of both kinds together, most
     similar first, and number them 1, 2, … in that order.
   - AC-005.3: WHEN at least one source is kept, THE backend SHALL call the `ai` module's `LlmClient.chat` once (once more only as in
@@ -821,7 +823,7 @@ public interface WikiSources {
 // vn.tsolve.chatbot.source.service.impl.NoWikiSources: no passage; every given id unavailable (fail closed)
 ```
 
-Backend settings (`.env.example`): `CHATBOT_MIN_SIMILARITY=0.7`, `CHATBOT_SOURCE_LIMIT=5`, `CHATBOT_ASK_TIMEOUT=60s`,
+Backend settings (`.env.example`): `CHATBOT_MIN_SIMILARITY=0.5`, `CHATBOT_SOURCE_LIMIT=5`, `CHATBOT_ASK_TIMEOUT=60s`,
 `CHATBOT_CONVERSATION_RETENTION=30d`, `CHATBOT_CONVERSATION_CLEANUP_CRON=0 0 2 * * *` (zone Asia/Ho_Chi_Minh).
 
 ### Required from other modules

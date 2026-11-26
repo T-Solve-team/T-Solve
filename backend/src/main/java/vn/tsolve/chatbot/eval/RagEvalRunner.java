@@ -176,7 +176,7 @@ public class RagEvalRunner implements ApplicationRunner {
     private Settings readSettings() {
         int sourceLimit = setting("CHATBOT_SOURCE_LIMIT", Integer.class, 5);
         int k = setting("RAG_EVAL_K", Integer.class, 10);
-        double minSimilarity = setting("CHATBOT_MIN_SIMILARITY", Double.class, 0.7);
+        double minSimilarity = setting("CHATBOT_MIN_SIMILARITY", Double.class, 0.5);
         if (sourceLimit < 1) {
             throw new Failure("CHATBOT_SOURCE_LIMIT must be positive");
         }

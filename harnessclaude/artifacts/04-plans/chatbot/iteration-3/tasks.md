@@ -359,6 +359,19 @@ All three tasks are Jira KAN-243, so one branch `feat/KAN-243-chatbot-classify-q
 **Dependencies:** Task 21, Task 25
 **Estimated size:** medium
 
+## Task 28: Find the source of a question asked in other words
+
+**Story:** STORY-005
+**Feature:** paraphrase-sources
+**Jira:** KAN-394 (BUG-387) · branch `fix/KAN-394-chatbot-paraphrase-sources`
+**Description:**
+- `CHATBOT_MIN_SIMILARITY` defaults to 0.5 in `ChatbotAnswerServiceImpl`, `.env.example` and
+  `infra/staging.env.example` (AC-005.1); a source between 0.5 and 0.7 is kept and answered.
+- No other change: AC-005.4 and AC-005.5 still answer `NO_SOURCE` with no source or no marker.
+**Covers:** AC-005.1, AC-005.4
+**Dependencies:** Task 26
+**Estimated size:** small
+
 ## Task 29: Ask once more when the answer cites no source
 
 **Story:** STORY-005
