@@ -7,6 +7,7 @@ import java.time.ZoneId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 import org.springframework.scheduling.support.CronExpression;
@@ -19,7 +20,13 @@ import vn.tsolve.ticket.repository.ImportPreviewRepository;
  * (`IMPORT_PREVIEW_CLEANUP_CRON`, default 01:00 Vietnam time) comes from the environment, so a deployment moves it
  * without a code change.
  */
+// Off in the rag-eval profile, which must write nothing (chatbot AC-015.7).
 @Component
+@ConditionalOnProperty(
+        prefix = "tsolve.ticket.preview-cleanup",
+        name = "enabled",
+        havingValue = "true",
+        matchIfMissing = true)
 public class PreviewCleanupJob implements SchedulingConfigurer {
 
     static final Duration MAX_AGE = Duration.ofHours(24);

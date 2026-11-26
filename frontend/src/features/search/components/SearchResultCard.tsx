@@ -10,24 +10,24 @@ import styles from './SearchResults.module.css';
  * One result of the Search (Figma 6.1, spec AC-002.7): every API text is React text, never HTML (AC-002.14).
  */
 export function SearchResultCard({ result }: { result: TicketSearchResult }) {
+  const resolved = result.resolvedAt === null ? '—' : formatDateTime(result.resolvedAt);
+
   return (
     <article className={styles.card}>
-      <Flex vertical gap="small">
-        <Link to={paths.ticketDetail(result.ticketId)} className={styles.title}>
-          {result.title}
-        </Link>
-        <Flex align="center" gap="middle" wrap>
-          <Typography.Text type="secondary">
-            {`${result.project.name} · ${result.department.name} · Resolved ${formatDateTime(result.resolvedAt)}`}
+      <Link to={paths.ticketDetail(result.ticketId)} className={styles.title}>
+        {result.title}
+      </Link>
+      <Flex align="baseline" gap="small" wrap>
+        <Typography.Text type="secondary">
+          {`${result.project.name} · ${result.department.name} · Resolved ${resolved}`}
+        </Typography.Text>
+        {result.helpfulRate !== null && ( // null = no Feedback yet: no rate (decision Q4, AC-002.8)
+          <Typography.Text type="secondary" className={styles.helpful}>
+            <LikeOutlined aria-hidden /> {`${result.helpfulRate}% helpful`}
           </Typography.Text>
-          {result.helpfulRate !== null && ( // null = no Feedback yet: no rate (decision Q4, AC-002.8)
-            <Typography.Text type="secondary">
-              <LikeOutlined aria-hidden /> {`${result.helpfulRate}% helpful`}
-            </Typography.Text>
-          )}
-        </Flex>
-        <Typography.Paragraph className={styles.excerpt}>{result.excerpt}</Typography.Paragraph>
+        )}
       </Flex>
+      <p className={styles.excerpt}>{result.excerpt}</p>
     </article>
   );
 }
