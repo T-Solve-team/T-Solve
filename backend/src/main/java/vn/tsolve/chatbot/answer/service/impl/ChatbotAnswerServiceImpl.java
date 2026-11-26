@@ -311,6 +311,12 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         String text = callAi(() -> llm.chat(messages, null), deadline);
         remaining(deadline);
         var cited = Citations.of(text, kept);
+        if (cited.citations().isEmpty()) {
+            var retryMessages = AnswerPrompt.retryMessages(messages, text);
+            String retryText = callAi(() -> llm.chat(retryMessages, null), deadline);
+            remaining(deadline);
+            cited = Citations.of(retryText, kept);
+        }
         var citedNumbers =
                 cited.citations().stream().map(ChatbotCitation::number).collect(Collectors.toSet());
         List<AnswerSource> stored = kept.stream()
