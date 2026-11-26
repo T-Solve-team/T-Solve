@@ -1,5 +1,5 @@
 # gitleaks false alarms: one Fingerprint line each, with the reason above it.
-# KAN-241: "PRIVATE_QUESTION_241" is a fake question marker that the test asserts never reaches the log.
-ba9dbfeed0154b8185e32be43dab552fd0cb640c:backend/src/test/java/vn/tsolve/chatbot/issue/service/impl/ChatbotIssueServiceImplTest.java:generic-api-key:256
-# KAN-241: "PRIVATE_DRAFT_241" is a fake draft marker the test asserts never reaches the log (staged-scan fingerprint).
-backend/src/test/java/vn/tsolve/chatbot/issue/service/impl/ChatbotIssueServiceImplTest.java:generic-api-key:290
+# KAN-241: "PRIVATE_QUESTION_241" is a fake question marker that the test asserts never reaches the log (squash commit of #270 on main, BUG-367).
+2bce364c926e6e4269300fe5990fc777432d1606:backend/src/test/java/vn/tsolve/chatbot/issue/service/impl/ChatbotIssueServiceImplTest.java:generic-api-key:280
+# KAN-241: the assertion that the fake markers never reach the log (staged-scan and dir-scan fingerprint; it moves when the file does).
+backend/src/test/java/vn/tsolve/chatbot/issue/service/impl/ChatbotIssueServiceImplTest.java:generic-api-key:269
