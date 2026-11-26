@@ -2322,6 +2322,8 @@
 {"ts":"2026-11-25T14:20:38.032Z","type":"feature-status","module":"search","feature":"collapse-duplicate-solutions","from":null,"to":"pending"}
 {"ts":"2026-11-25T14:20:38.362Z","type":"feature-status","module":"search","feature":"collapse-duplicate-solutions","from":"pending","to":"in-progress"}
 {"ts":"2026-11-25T14:28:30.793Z","type":"feature-status","module":"search","feature":"collapse-duplicate-solutions","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-25T13:35:54.295Z","type":"quick-opened","what":"BUG-367: point the KAN-241 gitleaks ignore at the squash-merged commit on main","files":[".gitleaksignore","docs/bug-log.md"]}
+{"ts":"2026-11-25T13:37:49.036Z","type":"quick-closed","what":"BUG-367: point the KAN-241 gitleaks ignore at the squash-merged commit on main","files":[".gitleaksignore","docs/bug-log.md"]}
 {"ts":"2026-11-25T14:59:48.280Z","type":"feature-status","module":"platform","feature":"workspace-catalog","from":"pending","to":"in-progress"}
 {"ts":"2026-11-25T14:59:48.587Z","type":"feature-status","module":"platform","feature":"workspace-catalog","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-25T14:59:48.901Z","type":"feature-status","module":"platform","feature":"workspace-catalog","from":"evaluating","to":"passing"}
