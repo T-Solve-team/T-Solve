@@ -136,7 +136,7 @@ public class RagEvalRunner implements ApplicationRunner {
 
     private float[] embed(GoldLine line) {
         try {
-            return embeddings.embed(List.of(line.question().strip())).getFirst();
+            return embeddings.embed(List.of(line.question().trim())).getFirst();
         } catch (RuntimeException e) {
             throw new Failure("line " + line.line() + ": embedding failed");
         }

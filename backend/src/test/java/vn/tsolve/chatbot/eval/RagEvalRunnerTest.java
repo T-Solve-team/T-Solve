@@ -63,7 +63,7 @@ class RagEvalRunnerTest {
     void retrievesAsFirstWebQuestion_AC_015_1() throws Exception {
         writeGold(DOCUMENT_ID, "WIKI");
         bindWorkspace(Optional.of(USER));
-        when(embeddings.embed(List.of(QUESTION.strip()))).thenReturn(List.of(VECTOR));
+        when(embeddings.embed(List.of(QUESTION.trim()))).thenReturn(List.of(VECTOR));
         when(solutions.nearest(VECTOR, 0, 10))
                 .thenReturn(List.of(
                         new RetrievedSolution(TICKET_ID, "Symptoms", "Root cause", "Steps", null, "Scope", 0.65)));
@@ -75,7 +75,7 @@ class RagEvalRunnerTest {
         var order = inOrder(tenants, accounts, embeddings, solutions, wiki);
         order.verify(tenants).runIn(eq(WORKSPACE_ID), ArgumentMatchers.<Supplier<?>>any());
         order.verify(accounts).findActive(USER_ID);
-        order.verify(embeddings).embed(List.of(QUESTION.strip()));
+        order.verify(embeddings).embed(List.of(QUESTION.trim()));
         order.verify(solutions).nearest(VECTOR, 0, 10);
         order.verify(wiki).nearest(USER, VECTOR, 0, 10);
         String output = Files.readString(reportPath());
@@ -135,7 +135,7 @@ class RagEvalRunnerTest {
         String first = Files.readString(goldPath());
         Files.writeString(goldPath(), first + "\n" + first.replace(QUESTION, "Second question"));
         bindWorkspace(Optional.of(USER));
-        when(embeddings.embed(List.of(QUESTION.strip()))).thenReturn(List.of(VECTOR));
+        when(embeddings.embed(List.of(QUESTION.trim()))).thenReturn(List.of(VECTOR));
         when(embeddings.embed(List.of("Second question")))
                 .thenThrow(new IllegalStateException("private provider text"));
 
@@ -161,7 +161,7 @@ class RagEvalRunnerTest {
     void callsNoChatModelAndStoresNothing_AC_015_7() throws Exception {
         writeGold(TICKET_ID, "TICKET");
         bindWorkspace(Optional.of(USER));
-        when(embeddings.embed(List.of(QUESTION.strip()))).thenReturn(List.of(VECTOR));
+        when(embeddings.embed(List.of(QUESTION.trim()))).thenReturn(List.of(VECTOR));
         when(wiki.nearest(USER, VECTOR, 0, 2))
                 .thenReturn(List.of(new WikiPassage(DOCUMENT_ID, "Private title", "Private passage", 0.9)));
 
@@ -174,13 +174,13 @@ class RagEvalRunnerTest {
         var order = inOrder(tenants, accounts, embeddings, solutions, wiki);
         order.verify(tenants).runIn(eq(WORKSPACE_ID), ArgumentMatchers.<Supplier<?>>any());
         order.verify(accounts).findActive(USER_ID);
-        order.verify(embeddings).embed(List.of(QUESTION.strip()));
+        order.verify(embeddings).embed(List.of(QUESTION.trim()));
         order.verify(solutions).nearest(VECTOR, 0, 2);
         order.verify(wiki).nearest(USER, VECTOR, 0, 2);
         order.verifyNoMoreInteractions();
         verifyNoInteractions(llm);
         String output = Files.readString(reportPath());
-        assertThat(output).doesNotContain(QUESTION.strip(), "Private title", "Private passage");
+        assertThat(output).doesNotContain(QUESTION.trim(), "Private title", "Private passage");
         var report = json.readTree(output);
         assertThat(report.at("/overall/noSourceRate").doubleValue()).isEqualTo(1);
         assertThat(report.at("/lines/0/rank").isNull()).isTrue();
