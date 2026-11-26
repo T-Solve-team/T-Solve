@@ -2341,3 +2341,16 @@
 {"ts":"2026-11-25T19:06:14.806Z","type":"feature-status","module":"ticket-review","feature":"ai-review-assist","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-25T19:27:37.347Z","type":"feature-status","module":"ticket-review","feature":"ai-review-assist","from":"evaluating","to":"passing"}
 {"ts":"2026-11-25T19:53:24.449Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"980c5116550bcd8d7e7ce1a54b0cf2940d6607ca"}
+{"ts":"2026-11-25T19:25:39.101Z","type":"spec-approved","module":"chatbot","specHash":"d7d2afb2dd0a77f29fae2b4e7df0c56e84f4ed6acd36bdebe94a55e6d928253d"}
+{"ts":"2026-11-25T19:30:01.707Z","type":"spec-approved","module":"search","specHash":"62cd2a15a53433604a6be742bc999577cab9ba49d293680dd9e42812d62c8de0"}
+{"ts":"2026-11-25T19:30:03.098Z","type":"feature-status","module":"chatbot","feature":"answer-sources","from":null,"to":"pending"}
+{"ts":"2026-11-25T19:30:03.399Z","type":"feature-status","module":"chatbot","feature":"rag-eval-runner","from":null,"to":"pending"}
+{"ts":"2026-11-25T19:30:03.699Z","type":"feature-status","module":"chatbot","feature":"answer-sources","from":"pending","to":"in-progress"}
+{"ts":"2026-11-25T19:43:38.648Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"112f6f2859c4e3ef906dfbd08c988aedcf17f394"}
+{"ts":"2026-11-25T19:43:38.956Z","type":"feature-status","module":"chatbot","feature":"answer-sources","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-26T04:40:05.651Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"58ea4910dae4aeef18c3d9f4bf652346472059bc"}
+{"ts":"2026-11-26T04:40:16.132Z","type":"feature-status","module":"chatbot","feature":"rag-eval-runner","from":"pending","to":"in-progress"}
+{"ts":"2026-11-26T04:40:16.424Z","type":"feature-status","module":"chatbot","feature":"rag-eval-runner","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-26T04:40:16.718Z","type":"feature-status","module":"chatbot","feature":"answer-sources","from":"evaluating","to":"passing"}
+{"ts":"2026-11-26T05:15:41.979Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"1484dc0e248f25084ed46d10b9c31f9308f21640"}
+{"ts":"2026-11-26T05:15:42.279Z","type":"feature-status","module":"chatbot","feature":"rag-eval-runner","from":"evaluating","to":"passing"}

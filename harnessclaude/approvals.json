@@ -242,8 +242,8 @@
     }
   },
   "chatbot": {
-    "specHash": "d3511c437410a179a13205bd4b04b9b9b0f2cd831b8a80233178387813eb5e12",
-    "approvedAt": "2026-11-22T19:35:45.864Z",
+    "specHash": "d7d2afb2dd0a77f29fae2b4e7df0c56e84f4ed6acd36bdebe94a55e6d928253d",
+    "approvedAt": "2026-11-25T19:25:39.098Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",
@@ -369,7 +369,20 @@
       "AC-013.9": "WHEN the daily retention job runs (), THE backend SHALL",
       "AC-013.10": "IF a request of STORY-013 has no web session, THEN THE backend SHALL answer 401 with MSG07; every",
       "AC-013.11": "THE chatbot changeset SHALL create  and  with the columns and",
-      "AC-013.12": "THE  path (STORY-012) SHALL create and read no conversation; its earlier turns stay"
+      "AC-013.12": "THE  path (STORY-012) SHALL create and read no conversation; its earlier turns stay",
+      "AC-014.1": "WHEN an answer is stored after a search, THE backend SHALL store in  one",
+      "AC-014.2": "IF an answer is stored without a search or with no kept source, THEN THE backend SHALL store",
+      "AC-014.3": "THE backend SHALL store in  no source text, question, earlier turn or rewritten query, and",
+      "AC-014.4": "THE chatbot changeset SHALL add to  the column",
+      "AC-014.5": "IF the ask fails and no answer is stored (AC-005.7), THEN THE backend SHALL store no sources.",
+      "AC-015.1": "WHEN the backend starts with the Spring profile , THE backend SHALL read the gold file at",
+      "AC-015.2": "THE runner SHALL read each non-blank line of the gold file as a JSON object with a non-blank",
+      "AC-015.3": "THE report SHALL be one JSON object with  (),",
+      "AC-015.4": "THE runner SHALL compute for the whole set and for each group value:  (the line count),",
+      "AC-015.5": "IF the run cannot start, THEN THE runner SHALL make no AI call, write no report, log the reason (the",
+      "AC-015.6": "IF an embedding call fails, THEN THE runner SHALL write no report and exit with a non-zero code.",
+      "AC-015.7": "THE runner SHALL run only with the profile , start no web server, call no chat model, write",
+      "AC-015.8": "THE repository SHALL hold  with at least three valid lines of"
     }
   },
   "identity": {
@@ -781,8 +794,8 @@
     }
   },
   "search": {
-    "specHash": "9050502b5c6dc4aa8ac10502e39d05917a808615d36ec7ec68e82dd98c4e57d4",
-    "approvedAt": "2026-11-22T09:07:03.778Z",
+    "specHash": "62cd2a15a53433604a6be742bc999577cab9ba49d293680dd9e42812d62c8de0",
+    "approvedAt": "2026-11-25T19:30:01.704Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Ticket Resolver or Project Manager opens , THE web app SHALL show 6.2 Ticket List",
@@ -872,7 +885,7 @@
       "AC-009.4": "IF  is missing or blank, THEN THE backend SHALL answer 400 with field error MSG01 on",
       "AC-009.5": "IF the request has no web session, THEN THE backend SHALL answer 401 with MSG07 (a Forge Invocation",
       "AC-010.1": "WHEN  is called, THE backend SHALL return",
-      "AC-010.2": "THE backend SHALL return each hit with the ticket's Symptoms, Root cause, Resolution steps, Workaround",
+      "AC-010.2": "THE backend SHALL return each hit with the ticket's  as , its Symptoms, Root",
       "AC-010.3": "IF a ticket is unpublished, inactive or too far, THEN THE backend SHALL leave it out (not",
       "AC-010.5": "IF an argument is out of range, THEN THE service SHALL throw  and SHALL run",
       "AC-010.4": "THE service SHALL take no user, Workspace or Department argument and SHALL call no",

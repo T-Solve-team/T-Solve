@@ -43,7 +43,9 @@ class SolutionRetrievalImplTest {
 
     @Test
     void returnsSectionsWithoutTicketDetails_AC_010_2() {
-        var row = mock(SolutionRetrievalRepository.SolutionRow.class);
+        UUID ticket = UUID.randomUUID();
+        var row = mock(SolutionRetrievalRepository.TicketSolutionRow.class);
+        when(row.getTicketId()).thenReturn(ticket);
         when(row.getSymptoms()).thenReturn("symptoms");
         when(row.getRootCause()).thenReturn("cause");
         when(row.getResolutionSteps()).thenReturn("steps");
@@ -53,12 +55,18 @@ class SolutionRetrievalImplTest {
         when(repository.nearest(anyString(), anyDouble(), anyInt())).thenReturn(List.of(row));
 
         assertThat(retrieval.nearest(vector(), 0.7, 5))
-                .containsExactly(new RetrievedSolution("symptoms", "cause", "steps", null, "scope", 0.9));
+                .containsExactly(new RetrievedSolution(ticket, "symptoms", "cause", "steps", null, "scope", 0.9));
         when(row.getWorkaround()).thenReturn("temporary fix");
         assertThat(retrieval.nearest(vector(), 0.7, 5).getFirst().workaround()).isEqualTo("temporary fix");
         assertThat(Arrays.stream(RetrievedSolution.class.getRecordComponents()).map(component -> component.getName()))
                 .containsExactly(
-                        "symptoms", "rootCause", "resolutionSteps", "workaround", "scopeOfApplicability", "similarity");
+                        "ticketId",
+                        "symptoms",
+                        "rootCause",
+                        "resolutionSteps",
+                        "workaround",
+                        "scopeOfApplicability",
+                        "similarity");
     }
 
     @Test
