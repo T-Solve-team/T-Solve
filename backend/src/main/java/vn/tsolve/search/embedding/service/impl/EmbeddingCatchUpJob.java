@@ -3,12 +3,18 @@ package vn.tsolve.search.embedding.service.impl;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import vn.tsolve.search.embedding.repository.TicketEmbeddingRepository;
 import vn.tsolve.search.embedding.service.TicketEmbeddingService;
 
 @Component
+@ConditionalOnProperty(
+        prefix = "tsolve.search.embedding",
+        name = "catch-up-enabled",
+        havingValue = "true",
+        matchIfMissing = true)
 public class EmbeddingCatchUpJob {
     private final TicketEmbeddingRepository repository;
     private final TicketEmbeddingService service;
