@@ -65,6 +65,9 @@ public final class TicketReviewView {
 
     public record Evidence(UUID id, String filename, long sizeBytes, String url) {}
 
+    /** The ticket text AI check reads (STORY-015): no identity, no Evidence. */
+    public record ReviewText(String title, String description, Solution solution) {}
+
     public record Feedback(UUID reviewerId, String comment) {}
 
     /** Review History query parameters as received; the service validates them (STORY-011). */

@@ -1,6 +1,7 @@
 package vn.tsolve.search.list.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
@@ -210,6 +211,25 @@ class TicketListRepositoryIT {
         assertThat(row.department().name()).isEqualTo("IT");
         assertThat(row.reviewDueDate()).isNull();
         assertThat(row.updatedAt()).isEqualTo(Instant.parse("2026-11-01T00:00:00Z"));
+    }
+
+    @Test
+    void returnsAndSortsTheReviewDueDateOnlyWhileInReview_AC_006_7_BUG_401() {
+        jdbc.update("UPDATE ticket SET review_due_date = '2026-11-27' WHERE source_ticket_id = 'HR-3'");
+        jdbc.update("UPDATE ticket SET review_due_date = '2026-11-26' WHERE source_ticket_id = 'HR-1'");
+        // A Published ticket keeps the column from its review; the list must not show it.
+        jdbc.update("UPDATE ticket SET review_due_date = '2026-11-01' WHERE source_ticket_id = 'IT-1'");
+
+        var rows = tickets.list(USER, new TicketListQuery(null, null, null, null, 0, 20, "reviewDueDate,asc"))
+                .getContent();
+
+        assertThat(rows)
+                .extracting(TicketSummaryResponse::sourceTicketId, TicketSummaryResponse::reviewDueDate)
+                .containsExactly(
+                        tuple("HR-1", Instant.parse("2026-11-25T17:00:00Z")),
+                        tuple("HR-3", Instant.parse("2026-11-26T17:00:00Z")),
+                        tuple("IT-2", null),
+                        tuple("IT-1", null));
     }
 
     @Test

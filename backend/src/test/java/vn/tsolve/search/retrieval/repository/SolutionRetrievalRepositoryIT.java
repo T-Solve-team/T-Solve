@@ -99,6 +99,15 @@ class SolutionRetrievalRepositoryIT {
     }
 
     @Test
+    void returnsTheTicketsPublicId_AC_010_2() {
+        insert("FIRST", "ACTIVE", "PUBLISHED", 1, 0);
+        UUID publicId = jdbc.queryForObject("SELECT public_id FROM ticket WHERE symptoms = 'FIRST'", UUID.class);
+        assertThat(nearest(0.7, 5))
+                .extracting(SolutionRetrievalRepository.TicketSolutionRow::getTicketId)
+                .containsExactly(publicId);
+    }
+
+    @Test
     void leavesOutUnpublishedInactiveOrFar_AC_010_3() {
         insert("UNPUBLISHED", "ACTIVE", "UNPUBLISHED", 1, 0);
         insert("INACTIVE", "DELETED", "PUBLISHED", 1, 0);
@@ -199,7 +208,7 @@ class SolutionRetrievalRepositoryIT {
         return (UUID) ids.get("public_id");
     }
 
-    private List<SolutionRetrievalRepository.SolutionRow> nearest(double minimum, int limit) {
+    private List<SolutionRetrievalRepository.TicketSolutionRow> nearest(double minimum, int limit) {
         return repository.nearest(vector(1, 0), minimum, limit);
     }
 
