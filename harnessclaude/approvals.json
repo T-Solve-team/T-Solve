@@ -599,8 +599,8 @@
     }
   },
   "platform": {
-    "specHash": "e234c4a37cb35de53ced5d718bd4261c91ffbe5a4345aba93054ad76242953f4",
-    "approvedAt": "2026-11-24T13:44:24.526Z",
+    "specHash": "fd8881657a2452ae9cb0e3c13fad76cad7f046acb43c974150b51e452c5aa039",
+    "approvedAt": "2026-11-25T16:28:45.650Z",
     "by": "user",
     "acs": {
       "AC-001.15": "THE catalog database (the Platform / Tenant Registry of the HLA, named ) SHALL hold the table  with  (UUID, primary key),  (not null, unique),  ( or , not null),  (not null, unique),  (not null),  (not null, encrypted as AC-001.24 says),  (the tenant changelog version last applied to that database, not null),  (nullable),  (nullable, unique),  and  (, not null) (GBR-24, GBR-37).",
@@ -624,7 +624,7 @@
       "AC-001.32": "THE runtime user of a Workspace database, the catalog user and the Jobs database user SHALL be neither superuser nor , and SHALL not own the tables on which a policy depends (HLA isolation layer ③).",
       "AC-001.33": "THE Jobs database , on the same PostgreSQL server as the catalog, SHALL hold only JobRunr's own tables, and its user SHALL be able to connect to that database only. It SHALL hold no Workspace data (H-Q3). The catalog changelog and the tenant changelog SHALL create nothing in it.",
       "AC-002.1": "THE backend SHALL offer  in :",
-      "AC-002.2": "WHEN a request arrives whose host is  followed by the configured base domain (), and the label is the site name of a Workspace, THE Tenant Resolver SHALL bind that Workspace for the whole request.",
+      "AC-002.2": "WHEN a request arrives whose host is  followed by the base domain of  (the host part after ), and the label is the site name of a Workspace, THE Tenant Resolver SHALL bind that Workspace for the whole request.",
       "AC-002.3": "THE Tenant Resolver SHALL read the Workspace site from the  header only, compared without case and without the port. It SHALL ignore ,  and any Workspace id in a header, a parameter, a cookie or the body (GBR-37).",
       "AC-002.4": "IF the label is not an RFC 1123 label (lowercase letters, digits and hyphens, starting and ending with a letter or a digit, at most 63 characters), THEN THE Tenant Resolver SHALL answer 404 with a  with   without looking up the catalog (D11).",
       "AC-002.5": "IF the label is not ,  or  (AC-002.10) and is the site name of no Workspace, THEN THE Tenant Resolver SHALL answer 404 with  .",
@@ -720,7 +720,7 @@
       "AC-010.3": "WHEN the images are pushed, THE CD workflow SHALL deploy staging through the self-hosted deploy runner, in this order (KAN-14):",
       "AC-010.4": "THE smoke test SHALL call  plus the staging base domain plus  and expect UP. It SHALL load one staging Workspace site's page (200) and call its  expecting 401 with  , which proves the resolver found the Workspace.",
       "AC-010.5": "IF a build, a migration, a health check, the seed or the smoke test fails, THEN THE CD workflow SHALL fail with the failing step, and for a migration the failing Workspace, in its log.",
-      "AC-010.6": "THE staging environment SHALL use the hosts , ,  and , through  =  (decision Q11). The site name  is reserved (D44 (25/10); AC-002.6, AC-013.3), so no production Workspace can own .",
+      "AC-010.6": "THE staging environment SHALL use the hosts , ,  and , with the base domain  given by  =  (AC-002.2; decision Q11). The site name  is reserved (D44 (25/10); AC-002.6, AC-013.3), so no production Workspace can own .",
       "AC-010.7": "THE staging secrets SHALL live only in the server's  (mode 600, owned by the deploy user) and in GitHub secrets, never in the repository.",
       "AC-010.8": "THE staging stack SHALL have a memory and CPU limit and a health check on every container, and restart  (KAN-12).",
       "AC-010.9": "THE application VPS SHALL refuse password login over SSH and allow key login only. Only ports 22, 80 and 443 SHALL be open to the internet (KAN-10).",

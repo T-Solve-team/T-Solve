@@ -2357,6 +2357,8 @@
 {"ts":"2026-11-25T14:59:51.756Z","type":"feature-status","module":"platform","feature":"catalog-worker-tenant","from":"pending","to":"in-progress"}
 {"ts":"2026-11-25T14:59:52.049Z","type":"feature-status","module":"platform","feature":"catalog-worker-tenant","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-25T14:59:52.341Z","type":"feature-status","module":"platform","feature":"catalog-worker-tenant","from":"evaluating","to":"passing"}
+{"ts":"2026-11-25T16:28:45.664Z","type":"spec-approved","module":"platform","specHash":"fd8881657a2452ae9cb0e3c13fad76cad7f046acb43c974150b51e452c5aa039"}
+{"ts":"2026-11-25T16:29:47.956Z","type":"feature-status","module":"platform","feature":"web-tenant-isolation","from":null,"to":"pending"}
 {"ts":"2026-11-25T16:30:43.844Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":null,"to":"pending"}
 {"ts":"2026-11-25T17:44:07.670Z","type":"spec-approved","module":"ticket-review","specHash":"47edc7d47960cc5f9988cf3a34523d52fe542fe89f014a07684d7be6b1e6c499"}
 {"ts":"2026-11-25T17:44:08.256Z","type":"feature-status","module":"ticket-review","feature":"ai-review-assist","from":null,"to":"pending"}
@@ -2388,3 +2390,4 @@
 {"ts":"2026-11-26T11:43:17.639Z","type":"quick-closed","what":"multi-IP k6 load test workflow","files":[".github/workflows/loadtest.yml","infra/loadtest/README.md","infra/loadtest/merge-summaries.js"]}
 {"ts":"2026-11-26T14:07:22.889Z","type":"spec-approved","module":"search","specHash":"42397eaa8b80419ef39ed813f2a7510f6fab2a108b484e13fc7a16bd72f24a06"}
 {"ts":"2026-11-26T14:29:01.915Z","type":"spec-approved","module":"search","specHash":"ff4fac26063f1f9096eb85121703bede46469d8fc0f5aace3c9cdd33aa0ceb66"}
+{"ts":"2026-11-26T16:04:26.299Z","type":"feature-status","module":"platform","feature":"web-tenant-isolation","from":null,"to":"pending"}
