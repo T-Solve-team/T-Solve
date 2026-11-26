@@ -35,6 +35,7 @@ owner: BA
 | 2026-11-17 | STORY-002, STORY-013 (new), STORY-001, STORY-003, STORY-007, STORY-010 | **Backend and frontend change (KAN-183).** The conversations move from `sessionStorage` to the Workspace database: new STORY-013 (tables `chat_session` and `chat_message`, list, open, delete, a 30-day retention job; the backend reads the earlier turns itself). STORY-002 renamed "Saved conversations": AC-002.2–AC-002.5, AC-002.7, AC-002.8 and AC-002.12 reworded, AC-002.11 removed, new AC-002.13–AC-002.15 (delete with MSG103, list errors). Reworded AC-001.6 (`chatSessionId` instead of `history`), AC-003.4 (rating from the server), AC-007.1–AC-007.3 (history from the conversation; the request `history` only for `askForProject`), AC-010.3 and AC-010.8 (draft takes no body). Requirements 5, 7 and 9 reworded. Out of Scope, Interface Contracts and Definition of Done follow. The Jira App path (STORY-012) is unchanged | User decisions of 17/11 (replace the 09/11 decision): keep a conversation 30 days after its last message, a daily job deletes older ones; separate `chat_session` and `chat_message` tables (every outcome, linked to its `chatbot_answer`); the backend reads the last 10 turns from the database, the web request sends `chatSessionId`; the user can delete a conversation (MSG103); when a conversation is deleted its unrated `ANSWERED`, `GREETING` and `OFF_TOPIC` answers are deleted too, rated, `NO_SOURCE` and `INJECTION` answers are kept (replaces the logout-event deletion) |
 | 2026-11-18 | STORY-002, STORY-013, STORY-004 | **Backend and frontend change (KAN-183).** The conversation list is paged: AC-013.5 answers one `PagedModel` page (`page` from 0, `size` default 20, above 100 read as 100); AC-002.3 shows the 20 newest; new AC-002.16 adds a Load more button that appends the next page and reloads the loaded pages after an ask or a delete; AC-004.8 pages the mock list too. Out of Scope no longer excludes paging; Interface Contracts follow | User, 18/11: show the 20 newest conversations, with a Load more button; standard team paging (`page`/`size`, `PagedModel`) |
 | 2026-11-23 | STORY-001, STORY-002, STORY-009, STORY-013 | **Merge of main into KAN-183.** AC-001.6 sends `chatSessionId` and empties the box on send. AC-002.2, AC-009.9 and AC-013.1: the AI `title` of a first question (no `chatSessionId`) is stored as `chat_session.title`, the trimmed question when there is none. AC-002.3 and AC-002.16: the server list is paged by 10 with a "Show more" button (main's session-only AC-002.14 is folded in). Main's AC-002.13 (one-line title) is now AC-002.17, since AC-002.13–AC-002.16 are KAN-183's. Interface Contracts: `ChatbotAnswer` has both `chatSessionId` and `title` | User, 23/11: store the AI title in the database; keep server paging with 10 per page and "Show more" (KAN-380, KAN-382 merged into main on 22/11) |
+| 2026-11-25 | STORY-014, STORY-015 (new), Requirement 12 | **Backend change (RAG measurement).** New STORY-014: every answer stores the sources it kept, with kind, id, similarity and whether it was cited, in a new `chatbot_answer.sources` JSONB column, never returned. New STORY-015: an offline `rag-eval` run measures retrieval (recall within the kept sources, MRR, no-source rate, per group) against a gold file, with no chat model. Requirement 12 added; Out of Scope, Interface Contracts, Required from other modules (search `nearest` returns the ticket's public id) and Definition of Done follow. Earlier criteria unchanged | RAG review of 21/11: every retrieval change (hybrid search, per-source thresholds, embedding text) needs a measurement first; decisions logged in `04-plans/chatbot/rag-eval-decisions.md` |
 
 ## Requirements
 
@@ -84,6 +85,10 @@ owner: BA
     reply with no AI call, an off-topic question or an attempt to change the Chatbot's instructions is refused and
     not searched, and any other question is searched with a short stand-alone query that is never shown or stored.
     A greeting or a refused question is not a knowledge gap (dashboard UC-34).
+12. Retrieval quality is measured (backend, RAG review 21/11): every stored answer records which sources it kept,
+    their similarity and which were cited, for debugging, never shown; an offline evaluation runs a gold set of
+    questions with known sources through the Chatbot's retrieval, without the chat model, and reports how often the
+    right source is kept.
 
 ### Non-Functional
 1. Every acceptance criterion has a test whose `it` name starts with its id; `sdd.ts trace chatbot` passes for the
@@ -507,6 +512,55 @@ owner: BA
   - AC-013.12: THE `askForProject` path (STORY-012) SHALL create and read no conversation; its earlier turns stay
     the request's `history`.
 
+### STORY-014: Record the sources of an answer on the backend
+- As the T-Solve team, I want every answer to record the sources it was built from and their scores, so that a wrong
+  or missing answer can be traced to its retrieval (RAG review 21/11).
+- Acceptance:
+  - AC-014.1: WHEN an answer is stored after a search, THE backend SHALL store in `chatbot_answer.sources` one
+    entry per kept source in number order, each with `n`, `kind` (`TICKET` or `WIKI`), `id` (the ticket's
+    `public_id` or the `wikiDocumentId`), `similarity` rounded to 4 decimals and `cited` (true when its `[n]` marker
+    is in the stored text); this holds for `ANSWERED` and for the `NO_SOURCE` of AC-005.4 and AC-005.5, on the web
+    and for a Jira project.
+  - AC-014.2: IF an answer is stored without a search or with no kept source, THEN THE backend SHALL store
+    `sources` as `[]`; the answers without a search are `GREETING`, `OFF_TOPIC` and `INJECTION`.
+  - AC-014.3: THE backend SHALL store in `sources` no source text, question, earlier turn or rewritten query, and
+    SHALL return `sources` in no response; AC-006.3 still holds.
+  - AC-014.4: THE chatbot changeset SHALL add to `chatbot_answer` the column `sources JSONB NOT NULL DEFAULT '[]'`
+    with a `--rollback` that drops it.
+  - AC-014.5: IF the ask fails and no answer is stored (AC-005.7), THEN THE backend SHALL store no sources.
+
+### STORY-015: Measure retrieval offline on the backend
+- As the T-Solve team, I want to run a gold set of questions with known sources through the Chatbot's retrieval and
+  get its scores, so that every retrieval change is measured instead of guessed (RAG review 21/11).
+- Acceptance:
+  - AC-015.1: WHEN the backend starts with the Spring profile `rag-eval`, THE backend SHALL read the gold file at
+    `RAG_EVAL_FILE`, retrieve each line's question in the Workspace `RAG_EVAL_WORKSPACE_ID` for the user
+    `RAG_EVAL_USER_ID` as for a first web question (AC-005.1, AC-005.2: the question embedded as asked, the sources
+    of `SolutionRetrieval.nearest` and `WikiSources.nearest` merged most similar first) with minimum similarity 0
+    and at most `RAG_EVAL_K` (default 10) results, write the report to `RAG_EVAL_REPORT` and exit with code 0.
+  - AC-015.2: THE runner SHALL read each non-blank line of the gold file as a JSON object with a non-blank
+    `question` of at most 1,000 characters, a non-empty `expected` list of `{ "kind": "TICKET" | "WIKI", "id":
+    <UUID> }` and an optional `groups` object of string values; a result matches an expected source when its kind
+    and id are equal (the ticket's `public_id`, the `wikiDocumentId`).
+  - AC-015.3: THE report SHALL be one JSON object with `minSimilarity` (`CHATBOT_MIN_SIMILARITY`), `sourceLimit`
+    (`CHATBOT_SOURCE_LIMIT`), `k`, the scores of the whole set, the scores of each group value (`key=value`), and
+    one entry per line with its line number, the 1-based `rank` and `similarity` of its first matching result
+    (null when none is within `k`) and the similarity of its first result (null when there is none).
+  - AC-015.4: THE runner SHALL compute for the whole set and for each group value: `questions` (the line count),
+    `recall` (the share of lines with a matching result among the first `sourceLimit` results whose similarity is
+    at least `minSimilarity`, what the Chatbot would keep), `mrr` (the mean of 1/`rank`, 0 for a line without one)
+    and `noSourceRate` (the share of lines whose first result is missing or below `minSimilarity`), each rounded to
+    4 decimals.
+  - AC-015.5: IF the run cannot start, THEN THE runner SHALL make no AI call, write no report, log the reason (the
+    line number for an invalid line, never its text) and exit with a non-zero code; the run cannot start when the
+    gold file is missing, unreadable or empty, when a line is invalid, when the Workspace is unknown, or when the
+    user is not an Active user.
+  - AC-015.6: IF an embedding call fails, THEN THE runner SHALL write no report and exit with a non-zero code.
+  - AC-015.7: THE runner SHALL run only with the profile `rag-eval`, start no web server, call no chat model, write
+    nothing to the Workspace database and log no question or source text.
+  - AC-015.8: THE repository SHALL hold `backend/rag-eval/gold.example.jsonl` with at least three valid lines of
+    both kinds and at least one `groups` object.
+
 ## Out of Scope
 - Renaming a conversation, searching the conversation list, sharing a conversation with another user,
   and moving conversations kept in `sessionStorage` before KAN-183 to the server (they are dropped).
@@ -531,6 +585,9 @@ owner: BA
 - The real search (`search` module) and the Wiki (`wiki` module); 11.2 Wiki Document stays their placeholder.
 - Counting ratings on the Knowledge Dashboard (`dashboard-audit`).
 - Streaming answers; answers are one response.
+- For RAG measurement (STORY-014, STORY-015): the real gold set itself (the team writes it for the demo Workspace,
+  Definition of Done), judging the chat model's answer text, follow-up questions, any screen or API that shows the
+  stored `sources`, and running the evaluation in CI (it needs the AI server and real data).
 - Kit components in `shared/ui`: the chat parts are built in `features/chatbot/components/` (rule of two).
 
 ## Interface Contracts
@@ -714,6 +771,20 @@ chatbot_answer
   jira_issue_key    VARCHAR(255) NULL                      -- STORY-011 (AC-011.11): the issue created from it
   source            VARCHAR(10) NOT NULL DEFAULT 'WEB' CHECK IN ('WEB', 'JIRA_APP')   -- STORY-012 (AC-012.5)
   project_id        UUID NULL                              -- the Project of a JIRA_APP row (public id)
+  sources           JSONB NOT NULL DEFAULT '[]'            -- STORY-014 (AC-014.4): [{n, kind, id, similarity, cited}]
+```
+
+Offline evaluation (STORY-015), profile `rag-eval`, environment `RAG_EVAL_FILE`, `RAG_EVAL_REPORT`,
+`RAG_EVAL_WORKSPACE_ID`, `RAG_EVAL_USER_ID`, `RAG_EVAL_K` (default 10):
+
+```jsonc
+// gold file: JSON Lines, one question per line
+{"question": "VPN báo lỗi 809", "expected": [{"kind": "TICKET", "id": "<ticket public_id>"}], "groups": {"department": "IT", "source": "ticket"}}
+// report
+{"minSimilarity": 0.7, "sourceLimit": 5, "k": 10,
+ "overall": {"questions": 50, "recall": 0.72, "mrr": 0.61, "noSourceRate": 0.18},
+ "groups": {"department=IT": {"questions": 20, "recall": 0.8, "mrr": 0.7, "noSourceRate": 0.1}},
+ "lines": [{"line": 1, "rank": 2, "similarity": 0.7412, "topSimilarity": 0.7655}]}
 ```
 
 Rating errors (STORY-008): 400 code MSG06 with no field error, 401 MSG07, 404 MSG04.
@@ -760,8 +831,8 @@ Backend settings (`.env.example`): `CHATBOT_MIN_SIMILARITY=0.7`, `CHATBOT_SOURCE
   logout and on a global 401. KAN-243 also needs MSG_NEW_5, MSG_NEW_6 and MSG_NEW_7 added to
   `frontend/src/shared/messages/catalog.ts`, allowed by fe-foundation AC-006.7 (reworded 17/11).
 - `search` (backend): `vn.tsolve.search.retrieval.service.SolutionRetrieval.nearest(queryVector, minSimilarity,
-  limit)` returning `RetrievedSolution` (the five sections and the similarity) of Workspace Solutions (search
-  STORY-010).
+  limit)` returning `RetrievedSolution` (the five sections, the similarity and, since 25/11, the ticket's `public_id`
+  for STORY-014 and STORY-015, never returned to a client) of Workspace Solutions (search STORY-010, AC-010.2).
 - `wiki` (later, backend; KAN-169): an implementation of `WikiSources` over the chunked and embedded Wiki documents
   the user can view (GBR-31).
 - `ai` (done): `EmbeddingClient` (bge-m3, 1024 dimensions), `LlmClient.chat` and `AiUnavailableException`.
@@ -795,3 +866,6 @@ Backend settings (`.env.example`): `CHATBOT_MIN_SIMILARITY=0.7`, `CHATBOT_SOURCE
 - [ ] KAN-243: every acceptance criterion of STORY-009, AC-001.15, AC-003.1 and AC-004.7 has a test named with its
       id; `sdd.ts trace chatbot STORY-009` passes; the classifier's latency is measured once on the real
       `OLLAMA_CHAT_MODEL` and written in the PR
+- [ ] RAG measurement: every acceptance criterion of STORY-014 and STORY-015 has a backend test named with its id;
+      `sdd.ts trace chatbot STORY-014 STORY-015` passes; a gold set of at least 50 real questions for the demo
+      Workspace is run once on the AI server and its report is attached to the PR

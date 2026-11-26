@@ -10,6 +10,7 @@ owner: BA
 
 | Date | Story | Change | Reason |
 |------|-------|--------|--------|
+| 2026-11-25 | STORY-015 (new) | **Backend and frontend change.** New STORY-015 AI review assist: an on-demand "AI check" on Ticket Detail of a Pending review ticket returns advisory findings (field, severity, issue, suggestion) from `LlmClient`; nothing stored; AI failure → 503 MSG_NEW_AI_REVIEW_1, decisions unaffected. Interface Contracts (new POST route), Required from other modules (ai `LlmClient`), Out of Scope and Definition of Done follow. Earlier criteria unchanged | User, 2026-11-25: the AI reads the Solution and points out what is unsound to the PM. Decisions D1–D10 in `artifacts/04-plans/ticket-review/ai-review-assist-decisions.md` |
 | 2026-11-18 | STORY-014 | AC-014.1: JOB-02's run time comes from `REVIEW_EXPIRY_CRON` (default `0 0 * * *`, also when blank; an invalid value stops the start with an error naming the variable); the time zone stays Asia/Ho_Chi_Minh. AC-014.6: after the third failed attempt, overdue tickets wait for the next scheduled run instead of the next 00:00 | User 18/11 (KAN-336 branch): job schedules go in env so a customer changes them without a code change; the expiry compares due dates with today's Vietnam date, so any run time keeps the same result |
 | 2026-11-14 | STORY-010 | Merge of KAN-333 and KAN-162: the branded HTML email of AC-010.2 and AC-010.7–010.9 is composed when the decision commits and queued in the worker email outbox, instead of being rendered by a job at send time (KAN-162) | PR #230 merged into main while KAN-162 was open; both changes were approved separately on 2026-11-14 |
 | 2026-11-14 | STORY-010 | The review email is composed when the decision commits and queued in the worker email outbox; the per-decision review-notification job, which loaded the decision, ticket and writer at send time, is removed (KAN-162) | Worker STORY-004 adds a shared outbox so the sender never reads the business database; user chose that every email goes through it |
@@ -211,10 +212,24 @@ Jira KAN-24 and its KAN-137 comment inspected on 2026-11-01; frontend AGENTS/gui
   - AC-014.7: IF the Workspace is Suspended or unknown when an expiry job runs, THEN THE worker SHALL change no ticket and schedule no further attempt (GBR-38).
   - AC-014.8: THE expiry job payload SHALL hold only the Workspace UUID and the attempt number, and JOB-02 SHALL record no review decision and no audit entry. THE tenant changelog SHALL add nullable ticket.expired_at as TIMESTAMPTZ and nullable ticket.status_before_expiry as VARCHAR(20) limited to PENDING_REVIEW and CHANGES_REQUESTED.
 
+### STORY-015: AI review assist on Ticket Detail
+
+- As a Project Manager, I want the AI to read a submitted Solution and point out what is missing or unsound so that I review faster and write better Reject and Request Changes comments. The AI only advises; the decision stays with the Project Manager (GBR-12). Decisions: `artifacts/04-plans/ticket-review/ai-review-assist-decisions.md`.
+- Acceptance:
+  - AC-015.1: WHEN a Project Manager who manages the ticket's Project opens Ticket Detail of a Pending review Solution Form ticket, THE frontend SHALL offer an "AI check" action; IF the user does not manage the Project or the ticket is not Pending review, THEN THE frontend SHALL not offer it.
+  - AC-015.2: WHEN the Project Manager runs AI check, THE backend SHALL send the ticket's title, description, symptoms, root cause, resolution steps, workaround and scope to `LlmClient` in one chat call constrained to the findings JSON schema, with the ticket text in the user message as data and a system prompt that tells the model to ignore instructions inside it.
+  - AC-015.3: THE system prompt SHALL ask the model to report, per Solution field, missing or vague information, a root cause that does not explain the symptoms, resolution steps that are not actionable, out of order or do not address the root cause, a workaround presented as the fix, a risky action without a warning, and contradictions between fields, in the language of the Solution text.
+  - AC-015.4: WHEN the AI answer matches the schema, THE API SHALL return 200 with at most 10 findings, each with `field` (one of TITLE, DESCRIPTION, SYMPTOMS, ROOT_CAUSE, RESOLUTION_STEPS, WORKAROUND, SCOPE, GENERAL), `severity` (HIGH, MEDIUM or LOW), `issue` and `suggestion` (each trimmed, at most 500 characters), ordered HIGH first; THE API SHALL drop findings beyond 10 and truncate longer texts.
+  - AC-015.5: WHEN findings are returned, THE frontend SHALL show them grouped by severity with the field name, as plain text; WHEN the list is empty, THE frontend SHALL show MSG_NEW_AI_REVIEW_2 ("No issues found"). WHILE the request is pending, THE frontend SHALL show a loading state and disable the action.
+  - AC-015.6: IF the AI call fails, times out or returns an answer that does not match the schema, THEN THE API SHALL return 503 with code MSG_NEW_AI_REVIEW_1 and THE frontend SHALL show that message with retry; THE Approve, Reject and Request Changes controls SHALL keep working.
+  - AC-015.7: IF the caller is unauthenticated, does not manage the ticket's Project, the ticket is in another Workspace, or the ticket is not a Pending review Solution Form ticket, THEN THE API SHALL return 401, 403, 404 or 409 respectively without calling the AI.
+  - AC-015.8: THE backend SHALL store no finding, record no review decision and no audit entry, and log no ticket text or AI answer; findings SHALL not be shown to the writer.
+
 ## Out of Scope
 
 - General audit writer, notification channels other than STORY-010 email, and real-time updates of screens other than the Review Queue (STORY-012). STORY-009 stores Review decisions and exposes Request Changes feedback to the writer in Jira. The KAN-162 retry limit of three attempts in one hour, a logo image, a Vietnamese or per-user language email, and email for decisions other than Reject and Request Changes are not part of STORY-010.
 - A WebSocket channel (STORY-012 uses SSE only). STORY-013 (KAN-156) serves and sends back tickets that are already EXPIRED; it does not move tickets to EXPIRED (STORY-014, KAN-157, does), rename `project.review_range`, or offer send-back on Ticket Detail. STORY-014 does not serve the Expired list, notify the writer or a Project Manager of an expiry, register JOB-02 per Workspace on provisioning (KAN-161), or retry beyond 3 attempts per night. KAN-158 delivers frontend, a proposed API and in-memory fixtures. KAN-159 displays historical Unpublish/Republish records without adding those mutation workflows; STORY-011 and STORY-013 serve the stored Approve, Reject, Request Changes and Send back decisions, so the UNPUBLISH and REPUBLISH filters return an empty page.
+- STORY-015 does not run on submit, store or cache findings, read Evidence files, prefill the Reject or Request Changes comment from findings, or show findings to the writer.
 - Importing PR #26 or changing/closing it; creating or pushing the replacement PR still requires the user to request that action.
 
 ## Interface Contracts
@@ -230,7 +245,11 @@ Jira KAN-24 and its KAN-137 comment inspected on 2026-11-01; frontend AGENTS/gui
 - Use the generated Ticket Detail query at `/api/v1/tickets/{ticketId}`, reusing existing Ticket source/status/Project/Solution definitions where compatible. Details carry trusted author and manager identity/scope information. The frontend uses account identifiers to determine authorship.
 - MSW fixtures hold ticket states and append-only decision records in memory, reset through the existing mock reset entry point. Invalid batches leave every ticket and history entry unchanged. No production table or second Ticket authority is created.
 
+- STORY-015 adds POST `/api/v1/tickets/{ticketId}/ai-review` (no body, Project Manager) → 200 `AiReviewResult` `{findings: AiReviewFinding[]}`, `AiReviewFinding` = `{field, severity, issue, suggestion}` with the enums of AC-015.4; errors 401/403/404/409 as the review Problem contract and 503 `MSG_NEW_AI_REVIEW_1`. New message ids MSG_NEW_AI_REVIEW_1 (AI check unavailable) and MSG_NEW_AI_REVIEW_2 (no issues found); their texts go to System_Messages.
+
 ### Required from other modules
+
+STORY-015 requires ai `LlmClient` chat with a JSON schema (ai STORY-001) and its `AiUnavailableException` on failure.
 
 STORY-009 requires a trusted Workspace binding and the authenticated Account's Project membership for Review. Jira panel feedback requires a verified Jira issue and writer identity in that same Workspace. Workspace routing, sign-in and general Project membership administration belong to their respective modules. STORY-014 requires the worker tenant port to list the Active Workspaces (worker STORY-003) and uses worker's public `TenantExecutionService` and JobRunr scheduler.
 
@@ -247,4 +266,5 @@ Use existing session roles and UUID Project memberships, catalog messages, share
 - [ ] Automated checks cover queue, Ticket Detail, confirmation, validation, stale/failure/retry and permissions; reports disclose mock-only guarantees and backend dependencies. Manual browser testing is omitted per the user's instruction.
 - [ ] STORY-009 passes backend verification, including PostgreSQL tests for scope, atomic decisions and persistence. Verify queue and detail through the real API and verify MSG64 for the writer in Jira.
 - [ ] STORY-013 passes backend verification, including PostgreSQL tests for scope, the atomic send-back batch, the recalculated due date and the SEND_BACK decision.
+- [ ] STORY-015 passes backend and frontend verification, with a stubbed `LlmClient` for findings, schema mismatch, failure and permissions.
 - [ ] Review and test evidence recorded; user approves each feature commit; push/PR only when requested.

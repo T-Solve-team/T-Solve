@@ -1462,6 +1462,39 @@ paths:
           $ref: '#/components/responses/Problem'
         '404':
           $ref: '#/components/responses/Problem'
+  /api/v1/tickets/{ticketId}/ai-review:
+    post:
+      tags: [review]
+      operationId: runAiReview
+      summary: Advisory AI check of a Pending review Solution (STORY-015).
+      description: |
+        Project Manager of the ticket's Project only, with the decisions' scope: 401 unauthenticated, 403 MSG08 an
+        unmanaged Project or unverified Workspace Account, 404 MSG04 a ticket missing from the signed-in Workspace,
+        409 MSG06 a ticket that is not a Pending review Solution Form ticket; each is refused before any AI call.
+        The title, description and Solution go to the AI as data; at most 10 findings come back, HIGH first, with
+        issue and suggestion trimmed to 500 characters. 503 MSG_NEW_AI_REVIEW_1 when the AI fails, times out or
+        answers outside the findings schema. Nothing is stored or audited; the decision stays with the Project Manager.
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Advisory findings.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiReviewResult' }
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
   /api/v1/review-history:
     get:
       tags: [review]
@@ -4793,6 +4826,28 @@ components:
         canDecide:
           type: boolean
           description: Whether the current user may decide this pending Solution Form ticket in its managed Project.
+    AiReviewFinding:
+      type: object
+      description: One advisory finding of AI check (STORY-015); plain text, never stored.
+      required: [field, severity, issue, suggestion]
+      properties:
+        field:
+          type: string
+          enum: [TITLE, DESCRIPTION, SYMPTOMS, ROOT_CAUSE, RESOLUTION_STEPS, WORKAROUND, SCOPE, GENERAL]
+        severity:
+          type: string
+          enum: [HIGH, MEDIUM, LOW]
+        issue: { type: string, maxLength: 500 }
+        suggestion: { type: string, maxLength: 500 }
+    AiReviewResult:
+      type: object
+      required: [findings]
+      properties:
+        findings:
+          type: array
+          maxItems: 10
+          description: HIGH first, then MEDIUM, then LOW; empty when the AI found no issue (MSG_NEW_AI_REVIEW_2).
+          items: { $ref: '#/components/schemas/AiReviewFinding' }
     JiraAccountLinkStatus:
       type: object
       required: [status]
