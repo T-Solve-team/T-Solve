@@ -1,4 +1,4 @@
-import type { ReviewQueueItem, ReviewTicketDetail } from '@/shared/api';
+import type { AiReviewFinding, ReviewQueueItem, ReviewTicketDetail } from '@/shared/api';
 
 /** Department ids equal the ones of the mock session (src/mocks/session.ts). */
 const IT_DEPARTMENT_ID = '00000000-0000-4000-8000-0000000000d1';
@@ -270,3 +270,26 @@ export function seedReviewTickets(): MockReviewTicket[] {
 export function departmentOf(ticket: ReviewQueueItem): string | undefined {
   return MOCK_PROJECTS.find((p) => p.projectId === ticket.project.projectId)?.departmentId;
 }
+
+/** The mock AI check answer (STORY-015), HIGH first; tests override the handler for the empty and failed cases. */
+export const AI_REVIEW_FINDINGS: AiReviewFinding[] = [
+  {
+    field: 'ROOT_CAUSE',
+    severity: 'HIGH',
+    issue: 'The root cause does not explain why only some workstations lose access.',
+    suggestion:
+      'Say which configuration value was out of date and why it affects these workstations.',
+  },
+  {
+    field: 'RESOLUTION_STEPS',
+    severity: 'MEDIUM',
+    issue: 'Restarting the client has no warning about unsaved work.',
+    suggestion: 'Ask users to save their work before the restart.',
+  },
+  {
+    field: 'WORKAROUND',
+    severity: 'LOW',
+    issue: 'No workaround is given.',
+    suggestion: 'Describe what users can do until the configuration is updated.',
+  },
+];

@@ -21,6 +21,8 @@ owner: BA
 | 2026-11-17 | STORY-001 | AC-001.1, AC-001.3 and AC-001.8 reworded, Requirement 1 follows: the Ticket List table drops the Ticket ID column and starts with a "No." column (the row's position across pages, not sortable); the Title, not the Ticket ID, is the link to 5.5 Ticket Detail; Ticket ID is no longer a sortable column. The keyword still matches the Ticket ID (AC-001.4 unchanged) | KAN-360: ids are noise in the table, users open a ticket from its title (user, 17/11) |
 | 2026-11-17 | STORY-006, STORY-012 (new) | New STORY-012: `MembershipVisibleScope`, the real `VisibleScope` built from the Workspace database, replaces the fail-closed `NoVisibleScope`, which is removed. The user's Departments are the ACTIVE Departments identity's `ScopeAccessService` grants (a Project Manager's own Department and the Departments of the Projects the user is a member of); the managed Projects are the user's `PROJECT_MANAGER` memberships (`ProjectMembershipLookup`); the writer is the user's account id matched against `ticket.writer_id` instead of the `ticket.writer` name. AC-006.1, AC-006.2, AC-006.11 and AC-006.12 reworded; the Visible scope term, Out of Scope, Interface Contracts (`Scope.writerId` is a `UUID`), Required from other modules and Definition of Done follow | KAN-354: on staging the Ticket List was empty for every user because no module implemented `VisibleScope`. User decisions of 17/11: Departments are the union of `app_user.department_id` and the Departments of the user's Projects; match the writer by `writer_id` |
 | 2026-11-22 | STORY-005, STORY-006, STORY-007 | **Backend change.** AC-005.4: the embedded text adds the ticket's description, rows carry `text_version` 2. New AC-005.10: the catch-up job embeds again the rows of `text_version` 1 after the tickets with no row; the old vector serves until then; `ticket_embedding` gains `text_version`. AC-006.4 (Ticket List keyword) and AC-007.2 (search keyword fallback) also match the description. Interface Contracts follow | KAN-380 (the user, 22/11): find tickets by their description too, wherever `ticket_embedding` is used (chatbot, search, suggestions); re-embed without a gap in search (decision log of KAN-380) |
+| 2026-11-22 | STORY-002 | 6.1 Search gets two layouts: AC-002.2 reworded (before a query the start state shows the heading "Find a Solution", one line on what is searched, and the Search box and filters centred; still no API call and no result message), AC-002.4 adds the Search box placeholder, new AC-002.16 (a query moves the Search box and filters to the top, above the results, with the focus kept in the box; removing it brings the start state back). No other criterion changes | KAN-383: the screen looked bare before a search; design option C "Search first" chosen by the user (22/11) |
+| 2026-11-25 | STORY-010 | AC-010.2 reworded: each hit also carries the ticket's `public_id` (`ticketId`) for the server side; the chatbot still returns no ticket id to a client (chatbot AC-006.3). Interface Contracts: `RetrievedSolution` gains `ticketId` | chatbot STORY-014 and STORY-015 (RAG measurement) need to know which ticket a source is; decisions logged in `04-plans/chatbot/rag-eval-decisions.md` |
 | 2026-11-25 | STORY-006 | **Backend change.** AC-006.7: `reviewDueDate` is the start of `ticket.review_due_date` in Asia/Ho_Chi_Minh while the ticket is Pending review or Changes requested, null otherwise, and its sort key sorts by it (KAN-454) | BUG-392: ticket-review now stores the due date, so the Ticket List shows "—" where the Review Queue shows a date |
 
 ## Requirements
@@ -112,12 +114,15 @@ owner: BA
   - AC-002.1: WHEN a Ticket Resolver or Project Manager opens `/search`, THE web app SHALL show 6.1 Search with
     the Search box and the filters Department, Source and Resolved date, above the results area.
   - AC-002.2: WHILE the URL has no query, or only white space, THE web app SHALL not call the search API and
-    SHALL show the results area empty, with no message (decision Q3).
+    SHALL show the start state instead of the results area: the heading "Find a Solution", the line "Describe the
+    problem in your own words. T-Solve searches the Published tickets of your Departments.", and the Search box and
+    the filters centred under them; no result and no result message (decision Q3).
   - AC-002.3: WHEN the user presses Enter in the Search box with a non-blank text, THE web app SHALL call
     `GET /api/v1/search/tickets` with the trimmed text as `q`, the current filters, page 0 and size 20;
     pressing Enter with an empty or white-space text SHALL do nothing, and typing without Enter SHALL not
     search.
-  - AC-002.4: THE Search box SHALL accept at most 200 characters.
+  - AC-002.4: THE Search box SHALL accept at most 200 characters. The box's placeholder is "For example: VPN drops
+    every few minutes".
   - AC-002.5: THE Department filter SHALL offer "All Departments" (the default) and each Department of the
     session's `departments`, sent as that Department's id as a string in `departmentId`; THE Source filter SHALL
     offer "All" (the default) and the four source labels, sent as `source`; THE Resolved date filter SHALL be an
@@ -143,6 +148,9 @@ owner: BA
   - AC-002.14: THE web app SHALL show the title, the excerpt and every text field as plain text, never as HTML.
   - AC-002.15: IF a result's `resolvedAt` is null (the ticket has no resolved date), THEN THE web app SHALL show
     "Resolved —" in that card's line instead of a date and time.
+  - AC-002.16: WHEN the URL gets a query, THE web app SHALL show the Search box and the filters at the top of the
+    page, above the results area, and SHALL keep the focus in the Search box; WHEN the query is removed (the clear
+    icon, or going back in history), THE web app SHALL show the start state of AC-002.2 again.
 
 ### STORY-003: Give Feedback popup
 - As a Ticket Resolver or Project Manager, I want to say whether a Published ticket helped me, so that good
@@ -379,9 +387,10 @@ Used by STORY-005 to STORY-009:
   - AC-010.1: WHEN `SolutionRetrieval.nearest(queryVector, minSimilarity, limit)` is called, THE backend SHALL return
     at most `limit` Workspace Solutions that have a `ticket_embedding` row whose cosine similarity to `queryVector`
     is at least `minSimilarity`, most similar first, the internal ticket id as the tie-breaker.
-  - AC-010.2: THE backend SHALL return each hit with the ticket's Symptoms, Root cause, Resolution steps, Workaround
-    (null when blank) and Scope of applicability, and its similarity; it SHALL return no ticket id, title, Project,
-    Department, writer, snapshot or Evidence (GBR-36).
+  - AC-010.2: THE backend SHALL return each hit with the ticket's `public_id` as `ticketId`, its Symptoms, Root
+    cause, Resolution steps, Workaround (null when blank) and Scope of applicability, and its similarity; it SHALL
+    return no title, Project, Department, writer, snapshot or Evidence, and the `ticketId` is for the server side
+    only (chatbot AC-006.3, GBR-36).
   - AC-010.3: IF a ticket is unpublished, inactive or too far, THEN THE backend SHALL leave it out (not
     `PUBLISHED`, its Department not `ACTIVE`, or its similarity below `minSimilarity`) and SHALL return an empty
     list when none is left.
@@ -598,6 +607,7 @@ public interface SolutionRetrieval {
 }
 // vn.tsolve.search.retrieval.dto
 public record RetrievedSolution(
+        UUID ticketId, // ticket.public_id, server side only (AC-010.2)
         String symptoms, String rootCause, String resolutionSteps, String workaround, String scopeOfApplicability,
         double similarity) {} // workaround null when blank
 ```

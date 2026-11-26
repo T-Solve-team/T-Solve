@@ -718,7 +718,32 @@ Spec: STORY-005 to STORY-009 · Design: master section "Backend". Rules: `backen
 **Dependencies:** none
 **Estimated size:** medium
 
-## Task 23: Ticket List review due date
+---
+
+## Task 23: Start state and two layouts of 6.1 Search
+
+**Story:** STORY-002
+**Feature:** search-start-layout
+**Jira:** KAN-383 · branch `feat/KAN-383-search-start-layout`
+**Description:**
+- Start state while there is no query: icon tile, heading "Find a Solution", the line of AC-002.2, the Search box and the
+  filters centred; no Results region and no API call (AC-002.2).
+- With a query: the Search box and filters at the top, results below in an 860px reading column of flat rows; the same
+  `SearchFilters` stays mounted so the focus stays in the box (AC-002.16, BUG-059).
+- Search box placeholder "For example: VPN drops every few minutes" (AC-002.4); filters as pills holding their labels
+  (design, change of 2026-11-22).
+**Files:**
+- Modify: `frontend/src/features/search/pages/SearchPage.tsx`, `…/pages/SearchPage.module.css`,
+  `…/components/SearchFilters.tsx`, `…/components/SearchResultCard.tsx`, `…/components/SearchResultList.tsx`,
+  `…/components/SearchResults.module.css`
+- Test: `…/pages/SearchPage.test.tsx` (AC-002.2 start state, AC-002.4 placeholder, AC-002.16 layout switch and focus)
+**Covers:** AC-002.2, AC-002.4, AC-002.16
+**Dependencies:** none
+**Estimated size:** small
+
+---
+
+## Task 24: Ticket List review due date
 
 **Story:** STORY-006
 **Feature:** list-review-due-date
