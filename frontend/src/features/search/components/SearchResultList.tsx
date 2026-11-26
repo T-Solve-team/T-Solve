@@ -33,7 +33,7 @@ export function SearchResultList({
         <SearchResultCard key={result.ticketId} result={result} />
       ))}
       <Pagination
-        align="end"
+        align="start"
         current={page}
         pageSize={PAGE_SIZE}
         total={total}

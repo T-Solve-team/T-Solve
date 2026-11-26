@@ -24,6 +24,7 @@ public class SolutionRetrievalImpl implements SolutionRetrieval {
         String vector = checkedVector(queryVector, minSimilarity, limit);
         return repository.nearest(vector, minSimilarity, limit).stream()
                 .map(row -> new RetrievedSolution(
+                        row.getTicketId(),
                         row.getSymptoms(),
                         row.getRootCause(),
                         row.getResolutionSteps(),

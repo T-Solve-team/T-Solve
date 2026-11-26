@@ -4,8 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -16,6 +14,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -35,10 +34,11 @@ import vn.tsolve.chatbot.answer.dto.ChatbotAskRequest;
 import vn.tsolve.chatbot.answer.dto.ChatbotCitation;
 import vn.tsolve.chatbot.answer.dto.ChatbotQuestionRequest;
 import vn.tsolve.chatbot.answer.dto.ChatbotTurnRequest;
-import vn.tsolve.chatbot.answer.dto.TicketSolutionCitation;
+import vn.tsolve.chatbot.answer.entity.AnswerSource;
 import vn.tsolve.chatbot.answer.entity.ChatbotAnswer;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
 import vn.tsolve.chatbot.answer.service.ChatbotAnswerService;
+import vn.tsolve.chatbot.answer.service.ChatbotRetrieval;
 import vn.tsolve.chatbot.conversation.service.ChatConversationService;
 import vn.tsolve.chatbot.exception.ChatbotProjectNotActiveException;
 import vn.tsolve.chatbot.rating.entity.ChatbotRating;
@@ -59,6 +59,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
     private final LlmClient llm;
     private final SolutionRetrieval solutions;
     private final WikiSources wiki;
+    private final ChatbotRetrieval retrieval;
     private final ChatbotAnswerRepository answers;
     private final ChatConversationService conversations;
     private final TransactionTemplate transaction;
@@ -76,6 +77,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
             LlmClient llm,
             SolutionRetrieval solutions,
             WikiSources wiki,
+            ChatbotRetrieval retrieval,
             ChatbotAnswerRepository answers,
             ChatConversationService conversations,
             PlatformTransactionManager transactionManager,
@@ -92,6 +94,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
                 llm,
                 solutions,
                 wiki,
+                retrieval,
                 answers,
                 conversations,
                 transactionManager,
@@ -109,6 +112,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
             LlmClient llm,
             SolutionRetrieval solutions,
             WikiSources wiki,
+            ChatbotRetrieval retrieval,
             ChatbotAnswerRepository answers,
             ChatConversationService conversations,
             PlatformTransactionManager transactionManager,
@@ -122,6 +126,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
                 llm,
                 solutions,
                 wiki,
+                retrieval,
                 answers,
                 conversations,
                 transactionManager,
@@ -139,6 +144,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
             LlmClient llm,
             SolutionRetrieval solutions,
             WikiSources wiki,
+            ChatbotRetrieval retrieval,
             ChatbotAnswerRepository answers,
             ChatConversationService conversations,
             PlatformTransactionManager transactionManager,
@@ -161,6 +167,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         this.llm = llm;
         this.solutions = solutions;
         this.wiki = wiki;
+        this.retrieval = retrieval;
         this.answers = answers;
         this.conversations = conversations;
         this.transaction = new TransactionTemplate(transactionManager);
@@ -183,11 +190,11 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         return answer(
                 request.question(),
                 history,
-                (vector, candidates) -> {
-                    solutions.nearest(vector, minSimilarity, sourceLimit).stream()
-                            .map(ChatbotSource::of)
-                            .forEach(candidates::add);
-                    return wiki.nearest(user, vector, minSimilarity, sourceLimit);
+                (vector, deadline) -> {
+                    var tickets = solutions.nearest(vector, minSimilarity, sourceLimit);
+                    var passages = wiki.nearest(user, vector, minSimilarity, sourceLimit);
+                    remaining(deadline);
+                    return retrieval.rank(tickets, passages, sourceLimit);
                 },
                 (question, outcome, text) -> new ChatbotAnswer(user.id(), question, outcome, text),
                 // AC-013.1, AC-013.3: the turn is stored in the transaction of its chatbot_answer row.
@@ -212,14 +219,14 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         return answer(
                 request.question(),
                 request.history(),
-                (vector, candidates) -> {
-                    solutions.nearestInProjectDepartment(projectId, vector, minSimilarity, sourceLimit).stream()
-                            .map(ChatbotSource::of)
-                            .forEach(candidates::add);
+                (vector, deadline) -> {
+                    var tickets = solutions.nearestInProjectDepartment(projectId, vector, minSimilarity, sourceLimit);
                     // AC-012.1: a linked asker reads what they may view on the web; anyone else Company-wide only.
-                    return reader.isPresent()
+                    List<WikiPassage> passages = reader.isPresent()
                             ? wiki.nearest(reader.get(), vector, minSimilarity, sourceLimit)
                             : wiki.nearestCompanyWide(vector, minSimilarity, sourceLimit);
+                    remaining(deadline);
+                    return retrieval.rankProject(tickets, passages, sourceLimit);
                 },
                 (question, outcome, text) -> ChatbotAnswer.forProject(projectId, question, outcome, text),
                 // AC-013.12: a Jira App question has no conversation.
@@ -237,9 +244,9 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         }
     }
 
-    /** Adds the Solution sources to the list and returns the Wiki passages for one embedded question. */
+    /** Finds and ranks the sources for one embedded question. */
     private interface Sources {
-        List<WikiPassage> find(float[] vector, List<ChatbotSource> candidates);
+        List<ChatbotSource> find(float[] vector, long deadline);
     }
 
     private interface Row {
@@ -288,17 +295,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         remaining(deadline);
 
         // Keep database access on the request thread so it retains the request's Workspace database.
-        List<ChatbotSource> candidates = new ArrayList<>();
-        List<WikiPassage> passages = sources.find(vector, candidates);
-        remaining(deadline);
-        passages.stream().map(ChatbotSource::of).forEach(candidates::add);
-        candidates.sort(Comparator.comparingDouble(ChatbotSource::similarity)
-                .reversed()
-                .thenComparingInt(source -> source.citation() instanceof TicketSolutionCitation ? 0 : 1));
-        List<ChatbotSource> kept = new ArrayList<>();
-        for (int index = 0; index < Math.min(sourceLimit, candidates.size()); index++) {
-            kept.add(candidates.get(index).numbered(index + 1));
-        }
+        List<ChatbotSource> kept = sources.find(vector, deadline);
         remaining(deadline);
 
         if (kept.isEmpty()) {
@@ -314,10 +311,15 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         String text = callAi(() -> llm.chat(messages, null), deadline);
         remaining(deadline);
         var cited = Citations.of(text, kept);
+        var citedNumbers =
+                cited.citations().stream().map(ChatbotCitation::number).collect(Collectors.toSet());
+        List<AnswerSource> stored = kept.stream()
+                .map(source -> source.stored(citedNumbers.contains(source.number())))
+                .toList();
         if (cited.citations().isEmpty()) {
             return save(
                     turn,
-                    row.of(question, Outcome.NO_SOURCE.name(), ""),
+                    row.of(question, Outcome.NO_SOURCE.name(), "").withSources(stored),
                     Outcome.NO_SOURCE,
                     List.of(),
                     title,
@@ -325,7 +327,7 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         }
         return save(
                 turn,
-                row.of(question, Outcome.ANSWERED.name(), cited.text()),
+                row.of(question, Outcome.ANSWERED.name(), cited.text()).withSources(stored),
                 Outcome.ANSWERED,
                 cited.citations(),
                 title,

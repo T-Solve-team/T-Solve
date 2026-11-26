@@ -20,10 +20,12 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.lang.reflect.RecordComponent;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -54,6 +56,7 @@ import vn.tsolve.ai.client.ChatMessage;
 import vn.tsolve.ai.client.EmbeddingClient;
 import vn.tsolve.ai.client.LlmClient;
 import vn.tsolve.ai.exception.AiUnavailableException;
+import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse;
 import vn.tsolve.chatbot.answer.dto.ChatbotAnswerResponse.Outcome;
 import vn.tsolve.chatbot.answer.dto.ChatbotAskRequest;
 import vn.tsolve.chatbot.answer.dto.ChatbotCitation;
@@ -61,9 +64,11 @@ import vn.tsolve.chatbot.answer.dto.ChatbotQuestionRequest;
 import vn.tsolve.chatbot.answer.dto.ChatbotTurnRequest;
 import vn.tsolve.chatbot.answer.dto.TicketSolutionCitation;
 import vn.tsolve.chatbot.answer.dto.WikiDocumentCitation;
+import vn.tsolve.chatbot.answer.entity.AnswerSource;
 import vn.tsolve.chatbot.answer.entity.ChatbotAnswer;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
 import vn.tsolve.chatbot.answer.service.ChatbotAnswerService;
+import vn.tsolve.chatbot.answer.service.ChatbotRetrieval;
 import vn.tsolve.chatbot.conversation.exception.ChatbotConversationNotFoundException;
 import vn.tsolve.chatbot.conversation.service.ChatConversationService;
 import vn.tsolve.chatbot.exception.ChatbotProjectNotActiveException;
@@ -904,6 +909,7 @@ class ChatbotAnswerServiceImplTest {
                 llm,
                 solutions,
                 wiki,
+                new ChatbotRetrieval(),
                 answers,
                 conversations,
                 transactions,
@@ -922,6 +928,7 @@ class ChatbotAnswerServiceImplTest {
                 llm,
                 solutions,
                 wiki,
+                new ChatbotRetrieval(),
                 answers,
                 conversations,
                 transactions,
@@ -938,7 +945,11 @@ class ChatbotAnswerServiceImplTest {
     }
 
     private static RetrievedSolution solution(String symptoms, double similarity) {
-        return new RetrievedSolution(symptoms, "cause", "steps", null, "scope", similarity);
+        return new RetrievedSolution(ticketId(symptoms), symptoms, "cause", "steps", null, "scope", similarity);
+    }
+
+    private static UUID ticketId(String symptoms) {
+        return UUID.nameUUIDFromBytes(symptoms.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     @Test
@@ -949,6 +960,91 @@ class ChatbotAnswerServiceImplTest {
         assertThat(response.outcome()).isEqualTo(Outcome.NO_SOURCE);
         assertThat(response.chatSessionId()).isEqualTo(SESSION);
         verify(embeddings).embed(List.of("earlier\nquestion"));
+    }
+
+    @Test
+    void storesKeptSourcesWithCitedFlag_AC_014_1() {
+        when(solutions.nearest(any(), anyDouble(), anyInt()))
+                .thenReturn(List.of(solution("first", 0.951234), solution("second", 0.9)));
+        UUID document = UUID.randomUUID();
+        when(wiki.nearest(any(), any(), anyDouble(), anyInt()))
+                .thenReturn(List.of(new WikiPassage(document, "VPN guide", "Reconnect", 0.8)));
+        when(llm.chat(any(), isNull())).thenReturn("Use the second fix [2] and the guide [3].");
+
+        service.ask(USER, newAsk());
+
+        ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
+        verify(answers).save(saved.capture());
+        assertThat(saved.getValue().getSources())
+                .containsExactly(
+                        new AnswerSource(1, "TICKET", ticketId("first"), 0.9512, false),
+                        new AnswerSource(2, "TICKET", ticketId("second"), 0.9, true),
+                        new AnswerSource(3, "WIKI", document, 0.8, true));
+    }
+
+    @Test
+    void storesKeptSourcesForUncitedNoSource_AC_014_1() {
+        withSolution();
+        when(llm.chat(any(), isNull())).thenReturn("No citation");
+
+        assertThat(service.ask(USER, newAsk()).outcome()).isEqualTo(Outcome.NO_SOURCE);
+
+        ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
+        verify(answers).save(saved.capture());
+        assertThat(saved.getValue().getSources())
+                .containsExactly(new AnswerSource(1, "TICKET", ticketId("private-source"), 0.9, false));
+    }
+
+    @Test
+    void storesJiraAppSources_AC_014_1() {
+        UUID project = UUID.randomUUID();
+        UUID ticket = UUID.randomUUID();
+        var service = projectService(project, true);
+        when(solutions.nearestInProjectDepartment(project, vector, 0.7, 5))
+                .thenReturn(List.of(
+                        new RetrievedTicketSolution(ticket, "vpn drops", "cause", "steps", null, "scope", 0.9)));
+        when(llm.chat(any(), isNull())).thenReturn("Restart the client [1]");
+
+        service.askForProject(project, Optional.empty(), question());
+
+        ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
+        verify(answers).save(saved.capture());
+        assertThat(saved.getValue().getSources()).containsExactly(new AnswerSource(1, "TICKET", ticket, 0.9, true));
+    }
+
+    @Test
+    void storesEmptySourcesWithoutSearch_AC_014_2() {
+        service.ask(USER, new ChatbotAskRequest("hi", null));
+        when(solutions.nearest(any(), anyDouble(), anyInt())).thenReturn(List.of());
+        service.ask(USER, newAsk());
+
+        ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
+        verify(answers, times(2)).save(saved.capture());
+        assertThat(saved.getAllValues()).extracting(ChatbotAnswer::getOutcome).containsExactly("GREETING", "NO_SOURCE");
+        assertThat(saved.getAllValues())
+                .allSatisfy(answer -> assertThat(answer.getSources()).isEmpty());
+    }
+
+    @Test
+    void responseHasNoSources_AC_014_3() {
+        assertThat(Arrays.stream(ChatbotAnswerResponse.class.getRecordComponents())
+                        .map(RecordComponent::getName))
+                .doesNotContain("sources");
+        assertThat(Arrays.stream(AnswerSource.class.getRecordComponents()).map(RecordComponent::getName))
+                .containsExactly("n", "kind", "id", "similarity", "cited");
+        assertThat(Arrays.stream(TicketSolutionCitation.class.getRecordComponents())
+                        .map(RecordComponent::getName))
+                .doesNotContain("id", "ticketId");
+    }
+
+    @Test
+    void failedAskStoresNoSources_AC_014_5() {
+        withSolution();
+        when(llm.chat(any(), isNull())).thenThrow(new AiUnavailableException());
+
+        assertThatThrownBy(() -> service.ask(USER, newAsk())).isInstanceOf(AiUnavailableException.class);
+
+        verify(answers, never()).save(any());
     }
 
     private static ChatbotQuestionRequest question() {

@@ -285,6 +285,9 @@ export const MESSAGES = {
     type: 'inline',
     text: "I can't change how I work. Ask a question about your team's knowledge.",
   },
+  /** Provisional keys (ticket-review STORY-015) until System_Messages numbers them: the spec's texts for AI check. */
+  MSG_NEW_AI_REVIEW_1: { type: 'inline', text: 'AI check unavailable' },
+  MSG_NEW_AI_REVIEW_2: { type: 'inline', text: 'No issues found' },
   // KAN-121 K121-D41: the Messages-file text; not yet in report3-messages.json.
   MSG157: {
     type: 'field',

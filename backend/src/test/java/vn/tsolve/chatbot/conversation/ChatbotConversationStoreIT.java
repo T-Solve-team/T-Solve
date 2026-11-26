@@ -49,6 +49,7 @@ import vn.tsolve.chatbot.answer.dto.ChatbotAskRequest;
 import vn.tsolve.chatbot.answer.dto.ChatbotTurnRequest;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
 import vn.tsolve.chatbot.answer.service.ChatbotAnswerService;
+import vn.tsolve.chatbot.answer.service.ChatbotRetrieval;
 import vn.tsolve.chatbot.answer.service.impl.ChatbotAnswerServiceImpl;
 import vn.tsolve.chatbot.conversation.exception.ChatbotConversationNotFoundException;
 import vn.tsolve.chatbot.conversation.repository.ChatMessageRepository;
@@ -270,7 +271,8 @@ class ChatbotConversationStoreIT {
             ChatMessageRepository messageRepository,
             Consumer<ChatbotAnswerService> test) {
         new ApplicationContextRunner()
-                .withUserConfiguration(ChatbotAnswerServiceImpl.class, ChatConversationServiceImpl.class)
+                .withUserConfiguration(
+                        ChatbotRetrieval.class, ChatbotAnswerServiceImpl.class, ChatConversationServiceImpl.class)
                 .withBean(EmbeddingClient.class, () -> embeddings)
                 .withBean(LlmClient.class, () -> llm)
                 .withBean(ObjectMapper.class, ObjectMapper::new)
