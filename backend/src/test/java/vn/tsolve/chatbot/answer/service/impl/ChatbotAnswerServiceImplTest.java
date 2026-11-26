@@ -551,6 +551,11 @@ class ChatbotAnswerServiceImplTest {
         assertThat(response.text()).isEmpty();
         assertThat(response.citations()).isEmpty();
         verify(llm, times(2)).chat(any(), isNull());
+        // AC-014.1: a NO_SOURCE stores no text, so no source is stored as cited even though the reply had [1].
+        ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
+        verify(answers).save(saved.capture());
+        assertThat(saved.getValue().getSources())
+                .containsExactly(new AnswerSource(1, "TICKET", ticketId("private-source"), 0.9, false));
     }
 
     @Test
