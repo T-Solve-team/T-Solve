@@ -176,12 +176,12 @@ jobs:
           # is not in the lists above, so it runs in one of these two until it is added to one of them.
           - part: it-other-a
             fetch-depth: 1
-            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -Dit.test=vn/tsolve/worker/**/*IT,vn/tsolve/review/**/*IT,vn/tsolve/wiki/**/*IT,vn/tsolve/chatbot/**/*IT,vn/tsolve/platform/**/*IT
+            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -Dit.test=vn/tsolve/worker/**/*IT,vn/tsolve/review/**/*IT,vn/tsolve/wiki/**/*IT,vn/tsolve/platform/**/*IT
           # `*IT` must be listed: a filter with only `!` patterns would replace Failsafe's default include and run
           # the unit tests again.
           - part: it-other-b
             fetch-depth: 1
-            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -Dit.test=*IT,!vn/tsolve/worker/**/*IT,!vn/tsolve/review/**/*IT,!vn/tsolve/wiki/**/*IT,!vn/tsolve/chatbot/**/*IT,!vn/tsolve/platform/**/*IT,!KeycloakThemeIT,!ProvisioningRaceIT,!KeycloakFailurePlacementIT,!OpsRealmImportIT,!KeycloakWorkspaceSignInProvisionerIT,!KeycloakSignInEndToEndIT,!RealmImportIT,!ProvisioningUndoIT
+            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -Dit.test=*IT,!vn/tsolve/worker/**/*IT,!vn/tsolve/review/**/*IT,!vn/tsolve/wiki/**/*IT,!vn/tsolve/platform/**/*IT,!KeycloakThemeIT,!ProvisioningRaceIT,!KeycloakFailurePlacementIT,!OpsRealmImportIT,!KeycloakWorkspaceSignInProvisionerIT,!KeycloakSignInEndToEndIT,!RealmImportIT,!ProvisioningUndoIT
     defaults:
       run:
         working-directory: backend
