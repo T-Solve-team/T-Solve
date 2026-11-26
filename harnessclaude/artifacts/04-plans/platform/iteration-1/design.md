@@ -58,6 +58,11 @@ bluefin adopted); wave 3 = Task 6-1 (background work bound) then Task 6-2 (routi
 row guard switched on for bluefin on staging; wave 5 = Task 7 ∥ `identity` KAN-247, Task 8, Task 9, then Task 12. The
 Jira App Tasks 18 – 21 are a separate lane after Tasks 4 and 6-2.
 
+Task 10 (planned 25/11, KAN-258) is two PRs: 10a the web resolver (master, "The web resolver (Task 10)": base domain
+from `TSOLVE_SITE_ORIGIN_TEMPLATE`, active only with a catalog bean, the raw `Host` header, the public `bindRequest`
+that only the resolver calls, no existence check in `runIn` for the bound id, no cache) and 10b `TenantIsolationIT`
+after Task 6-2.
+
 Task 6a (6a-1 the holder, 6a-2 the removal of the fallbacks) builds the master's "The binding" in two steps, so that routing (Task 6-2) lands on a binding that every entry
 already uses:
 - **Now (Tasks 6a-1 and 6a-2):** Task 6a-1: `ThreadLocalTenantContext` in `common/tenant` is the only per-thread binding. identity
@@ -68,7 +73,7 @@ already uses:
   transaction. The existence check (AC-002.14) goes through the port `KnownWorkspaces`, answered until Task 4 by
   identity's `WorkspaceLookup.findById` over the env stubs (Decided in planning, builder check). No database change.
 - **Later:** Task 4 answers `KnownWorkspaces` from `WorkspaceCatalog.findById`; Task 6-2 adds `TenantBinding` and the
-  routing; Task 10 binds anonymous site requests with `runIn`.
+  routing; Task 10 adds the resolver's own bind (`bindRequest`) for site requests.
 
 ## Task 6: background work bound, then routing (Hiếu, Q1 – Q10 = A; split into 6-1 and 6-2)
 
@@ -77,7 +82,7 @@ deploys. Full text in `tasks.md`; the routing design is the master's "Database r
 
 | # | Decided in planning |
 |---|---------------------|
-| Q1 | P5 is "bind only": `runIn` opens no transaction, so no connection is held through an AI call. AC-002.23 holds because the pool is chosen when `doBegin` takes the connection, a transaction begun unbound throws, and a switch is refused (AC-002.13). `WebSessionFilter` is unchanged; Task 10 binds with `runIn` too |
+| Q1 | P5 is "bind only": `runIn` opens no transaction, so no connection is held through an AI call. AC-002.23 holds because the pool is chosen when `doBegin` takes the connection, a transaction begun unbound throws, and a switch is refused (AC-002.13). `WebSessionFilter` is unchanged; Task 10 binds with `bindRequest` (Task 10, Q2) |
 | Q2 | The routing `DataSource` is primary exactly when the Registry is configured and the profile is not `dev`. The gate stays; moving the ITs to production routing is a later task |
 | Q3 | Boot's tenant Liquibase gets `spring.liquibase.url/user/password` from `DB_HOST/PORT/NAME/USER/PASSWORD`, under the routing gate only (builder check: the ITs set `DB_HOST=unused`). Staging migrates as today, until `TenantStartupMigrator` or wave 4's owner role |
 | Q4 | Routing on: `ddl-auto: none` and the R15 properties. Routing off: `validate` stays, so CI still catches schema drift (AGENTS §7 unchanged) |
@@ -111,7 +116,7 @@ all as in the master's Data Model.
 - KAN-140 (the chat model) for the chat-model part of Task 22; its `bge-m3` part does not wait.
 ## Edge cases covered here
 
-Master rows 1 – 55, 57 – 64, 69 – 71 and 72 – 89 (STORY-001, STORY-002, STORY-004, STORY-005, STORY-006, STORY-007, STORY-008,
+Master rows 1 – 55, 57 – 64, 69 – 71, 72 – 89, 90 and 91 (STORY-001, STORY-002, STORY-004, STORY-005, STORY-006, STORY-007, STORY-008,
 STORY-009, STORY-010, STORY-011, STORY-012 without the contributors, STORY-013 and the edge limits of STORY-014). Rows 45
 (also in Task 25), 56 and 65 – 68 belong to iteration 2.
 

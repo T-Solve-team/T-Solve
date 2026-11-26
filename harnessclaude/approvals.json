@@ -242,8 +242,8 @@
     }
   },
   "chatbot": {
-    "specHash": "d7d2afb2dd0a77f29fae2b4e7df0c56e84f4ed6acd36bdebe94a55e6d928253d",
-    "approvedAt": "2026-11-25T19:25:39.098Z",
+    "specHash": "6d9da370c0b66d9adef9edcc8dcabefb745ccc7fcbaec9bc53826172928c58fa",
+    "approvedAt": "2026-11-26T10:37:30.945Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",
@@ -295,9 +295,9 @@
       "AC-004.8": "THE mock SHALL keep conversations in memory as STORY-013 does: an ask with no  starts",
       "AC-005.1": "WHEN STORY-009 classifies a valid  as a question, THE backend SHALL embed",
       "AC-005.2": "THE backend SHALL keep at most  (default 5) sources of both kinds together, most",
-      "AC-005.3": "WHEN at least one source is kept, THE backend SHALL call the  module's  once with a",
+      "AC-005.3": "WHEN at least one source is kept, THE backend SHALL call the  module's  once (once more only as in",
       "AC-005.4": "IF no source reaches , THEN THE backend SHALL not call the chat model and",
-      "AC-005.5": "IF the model's text has no  marker of a kept source, THEN THE backend SHALL answer  as",
+      "AC-005.5": "IF the model's text has no kept  marker or no letter or digit outside its markers, THEN THE backend SHALL",
       "AC-005.6": "WHEN an answer is returned, THE backend SHALL store one  row (the user's id, the",
       "AC-005.7": "IF the AI fails or the ask is too slow, THEN THE backend SHALL answer 503 with MSG06, store no row",
       "AC-005.8": "IF  is missing or blank, THEN THE backend SHALL answer 400 with field error MSG01 on",
@@ -599,8 +599,8 @@
     }
   },
   "platform": {
-    "specHash": "e234c4a37cb35de53ced5d718bd4261c91ffbe5a4345aba93054ad76242953f4",
-    "approvedAt": "2026-11-24T13:44:24.526Z",
+    "specHash": "fd8881657a2452ae9cb0e3c13fad76cad7f046acb43c974150b51e452c5aa039",
+    "approvedAt": "2026-11-25T16:28:45.650Z",
     "by": "user",
     "acs": {
       "AC-001.15": "THE catalog database (the Platform / Tenant Registry of the HLA, named ) SHALL hold the table  with  (UUID, primary key),  (not null, unique),  ( or , not null),  (not null, unique),  (not null),  (not null, encrypted as AC-001.24 says),  (the tenant changelog version last applied to that database, not null),  (nullable),  (nullable, unique),  and  (, not null) (GBR-24, GBR-37).",
@@ -624,7 +624,7 @@
       "AC-001.32": "THE runtime user of a Workspace database, the catalog user and the Jobs database user SHALL be neither superuser nor , and SHALL not own the tables on which a policy depends (HLA isolation layer ③).",
       "AC-001.33": "THE Jobs database , on the same PostgreSQL server as the catalog, SHALL hold only JobRunr's own tables, and its user SHALL be able to connect to that database only. It SHALL hold no Workspace data (H-Q3). The catalog changelog and the tenant changelog SHALL create nothing in it.",
       "AC-002.1": "THE backend SHALL offer  in :",
-      "AC-002.2": "WHEN a request arrives whose host is  followed by the configured base domain (), and the label is the site name of a Workspace, THE Tenant Resolver SHALL bind that Workspace for the whole request.",
+      "AC-002.2": "WHEN a request arrives whose host is  followed by the base domain of  (the host part after ), and the label is the site name of a Workspace, THE Tenant Resolver SHALL bind that Workspace for the whole request.",
       "AC-002.3": "THE Tenant Resolver SHALL read the Workspace site from the  header only, compared without case and without the port. It SHALL ignore ,  and any Workspace id in a header, a parameter, a cookie or the body (GBR-37).",
       "AC-002.4": "IF the label is not an RFC 1123 label (lowercase letters, digits and hyphens, starting and ending with a letter or a digit, at most 63 characters), THEN THE Tenant Resolver SHALL answer 404 with a  with   without looking up the catalog (D11).",
       "AC-002.5": "IF the label is not ,  or  (AC-002.10) and is the site name of no Workspace, THEN THE Tenant Resolver SHALL answer 404 with  .",
@@ -720,7 +720,7 @@
       "AC-010.3": "WHEN the images are pushed, THE CD workflow SHALL deploy staging through the self-hosted deploy runner, in this order (KAN-14):",
       "AC-010.4": "THE smoke test SHALL call  plus the staging base domain plus  and expect UP. It SHALL load one staging Workspace site's page (200) and call its  expecting 401 with  , which proves the resolver found the Workspace.",
       "AC-010.5": "IF a build, a migration, a health check, the seed or the smoke test fails, THEN THE CD workflow SHALL fail with the failing step, and for a migration the failing Workspace, in its log.",
-      "AC-010.6": "THE staging environment SHALL use the hosts , ,  and , through  =  (decision Q11). The site name  is reserved (D44 (25/10); AC-002.6, AC-013.3), so no production Workspace can own .",
+      "AC-010.6": "THE staging environment SHALL use the hosts , ,  and , with the base domain  given by  =  (AC-002.2; decision Q11). The site name  is reserved (D44 (25/10); AC-002.6, AC-013.3), so no production Workspace can own .",
       "AC-010.7": "THE staging secrets SHALL live only in the server's  (mode 600, owned by the deploy user) and in GitHub secrets, never in the repository.",
       "AC-010.8": "THE staging stack SHALL have a memory and CPU limit and a health check on every container, and restart  (KAN-12).",
       "AC-010.9": "THE application VPS SHALL refuse password login over SSH and allow key login only. Only ports 22, 80 and 443 SHALL be open to the internet (KAN-10).",
@@ -794,8 +794,8 @@
     }
   },
   "search": {
-    "specHash": "62cd2a15a53433604a6be742bc999577cab9ba49d293680dd9e42812d62c8de0",
-    "approvedAt": "2026-11-25T19:30:01.704Z",
+    "specHash": "ff4fac26063f1f9096eb85121703bede46469d8fc0f5aace3c9cdd33aa0ceb66",
+    "approvedAt": "2026-11-26T14:29:01.901Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Ticket Resolver or Project Manager opens , THE web app SHALL show 6.2 Ticket List",
@@ -839,6 +839,8 @@
       "AC-003.9": "IF the request fails with another error than 401 or a field error, THEN THE web app SHALL keep",
       "AC-003.10": "WHEN the user clicks Cancel or the close icon, THE web app SHALL close the popup and send",
       "AC-003.11": "THE popup SHALL be the component  exported by ,",
+      "AC-003.12": "WHILE Ticket Detail (5.5) shows a  ticket, THE web app SHALL show a \"Give feedback\"",
+      "AC-003.13": "WHEN the user clicks \"Give feedback\", THE web app SHALL open the popup of STORY-003 for that ticket's",
       "AC-004.1": "WHILE mock mode is on, THE MSW handler of  SHALL return at least 25 tickets",
       "AC-004.2": "THE Ticket List mock SHALL apply  (case-insensitive, on Ticket ID, title and Solution",
       "AC-004.3": "THE MSW handler of  SHALL return only the Published mock tickets whose",
@@ -859,7 +861,7 @@
       "AC-006.4": "WHEN , ,  or  is given, THE backend SHALL combine them with AND",
       "AC-006.5": "THE backend SHALL return each row's ,  and  as",
       "AC-006.6": "THE backend SHALL return  as the Project's  (e.g. ITSUP) in every",
-      "AC-006.7": "THE backend SHALL return  as null for every ticket until ticket-review stores a review",
+      "AC-006.7": "WHILE a ticket is  or , THE backend SHALL return",
       "AC-006.8": "IF the caller has no session, THEN THE backend SHALL answer 401 with MSG07; IF the caller holds neither",
       "AC-006.9": "IF  is longer than 100 characters, THEN THE backend SHALL answer 400 with field error MSG02 on",
       "AC-006.10": "THE endpoints of STORY-006 to STORY-009 SHALL accept no Workspace parameter, header or body field and",

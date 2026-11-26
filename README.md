@@ -130,6 +130,19 @@ cd backend  && mvn verify          # tests + Spotless format check (mvn spotless
 cd frontend && npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build
 ```
 
+### Local code coverage (not a CI gate)
+
+Coverage is opt-in and does not enforce thresholds:
+
+```bash
+cd backend  && mvn verify -Pcoverage    # needs Docker for integration tests
+cd frontend && npm run test:coverage
+```
+
+Backend HTML: `backend/target/site/jacoco-merged/index.html`; XML:
+`backend/target/site/jacoco-merged/jacoco.xml` (merged unit and integration test coverage).
+Frontend HTML: `frontend/coverage/index.html`.
+
 ## API (current skeleton)
 
 | Method | Path | Description |

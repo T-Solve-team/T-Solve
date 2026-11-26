@@ -32,7 +32,7 @@ the target, not built here — H-Q1):
 
 | Entry | Path through the code | Workspace |
 |-------|----------------------|-----------|
-| Workspace site `<site>.<base>` `/api/**` | `TenantResolverFilter` (servlet filter, before Spring Security) → `HostClassifier` → `WorkspaceCatalog.findBySiteName` → bind → security chain of `be-foundation` / `identity` → handler → unbind in `finally` | from the host (AC-002.2) |
+| Workspace site `<site>.<base>` `/api/**` | `TenantResolverFilter` (servlet filter, before Spring Security) → `HostClassifier` → `WorkspaceCatalog.findBySiteName` → `bindRequest` → security chain of `be-foundation` / `identity` → handler → unbind in `finally` | from the host (AC-002.2) |
 | `api.<base>` `/api/v1/jira-app/**` | `TenantResolverFilter` (host check only) → `ForgeSecurityConfig` chain (ordered first, matches the `api.` host) → `ForgeTokenFilter` → `ForgeTokenVerifier` → `findByCloudId` → bind → handler → unbind | from the verified `cloudId` (AC-006.1) |
 | `api.<base>` `POST /api/v1/jira-app/lifecycle` | as above, but `ForgeTokenFilter` skips the Workspace lookup → `ForgeLifecycleController` answers 204 and changes nothing | none (AC-006.12, AC-006.15, AC-006.16) |
 | `login.<base>`, `admin.<base>` | `TenantResolverFilter` binds nothing → `login.` is Keycloak (Caddy, AC-009.4); `admin.` → `platform-console` chain | none; `runIn` where the spec allows it (the Console) |
@@ -44,19 +44,57 @@ the target, not built here — H-Q1):
 - `ThreadLocalTenantContext` (bean implementing `TenantContext`) keeps the bound Workspace id in a static `ThreadLocal`
   (package-private `TenantBinding`), so non-bean code (the routing `DataSource`, the transaction manager) reads the same
   value.
-- Resolvers, filters, jobs and modules all bind through `runIn`; there is no separate `bind`/`unbind` pair (Decided in
+- The web resolver binds with the public `bindRequest(UUID)` of `ThreadLocalTenantContext`, which is not part of the
+  interface (Task 10, Q2): it returns an `AutoCloseable` that unbinds, opens no transaction, checks no existence (the
+  resolver has just read the catalog) and throws when a Workspace is already bound. A source-scan test allows only
+  `TenantResolverFilter` to call it; modules bind only through `runIn`. Task 6 moves the static into `TenantBinding`
+  and keeps the method.
+- Other filters, jobs and modules all bind through `runIn`; there is no package-private `bind`/`unbind` pair (Decided in
   planning, Task 6, Q1 and Q9).
 - `runIn` refuses a different Workspace when one is bound (AC-002.13), refuses an unknown id (AC-002.14, one existence
-  check in the Registry), binds, runs the action, and restores the previous binding in `finally` (AC-002.12). It opens no
-  transaction (decision P5); transactions stay with the services' `@Transactional`. A Suspended Workspace can still be
-  bound (AC-002.15).
+  check in the Registry, skipped when the same id is already bound, because whoever bound it checked it; Task 10, Q9),
+  binds, runs the action, and restores the previous binding in `finally` (AC-002.12). It opens no transaction (decision
+  P5); transactions stay with the services' `@Transactional`. A Suspended Workspace can still be bound (AC-002.15).
 - Delivered in steps (wave order of 22/11, KAN-384; iteration-1 design "Wave order and Task 6a"): Tasks 6a-1 and 6a-2 make
   `ThreadLocalTenantContext` the only binding: 6a-1 adds the holder, 6a-2 removes the stub and the other fallbacks.
   Identity `TenantScope` and worker `runIn` delegate to it; no transaction yet; the existence check goes through the
   port `KnownWorkspaces` over the env stubs. Task 4 moves the existence check to
   the Registry; Task 6-1 binds the background database work (the publish listener runs in the publisher's Workspace;
   recurring jobs run once per Active Workspace, or once unbound with no catalog); Task 6-2 adds `TenantBinding` and the
-  routing; Task 10 the resolver, which binds with `runIn`.
+  routing; Task 10 the resolver, which binds with `bindRequest`.
+
+### The web resolver (Task 10; AC-002.2 – AC-002.11, AC-002.17, AC-002.19)
+
+- **Base domain.** The host part after `{slug}.` in `TSOLVE_SITE_ORIGIN_TEMPLATE` (`localhost` locally, `tsolve.io.vn`
+  on staging); `<base>` in this file means it. No variable of its own. `HostClassifier` parses the template itself
+  (`platform` does not depend on `identity`).
+- **Active only with a catalog.** The filter asks for `WorkspaceCatalog` through `ObjectProvider`. With no catalog bean
+  (empty `REGISTRY_DB_URL`: `dev`, Playwright, most ITs) it passes every request through and logs one line at start-up.
+  With a catalog and a template that gives no base domain, start-up fails naming the variable (Edge #86).
+- **Order of checks:** (1) the AC-002.19 paths pass; (2) the raw `Host` header, lower-cased, port removed; a host that
+  is no Workspace site → 404 `MSG151`, no lookup; (3) a site label: one `findBySiteName`; unknown → 404 `MSG151`,
+  Suspended → 403 `MSG150`; (4) `/api/v1/jira-app/**` on any host but `api.` → 404 `MSG06` (AC-005.8); (5) on `api.`
+  any other path → 404 `MSG06` (AC-005.7); (6) a site binds for the chain; `login.`, `api.`, `admin.` bind nothing.
+- **Refusals** are `application/problem+json` from `SecurityProblemWriter` on every path, sign-in and callback
+  included. A failing lookup answers 500 `MSG06`; the log holds the host, the code and the exception class, never its
+  message (it can hold the JDBC URL).
+- **`Host` against `X-Forwarded-Host`.** The resolver reads `getHeader("Host")`. With
+  `server.forward-headers-strategy: framework`, `getServerName()` (identity's `AuthHosts`) follows `X-Forwarded-Host`;
+  behind Caddy both match. If a client makes them differ on `:8080`, it fails closed: `runIn` of the other Workspace
+  throws (AC-002.13) or the session check answers `MSG123`.
+- **Queries per signed-in request:** the resolver's lookup and `WebSessionFilter`'s; `runIn` on the bound id asks
+  nothing. No cache, so a suspend applies on the next request.
+- Decided in planning: `/api/v1/jira-app/**` is matched on the decoded path with the same matcher as the Jira App chain
+  (`JiraAppSecurityConfig.PATHS`), and the AC-002.19 list the same way, so an encoded path cannot pass one and reach the
+  other.
+- Decided in planning: on a Suspended or unknown site the tenant answer (`MSG150` / `MSG151`) comes before `MSG06` of
+  AC-005.8, because the resolver runs before every security check (AC-002.8); a host that is no Workspace site answers
+  `MSG151` (AC-002.6).
+- Decided in planning: an ASYNC dispatch (SSE) binds the id resolved on the first dispatch, kept as a request
+  attribute, with no second lookup; an ERROR dispatch passes, since the binding is already gone.
+- Decided in planning: the filter resolves the catalog bean after start-up, never in a constructor (Edge #86).
+- The `identity-mock` profile filter (order -1) runs after the resolver; a mock caller of another Workspace makes
+  `runIn` throw (AC-002.13).
 
 ### Database routing (STORY-002; AC-002.20 – AC-002.25)
 
@@ -332,7 +370,7 @@ first confirms the object exists (`HeadObject`; AC-007.13), then signs offline.
 The signature covers the host and path Garage sees, so the URL must be signed for the address the browser uses, and
 Caddy must forward it unchanged.
 - The signed URL is `FILE_STORAGE_PUBLIC_URL_PATTERN` with the bound Workspace's site name, path-style:
-  `https://<site>.<base>/<bucket>/<workspaceId>/<uuid>?X-Amz-…` (e.g. pattern `https://{site}.${TSOLVE_BASE_DOMAIN}`;
+  `https://<site>.<base>/<bucket>/<workspaceId>/<uuid>?X-Amz-…` (e.g. pattern `https://{site}.tsolve.io.vn`;
   locally `http://{site}.localhost`). The backend finds the site name through `WorkspaceCatalog.findById`.
 - The signer is created with this public endpoint (signing needs no network call); reads and writes use the internal
   endpoint `FILE_STORAGE_ENDPOINT`.
@@ -379,8 +417,9 @@ another's; no such use exists yet (see Out of Scope of the spec).
 
 ## Security chains (order)
 
-1. `TenantResolverFilter` — `FilterRegistrationBean`, order `SecurityProperties.DEFAULT_FILTER_ORDER - 10`, so it runs
-   before Spring Security's `DelegatingFilterProxy` (AC-002.8).
+1. `TenantResolverFilter` — `FilterRegistrationBean`, order `SecurityProperties.DEFAULT_FILTER_ORDER - 10`, REQUEST and
+   ASYNC dispatch, so it runs before Spring Security's `DelegatingFilterProxy` (AC-002.8). Active only with a catalog
+   bean (The web resolver, Task 10).
 2. `ForgeSecurityConfig.forgeChain` — `@Order(1)`, `securityMatcher` = host is `api.<base>`; stateless, no CSRF, no
    session cookie (AC-005.6); `/actuator/health` permitted, `/api/v1/jira-app/**` authenticated by `ForgeTokenFilter`,
    everything else denied (404 `MSG06`, AC-005.7). On a Workspace site, `login.` or `admin.` a path under
@@ -485,6 +524,12 @@ another's; no such use exists yet (see Out of Scope of the spec).
 | R18 Jira site of the adopted row | The script copies `jira_site_address` and `jira_cloud_id` (lower-case) from bluefin's own tenant `workspace` table (`WorkspaceInfo`, written by Setup) when that row exists, both or neither; with no tenant row it writes the bluefin row without a Jira site and prints one line saying so | Ask for the site URL and cloud id (a hand-typed value can mismatch or be upper-case); write a cloud id with no tenant row (AC-004.23 would then refuse the Admin's Setup in Task 18) | The cloud id already lives in the tenant database; copying it avoids a variable and a dead end (Q8, replaced by Hiếu, 24/11) |
 | R19 Catalog lookups outside `dev` | `PlatformWorkspaceLookup` (identity port), `CatalogJiraWorkspaceLookup` (jira-app port) and `CatalogWorkerTenantService` (worker port, only when `tsolve.worker.enabled=true`) read `WorkspaceCatalog`; the first two through `ObjectProvider`: with no Registry bean they answer empty (the code gate stays, a later task drops it; `dev` keeps `DevWorkspaceLookup`). The worker service is the exception: its constructor takes `WorkspaceCatalog` directly (not an `ObjectProvider`), so a worker with job processing on and no catalog bean (Registry gate off) FAILS STARTUP with an error naming `WorkspaceCatalog` (worker AC-002.12, AC-003.3: never a silent empty list that skips every Workspace; on staging compose already requires `REGISTRY_DB_URL` in the worker). A Registry failure at run time propagates from every method, `enqueueWorkspaceId` included (never "no Workspace"; the enqueuer logs and queues nothing). Decided 24/11 (Q1, Q2 = recommended, 4c). `CatalogJiraWorkspaceLookup` is unconditional, because five jira-app services and `workspace.JiraAppTokenServiceImpl` inject `JiraWorkspaceLookup` in every context. The host maps to the site name through `TSOLVE_SITE_ORIGIN_TEMPLATE` (`{slug}`). No cache | A required `WorkspaceCatalog` parameter (breaks every full-context test with the gate off); a new host variable; an in-memory catalog for local runs (an env stand-in again) | One indexed query per lookup on the Registry pool; Task 10 may add a cache (Q3, Q4 = recommended, 24/11) |
 | R20 `claimEmail` users | None in Task 4: `claimEmail` is tested only in `WorkspaceCatalogIT`. identity Task 14 wires `WorkspaceEmailRegistry` to the catalog and backfills bluefin's Account emails then (lower-case `app_user` emails, `ON CONFLICT (email) DO NOTHING`); its adapter translates `claim` (boolean) to `claimEmail` (void, throws `MSG155`) and needs a `release` the contract lacks | A backfill in the adopt script (stale: until the adapter is live `AcceptAllWorkspaceEmailRegistry` records nothing) | Q9 = A (Hiếu, 24/11) |
+| T10 request binding (Task 10, Q2) | Public `bindRequest(UUID)` returning an `AutoCloseable`, no transaction, no existence check; only `TenantResolverFilter` calls it (source-scan test) | `runIn` around the whole request (Task 6 would rework two filters for P5); the filter in `common/tenant` behind a new port | The filter is in `platform/web`, so a package-private pair cannot be reached (Hiếu, 25/11) |
+| T10 resolver activation (Q3) | Only with a `WorkspaceCatalog` bean (`ObjectProvider`) | always on behind a second lookup port; always on and refusing every host | Staging always has the Registry; local runs, Playwright and about 50 ITs keep working (Hiếu, 25/11) |
+| T10 base domain (Q4) | The host part after `{slug}.` of `TSOLVE_SITE_ORIGIN_TEMPLATE` (AC-002.2) | a `TSOLVE_BASE_DOMAIN` variable; passing `TSOLVE_DOMAIN` to the backend | One source of truth (Hiếu, 25/11) |
+| T10 host header (Q5) | The raw `Host` header; a differing `X-Forwarded-Host` fails closed later | refuse such a request in the resolver; switch the forwarded-header strategy off | AC-002.3; https redirect URIs need the strategy (Hiếu, 25/11) |
+| T10 refusals (Q6, Q7) | problem+json on every path; `MSG150` / `MSG151` with the SRS texts in `SecurityProblemWriter` | redirects on the sign-in paths; a second writer `ProblemResponses` | AC-002.7, AC-002.9; one writer (Hiếu, 25/11) |
+| T10 Jira App paths (Q8) | Closed on every host but `api.` in the resolver (404 `MSG06`); the staging Forge `baseUrl` is checked before the deploy | leave to Task 20 | AC-005.8 is open today (Hiếu, 25/11) |
 | Tenant context storage | Static `ThreadLocal` behind the `TenantContext` bean | `ScopedValue` (preview in Java 21) | The routing `DataSource` and the transaction manager are not Spring-injected into every caller (Decided in planning) |
 | Resolver cache | None: one lookup by the unique `site_name` index per request | cache with eviction | The next request must see a suspend at once; the seed and the web run in different processes (Decided in planning) |
 | Health and API docs | `/actuator/health`, `/v3/api-docs*` and the Swagger UI pass every host check (AC-002.19) | classify like other paths | Docker health checks and `npm run api:pull` call `localhost:8080` |
@@ -521,16 +566,16 @@ backend/
     ├── main/java/vn/tsolve/
     │   ├── common/tenant/
     │   │   ├── TenantContext.java                     interface (spec contract)
-    │   │   ├── ThreadLocalTenantContext.java          bean; runIn binds only
+    │   │   ├── ThreadLocalTenantContext.java          bean; public bindRequest (resolver only); runIn binds only
     │   │   ├── TenantBinding.java                     package-private static holder
     │   │   ├── TenantDataSources.java                 port: DataSource poolOf(UUID)
     │   │   ├── TenantRoutingDataSource.java           AbstractRoutingDataSource subclass; checkout wrapper outside a transaction
     │   │   ├── TenantAwareJpaTransactionManager.java  set_config('app.tenant_id') in doBegin
     │   │   └── NoTenantException.java
     │   └── platform/
-    │       ├── config/       PlatformProperties (base domain, environment, Forge, storage), ForgeSecurityConfig, TenantFilterConfig,
-    │       │                 StorageConfig (`tsolve.storage.*`), JobsDataSourceConfig (Task 8)
-    │       ├── web/          TenantResolverFilter, HostClassifier, HostKind, ProblemResponses
+    │       ├── config/       ForgeSecurityConfig, TenantFilterConfig, StorageConfig (`tsolve.storage.*`),
+    │       │                 JobsDataSourceConfig (Task 8)
+    │       ├── web/          TenantResolverFilter, HostClassifier, HostKind
     │       ├── forge/        ForgeTokenVerifier (+ NimbusForgeTokenVerifier), ForgeTokenFilter, ForgeCallContext (+ impl),
     │       │                 VerifiedForgeCall, ForgeCallAuthentication
     │       ├── controller/   ForgeLifecycleController
@@ -550,7 +595,7 @@ backend/
     │       │                 WorkspaceRuleException (extends BusinessRuleException)
     │       └── seed/         SeedRunner, SeedData, MigrateRunner, OpsRunner (profile ops)
     ├── main/resources/
-    │   ├── application.yml            + tsolve.base-domain, tsolve.environment, tsolve.forge.*, tsolve.storage.*, tsolve.tenant-db.*
+    │   ├── application.yml            + tsolve.forge.*, tsolve.storage.*, tsolve.tenant-db.*
     │   ├── application-worker.yml     spring.liquibase.enabled=false (worker profile)
     │   ├── application-seed.yml, application-ops.yml, application-migrate.yml   web-application-type none
     │   └── db/changelog/
@@ -606,7 +651,8 @@ docker-compose.yml                      local stack (KAN-94)
 | `DB_MIGRATION_USER`, `DB_MIGRATION_PASSWORD` | tenant Liquibase, provisioning, ops (the Workspace owner role; the Registry uses `REGISTRY_DB_*`) | none |
 | `CATALOG_SECRET_KEY` | backend, ops (encrypts Workspace database passwords) | none |
 | `POSTGRES_PASSWORD` and the passwords of the roles | `infra/postgres/init` | none |
-| `TSOLVE_BASE_DOMAIN`, `TSOLVE_ENVIRONMENT` | backend, worker, seed, ops | none |
+| `TSOLVE_SITE_ORIGIN_TEMPLATE` (existing) | backend (the base domain of the web resolver is the host part after `{slug}.`), `identity`, `worker` | none |
+| `TSOLVE_ENVIRONMENT` | seed and reset only (AC-012.3, AC-012.9; added by Task 12, not by Task 10) | none |
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | `identity` sessions; the Redis container | none |
 | `FILE_STORAGE_ENDPOINT`, `FILE_STORAGE_ACCESS_KEY`, `FILE_STORAGE_SECRET_KEY`, `FILE_STORAGE_BUCKET`, `FILE_STORAGE_URL_TTL_SECONDS` (default 300), `FILE_STORAGE_MAX_BYTES` (default 10485760) | backend, worker, Garage init | none (as listed) |
 | `FILE_STORAGE_PUBLIC_URL_PATTERN` (new, R11) | backend (signed URLs) | none |
@@ -723,6 +769,8 @@ High row into a task.
 | 87 | STORY-002 | Authorization | A second Registry row exists after the 4b deploy and before routing (Task 6-2): sign-in and the Jira App would bind its users to bluefin's database | Critical | **Accepted risk until Task 6-2** (Hiếu, 24/11): the single-database guard goes away in 4b. Controls: no code path creates a second row before Task 7 (which depends on Task 6); the adopt script writes bluefin only and refuses differing values (#78); `RegistryRepository` has no insert method for `tenant_workspace` until Task 7 (a code control only: the app's Registry database user owns the Registry database, and the adopt script inserts as that user); process rule "one Registry row until routing; do not insert a row by hand before Task 6-2" in the PR text, the pre-deploy checklist and the Task 6 hand-off. No test or code in 4b. **Closer: Task 6-2** (edge #5 in `TenantRoutingIT`: a second row reaches only its own database) | none in 4b; closed by `TenantRoutingIT` (T6-2) |
 | 88 | STORY-002 | Error cascades | Once routing is on, the publish listener thread or a recurring job (embedding catch-up, conversation retention, preview cleanup) touches the tenant database with nothing bound | High | Task 6-1: the listener runs in the publisher's Workspace; each job runs once per Active Workspace, bound; one Workspace's failure is logged without ids and the others run; with no catalog, one unbound run | TicketsPublishedListenerTest, EmbeddingCatchUpJobTest, ConversationRetentionJobTest, PreviewCleanupJobTest (T6-1) |
 | 89 | STORY-001 | Environment | At the routing deploy bluefin's row password does not decrypt with the deployed `CATALOG_SECRET_KEY`: every bluefin query answers 500 `MSG06` | High | Checked before the merge (CD deploys it) with `RegistryPasswordCli verify`, which prints only OK or FAIL and never the password; on FAIL, Task 6-2 is not merged until the row or the key is corrected | RegistryPasswordCliTest; pre-deploy check (`infra/README.md`, T6-2) |
+| 90 | STORY-005 | Authorization | `/api/v1/jira-app/**`, plain or percent-encoded, on a site, `login.` or `admin.` host; any other path on `api.` | Critical | 404 `MSG06` from the resolver, the chain never called (a Suspended or unknown site answers `MSG150` / `MSG151` first) | TenantResolverFilterTest (T10a) |
+| 91 | STORY-002 | Environment of hosts | No `WorkspaceCatalog` bean (empty `REGISTRY_DB_URL`) | Medium | The resolver passes every request through and logs one line at start-up | TenantResolverFilterTest (T10a) |
 
 Open questions for the spec owner: none (the spec settles the Redis cache as out of scope and defines `schema_version` in AC-001.15).
 

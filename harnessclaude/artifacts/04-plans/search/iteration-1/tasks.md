@@ -740,3 +740,64 @@ Spec: STORY-005 to STORY-009 · Design: master section "Backend". Rules: `backen
 **Covers:** AC-002.2, AC-002.4, AC-002.16
 **Dependencies:** none
 **Estimated size:** small
+
+---
+
+## Task 24: One result per Solution
+
+**Story:** STORY-007, STORY-009
+**Feature:** collapse-duplicate-solutions
+**Jira:** KAN-447 · branch `fix/KAN-447-search-hybrid-ranking`
+**Description:**
+- `TicketRankingRepository.semantic` and `keyword`: `DISTINCT ON` the five Solution sections inside a subquery keeps
+  the first copy in the ranking order; the outer query re-sorts; the count query counts distinct Solutions
+  (AC-007.1, AC-007.2, BUG-372). Suggestions use the same ranking.
+**Files:**
+- Modify: `backend/src/main/java/vn/tsolve/search/query/repository/TicketRankingRepository.java`
+- Test: `TicketRankingRepositoryIT` (names end `_BUG_372`); its seed gives each ticket its own root cause
+**Covers:** AC-007.1, AC-007.2
+**Dependencies:** none
+**Estimated size:** small
+
+---
+
+## Task 25: Ticket List review due date
+
+**Story:** STORY-006
+**Feature:** list-review-due-date
+**Jira:** KAN-454 · branch `fix/KAN-454-search-ticket-list-review-due-date`
+**Description:**
+- `SearchTicket`'s subselect adds `review_due_date`, only while `t.status` is `PENDING_REVIEW` or
+  `CHANGES_REQUESTED` (the column keeps its value after review ends).
+- `TicketSummaryMapper` maps it to the start of that day in Asia/Ho_Chi_Minh; the `reviewDueDate` sort key sorts by
+  it instead of being skipped (AC-006.7, BUG-401).
+**Files:**
+- Modify: `backend/src/main/java/vn/tsolve/search/scope/entity/SearchTicket.java`,
+  `…/search/list/mapper/TicketSummaryMapper.java`, `…/search/list/service/impl/TicketListServiceImpl.java`
+- Test: `TicketSummaryMapperTest`, `TicketListServiceImplTest`, `TicketListRepositoryIT` (names end `_AC_006_7_BUG_401`)
+**Covers:** AC-006.7
+**Dependencies:** none
+**Estimated size:** small
+
+---
+
+## Task 26: Give feedback from Ticket Detail
+
+**Story:** STORY-003
+**Feature:** ticket-detail-feedback
+**Jira:** KAN-389 (BUG-361) · branch `fix/KAN-389-search-ticket-detail-feedback` (Task 23 is KAN-383's, PR #315)
+**Description:**
+- `GiveFeedbackButton({ ticketId })` in `features/feedback`: reads the ticket with `useGetReviewTicketDetail` (the
+  query of 5.5 Ticket Detail, same key, so no extra request), renders nothing unless the ticket is `PUBLISHED` and
+  `useSession().hasRole` holds TICKET_RESOLVER or PROJECT_MANAGER (AC-003.12); the button opens
+  `GiveFeedbackModal` with that `ticketId` (AC-003.13). Exported from `features/feedback/index.ts`.
+- `TicketDetailPage` mounts it next to `TicketPublicationActions` (one import, one element).
+**Files:**
+- Create: `frontend/src/features/feedback/components/GiveFeedbackButton.tsx`,
+  `frontend/src/features/feedback/components/GiveFeedbackButton.test.tsx`
+- Modify: `frontend/src/features/feedback/index.ts`, `frontend/src/features/tickets/pages/TicketDetailPage.tsx`
+- Test: `GiveFeedbackButton.test.tsx` (`AC-003.12 …` per role and status, loading and error; `AC-003.13 …` opens the
+  popup and sends the Feedback, named with BUG-361)
+**Covers:** AC-003.12, AC-003.13
+**Dependencies:** Task 3 (the popup)
+**Estimated size:** small

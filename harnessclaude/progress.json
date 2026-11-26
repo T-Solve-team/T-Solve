@@ -326,9 +326,12 @@
         "department-solution-retrieval": "passing",
         "membership-visible-scope": "evaluating",
         "embed-description": "passing",
+        "collapse-duplicate-solutions": "evaluating",
+        "list-review-due-date": "evaluating",
+        "ticket-detail-feedback": "evaluating",
         "search-start-layout": "evaluating"
       },
-      "lastUpdated": "2026-11-22T11:58:12.459Z",
+      "lastUpdated": "2026-11-25T14:28:30.791Z",
       "branch": "feat/search",
       "repos": [
         "default"
@@ -390,6 +393,8 @@
         "conversation-ui": "passing",
         "conversation-paging": "passing",
         "merge-title-paging": "evaluating",
+        "cite-retry": "evaluating",
+        "marker-only-answer": "evaluating",
         "answer-sources": "passing",
         "rag-eval-runner": "passing"
       },
@@ -519,9 +524,10 @@
         "registry-adopt-bluefin": "passing",
         "catalog-lookups": "passing",
         "catalog-worker-tenant": "passing",
-        "background-work-bound": "pending"
+        "background-work-bound": "pending",
+        "web-tenant-isolation": "pending"
       },
-      "lastUpdated": "2026-11-25T16:30:43.841Z",
+      "lastUpdated": "2026-11-26T16:04:26.251Z",
       "branch": "feat/platform",
       "repos": [
         "default"
