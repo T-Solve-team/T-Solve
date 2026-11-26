@@ -75,7 +75,8 @@ class AnswerPromptTest {
     }
 
     private static ChatbotSource source() {
-        return ChatbotSource.of(new RetrievedSolution("symptoms", "cause", "steps", null, "scope", 0.9))
+        return ChatbotSource.of(
+                        new RetrievedSolution(UUID.randomUUID(), "symptoms", "cause", "steps", null, "scope", 0.9))
                 .numbered(1);
     }
 
