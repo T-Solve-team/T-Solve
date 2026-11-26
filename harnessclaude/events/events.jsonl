@@ -2366,3 +2366,5 @@
 {"ts":"2026-11-26T05:15:42.279Z","type":"feature-status","module":"chatbot","feature":"rag-eval-runner","from":"evaluating","to":"passing"}
 {"ts":"2026-11-26T08:26:38.374Z","type":"spec-approved","module":"chatbot","specHash":"da1ed552477e4b9a5e401b19ddc76a8a4554d2783dacffcb30f2f8c651e50565"}
 {"ts":"2026-11-26T10:39:04.412Z","type":"spec-approved","module":"chatbot","specHash":"3b1d85cf764dc474bb96843215a3c56ccf179708960adc8e0c79afb208290f51"}
+{"ts":"2026-11-26T11:30:46.057Z","type":"quick-opened","what":"multi-IP k6 load test workflow","files":[".github/workflows/loadtest.yml","infra/loadtest/README.md","infra/loadtest/merge-summaries.js"]}
+{"ts":"2026-11-26T11:43:17.639Z","type":"quick-closed","what":"multi-IP k6 load test workflow","files":[".github/workflows/loadtest.yml","infra/loadtest/README.md","infra/loadtest/merge-summaries.js"]}

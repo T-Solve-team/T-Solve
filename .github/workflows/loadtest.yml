@@ -1,0 +1,186 @@
+# Multi-IP k6 load test (KAN-466), only usable from the default branch (main).
+# Staging limits about 100 concurrent requests per source IP. Cap each runner at
+# 90 VUs and spread load over GitHub-hosted runners; observed IPs expose shared NATs.
+# Manual runs only; serialize all runs so two load tests never overlap.
+name: Multi-IP load test
+
+on:
+  workflow_dispatch:
+    inputs:
+      total_vus:
+        description: Total VUs requested (1–2000; rounded up across runners)
+        type: string
+        required: true
+        default: '100'
+      duration:
+        description: Hold time per runner (e.g. 60s; job timeout is 30 minutes)
+        type: string
+        required: true
+        default: '60s'
+      base_url:
+        description: Public web HTTPS URL
+        type: string
+        required: true
+        default: https://bluefin.tsolve.io.vn
+      login_url:
+        description: Sign-in provider HTTPS URL
+        type: string
+        required: false
+        default: https://login.tsolve.io.vn
+      api_url:
+        description: Public API HTTPS URL
+        type: string
+        required: false
+        default: https://api.tsolve.io.vn
+
+permissions:
+  contents: read
+
+concurrency:
+  group: loadtest
+  cancel-in-progress: false
+
+# User inputs are data, never shell source. Quote each expansion in run scripts.
+env:
+  TOTAL_VUS: ${{ inputs.total_vus }}
+  HOLD: ${{ inputs.duration }}
+  BASE_URL: ${{ inputs.base_url }}
+  LOGIN_URL: ${{ inputs.login_url || 'https://login.tsolve.io.vn' }}
+  API_URL: ${{ inputs.api_url || 'https://api.tsolve.io.vn' }}
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      runners: ${{ steps.plan.outputs.runners }}
+      vus_per_runner: ${{ steps.plan.outputs.vus_per_runner }}
+    steps:
+      - name: Validate inputs and plan runners
+        id: plan
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          if (process.env.GITHUB_REF !== `refs/heads/${process.env.DEFAULT_BRANCH}`) {
+            throw new Error('Load tests are only usable from the default branch (main).');
+          }
+          const raw = process.env.TOTAL_VUS;
+          const total = Number(raw);
+          if (!/^[0-9]+$/.test(raw) || !Number.isInteger(total) || total < 1 || total > 2000) {
+            throw new Error('total_vus must be an integer from 1 to 2000.');
+          }
+          for (const name of ['BASE_URL', 'LOGIN_URL', 'API_URL']) {
+            const rawUrl = process.env[name];
+            const url = new URL(rawUrl);
+            if (!rawUrl.startsWith('https://') || url.protocol !== 'https:' || !url.hostname) {
+              throw new Error(`${name} must start with https:// and have a hostname.`);
+            }
+          }
+          if (!/^(?:[0-9]+(?:\.[0-9]+)?(?:ms|s|m|h))+$/.test(process.env.HOLD)) {
+            throw new Error('duration must be a k6 duration such as 60s or 2m30s.');
+          }
+          const runners = Math.ceil(total / 90);
+          const vus = Math.ceil(total / runners);
+          if (runners > 25 || vus > 90) throw new Error('Runner or VU cap exceeded.');
+          const matrix = Array.from({ length: runners }, (_, i) => i + 1);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,
+            `matrix=${JSON.stringify(matrix)}\nrunners=${runners}\nvus_per_runner=${vus}\n`);
+          console.log(`${total} requested VUs: ${runners} runners × ${vus} VUs = ${runners * vus} planned VUs.`);
+          NODE
+
+  k6:
+    name: k6 (${{ matrix.runner }})
+    needs: plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: grafana/setup-k6-action@c47136d33d365efbeb9ae7266908b5dcf98cdece # v1.3.0
+        with:
+          k6-version: '2.4.0'
+
+      - name: Run k6 and record source IP
+        continue-on-error: true # Merge judges thresholds; every runner must still upload its summary.
+        env:
+          VUS: ${{ needs.plan.outputs.vus_per_runner }}
+          RUNNER_INDEX: ${{ matrix.runner }}
+        run: |
+          export PUBLIC_IP="$(curl --fail --silent --show-error --connect-timeout 5 --max-time 10 https://api.ipify.org || true)"
+          exit_code=0
+          k6 run -e "VUS=$VUS" -e "HOLD=$HOLD" \
+            -e "BASE_URL=$BASE_URL" -e "LOGIN_URL=$LOGIN_URL" -e "API_URL=$API_URL" \
+            -e "SUMMARY_JSON=summary-$RUNNER_INDEX.json" infra/loadtest/public-paths.js || exit_code=$?
+          export K6_EXIT_CODE="$exit_code"
+          node <<'NODE'
+          const fs = require('node:fs');
+          const { isIP } = require('node:net');
+          const candidate = process.env.PUBLIC_IP.trim();
+          const meta = {
+            index: Number(process.env.RUNNER_INDEX),
+            publicIp: isIP(candidate) ? candidate : null,
+            k6ExitCode: Number(process.env.K6_EXIT_CODE),
+          };
+          fs.writeFileSync(`meta-${meta.index}.json`, JSON.stringify(meta, null, 2));
+          console.log(JSON.stringify(meta));
+          NODE
+          exit "$exit_code"
+
+      - name: Upload runner summary and metadata
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: k6-summary-${{ matrix.runner }}
+          path: |
+            summary-${{ matrix.runner }}.json
+            meta-${{ matrix.runner }}.json
+          if-no-files-found: error
+
+  merge:
+    needs: [plan, k6]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Prepare summary directory
+        run: mkdir -p summaries
+
+      - name: Download all runner summaries
+        continue-on-error: true # Even no artifacts must produce a failing merged report.
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: k6-summary-*
+          merge-multiple: true
+          path: summaries
+
+      - name: Merge summaries and judge targets
+        env:
+          EXPECTED_RUNNERS: ${{ needs.plan.outputs.runners || '0' }}
+        run: node infra/loadtest/merge-summaries.js summaries merged-summary.json
+
+      - name: Publish markdown summary
+        if: always()
+        run: cat merged-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload merged report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: k6-merged
+          path: |
+            merged-summary.json
+            merged-summary.md
+          if-no-files-found: error
