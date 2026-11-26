@@ -1186,6 +1186,9 @@ If Task 6-2 brings a two-Workspace test fixture, this test reuses it.
 **Files (no production file):**
 - Test: `backend/src/test/java/vn/tsolve/common/tenant/TenantIsolationIT.java` (plus a probe endpoint in test sources
   only)
+**From the Task 10a review (26/11, findings 2 and 3; tests to add):**
+- `TenantIsolationIT`: a request with `Host: a.` and `X-Forwarded-Host: b.` returns only A's rows.
+- A `RANDOM_PORT` real-Tomcat test: `/api/v1/jira%2Dapp/x` and `/api/v1/jira-app;x/y` on a site host (here or in Task 20).
 **Dependencies:** Tasks 10a and 6-2 (merged)
 **Estimated size:** small
 **Done when:** `TenantIsolationIT` passes on CI.
@@ -1490,6 +1493,9 @@ that request only), `ForgeCallAuthentication`, and `ForgeSecurityConfig` (`@Orde
 no cookie; other paths on `api.` → 404 `MSG06`).
 **Edge rows (Critical/High):** #30 (Forge token on a Workspace site, `login.` or `admin.`). Verifier rows #28 and #29 are
 re-asserted through the HTTP chain.
+**From the Task 10a review (26/11):** share one constant for the AC-002.19 path list between `SecurityConfig` and
+`TenantResolverFilter` (finding 4); if Task 10b did not add it, add the `RANDOM_PORT` real-Tomcat test for
+`/api/v1/jira%2Dapp/x` and `/api/v1/jira-app;x/y` on a site host (finding 2).
 **Tests (about 6):** `ForgeSecurityIT` (Edge #30, a refused token reaches no handler and no Workspace lookup, no `Set-Cookie` on
 `api.`, other paths on `api.` → 404 `MSG06`, AC-005.7; the claims are visible only for the request, AC-005.5).
 **Files:**
