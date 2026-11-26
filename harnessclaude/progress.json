@@ -524,9 +524,9 @@
         "registry-adopt-bluefin": "passing",
         "catalog-lookups": "passing",
         "catalog-worker-tenant": "passing",
-        "background-work-bound": "pending"
+        "background-work-bound": "passing"
       },
-      "lastUpdated": "2026-11-25T16:30:43.841Z",
+      "lastUpdated": "2026-11-26T16:12:44.334Z",
       "branch": "feat/platform",
       "repos": [
         "default"
