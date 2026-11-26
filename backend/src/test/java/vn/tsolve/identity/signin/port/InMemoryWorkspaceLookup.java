@@ -77,10 +77,14 @@ public final class InMemoryWorkspaceLookup implements WorkspaceLookup {
     private final List<WorkspaceRef> workspaces = new CopyOnWriteArrayList<>(ALL);
     private final List<String> askedHosts = new CopyOnWriteArrayList<>();
     private final List<UUID> askedIds = new CopyOnWriteArrayList<>();
+    private volatile RuntimeException failure;
 
     @Override
     public Optional<WorkspaceRef> findBySiteHost(String host) {
         askedHosts.add(host);
+        if (failure != null) {
+            throw failure;
+        }
         return workspaces.stream()
                 .filter(workspace -> workspace.siteHost().equals(host))
                 .findFirst();
@@ -89,9 +93,16 @@ public final class InMemoryWorkspaceLookup implements WorkspaceLookup {
     @Override
     public Optional<WorkspaceRef> findById(UUID id) {
         askedIds.add(id);
+        if (failure != null) {
+            throw failure;
+        }
         return workspaces.stream()
                 .filter(workspace -> workspace.id().equals(id))
                 .findFirst();
+    }
+
+    public void failWith(RuntimeException failure) {
+        this.failure = failure;
     }
 
     public List<String> askedHosts() {
@@ -114,6 +125,7 @@ public final class InMemoryWorkspaceLookup implements WorkspaceLookup {
     }
 
     public void reset() {
+        failure = null;
         askedHosts.clear();
         askedIds.clear();
         workspaces.clear();
