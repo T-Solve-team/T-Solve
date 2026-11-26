@@ -2391,3 +2391,6 @@
 {"ts":"2026-11-26T14:07:22.889Z","type":"spec-approved","module":"search","specHash":"42397eaa8b80419ef39ed813f2a7510f6fab2a108b484e13fc7a16bd72f24a06"}
 {"ts":"2026-11-26T14:29:01.915Z","type":"spec-approved","module":"search","specHash":"ff4fac26063f1f9096eb85121703bede46469d8fc0f5aace3c9cdd33aa0ceb66"}
 {"ts":"2026-11-26T16:04:26.299Z","type":"feature-status","module":"platform","feature":"web-tenant-isolation","from":null,"to":"pending"}
+{"ts":"2026-11-26T16:33:17.830Z","type":"feature-status","module":"platform","feature":"web-tenant-resolver","from":"pending","to":"in-progress"}
+{"ts":"2026-11-26T16:33:18.114Z","type":"feature-status","module":"platform","feature":"web-tenant-resolver","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-26T16:33:18.376Z","type":"feature-status","module":"platform","feature":"web-tenant-resolver","from":"evaluating","to":"passing"}

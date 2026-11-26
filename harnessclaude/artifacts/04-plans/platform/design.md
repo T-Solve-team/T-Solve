@@ -80,11 +80,15 @@ the target, not built here — H-Q1):
   message (it can hold the JDBC URL).
 - **`Host` against `X-Forwarded-Host`.** The resolver reads `getHeader("Host")`. With
   `server.forward-headers-strategy: framework`, `getServerName()` (identity's `AuthHosts`) follows `X-Forwarded-Host`;
-  behind Caddy both match. If a client makes them differ on `:8080`, it fails closed: `runIn` of the other Workspace
-  throws (AC-002.13) or the session check answers `MSG123`.
+  behind Caddy both match. If a client makes them differ on `:8080` while `Host` is a site (or `api.`), it fails
+  closed: `runIn` of the other Workspace throws (AC-002.13) or the session check answers `MSG123`. It does not hold for
+  `Host` = `login.` or `admin.` with a forged `X-Forwarded-Host` naming a Suspended site plus that site's session
+  cookie: the request reaches the handler (Edge #92). The control there is the network boundary (Caddy overwrites
+  forwarded headers; staging publishes no backend port). Follow-up (`identity`, not Task 10): its session check should
+  refuse a Suspended site.
 - **Queries per signed-in request:** the resolver's lookup and `WebSessionFilter`'s; `runIn` on the bound id asks
   nothing. No cache, so a suspend applies on the next request.
-- Decided in planning: `/api/v1/jira-app/**` is matched on the decoded path with the same matcher as the Jira App chain
+- Decided in planning: `/api/v1/jira-app/**` is matched on the decoded path with the same pattern as the Jira App chain
   (`JiraAppSecurityConfig.PATHS`), and the AC-002.19 list the same way, so an encoded path cannot pass one and reach the
   other.
 - Decided in planning: on a Suspended or unknown site the tenant answer (`MSG150` / `MSG151`) comes before `MSG06` of
@@ -527,7 +531,7 @@ another's; no such use exists yet (see Out of Scope of the spec).
 | T10 request binding (Task 10, Q2) | Public `bindRequest(UUID)` returning an `AutoCloseable`, no transaction, no existence check; only `TenantResolverFilter` calls it (source-scan test) | `runIn` around the whole request (Task 6 would rework two filters for P5); the filter in `common/tenant` behind a new port | The filter is in `platform/web`, so a package-private pair cannot be reached (Hiếu, 25/11) |
 | T10 resolver activation (Q3) | Only with a `WorkspaceCatalog` bean (`ObjectProvider`) | always on behind a second lookup port; always on and refusing every host | Staging always has the Registry; local runs, Playwright and about 50 ITs keep working (Hiếu, 25/11) |
 | T10 base domain (Q4) | The host part after `{slug}.` of `TSOLVE_SITE_ORIGIN_TEMPLATE` (AC-002.2) | a `TSOLVE_BASE_DOMAIN` variable; passing `TSOLVE_DOMAIN` to the backend | One source of truth (Hiếu, 25/11) |
-| T10 host header (Q5) | The raw `Host` header; a differing `X-Forwarded-Host` fails closed later | refuse such a request in the resolver; switch the forwarded-header strategy off | AC-002.3; https redirect URIs need the strategy (Hiếu, 25/11) |
+| T10 host header (Q5) | The raw `Host` header; a differing `X-Forwarded-Host` fails closed later (for a site or `api.` `Host`; Edge #92) | refuse such a request in the resolver; switch the forwarded-header strategy off | AC-002.3; https redirect URIs need the strategy (Hiếu, 25/11) |
 | T10 refusals (Q6, Q7) | problem+json on every path; `MSG150` / `MSG151` with the SRS texts in `SecurityProblemWriter` | redirects on the sign-in paths; a second writer `ProblemResponses` | AC-002.7, AC-002.9; one writer (Hiếu, 25/11) |
 | T10 Jira App paths (Q8) | Closed on every host but `api.` in the resolver (404 `MSG06`); the staging Forge `baseUrl` is checked before the deploy | leave to Task 20 | AC-005.8 is open today (Hiếu, 25/11) |
 | Tenant context storage | Static `ThreadLocal` behind the `TenantContext` bean | `ScopedValue` (preview in Java 21) | The routing `DataSource` and the transaction manager are not Spring-injected into every caller (Decided in planning) |
@@ -771,6 +775,7 @@ High row into a task.
 | 89 | STORY-001 | Environment | At the routing deploy bluefin's row password does not decrypt with the deployed `CATALOG_SECRET_KEY`: every bluefin query answers 500 `MSG06` | High | Checked before the merge (CD deploys it) with `RegistryPasswordCli verify`, which prints only OK or FAIL and never the password; on FAIL, Task 6-2 is not merged until the row or the key is corrected | RegistryPasswordCliTest; pre-deploy check (`infra/README.md`, T6-2) |
 | 90 | STORY-005 | Authorization | `/api/v1/jira-app/**`, plain or percent-encoded, on a site, `login.` or `admin.` host; any other path on `api.` | Critical | 404 `MSG06` from the resolver, the chain never called (a Suspended or unknown site answers `MSG150` / `MSG151` first) | TenantResolverFilterTest (T10a) |
 | 91 | STORY-002 | Environment of hosts | No `WorkspaceCatalog` bean (empty `REGISTRY_DB_URL`) | Medium | The resolver passes every request through and logs one line at start-up | TenantResolverFilterTest (T10a) |
+| 92 | STORY-002 | Authorization | Direct call to the backend: `Host` = `login.` or `admin.`, a forged `X-Forwarded-Host` naming a Suspended site, and that site's session cookie | Medium | **Accepted:** the resolver binds and looks up nothing and the request reaches the handler. Control: the network boundary (Caddy overwrites forwarded headers; staging publishes no backend port). Follow-up (`identity`): the session check refuses a Suspended site | none (network boundary) |
 
 Open questions for the spec owner: none (the spec settles the Redis cache as out of scope and defines `schema_version` in AC-001.15).
 

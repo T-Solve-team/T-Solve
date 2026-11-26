@@ -326,3 +326,6 @@ Master registry of all artifacts in this workspace.
 | — | test-report | platform | pass | artifacts/06-evaluation/platform/task-6a-2-no-workspace-fallbacks-test-report.md |
 | — | session-log | platform | passing | artifacts/05-implementation/platform/task-4-workspace-catalog.md |
 | — | review | platform | pass | artifacts/06-evaluation/platform/task-4-workspace-catalog-review.md |
+| — | session-log | platform | passing | artifacts/05-implementation/platform/task-10a-web-tenant-resolver.md |
+| — | review | platform | pass | artifacts/06-evaluation/platform/task-10a-web-tenant-resolver-review.md |
+| — | test-report | platform | pass | artifacts/06-evaluation/platform/task-10a-web-tenant-resolver-test-report.md |
