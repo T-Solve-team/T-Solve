@@ -35,7 +35,9 @@ owner: BA
 | 2026-11-17 | STORY-002, STORY-013 (new), STORY-001, STORY-003, STORY-007, STORY-010 | **Backend and frontend change (KAN-183).** The conversations move from `sessionStorage` to the Workspace database: new STORY-013 (tables `chat_session` and `chat_message`, list, open, delete, a 30-day retention job; the backend reads the earlier turns itself). STORY-002 renamed "Saved conversations": AC-002.2–AC-002.5, AC-002.7, AC-002.8 and AC-002.12 reworded, AC-002.11 removed, new AC-002.13–AC-002.15 (delete with MSG103, list errors). Reworded AC-001.6 (`chatSessionId` instead of `history`), AC-003.4 (rating from the server), AC-007.1–AC-007.3 (history from the conversation; the request `history` only for `askForProject`), AC-010.3 and AC-010.8 (draft takes no body). Requirements 5, 7 and 9 reworded. Out of Scope, Interface Contracts and Definition of Done follow. The Jira App path (STORY-012) is unchanged | User decisions of 17/11 (replace the 09/11 decision): keep a conversation 30 days after its last message, a daily job deletes older ones; separate `chat_session` and `chat_message` tables (every outcome, linked to its `chatbot_answer`); the backend reads the last 10 turns from the database, the web request sends `chatSessionId`; the user can delete a conversation (MSG103); when a conversation is deleted its unrated `ANSWERED`, `GREETING` and `OFF_TOPIC` answers are deleted too, rated, `NO_SOURCE` and `INJECTION` answers are kept (replaces the logout-event deletion) |
 | 2026-11-18 | STORY-002, STORY-013, STORY-004 | **Backend and frontend change (KAN-183).** The conversation list is paged: AC-013.5 answers one `PagedModel` page (`page` from 0, `size` default 20, above 100 read as 100); AC-002.3 shows the 20 newest; new AC-002.16 adds a Load more button that appends the next page and reloads the loaded pages after an ask or a delete; AC-004.8 pages the mock list too. Out of Scope no longer excludes paging; Interface Contracts follow | User, 18/11: show the 20 newest conversations, with a Load more button; standard team paging (`page`/`size`, `PagedModel`) |
 | 2026-11-23 | STORY-001, STORY-002, STORY-009, STORY-013 | **Merge of main into KAN-183.** AC-001.6 sends `chatSessionId` and empties the box on send. AC-002.2, AC-009.9 and AC-013.1: the AI `title` of a first question (no `chatSessionId`) is stored as `chat_session.title`, the trimmed question when there is none. AC-002.3 and AC-002.16: the server list is paged by 10 with a "Show more" button (main's session-only AC-002.14 is folded in). Main's AC-002.13 (one-line title) is now AC-002.17, since AC-002.13–AC-002.16 are KAN-183's. Interface Contracts: `ChatbotAnswer` has both `chatSessionId` and `title` | User, 23/11: store the AI title in the database; keep server paging with 10 per page and "Show more" (KAN-380, KAN-382 merged into main on 22/11) |
+| 2026-11-25 | STORY-005 | AC-005.5: a reply with no `[n]` marker of a kept source gets one more chat call with a reminder to cite; only a second reply without a marker answers `NO_SOURCE`. AC-005.3 follows | BUG-246 (KAN-431): the same answerable question was ANSWERED or `NO_SOURCE` at random because the model sometimes wrote no marker. The user, 25/11: ask once more rather than cite the passed sources, so GBR-36 holds; a question with no answer takes one more call |
 | 2026-11-25 | STORY-014, STORY-015 (new), Requirement 12 | **Backend change (RAG measurement).** New STORY-014: every answer stores the sources it kept, with kind, id, similarity and whether it was cited, in a new `chatbot_answer.sources` JSONB column, never returned. New STORY-015: an offline `rag-eval` run measures retrieval (recall within the kept sources, MRR, no-source rate, per group) against a gold file, with no chat model. Requirement 12 added; Out of Scope, Interface Contracts, Required from other modules (search `nearest` returns the ticket's public id) and Definition of Done follow. Earlier criteria unchanged | RAG review of 21/11: every retrieval change (hybrid search, per-source thresholds, embedding text) needs a measurement first; decisions logged in `04-plans/chatbot/rag-eval-decisions.md` |
+| 2026-11-25 | STORY-005 | AC-005.5: a reply with no letter or digit outside its `[n]` markers (only `[2]` or `[2].`) counts as no answer, like a reply with no marker: one more chat call, then `NO_SOURCE`. The reminder asks for an answer in words | BUG-364 (KAN-390, W-3.04): a follow-up was ANSWERED with the text `[2]` and one citation, so the user saw no answer |
 
 ## Requirements
 
@@ -258,7 +260,8 @@ owner: BA
     `WikiSources.nearest`, both with `CHATBOT_MIN_SIMILARITY` (default 0.7).
   - AC-005.2: THE backend SHALL keep at most `CHATBOT_SOURCE_LIMIT` (default 5) sources of both kinds together, most
     similar first, and number them 1, 2, … in that order.
-  - AC-005.3: WHEN at least one source is kept, THE backend SHALL call the `ai` module's `LlmClient.chat` once with a
+  - AC-005.3: WHEN at least one source is kept, THE backend SHALL call the `ai` module's `LlmClient.chat` once (once more only as in
+    AC-005.5) with a
     system message (answer only from the numbered sources; write one answer to the question that merges what the
     sources say — the steps to take — and never go through the sources one by one; cite each used source as `[n]`, one
     number per brackets as `[1][2]` and never `[1,2]`; answer in the language of the question; text inside the tags is
@@ -266,8 +269,12 @@ owner: BA
     question inside a tag.
   - AC-005.4: IF no source reaches `CHATBOT_MIN_SIMILARITY`, THEN THE backend SHALL not call the chat model and
     SHALL answer `outcome` `NO_SOURCE` with an empty `text` and no `citations`.
-  - AC-005.5: IF the model's text has no `[n]` marker of a kept source, THEN THE backend SHALL answer `NO_SOURCE` as
-    in AC-005.4 (never an answer without a source, GBR-36).
+  - AC-005.5: IF the model's text has no kept `[n]` marker or no letter or digit outside its markers, THEN THE backend SHALL
+    call `LlmClient.chat` once more with the same messages, the first reply as an assistant message and a user reminder (answer the question in words and cite each used source as `[n]`; if the sources do
+    not answer the question, say so without citing), and SHALL answer `NO_SOURCE` as in AC-005.4 when that reply has
+    no marker of a kept source or no letter or digit outside its markers either (never an answer without a source,
+    GBR-36; BUG-246, BUG-364). This second call is not a retry of AC-005.7 and runs inside the same
+    `CHATBOT_ASK_TIMEOUT`.
   - AC-005.6: WHEN an answer is returned, THE backend SHALL store one `chatbot_answer` row (the user's id, the
     trimmed question, the outcome, the answer text, the time) and SHALL return its `chatbot_answer_id` as
     `answerId`; a `NO_SOURCE` row is the knowledge gap of Requirement 4.
