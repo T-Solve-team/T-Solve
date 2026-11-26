@@ -63,6 +63,7 @@ import vn.tsolve.chatbot.answer.dto.WikiDocumentCitation;
 import vn.tsolve.chatbot.answer.entity.AnswerSource;
 import vn.tsolve.chatbot.answer.entity.ChatbotAnswer;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
+import vn.tsolve.chatbot.answer.service.ChatbotRetrieval;
 import vn.tsolve.chatbot.conversation.exception.ChatbotConversationNotFoundException;
 import vn.tsolve.chatbot.conversation.service.ChatConversationService;
 import vn.tsolve.chatbot.exception.ChatbotProjectNotActiveException;
@@ -876,6 +877,7 @@ class ChatbotAnswerServiceImplTest {
                 llm,
                 solutions,
                 wiki,
+                new ChatbotRetrieval(),
                 answers,
                 conversations,
                 transactions,
@@ -894,6 +896,7 @@ class ChatbotAnswerServiceImplTest {
                 llm,
                 solutions,
                 wiki,
+                new ChatbotRetrieval(),
                 answers,
                 conversations,
                 transactions,

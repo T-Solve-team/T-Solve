@@ -11,8 +11,8 @@ import vn.tsolve.search.retrieval.dto.RetrievedSolution;
 import vn.tsolve.search.retrieval.dto.RetrievedTicketSolution;
 
 /** {@code id} is the ticket's public id or the Wiki document id, stored but never cited (AC-006.3, AC-014.1). */
-record ChatbotSource(int number, UUID id, double similarity, String text, ChatbotCitation citation) {
-    static ChatbotSource of(RetrievedSolution solution) {
+public record ChatbotSource(int number, UUID id, double similarity, String text, ChatbotCitation citation) {
+    public static ChatbotSource of(RetrievedSolution solution) {
         String workaround = solution.workaround();
         if (workaround != null && workaround.isBlank()) {
             workaround = null;
@@ -35,7 +35,7 @@ record ChatbotSource(int number, UUID id, double similarity, String text, Chatbo
     }
 
     /** A Solution of the Project's Department (STORY-012); its ticket id is never cited (AC-006.3). */
-    static ChatbotSource of(RetrievedTicketSolution solution) {
+    public static ChatbotSource of(RetrievedTicketSolution solution) {
         return of(new RetrievedSolution(
                 solution.ticketId(),
                 solution.symptoms(),
@@ -46,7 +46,7 @@ record ChatbotSource(int number, UUID id, double similarity, String text, Chatbo
                 solution.similarity()));
     }
 
-    static ChatbotSource of(WikiPassage passage) {
+    public static ChatbotSource of(WikiPassage passage) {
         return new ChatbotSource(
                 0,
                 passage.wikiDocumentId(),
@@ -55,7 +55,7 @@ record ChatbotSource(int number, UUID id, double similarity, String text, Chatbo
                 new WikiDocumentCitation(0, passage.wikiDocumentId(), passage.title()));
     }
 
-    ChatbotSource numbered(int number) {
+    public ChatbotSource numbered(int number) {
         ChatbotCitation numbered =
                 switch (citation) {
                     case TicketSolutionCitation solution -> new TicketSolutionCitation(number, solution.solution());
@@ -65,9 +65,12 @@ record ChatbotSource(int number, UUID id, double similarity, String text, Chatbo
         return new ChatbotSource(number, id, similarity, text, numbered);
     }
 
+    public String kind() {
+        return citation instanceof TicketSolutionCitation ? "TICKET" : "WIKI";
+    }
+
     /** The stored record of this kept source (AC-014.1): similarity rounded to 4 decimals. */
     AnswerSource stored(boolean cited) {
-        String kind = citation instanceof TicketSolutionCitation ? "TICKET" : "WIKI";
-        return new AnswerSource(number, kind, id, Math.round(similarity * 10_000) / 10_000.0, cited);
+        return new AnswerSource(number, kind(), id, Math.round(similarity * 10_000) / 10_000.0, cited);
     }
 }
