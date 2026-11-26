@@ -134,6 +134,7 @@ class ChatbotAnswerServiceImplTest {
                 .withBean(LlmClient.class, () -> llm)
                 .withBean(SolutionRetrieval.class, () -> solutions)
                 .withBean(WikiSources.class, () -> wiki)
+                .withBean(ChatbotRetrieval.class, ChatbotRetrieval::new)
                 .withBean(ChatbotAnswerRepository.class, () -> answers)
                 .withBean(ChatConversationService.class, () -> conversations)
                 .withBean(PlatformTransactionManager.class, () -> transactions)

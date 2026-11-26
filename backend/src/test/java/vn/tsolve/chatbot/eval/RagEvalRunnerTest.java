@@ -66,9 +66,9 @@ class RagEvalRunnerTest {
         when(embeddings.embed(List.of(QUESTION.trim()))).thenReturn(List.of(VECTOR));
         when(solutions.nearest(VECTOR, 0, 10))
                 .thenReturn(List.of(
-                        new RetrievedSolution(TICKET_ID, "Symptoms", "Root cause", "Steps", null, "Scope", 0.65)));
+                        new RetrievedSolution(TICKET_ID, "Symptoms", "Root cause", "Steps", null, "Scope", 0.45)));
         when(wiki.nearest(USER, VECTOR, 0, 10))
-                .thenReturn(List.of(new WikiPassage(DOCUMENT_ID, "Title", "Passage", 0.65)));
+                .thenReturn(List.of(new WikiPassage(DOCUMENT_ID, "Title", "Passage", 0.45)));
 
         assertThat(run(settings())).isZero();
 
@@ -80,11 +80,12 @@ class RagEvalRunnerTest {
         order.verify(wiki).nearest(USER, VECTOR, 0, 10);
         String output = Files.readString(reportPath());
         var report = json.readTree(output);
-        assertThat(report.path("minSimilarity").doubleValue()).isEqualTo(0.7);
+        // AC-015.3: the default is the Chatbot's CHATBOT_MIN_SIMILARITY of AC-005.1 (0.5).
+        assertThat(report.path("minSimilarity").doubleValue()).isEqualTo(0.5);
         assertThat(report.path("sourceLimit").intValue()).isEqualTo(5);
         assertThat(report.path("k").intValue()).isEqualTo(10);
         assertThat(report.at("/lines/0/rank").intValue()).isEqualTo(2);
-        assertThat(report.at("/lines/0/similarity").doubleValue()).isEqualTo(0.65);
+        assertThat(report.at("/lines/0/similarity").doubleValue()).isEqualTo(0.45);
         assertThat(report.at("/overall/recall").doubleValue()).isZero();
         assertThat(output.lines().count()).isGreaterThan(1);
     }
