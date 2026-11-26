@@ -371,3 +371,30 @@ All three tasks are Jira KAN-243, so one branch `feat/KAN-243-chatbot-classify-q
 **Covers:** AC-005.1, AC-005.4
 **Dependencies:** Task 26
 **Estimated size:** small
+
+## Task 29: Ask once more when the answer cites no source
+
+**Story:** STORY-005
+**Feature:** cite-retry
+**Jira:** KAN-431 (BUG-246) · branch `fix/KAN-431-chatbot-cite-retry`
+**Description:**
+- `ChatbotAnswerServiceImpl`: when the answer has no `[n]` marker of a kept source, call the chat model once more
+  with the same messages, the first reply and a reminder to cite (`AnswerPrompt`); `NO_SOURCE` only when the second
+  reply has no marker either. Web and Jira App paths alike (both use the same answer step).
+**Covers:** AC-005.3, AC-005.5
+**Dependencies:** Task 26
+**Estimated size:** small
+
+## Task 30: Treat a marker-only answer as no answer
+
+**Story:** STORY-005
+**Feature:** marker-only-answer
+**Jira:** KAN-390 (BUG-364) · branch `fix/KAN-390-chatbot-marker-only-answer` (stacked on Task 29)
+**Description:**
+- `Citations`: say whether the text has words besides its kept `[n]` markers. `ChatbotAnswerServiceImpl`: a reply
+  with no such words takes the AC-005.5 second call like a reply with no marker; `NO_SOURCE` when the second reply
+  has none either. `AnswerPrompt`: the reminder asks for an answer in words.
+**Covers:** AC-005.5
+**Dependencies:** Task 29
+**Estimated size:** small
+

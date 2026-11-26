@@ -242,8 +242,8 @@
     }
   },
   "chatbot": {
-    "specHash": "1ac3f26a7bba1bd643018733b7d2f839aea812bdc2ef3301afae4564a637a7f6",
-    "approvedAt": "2026-11-26T10:17:49.245Z",
+    "specHash": "bdf2b40d09b5cadc74361a0d72ddeed701b7f2d77579304f73f7920785cba43d",
+    "approvedAt": "2026-11-26T13:39:28.747Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",
@@ -295,9 +295,9 @@
       "AC-004.8": "THE mock SHALL keep conversations in memory as STORY-013 does: an ask with no  starts",
       "AC-005.1": "WHEN STORY-009 classifies a valid  as a question, THE backend SHALL embed",
       "AC-005.2": "THE backend SHALL keep at most  (default 5) sources of both kinds together, most",
-      "AC-005.3": "WHEN at least one source is kept, THE backend SHALL call the  module's  once with a",
+      "AC-005.3": "WHEN at least one source is kept, THE backend SHALL call the  module's  once (once more only as in",
       "AC-005.4": "IF no source reaches , THEN THE backend SHALL not call the chat model and",
-      "AC-005.5": "IF the model's text has no  marker of a kept source, THEN THE backend SHALL answer  as",
+      "AC-005.5": "IF the model's text has no kept  marker or no letter or digit outside its markers, THEN THE backend SHALL",
       "AC-005.6": "WHEN an answer is returned, THE backend SHALL store one  row (the user's id, the",
       "AC-005.7": "IF the AI fails or the ask is too slow, THEN THE backend SHALL answer 503 with MSG06, store no row",
       "AC-005.8": "IF  is missing or blank, THEN THE backend SHALL answer 400 with field error MSG01 on",

@@ -390,6 +390,8 @@
         "conversation-ui": "passing",
         "conversation-paging": "passing",
         "merge-title-paging": "evaluating",
+        "cite-retry": "evaluating",
+        "marker-only-answer": "evaluating",
         "paraphrase-sources": "evaluating",
         "answer-sources": "passing",
         "rag-eval-runner": "passing"
