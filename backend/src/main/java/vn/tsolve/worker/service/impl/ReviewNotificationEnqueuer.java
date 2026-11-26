@@ -1,5 +1,6 @@
 package vn.tsolve.worker.service.impl;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -7,10 +8,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.web.util.UriUtils;
 import vn.tsolve.common.tenant.TenantContext;
 import vn.tsolve.identity.service.WorkspaceSiteService;
 import vn.tsolve.ticket.dto.ReviewNotification;
@@ -37,23 +38,13 @@ public class ReviewNotificationEnqueuer {
     private final ReviewEmailRenderer renderer = new ReviewEmailRenderer();
     private final ObjectProvider<WorkerTenantService> tenants;
     private final ObjectProvider<TenantContext> requestTenants;
-    private final String siteOriginTemplate;
 
     public ReviewNotificationEnqueuer(
             ObjectProvider<EmailOutboxService> outboxes,
             ObjectProvider<WorkerTenantService> tenants,
             ReviewNotificationService notifications,
             WorkspaceSiteService sites) {
-        this(outboxes, tenants, notifications, sites, "");
-    }
-
-    public ReviewNotificationEnqueuer(
-            ObjectProvider<EmailOutboxService> outboxes,
-            ObjectProvider<WorkerTenantService> tenants,
-            ReviewNotificationService notifications,
-            WorkspaceSiteService sites,
-            String siteOriginTemplate) {
-        this(outboxes, tenants, notifications, sites, siteOriginTemplate, null);
+        this(outboxes, tenants, notifications, sites, null);
     }
 
     /** {@code requestTenants} is the holder that names the Workspace in the web process, where no WorkerTenantService exists. */
@@ -63,14 +54,12 @@ public class ReviewNotificationEnqueuer {
             ObjectProvider<WorkerTenantService> tenants,
             ReviewNotificationService notifications,
             WorkspaceSiteService sites,
-            @Value("${TSOLVE_SITE_ORIGIN_TEMPLATE:}") String siteOriginTemplate,
             ObjectProvider<TenantContext> requestTenants) {
         this.requestTenants = requestTenants;
         this.outboxes = outboxes;
         this.tenants = tenants;
         this.notifications = notifications;
         this.sites = sites;
-        this.siteOriginTemplate = siteOriginTemplate;
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -87,11 +76,12 @@ public class ReviewNotificationEnqueuer {
             WorkerTenantService context = tenants.getIfAvailable();
             Runnable enqueue = () -> {
                 String host = siteHost(context);
+                String jiraSite = jiraSite();
                 for (UUID decisionId : event.decisionIds()) {
                     try {
                         notifications
                                 .findNotification(decisionId)
-                                .ifPresent(notification -> queue.queue(render(notification, host)));
+                                .ifPresent(notification -> queue.queue(render(notification, host, jiraSite)));
                     } catch (EmailOutboxUnavailableException outage) {
                         // The Jobs database is down: every further queue call would wait for a connection on the
                         // request thread (BUG-164), so the outer handler logs the remainder once.
@@ -165,20 +155,26 @@ public class ReviewNotificationEnqueuer {
         return request == null ? Optional.empty() : request.currentWorkspaceId();
     }
 
-    private OutboundEmail render(ReviewNotification notification, String host) {
+    /** Read once per event (AC-010.8); a failed lookup only drops the button, never the email. */
+    private String jiraSite() {
+        try {
+            return notifications.jiraSiteUrl().orElse(null);
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+    }
+
+    private OutboundEmail render(ReviewNotification notification, String host, String jiraSite) {
         Decision decision =
                 switch (notification.kind()) {
                     case REJECTED -> Decision.REJECT;
                     case CHANGES_REQUESTED -> Decision.REQUEST_CHANGES;
                 };
-        // The site service exposes the host only; tenant site hosts start with their Workspace slug.
-        String link = null;
-        if (host != null) {
-            String origin = siteOriginTemplate == null || siteOriginTemplate.isBlank()
-                    ? "https://" + host
-                    : siteOriginTemplate.replace("{slug}", host.split("[.:]", 2)[0]);
-            link = origin + "/tickets/" + notification.ticketId();
-        }
+        // The writer edits the Solution in the Jira Solution Form, so the button opens the Jira issue (AC-010.8).
+        String key = notification.ticketKey();
+        String link = jiraSite == null || key == null || key.isBlank()
+                ? null
+                : jiraSite + "/browse/" + UriUtils.encodePathSegment(key, StandardCharsets.UTF_8);
         var email = new ReviewEmail(
                 decision,
                 notification.ticketKey(),

@@ -21,9 +21,7 @@ class ReviewEmailRendererTest {
                 writer,
                 Instant.parse("2026-11-14T18:42:00Z"),
                 feedback,
-                host == null || host.isBlank()
-                        ? null
-                        : "https://" + host + "/tickets/00000000-0000-0000-0000-000000000001",
+                host == null || host.isBlank() ? null : "https://" + host + "/browse/ITS-1",
                 host);
     }
 
@@ -75,7 +73,7 @@ class ReviewEmailRendererTest {
                             "Rejected",
                             "Your ticket was rejected",
                             "Rejection reason",
-                            ">Open ticket</a>",
+                            ">Open in Jira</a>",
                             "#FFF2F0",
                             "#CF1322");
         } else {
@@ -84,7 +82,7 @@ class ReviewEmailRendererTest {
                             "Changes requested",
                             "Your ticket needs a few changes",
                             "Review comment",
-                            ">Update ticket</a>",
+                            ">Update in Jira</a>",
                             "#FFFBE6",
                             "#AD6800");
         }
@@ -99,7 +97,7 @@ class ReviewEmailRendererTest {
                         "Add evidence",
                         email.ticketUrl());
         assertThat(renderer.plain(email))
-                .contains((decision == Decision.REJECT ? "Open ticket" : "Update ticket") + ": " + email.ticketUrl());
+                .contains((decision == Decision.REJECT ? "Open in Jira" : "Update in Jira") + ": " + email.ticketUrl());
     }
 
     @Test
@@ -163,7 +161,7 @@ class ReviewEmailRendererTest {
             "15 Nov 2026, 01:42 (GMT+7)",
             rejected ? ">Rejection reason</div>" : ">Review comment</div>",
             ">Add evidence</td>",
-            rejected ? ">Open ticket</a>" : ">Update ticket</a>",
+            rejected ? ">Open in Jira</a>" : ">Update in Jira</a>",
             "You got this email because",
             "This is an automated message"
         }) {
@@ -240,9 +238,9 @@ class ReviewEmailRendererTest {
         for (String host : new String[] {null, "", " "}) {
             var email = email(Decision.REQUEST_CHANGES, host, " ", "Login fails", "Evidence");
             assertThat(renderer.html(email))
-                    .doesNotContain("<a ", "https://", "in the", "Update ticket")
+                    .doesNotContain("<a ", "https://", "in the", "Update in Jira")
                     .contains("Hi there,");
-            assertThat(renderer.plain(email)).doesNotContain("https://", "in the", "Update ticket");
+            assertThat(renderer.plain(email)).doesNotContain("https://", "in the", "Update in Jira");
         }
     }
 

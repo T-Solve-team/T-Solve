@@ -56,6 +56,8 @@ import vn.tsolve.ticket.service.TicketDecisionService.Action;
 import vn.tsolve.ticket.service.impl.ReviewNotificationServiceImpl;
 import vn.tsolve.ticket.service.impl.TicketDecisionServiceImpl;
 import vn.tsolve.ticket.service.impl.TicketTransitions;
+import vn.tsolve.tracker.dto.JiraAccount;
+import vn.tsolve.tracker.service.JiraServiceAccount;
 import vn.tsolve.worker.WorkerJobsDatabase;
 import vn.tsolve.worker.client.ReviewEmail;
 import vn.tsolve.worker.client.ReviewEmail.Decision;
@@ -137,6 +139,11 @@ class ReviewNotificationIT {
 
     @TestConfiguration
     static class OutboxConfig {
+        @Bean
+        JiraServiceAccount jiraServiceAccount() {
+            return () -> Optional.of(new JiraAccount("https://acme.atlassian.net/", "cloud-id", "token"));
+        }
+
         @Bean
         WorkerTenantService tenants() {
             return new FixedWorkerTenantService(Set.of(WORKSPACE), Set.of(), new ThreadLocalTenantContext(id -> true));
@@ -261,7 +268,7 @@ class ReviewNotificationIT {
                 notification.writerName(),
                 notification.decidedAt(),
                 notification.feedback(),
-                "https://acme.example.test/tickets/" + ticket,
+                "https://acme.atlassian.net/browse/ITS-7",
                 "acme.example.test");
         var renderer = new ReviewEmailRenderer();
         var row = jobsJdbc.queryForMap("select * from email_outbox");

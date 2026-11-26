@@ -328,7 +328,7 @@
         "embed-description": "passing",
         "search-start-layout": "evaluating"
       },
-      "lastUpdated": "2026-11-22T11:58:12.459Z",
+      "lastUpdated": "2026-11-25T21:05:33.533Z",
       "branch": "feat/search",
       "repos": [
         "default"
@@ -634,9 +634,10 @@
         "review-email-outbox": "passing",
         "review-email-link-fallback": "passing",
         "jira-rejected-feedback": "passing",
-        "ai-review-assist": "passing"
+        "ai-review-assist": "passing",
+        "review-email-jira-link": "in-progress"
       },
-      "lastUpdated": "2026-11-25T19:53:24.445Z",
+      "lastUpdated": "2026-11-25T21:16:00.739Z",
       "branch": "feat/ticket-review",
       "repos": [
         "default"
