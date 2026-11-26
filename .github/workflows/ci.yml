@@ -2,11 +2,11 @@
 # One workflow, one job per part of the repo. The `changes` job looks at which folders changed and the
 # other jobs run only when their folder changed. A job skipped this way still reports success, so it
 # can be a required check without blocking PRs that don't touch its folder.
-# Jobs: frontend (KAN-4; checks and four test shards since KAN-305), backend (KAN-6; unit tests and two integration-test parts since KAN-305).
+# Jobs: frontend (KAN-4; checks and four test shards since KAN-305), backend (KAN-6; unit tests and integration-test parts since KAN-305; four of them since KAN-470).
 #
 # Time budget (KAN-305): the whole run takes ~4 min (it was ~9). Keep every frontend shard and every backend part
 # under ~4 min. When one goes over: frontend, raise the shard count (matrix.shard and the /4 in two places);
-# backend, move test classes between the it-keycloak-a / it-keycloak-b / it-other lists or add a part. Do not raise
+# backend, move test classes between the it-keycloak-* / it-other-* lists or add a part. Do not raise
 # the job timeouts: they are 2-3 times the normal time, so a hang or a creeping test fails visibly. Rules for new
 # tests: backend/AGENTS.md section 8 and frontend/guidelines/10-testing.md T7.
 name: CI
@@ -146,10 +146,10 @@ jobs:
             *failure*|*cancelled*) echo "::error::A frontend job did not succeed."; exit 1 ;;
           esac
 
-  # The backend runs as three parallel parts (KAN-305); together they run exactly what `mvn verify` runs on a
+  # The backend runs as five parallel parts (KAN-305, KAN-470); together they run exactly what `mvn verify` runs on a
   # laptop (backend/AGENTS.md). The Keycloak integration tests are the slowest, so they get a part of their own.
-  # The two IT parts use complementary class-name patterns (include / exclude the same three), so no IT is
-  # skipped and none runs twice, and a new IT with another name runs in `it-other`.
+  # The IT parts use complementary patterns (what one part includes, `it-other-b` excludes), so no IT is skipped
+  # and none runs twice, and a new IT with another name or in another package runs in `it-other-b`.
   backend-tests:
     name: backend-tests (${{ matrix.part }})
     needs: changes
@@ -168,16 +168,20 @@ jobs:
           # its own Keycloak, 30-70 s); no unit tests, no Spotless.
           - part: it-keycloak-a
             fetch-depth: 1
-            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -Dit.test=KeycloakThemeIT,ProvisioningRaceIT,KeycloakFailurePlacementIT
+            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -Dit.test=KeycloakThemeIT,ProvisioningRaceIT,KeycloakFailurePlacementIT,OpsRealmImportIT
           - part: it-keycloak-b
             fetch-depth: 1
             mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -Dit.test=KeycloakWorkspaceSignInProvisionerIT,KeycloakSignInEndToEndIT,RealmImportIT,ProvisioningUndoIT
-          # Every other integration test (Failsafe); no unit tests, no Spotless. `*IT` must be listed: a filter
-          # with only `!` patterns would replace Failsafe's default include and run the unit tests again. A new
-          # Keycloak IT is not in the lists above, so it runs here until it is added to one of them.
-          - part: it-other
+          # Every other integration test (Failsafe), split by package; no unit tests, no Spotless. A new Keycloak IT
+          # is not in the lists above, so it runs in one of these two until it is added to one of them.
+          - part: it-other-a
             fetch-depth: 1
-            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -Dit.test=*IT,!KeycloakThemeIT,!ProvisioningRaceIT,!KeycloakFailurePlacementIT,!KeycloakWorkspaceSignInProvisionerIT,!KeycloakSignInEndToEndIT,!RealmImportIT,!ProvisioningUndoIT
+            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -Dit.test=vn/tsolve/worker/**/*IT,vn/tsolve/review/**/*IT,vn/tsolve/wiki/**/*IT,vn/tsolve/chatbot/**/*IT,vn/tsolve/platform/**/*IT
+          # `*IT` must be listed: a filter with only `!` patterns would replace Failsafe's default include and run
+          # the unit tests again.
+          - part: it-other-b
+            fetch-depth: 1
+            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -Dit.test=*IT,!vn/tsolve/worker/**/*IT,!vn/tsolve/review/**/*IT,!vn/tsolve/wiki/**/*IT,!vn/tsolve/chatbot/**/*IT,!vn/tsolve/platform/**/*IT,!KeycloakThemeIT,!ProvisioningRaceIT,!KeycloakFailurePlacementIT,!OpsRealmImportIT,!KeycloakWorkspaceSignInProvisionerIT,!KeycloakSignInEndToEndIT,!RealmImportIT,!ProvisioningUndoIT
     defaults:
       run:
         working-directory: backend
