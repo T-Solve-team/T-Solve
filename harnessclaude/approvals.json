@@ -794,8 +794,8 @@
     }
   },
   "search": {
-    "specHash": "42397eaa8b80419ef39ed813f2a7510f6fab2a108b484e13fc7a16bd72f24a06",
-    "approvedAt": "2026-11-26T14:07:22.885Z",
+    "specHash": "ff4fac26063f1f9096eb85121703bede46469d8fc0f5aace3c9cdd33aa0ceb66",
+    "approvedAt": "2026-11-26T14:29:01.901Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Ticket Resolver or Project Manager opens , THE web app SHALL show 6.2 Ticket List",
@@ -839,6 +839,8 @@
       "AC-003.9": "IF the request fails with another error than 401 or a field error, THEN THE web app SHALL keep",
       "AC-003.10": "WHEN the user clicks Cancel or the close icon, THE web app SHALL close the popup and send",
       "AC-003.11": "THE popup SHALL be the component  exported by ,",
+      "AC-003.12": "WHILE Ticket Detail (5.5) shows a  ticket, THE web app SHALL show a \"Give feedback\"",
+      "AC-003.13": "WHEN the user clicks \"Give feedback\", THE web app SHALL open the popup of STORY-003 for that ticket's",
       "AC-004.1": "WHILE mock mode is on, THE MSW handler of  SHALL return at least 25 tickets",
       "AC-004.2": "THE Ticket List mock SHALL apply  (case-insensitive, on Ticket ID, title and Solution",
       "AC-004.3": "THE MSW handler of  SHALL return only the Published mock tickets whose",

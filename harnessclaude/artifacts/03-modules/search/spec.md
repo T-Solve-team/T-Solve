@@ -25,6 +25,7 @@ owner: BA
 | 2026-11-25 | STORY-010 | AC-010.2 reworded: each hit also carries the ticket's `public_id` (`ticketId`) for the server side; the chatbot still returns no ticket id to a client (chatbot AC-006.3). Interface Contracts: `RetrievedSolution` gains `ticketId` | chatbot STORY-014 and STORY-015 (RAG measurement) need to know which ticket a source is; decisions logged in `04-plans/chatbot/rag-eval-decisions.md` |
 | 2026-11-25 | STORY-007, STORY-009 | **Backend change.** AC-007.1, AC-007.2: tickets with the same Solution count and appear once, as their best-ranked copy; suggestions (AC-009.1) rank with AC-007.1, so they follow (KAN-447) | BUG-372: 25 copies of one CSV sample Solution filled page 1 and pushed a matching ticket to rank 26; user 25/11 chose to collapse exact duplicates |
 | 2026-11-25 | STORY-006 | **Backend change.** AC-006.7: `reviewDueDate` is the start of `ticket.review_due_date` in Asia/Ho_Chi_Minh while the ticket is Pending review or Changes requested, null otherwise, and its sort key sorts by it (KAN-454) | BUG-401: ticket-review now stores the due date, so the Ticket List shows "—" where the Review Queue shows a date |
+| 2026-11-25 | STORY-003 | **Frontend change (KAN-389, BUG-361).** New AC-003.12 and AC-003.13: the "Give feedback" button on 5.5 Ticket Detail, shown for a Published ticket to a Ticket Resolver or Project Manager, opens `GiveFeedbackModal`; it is the component `GiveFeedbackButton` of `features/feedback`, which Ticket Detail mounts. Out of Scope no longer lists the button; the screen itself stays `ticket-repository`'s | System test W-2.14 failed (BUG-361): the popup of KAN-148 was never mounted, because ticket-repository and search each left the button out of scope. The user, 25/11: search owns the button as well as the popup, Ticket Detail only mounts it |
 
 ## Requirements
 
@@ -183,6 +184,13 @@ owner: BA
   - AC-003.11: THE popup SHALL be the component `GiveFeedbackModal` exported by `features/feedback/index.ts`,
     with the props `ticketId` (UUID string), `isOpen` and `onClose`, so that 5.5 Ticket Detail can mount it behind
     its "Give feedback" button (decision Q1).
+  - AC-003.12: WHILE Ticket Detail (5.5) shows a `PUBLISHED` ticket, THE web app SHALL show a "Give feedback"
+    button on that screen to a user who holds TICKET_RESOLVER or PROJECT_MANAGER, and no such button for any other
+    status or role or while the ticket is loading or failed to load (KAN-389, BUG-361).
+  - AC-003.13: WHEN the user clicks "Give feedback", THE web app SHALL open the popup of STORY-003 for that ticket's
+    id; the button SHALL be the component `GiveFeedbackButton` exported by `features/feedback/index.ts` with the
+    prop `ticketId`, reading the ticket with the query 5.5 Ticket Detail already uses, so it adds no request
+    (KAN-389).
 
 ### STORY-004: Mocks behind the contract
 - As a developer, I want realistic mocks behind the contract, so that the three screens can be built and shown
@@ -460,8 +468,7 @@ Used by STORY-005 to STORY-009:
   `main` when the changesets are written; then they follow it.
 - Retrieval of Wiki documents (KAN-38); the ticket retrieval for the Chatbot and triage is STORY-010 and STORY-011.
 - Converting or dropping the legacy table `reuse_record` (platform AC-001.21).
-- The "Give feedback" button on 5.5 Ticket Detail and that screen (`ticket-repository`); it mounts
-  `GiveFeedbackModal` (AC-003.11).
+- 5.5 Ticket Detail itself (`ticket-repository`); it only mounts `GiveFeedbackButton` (AC-003.13).
 - Showing the user's previous Feedback in the popup; a new Feedback replaces it on the backend (UC-28).
 - A search before a query or a "latest tickets" list on 6.1 (decision Q3).
 - Row actions, row selection, export and polling of the Ticket List; a Project filter (Report3 §III 6.2).
