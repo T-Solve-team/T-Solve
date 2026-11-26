@@ -108,7 +108,13 @@ describe('KnowledgeChatbotPage saved conversations', () => {
     const saved = (await listChatbotConversations()).content[0];
     expect(saved?.chatSessionId).toMatch(UUID);
     expect(
-      await within(await screen.findByRole('region', { name: 'Conversation' })).findByText(VPN),
+      await within(await screen.findByRole('region', { name: 'Conversation' })).findByRole(
+        'heading',
+        {
+          level: 3,
+          name: VPN,
+        },
+      ),
     ).toBeInTheDocument();
     expect(sessionStorage.getItem(STORED_KEY)).toBeNull();
   });
@@ -306,7 +312,7 @@ describe('KnowledgeChatbotPage saved conversations', () => {
     await view.user.click(deleteButton(LEAVE));
     await view.user.click(screen.getByRole('button', { name: 'OK' }));
     await waitFor(() => expect(titles()).toEqual([VPN]));
-    expect(within(thread()).getByText(VPN)).toBeInTheDocument();
+    expect(within(thread()).getByRole('heading', { level: 3, name: VPN })).toBeInTheDocument();
   });
 
   it('AC-002.14 shows MSG06 and keeps the conversation after delete fails', async () => {
@@ -321,7 +327,7 @@ describe('KnowledgeChatbotPage saved conversations', () => {
     await view.user.click(screen.getByRole('button', { name: 'OK' }));
     expect(await screen.findByText(msg('MSG06'))).toBeInTheDocument();
     expect(titles()).toEqual([VPN]);
-    expect(within(thread()).getByText(VPN)).toBeInTheDocument();
+    expect(within(thread()).getByRole('heading', { level: 3, name: VPN })).toBeInTheDocument();
   });
 
   it('AC-013.4 leaves a conversation deleted elsewhere when a question gets 404 (BUG-389)', async () => {
@@ -369,6 +375,30 @@ describe('KnowledgeChatbotPage saved conversations', () => {
     release();
     await screen.findByRole('button', { name: LEAVE });
     await waitFor(() => expect(deleteButton(VPN)).toBeEnabled());
+  });
+
+  it('AC-002.18 shows the open conversation title above the thread with a first-question fallback', async () => {
+    const heading = (name: string) => within(thread()).getByRole('heading', { level: 2, name });
+    const view = await openChatbot();
+    expect(heading('New conversation')).toBeVisible();
+
+    const release = hold('post', '*/api/v1/chatbot/answers');
+    await view.user.click(view.box);
+    await view.user.paste(VPN);
+    await view.user.keyboard('{Enter}');
+    await screen.findByTestId('pending-answer');
+    expect(heading(VPN)).toBeVisible();
+    release();
+    await screen.findByRole('button', { name: VPN });
+    expect(heading(VPN)).toBeVisible();
+
+    await view.user.click(newButton());
+    expect(heading('New conversation')).toBeVisible();
+    await ask(view, LEAVE);
+    expect(heading(LEAVE)).toBeVisible();
+
+    await view.user.click(within(list()).getByRole('button', { name: VPN }));
+    expect(await within(thread()).findByRole('heading', { level: 2, name: VPN })).toBeVisible();
   });
 
   it('AC-001.6 renders a successful answer even while its conversation is being refreshed', async () => {

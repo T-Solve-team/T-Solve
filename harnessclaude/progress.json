@@ -390,6 +390,7 @@
         "conversation-ui": "passing",
         "conversation-paging": "passing",
         "merge-title-paging": "evaluating",
+        "mockup-c-polish": "pending",
         "cite-retry": "evaluating",
         "marker-only-answer": "evaluating",
         "answer-sources": "passing",
