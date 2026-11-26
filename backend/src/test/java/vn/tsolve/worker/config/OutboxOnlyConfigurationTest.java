@@ -10,6 +10,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
+import java.util.Map;
 import java.util.UUID;
 import javax.sql.DataSource;
 import liquibase.integration.spring.SpringLiquibase;
@@ -21,11 +22,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import vn.tsolve.common.tenant.NoTenantException;
 import vn.tsolve.common.tenant.ThreadLocalTenantContext;
+import vn.tsolve.platform.dto.WorkspaceStatus;
+import vn.tsolve.platform.service.WorkspaceCatalog;
 import vn.tsolve.worker.dto.OutboundEmail;
 import vn.tsolve.worker.repository.EmailOutboxRepository;
 import vn.tsolve.worker.service.EmailOutboxService;
 import vn.tsolve.worker.service.TenantJobService;
 import vn.tsolve.worker.service.WorkerTenantService;
+import vn.tsolve.worker.support.FixedWorkspaceCatalog;
 
 /**
  * BUG-339: the web process queues the review email without the worker runtime. Task 6a-2: the Workspace is the one
@@ -87,14 +91,11 @@ class OutboxOnlyConfigurationTest {
     }
 
     @Test
-    @DisplayName("AC-002.16 the outbox refuses with nothing bound, even when the mock list names exactly one Workspace")
+    @DisplayName(
+            "AC-002.16 the outbox refuses with nothing bound, even when the catalog has exactly one Active Workspace")
     void refusesWithNothingBoundEvenWithOneMockWorkspace_AC_002_16() {
-        staging.withPropertyValues(
-                        ENABLED,
-                        JOBS,
-                        "tsolve.worker.password=p",
-                        "tsolve.worker.mock.active-workspaces=" + A,
-                        "TSOLVE_MOCK_ACTIVE_WORKSPACES=" + A)
+        staging.withPropertyValues(ENABLED, JOBS, "tsolve.worker.password=p")
+                .withBean(WorkspaceCatalog.class, () -> new FixedWorkspaceCatalog(Map.of(A, WorkspaceStatus.ACTIVE)))
                 .withAllowBeanDefinitionOverriding(true)
                 .withBean("emailOutboxRepository", EmailOutboxRepository.class, () -> repository)
                 .run(context -> {
@@ -108,10 +109,10 @@ class OutboxOnlyConfigurationTest {
     }
 
     @Test
-    @DisplayName("edge 4 the outbox queues for the bound Workspace, never for the one in the mock list")
-    void neverSwitchesToTheMockListWorkspace_edge_4() {
-        staging.withPropertyValues(
-                        ENABLED, JOBS, "tsolve.worker.password=p", "tsolve.worker.mock.active-workspaces=" + B)
+    @DisplayName("edge 4 the outbox queues for the bound Workspace, never for the catalog's single Active one")
+    void neverSwitchesToTheCatalogsSingleActiveWorkspace_edge_4() {
+        staging.withPropertyValues(ENABLED, JOBS, "tsolve.worker.password=p")
+                .withBean(WorkspaceCatalog.class, () -> new FixedWorkspaceCatalog(Map.of(B, WorkspaceStatus.ACTIVE)))
                 .withAllowBeanDefinitionOverriding(true)
                 .withBean("emailOutboxRepository", EmailOutboxRepository.class, () -> repository)
                 .run(context -> {

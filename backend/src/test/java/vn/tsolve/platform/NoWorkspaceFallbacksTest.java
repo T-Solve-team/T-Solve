@@ -33,7 +33,22 @@ class NoWorkspaceFallbacksTest {
             "tsolve.stub." + "workspace-id",
             "TSOLVE_STUB_" + "WORKSPACE_ID",
             "tsolve.tracker." + "dev-workspace-id",
-            "TSOLVE_TRACKER_" + "DEV_WORKSPACE_ID");
+            "TSOLVE_TRACKER_" + "DEV_WORKSPACE_ID",
+            "No" + "WorkspaceLookup",
+            "Config" + "JiraWorkspaceLookup",
+            "Stub" + "WorkspaceStatusLookup",
+            "TSOLVE_STUB_" + "WORKSPACES",
+            "tsolve.stub." + "workspaces",
+            "TSOLVE_STUB_" + "JIRA_SITES",
+            "TSOLVE_STUB_" + "WORKSPACE_READY",
+            "tsolve.stub." + "workspace-ready",
+            // Task 4c (KAN-252): the worker's stand-in tenancy is gone; the worker reads the Registry catalog.
+            "Mock" + "WorkerTenantService",
+            "Worker" + "MockConfiguration",
+            "worker-" + "mock",
+            "TSOLVE_MOCK_" + "ACTIVE_WORKSPACES",
+            "TSOLVE_MOCK_" + "SUSPENDED_WORKSPACES",
+            "tsolve.worker." + "mock");
 
     @Test
     @DisplayName(
@@ -61,8 +76,14 @@ class NoWorkspaceFallbacksTest {
     @Test
     @DisplayName("AC-002.13 the removed class and property names are read nowhere in the code, tests or env files")
     void theRemovedNamesAreReadNowhere_AC_002_13() throws IOException {
-        List<Path> roots =
-                List.of(Path.of("src/main"), Path.of("src/test"), Path.of("../.env.example"), Path.of("../infra"));
+        List<Path> roots = List.of(
+                Path.of("src/main"),
+                Path.of("src/test"),
+                Path.of("../.env.example"),
+                Path.of("../infra"),
+                Path.of("../e2e/README.md"),
+                Path.of("README-worker.md"),
+                Path.of("Dockerfile"));
         List<String> hits;
         try (Stream<Path> files = roots.stream().flatMap(NoWorkspaceFallbacksTest::walk)) {
             hits = files.filter(Files::isRegularFile)
@@ -86,7 +107,7 @@ class NoWorkspaceFallbacksTest {
         }
     }
 
-    /** A whole-word match, so TSOLVE_STUB_WORKSPACES and TSOLVE_STUB_WORKSPACE_READY (kept) do not count. */
+    /** A whole-word match against each removed name. */
     private static boolean contains(Path file, String name) {
         try {
             return Pattern.compile("\\b" + Pattern.quote(name) + "\\b")
