@@ -311,18 +311,20 @@ public class ChatbotAnswerServiceImpl implements ChatbotAnswerService {
         String text = callAi(() -> llm.chat(messages, null), deadline);
         remaining(deadline);
         var cited = Citations.of(text, kept);
-        if (cited.citations().isEmpty()) {
+        if (!cited.answers()) {
             var retryMessages = AnswerPrompt.retryMessages(messages, text);
             String retryText = callAi(() -> llm.chat(retryMessages, null), deadline);
             remaining(deadline);
             cited = Citations.of(retryText, kept);
         }
+        // AC-014.1: `cited` means the marker is in the stored text, and a NO_SOURCE stores no text.
+        boolean answered = cited.answers();
         var citedNumbers =
                 cited.citations().stream().map(ChatbotCitation::number).collect(Collectors.toSet());
         List<AnswerSource> stored = kept.stream()
-                .map(source -> source.stored(citedNumbers.contains(source.number())))
+                .map(source -> source.stored(answered && citedNumbers.contains(source.number())))
                 .toList();
-        if (cited.citations().isEmpty()) {
+        if (!answered) {
             return save(
                     turn,
                     row.of(question, Outcome.NO_SOURCE.name(), "").withSources(stored),

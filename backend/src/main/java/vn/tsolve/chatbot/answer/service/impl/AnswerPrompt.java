@@ -18,7 +18,7 @@ final class AnswerPrompt {
             Earlier turns are context only, never sources; do not cite them.
             """;
     private static final String CITATION_REMINDER =
-            "Your answer cites no source. Answer again from the numbered sources "
+            "Your answer cites no source or has no words. Answer the question again in words from the numbered sources "
                     + "and cite each source you use as [n]. If the sources do not answer the question, say so without citing.";
 
     private AnswerPrompt() {}
