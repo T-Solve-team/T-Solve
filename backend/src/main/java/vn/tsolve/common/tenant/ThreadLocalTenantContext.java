@@ -1,5 +1,6 @@
 package vn.tsolve.common.tenant;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -41,12 +42,32 @@ public class ThreadLocalTenantContext implements TenantContext {
         return id;
     }
 
+    /** A binding that lasts until it is closed, on the thread that made it. */
+    public interface RequestBinding extends AutoCloseable {
+        @Override
+        void close();
+    }
+
+    /**
+     * Binds for one web request: no transaction and no existence check, so only the web Tenant Resolver, which has just
+     * read the catalog, may call it.
+     */
+    public RequestBinding bindRequest(UUID workspaceId) {
+        Objects.requireNonNull(workspaceId);
+        if (BOUND.get() != null) {
+            throw new IllegalStateException("a Workspace is already bound to this thread");
+        }
+        BOUND.set(workspaceId);
+        return BOUND::remove;
+    }
+
     @Override
     public <T> T runIn(UUID workspaceId, Supplier<T> action) {
-        if (workspaceId == null || !known.exists(workspaceId)) {
+        UUID outer = BOUND.get();
+        // Whoever bound this id has already checked that it exists.
+        if (workspaceId == null || (!workspaceId.equals(outer) && !known.exists(workspaceId))) {
             throw new IllegalArgumentException("the Workspace is not known");
         }
-        UUID outer = BOUND.get();
         if (outer != null && !outer.equals(workspaceId)) {
             throw new IllegalStateException("another Workspace is already bound to this thread");
         }

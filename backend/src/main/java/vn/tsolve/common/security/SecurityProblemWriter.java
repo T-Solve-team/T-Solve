@@ -23,6 +23,8 @@ public class SecurityProblemWriter {
     public static final String MSG10 = "MSG10";
     public static final String MSG123 = "MSG123";
     public static final String MSG135 = "MSG135";
+    public static final String MSG150 = "MSG150";
+    public static final String MSG151 = "MSG151";
 
     private static final String MSG06_TEXT = "Something went wrong. Please try again later.";
     private static final String MSG07_TEXT = "Your session has expired. Please log in again.";
@@ -31,6 +33,8 @@ public class SecurityProblemWriter {
     private static final String MSG123_TEXT = "Your session is not valid on this site. Please log in again.";
 
     private static final String MSG135_TEXT = "You do not have permission to access the Platform Console.";
+    private static final String MSG150_TEXT = "This workspace is suspended. Please contact your company administrator.";
+    private static final String MSG151_TEXT = "This workspace does not exist. Check the address.";
 
     private final ObjectMapper objectMapper;
 
@@ -47,6 +51,8 @@ public class SecurityProblemWriter {
                     case MSG10 -> MSG10_TEXT;
                     case MSG123 -> MSG123_TEXT;
                     case MSG135 -> MSG135_TEXT;
+                    case MSG150 -> MSG150_TEXT;
+                    case MSG151 -> MSG151_TEXT;
                     default -> MSG06_TEXT;
                 };
         ProblemDetail problem =
