@@ -743,7 +743,25 @@ Spec: STORY-005 to STORY-009 · Design: master section "Backend". Rules: `backen
 
 ---
 
-## Task 24: Ticket List review due date
+## Task 24: One result per Solution
+
+**Story:** STORY-007, STORY-009
+**Feature:** collapse-duplicate-solutions
+**Jira:** KAN-447 · branch `fix/KAN-447-search-hybrid-ranking`
+**Description:**
+- `TicketRankingRepository.semantic` and `keyword`: `DISTINCT ON` the five Solution sections inside a subquery keeps
+  the first copy in the ranking order; the outer query re-sorts; the count query counts distinct Solutions
+  (AC-007.1, AC-007.2, BUG-372). Suggestions use the same ranking.
+**Files:**
+- Modify: `backend/src/main/java/vn/tsolve/search/query/repository/TicketRankingRepository.java`
+- Test: `TicketRankingRepositoryIT` (names end `_BUG_372`); its seed gives each ticket its own root cause
+**Covers:** AC-007.1, AC-007.2
+**Dependencies:** none
+**Estimated size:** small
+
+---
+
+## Task 25: Ticket List review due date
 
 **Story:** STORY-006
 **Feature:** list-review-due-date
