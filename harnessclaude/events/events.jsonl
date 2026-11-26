@@ -2265,6 +2265,11 @@
 {"ts":"2026-11-22T06:33:44.027Z","type":"quick-opened","what":"BUG-360: log the wiki-index web-jobs bug","files":["docs/bug-log.md"]}
 {"ts":"2026-11-22T06:34:11.695Z","type":"quick-closed","what":"BUG-360: log the wiki-index web-jobs bug","files":["docs/bug-log.md"]}
 {"ts":"2026-11-22T06:37:34.000Z","type":"quick-opened","what":"BUG-360: fill the PR cell in the bug log","files":["docs/bug-log.md"]}
+{"ts":"2026-11-22T09:06:37.262Z","type":"feature-status","module":"search","feature":"search-start-layout","from":null,"to":"pending"}
+{"ts":"2026-11-22T09:07:03.781Z","type":"spec-approved","module":"search","specHash":"9050502b5c6dc4aa8ac10502e39d05917a808615d36ec7ec68e82dd98c4e57d4"}
+{"ts":"2026-11-22T09:07:48.251Z","type":"feature-status","module":"search","feature":"search-start-layout","from":"pending","to":"in-progress"}
+{"ts":"2026-11-22T11:58:11.503Z","type":"feature-status","module":"search","feature":"search-start-layout","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-22T11:58:12.461Z","type":"commit-recorded","module":"search","repo":"default","sha":"2395ae692403866a3f15468c3442690b19a6864f"}
 {"ts":"2026-11-22T15:49:59.423Z","type":"feature-status","module":"platform","feature":"one-tenant-holder","from":null,"to":"pending"}
 {"ts":"2026-11-22T15:49:59.740Z","type":"feature-status","module":"platform","feature":"no-workspace-fallbacks","from":null,"to":"pending"}
 {"ts":"2026-11-23T14:16:42.480Z","type":"feature-status","module":"platform","feature":"one-tenant-holder","from":"pending","to":"in-progress"}
@@ -2304,10 +2309,14 @@
 {"ts":"2026-11-23T19:31:06.803Z","type":"feature-status","module":"platform","feature":"row-guard","from":"pending","to":"in-progress"}
 {"ts":"2026-11-23T19:31:06.860Z","type":"feature-status","module":"platform","feature":"row-guard","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-23T19:31:06.909Z","type":"feature-status","module":"platform","feature":"row-guard","from":"evaluating","to":"passing"}
+{"ts":"2026-11-24T15:03:14.236Z","type":"quick-opened","what":"Resolve KAN-383 bug-log conflict and keep the Search regression bug ID in sync","files":["docs/bug-log.md","frontend/src/features/search/pages/SearchPage.test.tsx"]}
+{"ts":"2026-11-24T15:42:53.341Z","type":"quick-closed","what":"Resolve KAN-383 bug-log conflict and keep the Search regression bug ID in sync","files":["docs/bug-log.md","frontend/src/features/search/pages/SearchPage.test.tsx"]}
 {"ts":"2026-11-24T13:44:24.536Z","type":"spec-approved","module":"platform","specHash":"e234c4a37cb35de53ced5d718bd4261c91ffbe5a4345aba93054ad76242953f4"}
 {"ts":"2026-11-24T13:44:27.425Z","type":"spec-approved","module":"be-foundation","specHash":"c11bedeba95e6a426a0f12561ab1f63abc0edc2042b62575dd47c3405aaad96c"}
 {"ts":"2026-11-24T13:44:29.407Z","type":"spec-approved","module":"worker","specHash":"5e551b167acd3be6c1132e9387eff52c05bde0d4c5869ac1a311c654747c7de1"}
 {"ts":"2026-11-24T12:04:34.368Z","type":"spec-approved","module":"wiki","specHash":"47fb26627301fe7f41ffc78786ff532ed82a0459519a3b8e64709477d4234361"}
+{"ts":"2026-11-24T17:50:55.559Z","type":"quick-opened","what":"resolve the bug log merge conflict with main: keep BUG-389 and BUG-390","files":["docs/bug-log.md"]}
+{"ts":"2026-11-24T17:51:37.519Z","type":"quick-closed","what":"resolve the bug log merge conflict with main: keep BUG-389 and BUG-390","files":["docs/bug-log.md"]}
 {"ts":"2026-11-24T19:29:55.176Z","type":"spec-approved","module":"wiki","specHash":"f912468f95e47b33f3db76ea16adf6bbe8cd904d611ba98a281d30f098498d30"}
 {"ts":"2026-11-25T14:20:34.166Z","type":"spec-approved","module":"search","specHash":"a3fd0c2a6333a5d8267064eb3da3bafadff6b8f5ac435c0fe3d8221271093067"}
 {"ts":"2026-11-25T14:20:38.032Z","type":"feature-status","module":"search","feature":"collapse-duplicate-solutions","from":null,"to":"pending"}
@@ -2329,3 +2338,24 @@
 {"ts":"2026-11-25T14:59:52.049Z","type":"feature-status","module":"platform","feature":"catalog-worker-tenant","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-25T14:59:52.341Z","type":"feature-status","module":"platform","feature":"catalog-worker-tenant","from":"evaluating","to":"passing"}
 {"ts":"2026-11-25T16:30:43.844Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":null,"to":"pending"}
+{"ts":"2026-11-25T17:44:07.670Z","type":"spec-approved","module":"ticket-review","specHash":"47edc7d47960cc5f9988cf3a34523d52fe542fe89f014a07684d7be6b1e6c499"}
+{"ts":"2026-11-25T17:44:08.256Z","type":"feature-status","module":"ticket-review","feature":"ai-review-assist","from":null,"to":"pending"}
+{"ts":"2026-11-25T18:02:11.067Z","type":"feature-status","module":"ticket-review","feature":"ai-review-assist","from":"pending","to":"in-progress"}
+{"ts":"2026-11-25T19:06:14.509Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"5946758dd12c3d43d817c00cc157cdcf91aad80a"}
+{"ts":"2026-11-25T19:06:14.806Z","type":"feature-status","module":"ticket-review","feature":"ai-review-assist","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-25T19:27:37.347Z","type":"feature-status","module":"ticket-review","feature":"ai-review-assist","from":"evaluating","to":"passing"}
+{"ts":"2026-11-25T19:53:24.449Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"980c5116550bcd8d7e7ce1a54b0cf2940d6607ca"}
+{"ts":"2026-11-25T19:25:39.101Z","type":"spec-approved","module":"chatbot","specHash":"d7d2afb2dd0a77f29fae2b4e7df0c56e84f4ed6acd36bdebe94a55e6d928253d"}
+{"ts":"2026-11-25T19:30:01.707Z","type":"spec-approved","module":"search","specHash":"62cd2a15a53433604a6be742bc999577cab9ba49d293680dd9e42812d62c8de0"}
+{"ts":"2026-11-25T19:30:03.098Z","type":"feature-status","module":"chatbot","feature":"answer-sources","from":null,"to":"pending"}
+{"ts":"2026-11-25T19:30:03.399Z","type":"feature-status","module":"chatbot","feature":"rag-eval-runner","from":null,"to":"pending"}
+{"ts":"2026-11-25T19:30:03.699Z","type":"feature-status","module":"chatbot","feature":"answer-sources","from":"pending","to":"in-progress"}
+{"ts":"2026-11-25T19:43:38.648Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"112f6f2859c4e3ef906dfbd08c988aedcf17f394"}
+{"ts":"2026-11-25T19:43:38.956Z","type":"feature-status","module":"chatbot","feature":"answer-sources","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-26T04:40:05.651Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"58ea4910dae4aeef18c3d9f4bf652346472059bc"}
+{"ts":"2026-11-26T04:40:16.132Z","type":"feature-status","module":"chatbot","feature":"rag-eval-runner","from":"pending","to":"in-progress"}
+{"ts":"2026-11-26T04:40:16.424Z","type":"feature-status","module":"chatbot","feature":"rag-eval-runner","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-26T04:40:16.718Z","type":"feature-status","module":"chatbot","feature":"answer-sources","from":"evaluating","to":"passing"}
+{"ts":"2026-11-26T05:15:41.979Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"1484dc0e248f25084ed46d10b9c31f9308f21640"}
+{"ts":"2026-11-26T05:15:42.279Z","type":"feature-status","module":"chatbot","feature":"rag-eval-runner","from":"evaluating","to":"passing"}
+{"ts":"2026-11-26T10:20:13.851Z","type":"spec-approved","module":"search","specHash":"81ab68f9db6bd14f294214b02798dc59682f5f56cc2e183aa6c7c9c3cf288d5b"}
