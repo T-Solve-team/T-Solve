@@ -3397,7 +3397,9 @@ components:
         pattern: '^[A-Z][A-Z0-9_]*-[1-9][0-9]*$'
   responses:
     Problem:
-      description: Error (RFC 9457 Problem Details with an SRS MSG code).
+      description: >-
+        Error (RFC 9457 Problem Details with an SRS MSG code). Any API path can also answer 403 MSG150 (the Workspace
+        of the host is suspended) or 404 MSG151 (the host names no Workspace).
       content:
         application/problem+json:
           schema:

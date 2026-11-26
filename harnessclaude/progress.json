@@ -490,7 +490,7 @@
         "tenant-schema": "pending",
         "row-level-security": "pending",
         "workspace-registry": "pending",
-        "web-tenant-resolver": "pending",
+        "web-tenant-resolver": "passing",
         "file-storage": "passing",
         "local-compose": "pending",
         "ci-images": "pending",
@@ -527,7 +527,7 @@
         "background-work-bound": "passing",
         "web-tenant-isolation": "pending"
       },
-      "lastUpdated": "2026-11-26T16:15:53.356Z",
+      "lastUpdated": "2026-11-26T16:52:14.802Z",
       "branch": "feat/platform",
       "repos": [
         "default"

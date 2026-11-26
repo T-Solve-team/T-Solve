@@ -2394,6 +2394,12 @@
 {"ts":"2026-11-26T16:12:44.035Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-26T16:12:44.335Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":"evaluating","to":"passing"}
 {"ts":"2026-11-26T16:04:26.299Z","type":"feature-status","module":"platform","feature":"web-tenant-isolation","from":null,"to":"pending"}
+{"ts":"2026-11-26T16:33:17.830Z","type":"feature-status","module":"platform","feature":"web-tenant-resolver","from":"pending","to":"in-progress"}
+{"ts":"2026-11-26T16:33:18.114Z","type":"feature-status","module":"platform","feature":"web-tenant-resolver","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-26T16:33:18.376Z","type":"feature-status","module":"platform","feature":"web-tenant-resolver","from":"evaluating","to":"passing"}
 {"ts":"2026-11-26T16:15:47.522Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":"pending","to":"in-progress"}
 {"ts":"2026-11-26T16:15:50.672Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-26T16:15:53.357Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":"evaluating","to":"passing"}
+{"ts":"2026-11-26T16:52:14.210Z","type":"feature-status","module":"platform","feature":"web-tenant-resolver","from":"pending","to":"in-progress"}
+{"ts":"2026-11-26T16:52:14.523Z","type":"feature-status","module":"platform","feature":"web-tenant-resolver","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-26T16:52:14.804Z","type":"feature-status","module":"platform","feature":"web-tenant-resolver","from":"evaluating","to":"passing"}
