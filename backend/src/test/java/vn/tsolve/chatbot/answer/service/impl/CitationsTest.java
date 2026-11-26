@@ -36,6 +36,24 @@ class CitationsTest {
                 .isEqualTo("third");
     }
 
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "Reconnect [1].|true",
+                "[1] 2FA|true",
+                "Bước 1 [2]|true",
+                "[1]|false",
+                "' [1][3]. '|false",
+                "[1], [2]!|false",
+                "No marker|false",
+                "args[1]|false",
+                "Unknown [9]|false"
+            })
+    void answersOnlyWithAKeptMarkerAndALetterOrDigitOutsideMarkers_AC_005_5_BUG_364(String text, boolean answers) {
+        assertThat(Citations.of(text, kept).answers()).isEqualTo(answers);
+    }
+
     @Test
     void listsAdjacentMarkersAndIgnoresOtherForms_AC_006_1() {
         var citations = Citations.of("Both [1][2]; not [01], [ 3 ], [0] or [n=3].", kept);
@@ -129,6 +147,6 @@ class CitationsTest {
     }
 
     private static RetrievedSolution solution(String symptoms, String workaround) {
-        return new RetrievedSolution(symptoms, "cause", "steps", workaround, "scope", 0.9);
+        return new RetrievedSolution(UUID.randomUUID(), symptoms, "cause", "steps", workaround, "scope", 0.9);
     }
 }

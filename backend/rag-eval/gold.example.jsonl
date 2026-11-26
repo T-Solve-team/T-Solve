@@ -1,0 +1,3 @@
+{"question":"How do I reconnect to the example VPN?","expected":[{"kind":"TICKET","id":"00000000-0000-0000-0000-000000000001"}],"groups":{"topic":"access"}}
+{"question":"Where can I find the example onboarding guide?","expected":[{"kind":"WIKI","id":"00000000-0000-0000-0000-000000000002"}],"groups":{"topic":"onboarding"}}
+{"question":"How do I reset the example workspace preferences?","expected":[{"kind":"TICKET","id":"00000000-0000-0000-0000-000000000003"},{"kind":"WIKI","id":"00000000-0000-0000-0000-000000000004"}]}

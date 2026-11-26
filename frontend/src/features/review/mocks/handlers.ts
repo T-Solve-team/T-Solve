@@ -2,6 +2,7 @@ import { delay, http, HttpResponse, type HttpHandler } from 'msw';
 import {
   getMe,
   isApiError,
+  type AiReviewResult,
   type CurrentUser,
   type ReviewQueueItem,
   type ReviewTicketDetail,
@@ -9,7 +10,12 @@ import {
 import { MOCK_DELAY_MS, problem } from '@/shared/api/mocks';
 import { parseSort } from '@/shared/lib';
 import { MAX_REVIEW_SELECTION } from '../review-limits';
-import { departmentOf, REVIEW_WORKSPACE_ID, type MockReviewTicket } from './data';
+import {
+  AI_REVIEW_FINDINGS,
+  departmentOf,
+  REVIEW_WORKSPACE_ID,
+  type MockReviewTicket,
+} from './data';
 import { resetReviewState, reviewStore, type ReviewHistoryEntry } from './state';
 import { expiredHandlers } from './expired-handlers';
 import { historyHandlers } from './history-handlers';
@@ -205,6 +211,21 @@ export const handlers: HttpHandler[] = [
       ...detail
     } = ticket;
     return HttpResponse.json<ReviewTicketDetail>(detail);
+  }),
+  // AI check (STORY-015): the decisions' scope, refused before the "AI" answers; stores nothing.
+  http.post('*/api/v1/tickets/:ticketId/ai-review', async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    const user = await actor();
+    if (user instanceof HttpResponse) return user;
+    if (!user.roles.includes('PROJECT_MANAGER')) return problem(403, 'MSG08');
+    const ticket = reviewStore.tickets.find(
+      (item) => item.ticketId === params.ticketId && item.workspaceId === REVIEW_WORKSPACE_ID,
+    );
+    if (!ticket) return problem(404, 'MSG04');
+    if (!manages(user, ticket)) return problem(403, 'MSG08');
+    if (ticket.status !== 'PENDING_REVIEW' || ticket.source !== 'SOLUTION_FORM')
+      return problem(409, 'MSG06');
+    return HttpResponse.json<AiReviewResult>({ findings: structuredClone(AI_REVIEW_FINDINGS) });
   }),
   http.post('*/api/v1/reviews/approve', ({ request }) => decide(request, 'APPROVE')),
   http.post('*/api/v1/reviews/reject', ({ request }) => decide(request, 'REJECT')),
