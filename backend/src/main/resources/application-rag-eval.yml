@@ -1,0 +1,25 @@
+spring:
+  main:
+    web-application-type: none
+    # Leave the unused servlet security beans uninitialized in the headless context.
+    lazy-initialization: true
+  liquibase:
+    enabled: false
+
+tsolve:
+  registry:
+    liquibase:
+      enabled: false
+  ticket:
+    preview-cleanup:
+      enabled: false
+  search:
+    embedding:
+      catch-up-enabled: false
+  worker:
+    enabled: false
+    web-jobs-enabled: false
+    outbox-enabled: false
+
+TSOLVE_SESSION_SWEEP_CRON: "-"
+CHATBOT_CONVERSATION_CLEANUP_CRON: "-"

@@ -22,6 +22,7 @@ owner: BA
 | 2026-11-17 | STORY-006, STORY-012 (new) | New STORY-012: `MembershipVisibleScope`, the real `VisibleScope` built from the Workspace database, replaces the fail-closed `NoVisibleScope`, which is removed. The user's Departments are the ACTIVE Departments identity's `ScopeAccessService` grants (a Project Manager's own Department and the Departments of the Projects the user is a member of); the managed Projects are the user's `PROJECT_MANAGER` memberships (`ProjectMembershipLookup`); the writer is the user's account id matched against `ticket.writer_id` instead of the `ticket.writer` name. AC-006.1, AC-006.2, AC-006.11 and AC-006.12 reworded; the Visible scope term, Out of Scope, Interface Contracts (`Scope.writerId` is a `UUID`), Required from other modules and Definition of Done follow | KAN-354: on staging the Ticket List was empty for every user because no module implemented `VisibleScope`. User decisions of 17/11: Departments are the union of `app_user.department_id` and the Departments of the user's Projects; match the writer by `writer_id` |
 | 2026-11-22 | STORY-005, STORY-006, STORY-007 | **Backend change.** AC-005.4: the embedded text adds the ticket's description, rows carry `text_version` 2. New AC-005.10: the catch-up job embeds again the rows of `text_version` 1 after the tickets with no row; the old vector serves until then; `ticket_embedding` gains `text_version`. AC-006.4 (Ticket List keyword) and AC-007.2 (search keyword fallback) also match the description. Interface Contracts follow | KAN-380 (the user, 22/11): find tickets by their description too, wherever `ticket_embedding` is used (chatbot, search, suggestions); re-embed without a gap in search (decision log of KAN-380) |
 | 2026-11-22 | STORY-002 | 6.1 Search gets two layouts: AC-002.2 reworded (before a query the start state shows the heading "Find a Solution", one line on what is searched, and the Search box and filters centred; still no API call and no result message), AC-002.4 adds the Search box placeholder, new AC-002.16 (a query moves the Search box and filters to the top, above the results, with the focus kept in the box; removing it brings the start state back). No other criterion changes | KAN-383: the screen looked bare before a search; design option C "Search first" chosen by the user (22/11) |
+| 2026-11-25 | STORY-010 | AC-010.2 reworded: each hit also carries the ticket's `public_id` (`ticketId`) for the server side; the chatbot still returns no ticket id to a client (chatbot AC-006.3). Interface Contracts: `RetrievedSolution` gains `ticketId` | chatbot STORY-014 and STORY-015 (RAG measurement) need to know which ticket a source is; decisions logged in `04-plans/chatbot/rag-eval-decisions.md` |
 
 ## Requirements
 
@@ -384,9 +385,10 @@ Used by STORY-005 to STORY-009:
   - AC-010.1: WHEN `SolutionRetrieval.nearest(queryVector, minSimilarity, limit)` is called, THE backend SHALL return
     at most `limit` Workspace Solutions that have a `ticket_embedding` row whose cosine similarity to `queryVector`
     is at least `minSimilarity`, most similar first, the internal ticket id as the tie-breaker.
-  - AC-010.2: THE backend SHALL return each hit with the ticket's Symptoms, Root cause, Resolution steps, Workaround
-    (null when blank) and Scope of applicability, and its similarity; it SHALL return no ticket id, title, Project,
-    Department, writer, snapshot or Evidence (GBR-36).
+  - AC-010.2: THE backend SHALL return each hit with the ticket's `public_id` as `ticketId`, its Symptoms, Root
+    cause, Resolution steps, Workaround (null when blank) and Scope of applicability, and its similarity; it SHALL
+    return no title, Project, Department, writer, snapshot or Evidence, and the `ticketId` is for the server side
+    only (chatbot AC-006.3, GBR-36).
   - AC-010.3: IF a ticket is unpublished, inactive or too far, THEN THE backend SHALL leave it out (not
     `PUBLISHED`, its Department not `ACTIVE`, or its similarity below `minSimilarity`) and SHALL return an empty
     list when none is left.
@@ -603,6 +605,7 @@ public interface SolutionRetrieval {
 }
 // vn.tsolve.search.retrieval.dto
 public record RetrievedSolution(
+        UUID ticketId, // ticket.public_id, server side only (AC-010.2)
         String symptoms, String rootCause, String resolutionSteps, String workaround, String scopeOfApplicability,
         double similarity) {} // workaround null when blank
 ```
