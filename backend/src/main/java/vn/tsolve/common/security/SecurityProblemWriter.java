@@ -57,7 +57,11 @@ public class SecurityProblemWriter {
                 };
         ProblemDetail problem =
                 ProblemDetails.withCode(ProblemDetail.forStatusAndDetail(status, detail), code, Map.of());
-        problem.setInstance(URI.create(request.getRequestURI()));
+        try {
+            problem.setInstance(URI.create(request.getRequestURI()));
+        } catch (IllegalArgumentException unparsable) {
+            // A path such as "//" is no URI: the refusal goes out without an instance.
+        }
         response.setStatus(status.value());
         response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
         objectMapper.writeValue(response.getOutputStream(), problem);

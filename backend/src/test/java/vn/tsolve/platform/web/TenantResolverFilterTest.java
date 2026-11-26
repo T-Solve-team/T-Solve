@@ -362,6 +362,16 @@ class TenantResolverFilterTest {
         assertThat(holder.currentWorkspaceId()).isEmpty();
     }
 
+    @Test
+    @DisplayName("BUG-404 AC-002.4 AC-002.5 refuses a request for the path // with its own code, not an exception")
+    void refusesTheDoubleSlashPath_BUG_404() throws Exception {
+        TenantResolverFilter filter = filter(providerWith(catalog));
+        catalog.put(A, "acme", WorkspaceStatus.SUSPENDED);
+
+        assertRefused(filter, get(NOSUCH, "//"), 404, "MSG151");
+        assertRefused(filter, get(ACME, "//"), 403, "MSG150");
+    }
+
     private TenantResolverFilter filter(ObjectProvider<WorkspaceCatalog> provider) {
         return new TenantResolverFilter(
                 HostClassifier.fromTemplate("https://{slug}.tsolve.io.vn"),
