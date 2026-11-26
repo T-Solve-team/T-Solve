@@ -20,3 +20,6 @@ the user's check of them.
 | What is stored per source | ids and scores · plus text | `n`, `kind`, `id`, `similarity`, `cited` | No source text or rewritten query (Requirement 11, AC-005.10 spirit) |
 | The real gold set | In the repo · outside it | Outside it; only `gold.example.jsonl` in the repo | It names real tickets and documents of one Workspace database |
 | Changeset number | — | `056-chatbot-answer-sources.sql`, or the next free number on `main` | 055 is the last on `main` (26/11) |
+| How the `rag-eval` run writes nothing (Task 28, review 26/11) | Profile file only · off switches in the other modules | Off switches with a default of on: `DevAccountSeeder`/`MockUserListSeeder` skip `rag-eval`; `tsolve.registry.liquibase.enabled`, `tsolve.search.embedding.catch-up-enabled`, `tsolve.ticket.preview-cleanup.enabled` set `false` in `application-rag-eval.yml` | Those beans start writing at boot or on a schedule; normal runs keep the old behaviour. Environment variables still override the profile file, so do not start the run with the app's `env_file` |
+| Question text the runner embeds | As written in the gold line · trimmed | Trimmed | AC-015.1 says "as for a first web question", and the web path embeds the trimmed question |
+| A gold file with a UTF-8 byte-order mark | Fail line 1 · strip it | Strip it | Windows PowerShell 5 and Notepad write one |

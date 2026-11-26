@@ -2341,3 +2341,7 @@
 {"ts":"2026-11-25T19:30:03.699Z","type":"feature-status","module":"chatbot","feature":"answer-sources","from":"pending","to":"in-progress"}
 {"ts":"2026-11-25T19:43:38.648Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"112f6f2859c4e3ef906dfbd08c988aedcf17f394"}
 {"ts":"2026-11-25T19:43:38.956Z","type":"feature-status","module":"chatbot","feature":"answer-sources","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-26T04:40:05.651Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"58ea4910dae4aeef18c3d9f4bf652346472059bc"}
+{"ts":"2026-11-26T04:40:16.132Z","type":"feature-status","module":"chatbot","feature":"rag-eval-runner","from":"pending","to":"in-progress"}
+{"ts":"2026-11-26T04:40:16.424Z","type":"feature-status","module":"chatbot","feature":"rag-eval-runner","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-26T04:40:16.718Z","type":"feature-status","module":"chatbot","feature":"answer-sources","from":"evaluating","to":"passing"}
