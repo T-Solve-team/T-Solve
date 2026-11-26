@@ -80,13 +80,14 @@ class TicketListServiceImplTest {
     }
 
     @Test
-    void acceptsReviewDueDateWithIdTieBreakOnly_AC_006_7() {
+    void sortsByReviewDueDateThenId_AC_006_7_BUG_401() {
         when(repository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(new PageImpl<SearchTicket>(List.of()));
         service.list(user, query(null, null, null, null, null, null, "reviewDueDate,asc"));
         ArgumentCaptor<Pageable> paging = ArgumentCaptor.forClass(Pageable.class);
         verify(repository).findAll(any(Specification.class), paging.capture());
-        assertThat(paging.getValue().getSort()).isEqualTo(Sort.by(Sort.Order.desc("id")));
+        assertThat(paging.getValue().getSort())
+                .isEqualTo(Sort.by(Sort.Order.asc("reviewDueDate"), Sort.Order.desc("id")));
     }
 
     @ParameterizedTest
@@ -132,10 +133,21 @@ class TicketListServiceImplTest {
                         Sort.by(
                                 Sort.Order.desc("projectName"), Sort.Order.asc("sourceTicketId"),
                                 Sort.Order.desc("title"), Sort.Order.desc("id"))),
-                Arguments.of("reviewDueDate,desc,title,asc,updatedAt,desc", titleUpdated),
-                Arguments.of("title,asc,reviewDueDate,asc,updatedAt,desc", titleUpdated),
-                Arguments.of("title,asc,updatedAt,desc,reviewDueDate,desc", titleUpdated),
-                Arguments.of("reviewDueDate,asc,reviewDueDate,desc", Sort.by(Sort.Order.desc("id"))));
+                // BUG-401: reviewDueDate sorts where it stands instead of being skipped.
+                Arguments.of(
+                        "reviewDueDate,desc,title,asc,updatedAt,desc",
+                        Sort.by(Sort.Order.desc("reviewDueDate")).and(titleUpdated)),
+                Arguments.of(
+                        "title,asc,reviewDueDate,asc,updatedAt,desc",
+                        Sort.by(
+                                Sort.Order.asc("title"), Sort.Order.asc("reviewDueDate"),
+                                Sort.Order.desc("updatedAt"), Sort.Order.desc("id"))),
+                Arguments.of(
+                        "reviewDueDate,asc,reviewDueDate,desc",
+                        Sort.by(
+                                Sort.Order.asc("reviewDueDate"),
+                                Sort.Order.desc("reviewDueDate"),
+                                Sort.Order.desc("id"))));
     }
 
     @ParameterizedTest

@@ -72,7 +72,9 @@ public class RegistryDataSourceConfig {
                 migration.setDataSource(factory.getBean("registryDataSource", javax.sql.DataSource.class));
                 migration.setChangeLog(CATALOG_CHANGELOG);
                 // The worker process never migrates the Registry (AC-008.4); it only reads it.
-                migration.setShouldRun(!factory.getBean(Environment.class).acceptsProfiles(Profiles.of("worker")));
+                Environment environment = factory.getBean(Environment.class);
+                migration.setShouldRun(!environment.acceptsProfiles(Profiles.of("worker"))
+                        && environment.getProperty("tsolve.registry.liquibase.enabled", Boolean.class, true));
                 return migration;
             });
             registry.registerBeanDefinition("registryLiquibase", liquibase);

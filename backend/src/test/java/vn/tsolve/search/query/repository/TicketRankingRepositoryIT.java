@@ -161,6 +161,30 @@ class TicketRankingRepositoryIT {
     }
 
     @Test
+    void showsOneTicketPerSolutionAndCountsIt_AC_007_1_BUG_372() {
+        jdbc.update("UPDATE ticket SET root_cause = 'Root cause of BEST' WHERE title = 'TIED'");
+
+        var first = rank(new RankFilter(null, null, null, null), PageRequest.of(0, 2));
+        var second = rank(new RankFilter(null, null, null, null), PageRequest.of(1, 2));
+
+        assertThat(first.getTotalElements()).isEqualTo(3);
+        assertThat(first.stream().map(TicketSearchResultResponse::title)).containsExactly("BEST", "WEAKER");
+        assertThat(second.stream().map(TicketSearchResultResponse::title)).containsExactly("UNDATED");
+    }
+
+    @Test
+    void keywordFallbackShowsOneTicketPerSolution_AC_007_2_BUG_372() {
+        when(embeddings.embed(any())).thenThrow(new AiUnavailableException());
+        jdbc.update("UPDATE ticket SET root_cause = 'Root cause of BEST' WHERE title = 'TIED'");
+
+        var result = rank(new RankFilter(null, null, null, null), PageRequest.of(0, 20));
+
+        assertThat(result.getTotalElements()).isEqualTo(5);
+        assertThat(result.stream().map(TicketSearchResultResponse::title))
+                .containsExactly("NO-VECTOR", "LOW", "WEAKER", "TIED", "UNDATED");
+    }
+
+    @Test
     void neverReturnsUnpublishedOrDeletedDepartment_AC_007_1() {
         assertThat(rank(new RankFilter(null, null, null, null), PageRequest.of(0, 20)).stream()
                         .map(TicketSearchResultResponse::title))
@@ -305,7 +329,7 @@ class TicketRankingRepositoryIT {
                 """
                 INSERT INTO ticket(ticket_id, source_ticket_id, project_id, source, status, title, writer,
                     symptoms, root_cause, resolution_steps, scope, resolved_date)
-                VALUES (?,?,?,?,?,?,'writer',?,'Root cause',E'  Restart\\nrouter  ','Scope',CAST(? AS date)) RETURNING ticket_id
+                VALUES (?,?,?,?,?,?,'writer',?,?,E'  Restart\\nrouter  ','Scope',CAST(? AS date)) RETURNING ticket_id
                 """,
                 UUID.class,
                 new UUID(0, ++ticketSequence),
@@ -315,6 +339,8 @@ class TicketRankingRepositoryIT {
                 status,
                 title,
                 symptoms,
+                // Its own root cause, so only a test that copies a Solution makes two tickets the same (BUG-372).
+                "Root cause of " + title,
                 date);
     }
 
