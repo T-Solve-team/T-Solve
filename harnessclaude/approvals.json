@@ -794,8 +794,8 @@
     }
   },
   "search": {
-    "specHash": "00f081eade99b0eac0a104e2b682e77b0213e7bf4448716a5ab027fcfe757b7a",
-    "approvedAt": "2026-11-26T10:26:29.108Z",
+    "specHash": "ff4fac26063f1f9096eb85121703bede46469d8fc0f5aace3c9cdd33aa0ceb66",
+    "approvedAt": "2026-11-26T14:29:01.901Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Ticket Resolver or Project Manager opens , THE web app SHALL show 6.2 Ticket List",
@@ -861,7 +861,7 @@
       "AC-006.4": "WHEN , ,  or  is given, THE backend SHALL combine them with AND",
       "AC-006.5": "THE backend SHALL return each row's ,  and  as",
       "AC-006.6": "THE backend SHALL return  as the Project's  (e.g. ITSUP) in every",
-      "AC-006.7": "THE backend SHALL return  as null for every ticket until ticket-review stores a review",
+      "AC-006.7": "WHILE a ticket is  or , THE backend SHALL return",
       "AC-006.8": "IF the caller has no session, THEN THE backend SHALL answer 401 with MSG07; IF the caller holds neither",
       "AC-006.9": "IF  is longer than 100 characters, THEN THE backend SHALL answer 400 with field error MSG02 on",
       "AC-006.10": "THE endpoints of STORY-006 to STORY-009 SHALL accept no Workspace parameter, header or body field and",

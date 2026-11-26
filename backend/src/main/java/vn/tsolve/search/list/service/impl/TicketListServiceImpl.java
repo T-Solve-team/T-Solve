@@ -25,7 +25,16 @@ public class TicketListServiceImpl implements TicketListService {
     private static final Set<String> STATUSES =
             Set.of("PENDING_REVIEW", "CHANGES_REQUESTED", "PUBLISHED", "REJECTED", "UNPUBLISHED", "EXPIRED");
     private static final Map<String, String> SORT_KEYS = Map.of(
-            "sourceTicketId", "sourceTicketId", "title", "title", "project", "projectName", "updatedAt", "updatedAt");
+            "sourceTicketId",
+            "sourceTicketId",
+            "title",
+            "title",
+            "project",
+            "projectName",
+            "reviewDueDate",
+            "reviewDueDate",
+            "updatedAt",
+            "updatedAt");
     private final TicketListRepository repository;
     private final VisibleScope visibleScope;
     private final TicketSummaryMapper mapper;
@@ -89,7 +98,6 @@ public class TicketListServiceImpl implements TicketListService {
             if (!("asc".equals(sort[i + 1]) || "desc".equals(sort[i + 1]))) {
                 throw new InvalidListQueryException();
             }
-            if ("reviewDueDate".equals(sort[i])) continue;
             String property = SORT_KEYS.get(sort[i]);
             if (property == null) throw new InvalidListQueryException();
             order = order.and(Sort.by(new Sort.Order(Sort.Direction.fromString(sort[i + 1]), property)));
