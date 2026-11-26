@@ -13,6 +13,16 @@ record Citations(String text, List<ChatbotCitation> citations) {
     private static final Pattern GROUP = Pattern.compile("(?<![\\p{L}\\p{N}_])\\[([1-9]\\d?(?:, ?[1-9]\\d?)+)\\]");
     private static final Pattern MARKER = Pattern.compile("(?<![\\p{L}\\p{N}_])\\[([1-9]\\d?)\\]");
     private static final String WORD_END = " \n.,;:!?)";
+    private static final Pattern LETTER_OR_DIGIT = Pattern.compile("[\\p{L}\\p{N}]");
+
+    /**
+     * AC-005.5: the text cites a kept source and has a letter or digit outside its markers, so "[2]" or "[1][2]." alone
+     * is no answer (BUG-246, BUG-364).
+     */
+    boolean answers() {
+        return !citations.isEmpty()
+                && LETTER_OR_DIGIT.matcher(MARKER.matcher(text).replaceAll("")).find();
+    }
 
     static Citations of(String text, List<ChatbotSource> kept) {
         text = GROUP.matcher(text).replaceAll(group -> "[" + group.group(1).replaceAll(", ?", "][") + "]");
