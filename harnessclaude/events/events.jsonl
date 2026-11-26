@@ -2397,3 +2397,5 @@
 {"ts":"2026-11-26T16:15:47.522Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":"pending","to":"in-progress"}
 {"ts":"2026-11-26T16:15:50.672Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-26T16:15:53.357Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":"evaluating","to":"passing"}
+{"ts":"2026-11-26T16:52:08.870Z","type":"quick-opened","what":"split it-other into two parts and move OpsRealmImportIT to the Keycloak list (KAN-470)","files":[".github/workflows/ci.yml","backend/AGENTS.md"]}
+{"ts":"2026-11-26T16:59:32.021Z","type":"quick-closed","what":"split it-other into two parts and move OpsRealmImportIT to the Keycloak list (KAN-470)","files":[".github/workflows/ci.yml","backend/AGENTS.md"]}
