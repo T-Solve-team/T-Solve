@@ -326,8 +326,7 @@
         "department-solution-retrieval": "passing",
         "membership-visible-scope": "evaluating",
         "embed-description": "passing",
-        "search-start-layout": "evaluating",
-        "ticket-list-review-due-date": "pending"
+        "search-start-layout": "evaluating"
       },
       "lastUpdated": "2026-11-25T21:05:33.533Z",
       "branch": "feat/search",
