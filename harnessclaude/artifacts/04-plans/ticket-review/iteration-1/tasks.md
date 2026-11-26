@@ -225,7 +225,19 @@ feedback when the reviewer's name is missing or blank. MSG64 stays as it is.
 **Dependencies:** none (requested by jira-app Task 15)
 **Estimated size:** small
 
-## Task 23: Review email links to the Jira issue (STORY-010 change)
+## Task 23: AI check on Ticket Detail (KAN-462)
+
+**Story:** STORY-015
+**Feature:** ai-review-assist
+**Description:** AC-015.1–015.8. Backend: `POST /api/v1/tickets/{ticketId}/ai-review` in a new `AiReviewController`; `AiReviewService` checks scope like the decisions (signed-in Workspace, managing Project Manager, Pending review Solution Form ticket; 401/403/404/409 before any AI call), builds the system prompt (checks of AC-015.3, ticket text is data) and the user message from the seven fields, calls `LlmClient` with the findings JSON schema, validates and trims the answer (≤ 10 findings, HIGH first, texts ≤ 500), maps `AiUnavailableException` or a schema mismatch to 503 `MSG_NEW_AI_REVIEW_1`. Nothing stored or logged. Frontend: an "AI check" button on Ticket Detail shown only with the decision controls, a findings panel grouped by severity, MSG_NEW_AI_REVIEW_2 when empty, error with retry; MSW handler and fixtures. Test first.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/review/controller/AiReviewController.java`, `review/service/AiReviewService.java`, `review/service/impl/AiReviewServiceImpl.java`, `review/dto/AiReviewResult.java`, `review/dto/AiReviewFinding.java`, their tests; `frontend/src/features/review/components/AiReviewPanel.tsx` and its test
+- Modify: `frontend/src/features/review/components/ReviewTicketDetail.tsx`, `frontend/src/features/review/mocks/**`, `frontend/openapi/tsolve-api.yaml`, `frontend/src/shared/api/generated/**`
+**Dependencies:** ai STORY-001 `LlmClient` (passing)
+**Estimated size:** medium
+**Verification:** tests named AC-015.1–015.8 with a stubbed `LlmClient` (findings, empty, schema mismatch, AI failure, each refused case asserts no AI call); `mvn verify`; frontend format/lint/typecheck/test/build, `generate:api` leaves no diff; `sdd.ts trace ticket-review STORY-015`.
+
+## Task 24: Review email links to the Jira issue (STORY-010 change)
 
 **Story:** STORY-010
 **Feature:** review-email-jira-link

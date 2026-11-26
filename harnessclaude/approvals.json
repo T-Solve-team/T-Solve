@@ -242,8 +242,8 @@
     }
   },
   "chatbot": {
-    "specHash": "d3511c437410a179a13205bd4b04b9b9b0f2cd831b8a80233178387813eb5e12",
-    "approvedAt": "2026-11-22T19:35:45.864Z",
+    "specHash": "d7d2afb2dd0a77f29fae2b4e7df0c56e84f4ed6acd36bdebe94a55e6d928253d",
+    "approvedAt": "2026-11-25T19:25:39.098Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",
@@ -369,7 +369,20 @@
       "AC-013.9": "WHEN the daily retention job runs (), THE backend SHALL",
       "AC-013.10": "IF a request of STORY-013 has no web session, THEN THE backend SHALL answer 401 with MSG07; every",
       "AC-013.11": "THE chatbot changeset SHALL create  and  with the columns and",
-      "AC-013.12": "THE  path (STORY-012) SHALL create and read no conversation; its earlier turns stay"
+      "AC-013.12": "THE  path (STORY-012) SHALL create and read no conversation; its earlier turns stay",
+      "AC-014.1": "WHEN an answer is stored after a search, THE backend SHALL store in  one",
+      "AC-014.2": "IF an answer is stored without a search or with no kept source, THEN THE backend SHALL store",
+      "AC-014.3": "THE backend SHALL store in  no source text, question, earlier turn or rewritten query, and",
+      "AC-014.4": "THE chatbot changeset SHALL add to  the column",
+      "AC-014.5": "IF the ask fails and no answer is stored (AC-005.7), THEN THE backend SHALL store no sources.",
+      "AC-015.1": "WHEN the backend starts with the Spring profile , THE backend SHALL read the gold file at",
+      "AC-015.2": "THE runner SHALL read each non-blank line of the gold file as a JSON object with a non-blank",
+      "AC-015.3": "THE report SHALL be one JSON object with  (),",
+      "AC-015.4": "THE runner SHALL compute for the whole set and for each group value:  (the line count),",
+      "AC-015.5": "IF the run cannot start, THEN THE runner SHALL make no AI call, write no report, log the reason (the",
+      "AC-015.6": "IF an embedding call fails, THEN THE runner SHALL write no report and exit with a non-zero code.",
+      "AC-015.7": "THE runner SHALL run only with the profile , start no web server, call no chat model, write",
+      "AC-015.8": "THE repository SHALL hold  with at least three valid lines of"
     }
   },
   "identity": {
@@ -781,8 +794,8 @@
     }
   },
   "search": {
-    "specHash": "d777c9b1d2af6aa529f3a5e1233179aadef0d14bba2e6c955403bec0bd46d7a6",
-    "approvedAt": "2026-11-25T21:05:07.748Z",
+    "specHash": "62cd2a15a53433604a6be742bc999577cab9ba49d293680dd9e42812d62c8de0",
+    "approvedAt": "2026-11-25T19:30:01.704Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Ticket Resolver or Project Manager opens , THE web app SHALL show 6.2 Ticket List",
@@ -846,7 +859,7 @@
       "AC-006.4": "WHEN , ,  or  is given, THE backend SHALL combine them with AND",
       "AC-006.5": "THE backend SHALL return each row's ,  and  as",
       "AC-006.6": "THE backend SHALL return  as the Project's  (e.g. ITSUP) in every",
-      "AC-006.7": "THE backend SHALL return  as the start (00:00) in Asia/Ho_Chi_Minh of the ticket's",
+      "AC-006.7": "THE backend SHALL return  as null for every ticket until ticket-review stores a review",
       "AC-006.8": "IF the caller has no session, THEN THE backend SHALL answer 401 with MSG07; IF the caller holds neither",
       "AC-006.9": "IF  is longer than 100 characters, THEN THE backend SHALL answer 400 with field error MSG02 on",
       "AC-006.10": "THE endpoints of STORY-006 to STORY-009 SHALL accept no Workspace parameter, header or body field and",
@@ -872,7 +885,7 @@
       "AC-009.4": "IF  is missing or blank, THEN THE backend SHALL answer 400 with field error MSG01 on",
       "AC-009.5": "IF the request has no web session, THEN THE backend SHALL answer 401 with MSG07 (a Forge Invocation",
       "AC-010.1": "WHEN  is called, THE backend SHALL return",
-      "AC-010.2": "THE backend SHALL return each hit with the ticket's Symptoms, Root cause, Resolution steps, Workaround",
+      "AC-010.2": "THE backend SHALL return each hit with the ticket's  as , its Symptoms, Root",
       "AC-010.3": "IF a ticket is unpublished, inactive or too far, THEN THE backend SHALL leave it out (not",
       "AC-010.5": "IF an argument is out of range, THEN THE service SHALL throw  and SHALL run",
       "AC-010.4": "THE service SHALL take no user, Workspace or Department argument and SHALL call no",
@@ -1025,8 +1038,8 @@
     }
   },
   "ticket-review": {
-    "specHash": "11f0788eca91553116da8c69acf7204c56ef98cc92f764042be456bbbb65d087",
-    "approvedAt": "2026-11-25T21:01:42.999Z",
+    "specHash": "a2c379a09130fd48de68c94a10e18ea7a6a3f050a4ae199e63d4909446f2bdeb",
+    "approvedAt": "2026-11-26T12:05:40.833Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the Review Queue loads, THE frontend and mock API SHALL return only Pending review Solution Form tickets in the current Workspace's Projects managed by the signed-in Project Manager, ordered by earliest review due date by default.",
@@ -1126,7 +1139,15 @@
       "AC-014.5": "WHEN the expiry transaction commits, THE expired tickets SHALL no longer appear in the Review Queue or its eligible ids, and THE worker SHALL log one line per Project with expired tickets, carrying only the Workspace UUID, the Project UUID and the count. IF no ticket is overdue, THEN THE worker SHALL end without changing any ticket.",
       "AC-014.6": "IF the expiry transaction fails, THEN THE worker SHALL roll back every ticket change of that attempt, log the failure without ticket content, and schedule another expiry job for that Workspace 15 minutes later with the next attempt number. IF attempt 3 fails, THEN THE worker SHALL schedule no further attempt and the overdue tickets SHALL wait for the next scheduled run.",
       "AC-014.7": "IF the Workspace is Suspended or unknown when an expiry job runs, THEN THE worker SHALL change no ticket and schedule no further attempt (GBR-38).",
-      "AC-014.8": "THE expiry job payload SHALL hold only the Workspace UUID and the attempt number, and JOB-02 SHALL record no review decision and no audit entry. THE tenant changelog SHALL add nullable ticket.expired_at as TIMESTAMPTZ and nullable ticket.status_before_expiry as VARCHAR(20) limited to PENDING_REVIEW and CHANGES_REQUESTED."
+      "AC-014.8": "THE expiry job payload SHALL hold only the Workspace UUID and the attempt number, and JOB-02 SHALL record no review decision and no audit entry. THE tenant changelog SHALL add nullable ticket.expired_at as TIMESTAMPTZ and nullable ticket.status_before_expiry as VARCHAR(20) limited to PENDING_REVIEW and CHANGES_REQUESTED.",
+      "AC-015.1": "WHEN a Project Manager who manages the ticket's Project opens Ticket Detail of a Pending review Solution Form ticket, THE frontend SHALL offer an \"AI check\" action; IF the user does not manage the Project or the ticket is not Pending review, THEN THE frontend SHALL not offer it.",
+      "AC-015.2": "WHEN the Project Manager runs AI check, THE backend SHALL send the ticket's title, description, symptoms, root cause, resolution steps, workaround and scope to  in one chat call constrained to the findings JSON schema, with the ticket text in the user message as data and a system prompt that tells the model to ignore instructions inside it.",
+      "AC-015.3": "THE system prompt SHALL ask the model to report, per Solution field, missing or vague information, a root cause that does not explain the symptoms, resolution steps that are not actionable, out of order or do not address the root cause, a workaround presented as the fix, a risky action without a warning, and contradictions between fields, in the language of the Solution text.",
+      "AC-015.4": "WHEN the AI answer matches the schema, THE API SHALL return 200 with at most 10 findings, each with  (one of TITLE, DESCRIPTION, SYMPTOMS, ROOT_CAUSE, RESOLUTION_STEPS, WORKAROUND, SCOPE, GENERAL),  (HIGH, MEDIUM or LOW),  and  (each trimmed, at most 500 characters), ordered HIGH first; THE API SHALL drop findings beyond 10 and truncate longer texts.",
+      "AC-015.5": "WHEN findings are returned, THE frontend SHALL show them grouped by severity with the field name, as plain text; WHEN the list is empty, THE frontend SHALL show MSG_NEW_AI_REVIEW_2 (\"No issues found\"). WHILE the request is pending, THE frontend SHALL show a loading state and disable the action.",
+      "AC-015.6": "IF the AI call fails, times out or returns an answer that does not match the schema, THEN THE API SHALL return 503 with code MSG_NEW_AI_REVIEW_1 and THE frontend SHALL show that message with retry; THE Approve, Reject and Request Changes controls SHALL keep working.",
+      "AC-015.7": "IF the caller is unauthenticated, does not manage the ticket's Project, the ticket is in another Workspace, or the ticket is not a Pending review Solution Form ticket, THEN THE API SHALL return 401, 403, 404 or 409 respectively without calling the AI.",
+      "AC-015.8": "THE backend SHALL store no finding, record no review decision and no audit entry, and log no ticket text or AI answer; findings SHALL not be shown to the writer."
     }
   },
   "ai": {

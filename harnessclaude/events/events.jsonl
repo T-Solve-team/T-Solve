@@ -2318,6 +2318,8 @@
 {"ts":"2026-11-24T17:50:55.559Z","type":"quick-opened","what":"resolve the bug log merge conflict with main: keep BUG-389 and BUG-390","files":["docs/bug-log.md"]}
 {"ts":"2026-11-24T17:51:37.519Z","type":"quick-closed","what":"resolve the bug log merge conflict with main: keep BUG-389 and BUG-390","files":["docs/bug-log.md"]}
 {"ts":"2026-11-24T19:29:55.176Z","type":"spec-approved","module":"wiki","specHash":"f912468f95e47b33f3db76ea16adf6bbe8cd904d611ba98a281d30f098498d30"}
+{"ts":"2026-11-25T13:35:54.295Z","type":"quick-opened","what":"BUG-367: point the KAN-241 gitleaks ignore at the squash-merged commit on main","files":[".gitleaksignore","docs/bug-log.md"]}
+{"ts":"2026-11-25T13:37:49.036Z","type":"quick-closed","what":"BUG-367: point the KAN-241 gitleaks ignore at the squash-merged commit on main","files":[".gitleaksignore","docs/bug-log.md"]}
 {"ts":"2026-11-25T14:59:48.280Z","type":"feature-status","module":"platform","feature":"workspace-catalog","from":"pending","to":"in-progress"}
 {"ts":"2026-11-25T14:59:48.587Z","type":"feature-status","module":"platform","feature":"workspace-catalog","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-25T14:59:48.901Z","type":"feature-status","module":"platform","feature":"workspace-catalog","from":"evaluating","to":"passing"}
@@ -2339,3 +2341,24 @@
 {"ts":"2026-11-25T21:05:33.249Z","type":"feature-status","module":"ticket-review","feature":"review-email-jira-link","from":null,"to":"pending"}
 {"ts":"2026-11-25T21:05:33.534Z","type":"feature-status","module":"search","feature":"ticket-list-review-due-date","from":null,"to":"pending"}
 {"ts":"2026-11-25T21:16:00.744Z","type":"feature-status","module":"ticket-review","feature":"review-email-jira-link","from":"pending","to":"in-progress"}
+{"ts":"2026-11-25T17:44:07.670Z","type":"spec-approved","module":"ticket-review","specHash":"47edc7d47960cc5f9988cf3a34523d52fe542fe89f014a07684d7be6b1e6c499"}
+{"ts":"2026-11-25T17:44:08.256Z","type":"feature-status","module":"ticket-review","feature":"ai-review-assist","from":null,"to":"pending"}
+{"ts":"2026-11-25T18:02:11.067Z","type":"feature-status","module":"ticket-review","feature":"ai-review-assist","from":"pending","to":"in-progress"}
+{"ts":"2026-11-25T19:06:14.509Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"5946758dd12c3d43d817c00cc157cdcf91aad80a"}
+{"ts":"2026-11-25T19:06:14.806Z","type":"feature-status","module":"ticket-review","feature":"ai-review-assist","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-25T19:27:37.347Z","type":"feature-status","module":"ticket-review","feature":"ai-review-assist","from":"evaluating","to":"passing"}
+{"ts":"2026-11-25T19:53:24.449Z","type":"commit-recorded","module":"ticket-review","repo":"default","sha":"980c5116550bcd8d7e7ce1a54b0cf2940d6607ca"}
+{"ts":"2026-11-25T19:25:39.101Z","type":"spec-approved","module":"chatbot","specHash":"d7d2afb2dd0a77f29fae2b4e7df0c56e84f4ed6acd36bdebe94a55e6d928253d"}
+{"ts":"2026-11-25T19:30:01.707Z","type":"spec-approved","module":"search","specHash":"62cd2a15a53433604a6be742bc999577cab9ba49d293680dd9e42812d62c8de0"}
+{"ts":"2026-11-25T19:30:03.098Z","type":"feature-status","module":"chatbot","feature":"answer-sources","from":null,"to":"pending"}
+{"ts":"2026-11-25T19:30:03.399Z","type":"feature-status","module":"chatbot","feature":"rag-eval-runner","from":null,"to":"pending"}
+{"ts":"2026-11-25T19:30:03.699Z","type":"feature-status","module":"chatbot","feature":"answer-sources","from":"pending","to":"in-progress"}
+{"ts":"2026-11-25T19:43:38.648Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"112f6f2859c4e3ef906dfbd08c988aedcf17f394"}
+{"ts":"2026-11-25T19:43:38.956Z","type":"feature-status","module":"chatbot","feature":"answer-sources","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-26T04:40:05.651Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"58ea4910dae4aeef18c3d9f4bf652346472059bc"}
+{"ts":"2026-11-26T04:40:16.132Z","type":"feature-status","module":"chatbot","feature":"rag-eval-runner","from":"pending","to":"in-progress"}
+{"ts":"2026-11-26T04:40:16.424Z","type":"feature-status","module":"chatbot","feature":"rag-eval-runner","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-26T04:40:16.718Z","type":"feature-status","module":"chatbot","feature":"answer-sources","from":"evaluating","to":"passing"}
+{"ts":"2026-11-26T05:15:41.979Z","type":"commit-recorded","module":"chatbot","repo":"default","sha":"1484dc0e248f25084ed46d10b9c31f9308f21640"}
+{"ts":"2026-11-26T05:15:42.279Z","type":"feature-status","module":"chatbot","feature":"rag-eval-runner","from":"evaluating","to":"passing"}
+{"ts":"2026-11-26T12:05:40.841Z","type":"spec-approved","module":"ticket-review","specHash":"a2c379a09130fd48de68c94a10e18ea7a6a3f050a4ae199e63d4909446f2bdeb"}

@@ -9,9 +9,12 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.hibernate.annotations.Generated;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.generator.EventType;
+import org.hibernate.type.SqlTypes;
 import vn.tsolve.chatbot.rating.entity.ChatbotRating;
 
 // @Immutable breaks @Generated insert columns in Hibernate 6; columns use updatable = false instead.
@@ -55,6 +58,11 @@ public class ChatbotAnswer {
 
     @Column(name = "jira_issue_key", length = 255)
     private String jiraIssueKey;
+
+    // AC-014.1 to AC-014.3: ids and scores of the kept sources, never returned to a client.
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false, updatable = false, columnDefinition = "jsonb")
+    private List<AnswerSource> sources = List.of();
 
     protected ChatbotAnswer() {}
 
@@ -122,6 +130,16 @@ public class ChatbotAnswer {
 
     public String getJiraIssueKey() {
         return jiraIssueKey;
+    }
+
+    public List<AnswerSource> getSources() {
+        return sources;
+    }
+
+    /** Set before the row is saved; the column is not updatable. */
+    public ChatbotAnswer withSources(List<AnswerSource> kept) {
+        sources = List.copyOf(kept);
+        return this;
     }
 
     public void recordJiraIssue(String issueKey) {

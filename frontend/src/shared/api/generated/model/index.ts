@@ -8,6 +8,10 @@
  */
 
 export * from './addProjectMembersRequest';
+export * from './aiReviewFinding';
+export * from './aiReviewFindingField';
+export * from './aiReviewFindingSeverity';
+export * from './aiReviewResult';
 export * from './approveTicketsRequest';
 export * from './auditAction';
 export * from './auditEntry';

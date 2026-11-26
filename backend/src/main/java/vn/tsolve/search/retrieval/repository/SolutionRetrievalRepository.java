@@ -8,8 +8,9 @@ import org.springframework.data.repository.query.Param;
 import vn.tsolve.search.scope.entity.SearchTicket;
 
 public interface SolutionRetrievalRepository extends Repository<SearchTicket, UUID> {
+    // Returns ticket.public_id for the server side only (AC-010.2).
     @Query(value = """
-                    SELECT t.symptoms AS symptoms, t.root_cause AS "rootCause",
+                    SELECT t.public_id AS "ticketId", t.symptoms AS symptoms, t.root_cause AS "rootCause",
                            t.resolution_steps AS "resolutionSteps", t.workaround AS workaround,
                            t.scope AS "scopeOfApplicability",
                            1 - (e.embedding <=> CAST(:vector AS vector)) AS similarity
@@ -22,7 +23,7 @@ public interface SolutionRetrievalRepository extends Repository<SearchTicket, UU
                     ORDER BY e.embedding <=> CAST(:vector AS vector), t.ticket_id
                     LIMIT :limit
                     """, nativeQuery = true)
-    List<SolutionRow> nearest(
+    List<TicketSolutionRow> nearest(
             @Param("vector") String vector, @Param("minSimilarity") double minSimilarity, @Param("limit") int limit);
 
     // The `nearest` query narrowed to the Department of one Project, by its public_id (AC-011.1, AC-011.3); returns
