@@ -37,6 +37,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -49,6 +50,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.SimpleTransactionStatus;
 import vn.tsolve.ai.client.ChatMessage;
+import vn.tsolve.ai.client.ChatMessage.Role;
 import vn.tsolve.ai.client.EmbeddingClient;
 import vn.tsolve.ai.client.LlmClient;
 import vn.tsolve.ai.exception.AiUnavailableException;
@@ -476,12 +478,125 @@ class ChatbotAnswerServiceImplTest {
     @ValueSource(strings = {"No citation", "Unknown [9]", "[01] [ 1 ] [0] [n=1]", "[100]"})
     void answersNoSourceWhenNoMarker_AC_005_5(String text) {
         withSolution();
-        when(llm.chat(any(), isNull())).thenReturn(text);
+        when(llm.chat(any(), isNull())).thenReturn(text, text);
         var response =
                 service.ask(USER, inSession("question", List.of(new ChatbotTurnRequest("old question", "Old [9]"))));
         assertThat(response.outcome()).isEqualTo(Outcome.NO_SOURCE);
         assertThat(response.text()).isEmpty();
         assertThat(response.citations()).isEmpty();
+        verify(llm, times(2)).chat(any(), isNull());
+    }
+
+    @Test
+    @DisplayName("AC-005.5 asks once more and answers with the cited source when the first reply cites none (BUG-246)")
+    void asksOnceMoreAndAnswersWithTheCitedSource_AC_005_5_BUG_246() {
+        withSolution();
+        String firstReply = "Reconnect the VPN.";
+        when(llm.chat(any(), isNull())).thenReturn(firstReply, "Reconnect the VPN [1].");
+
+        var response = service.ask(USER, followUp());
+
+        assertThat(response.outcome()).isEqualTo(Outcome.ANSWERED);
+        assertThat(response.text()).isEqualTo("Reconnect the VPN [1].");
+        assertThat(response.citations()).singleElement().isInstanceOfSatisfying(TicketSolutionCitation.class, cited -> {
+            assertThat(cited.number()).isEqualTo(1);
+            assertThat(cited.solution().symptoms()).isEqualTo("private-source");
+        });
+        ArgumentCaptor<List<ChatMessage>> prompt = ArgumentCaptor.forClass(List.class);
+        verify(llm, times(2)).chat(prompt.capture(), isNull());
+        var firstMessages = prompt.getAllValues().getFirst();
+        var retryMessages = prompt.getValue();
+        assertThat(retryMessages)
+                .hasSize(firstMessages.size() + 2)
+                .startsWith(firstMessages.toArray(ChatMessage[]::new));
+        assertThat(retryMessages.get(firstMessages.size())).isEqualTo(new ChatMessage(Role.ASSISTANT, firstReply));
+        assertThat(retryMessages.getLast().role()).isEqualTo(Role.USER);
+        assertThat(retryMessages.getLast().content())
+                .contains("numbered sources", "cite each source you use as [n]", "say so without citing");
+        // AC-014.1: `cited` follows the stored text, so a source cited only on the retry is stored as cited.
+        ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
+        verify(answers).save(saved.capture());
+        assertThat(saved.getValue().getSources())
+                .containsExactly(new AnswerSource(1, "TICKET", ticketId("private-source"), 0.9, true));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"[1]", " [1] ", "[1].", "[1]\n[1]", "[1][1]!"})
+    @DisplayName("AC-005.5 asks once more when the first reply is only markers, and answers with the second (BUG-364)")
+    void asksOnceMoreWhenTheReplyIsOnlyMarkers_AC_005_5_BUG_364(String firstReply) {
+        withSolution();
+        when(llm.chat(any(), isNull())).thenReturn(firstReply, "Use the VPN web portal [1].");
+
+        var response = service.ask(USER, followUp());
+
+        assertThat(response.outcome()).isEqualTo(Outcome.ANSWERED);
+        assertThat(response.text()).isEqualTo("Use the VPN web portal [1].");
+        assertThat(response.citations()).extracting(ChatbotCitation::number).containsExactly(1);
+        ArgumentCaptor<List<ChatMessage>> prompt = ArgumentCaptor.forClass(List.class);
+        verify(llm, times(2)).chat(prompt.capture(), isNull());
+        var retryMessages = prompt.getValue();
+        assertThat(retryMessages.get(retryMessages.size() - 2)).isEqualTo(new ChatMessage(Role.ASSISTANT, firstReply));
+        assertThat(retryMessages.getLast().content()).contains("in words");
+    }
+
+    @Test
+    @DisplayName("AC-005.5 answers NO_SOURCE when the reply after the reminder is only markers too (BUG-364)")
+    void answersNoSourceWhenBothRepliesAreOnlyMarkers_AC_005_5_BUG_364() {
+        withSolution();
+        when(llm.chat(any(), isNull())).thenReturn("[1]", "[1].");
+
+        var response = service.ask(USER, followUp());
+
+        assertThat(response.outcome()).isEqualTo(Outcome.NO_SOURCE);
+        assertThat(response.text()).isEmpty();
+        assertThat(response.citations()).isEmpty();
+        verify(llm, times(2)).chat(any(), isNull());
+        // AC-014.1: a NO_SOURCE stores no text, so no source is stored as cited even though the reply had [1].
+        ArgumentCaptor<ChatbotAnswer> saved = ArgumentCaptor.forClass(ChatbotAnswer.class);
+        verify(answers).save(saved.capture());
+        assertThat(saved.getValue().getSources())
+                .containsExactly(new AnswerSource(1, "TICKET", ticketId("private-source"), 0.9, false));
+    }
+
+    @Test
+    @DisplayName("AC-005.5 answers NO_SOURCE when the reply after the reminder cites none either (BUG-246)")
+    void answersNoSourceWhenTheRetryAlsoCitesNone_AC_005_5_BUG_246() {
+        withSolution();
+        when(llm.chat(any(), isNull())).thenReturn("Reconnect the VPN.", "The sources do not answer the question.");
+
+        var response = service.ask(USER, newAsk());
+
+        assertThat(response.outcome()).isEqualTo(Outcome.NO_SOURCE);
+        assertThat(response.text()).isEmpty();
+        assertThat(response.citations()).isEmpty();
+        verify(llm, times(2)).chat(any(), isNull());
+    }
+
+    @Test
+    @DisplayName("AC-005.3 calls the chat model once when the first reply cites a source (BUG-246)")
+    void callsTheChatModelOnceWhenTheFirstReplyCitesASource_AC_005_3_BUG_246() {
+        withSolution();
+        when(llm.chat(any(), isNull())).thenReturn("Reconnect the VPN [1].");
+
+        var response = service.ask(USER, newAsk());
+
+        assertThat(response.outcome()).isEqualTo(Outcome.ANSWERED);
+        verify(llm).chat(any(), isNull());
+    }
+
+    @Test
+    @DisplayName("AC-005.7 reports an AI failure and stores nothing when the second chat call fails (BUG-246)")
+    void storesNothingWhenTheRetryFails_AC_005_7_BUG_246() {
+        withSolution();
+        when(llm.chat(any(), isNull()))
+                .thenReturn("Reconnect the VPN.")
+                .thenThrow(new IllegalStateException("provider down"));
+
+        assertThatThrownBy(() -> service.ask(USER, newAsk()))
+                .isInstanceOf(AiUnavailableException.class)
+                .hasMessage("MSG06");
+        verify(llm, times(2)).chat(any(), isNull());
+        verifyNoInteractions(answers, conversations);
     }
 
     @Test
