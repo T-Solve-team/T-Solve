@@ -147,6 +147,6 @@ class CitationsTest {
     }
 
     private static RetrievedSolution solution(String symptoms, String workaround) {
-        return new RetrievedSolution(symptoms, "cause", "steps", workaround, "scope", 0.9);
+        return new RetrievedSolution(UUID.randomUUID(), symptoms, "cause", "steps", workaround, "scope", 0.9);
     }
 }
