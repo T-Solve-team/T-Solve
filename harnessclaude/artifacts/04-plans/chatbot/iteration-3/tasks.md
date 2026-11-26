@@ -372,6 +372,19 @@ All three tasks are Jira KAN-243, so one branch `feat/KAN-243-chatbot-classify-q
 **Dependencies:** Task 26
 **Estimated size:** small
 
+## Task 30: Treat a marker-only answer as no answer
+
+**Story:** STORY-005
+**Feature:** marker-only-answer
+**Jira:** KAN-390 (BUG-364) · branch `fix/KAN-390-chatbot-marker-only-answer` (stacked on Task 29)
+**Description:**
+- `Citations`: say whether the text has words besides its kept `[n]` markers. `ChatbotAnswerServiceImpl`: a reply
+  with no such words takes the AC-005.5 second call like a reply with no marker; `NO_SOURCE` when the second reply
+  has none either. `AnswerPrompt`: the reminder asks for an answer in words.
+**Covers:** AC-005.5
+**Dependencies:** Task 29
+**Estimated size:** small
+
 ## Task 31: Name the answer language after the question
 
 **Story:** STORY-005

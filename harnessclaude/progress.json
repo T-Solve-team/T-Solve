@@ -391,6 +391,7 @@
         "conversation-paging": "passing",
         "merge-title-paging": "evaluating",
         "cite-retry": "evaluating",
+        "marker-only-answer": "evaluating",
         "answer-language": "evaluating",
         "answer-sources": "passing",
         "rag-eval-runner": "passing"
