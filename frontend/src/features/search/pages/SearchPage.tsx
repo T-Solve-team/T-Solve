@@ -1,5 +1,9 @@
-/** 6.1 Search — SRS III.6.1, Figma "6.1 Search" (a)–(c). */
-import { Flex } from 'antd';
+/**
+ * 6.1 Search — SRS III.6.1, laid out as design option C "Search first" (search design.md): a start state before a
+ * query, then the Search box at the top with the results under it.
+ */
+import { SearchOutlined } from '@ant-design/icons';
+import { Flex, Typography } from 'antd';
 import { useSession } from '@/shared/auth';
 import { SearchFilters } from '../components/SearchFilters';
 import { SearchResultList } from '../components/SearchResultList';
@@ -10,22 +14,36 @@ export function SearchPage() {
   const { session } = useSession();
   const search = useTicketSearch();
   const { results } = search;
+  const hasQuery = search.q !== '';
 
   return (
     <Flex vertical gap="large">
-      <SearchFilters
-        departments={session?.departments ?? []}
-        q={search.q}
-        departmentId={search.departmentId}
-        source={search.source}
-        resolvedFrom={search.resolvedFrom}
-        resolvedTo={search.resolvedTo}
-        onChange={search.setFilter}
-        onResolvedChange={search.setResolved}
-      />
-      {/* No query: an empty results area with no message (decision Q3, spec AC-002.2). */}
-      <section aria-label="Results" className={styles.results}>
-        {search.q && (
+      <div className={hasQuery ? styles.top : styles.start}>
+        {!hasQuery && (
+          <div className={styles.intro}>
+            <span className={styles.iconTile} aria-hidden="true">
+              <SearchOutlined />
+            </span>
+            <Typography.Title level={2}>Find a Solution</Typography.Title>
+            <Typography.Text type="secondary">
+              Describe the problem in your own words. T-Solve searches the Published tickets of your
+              Departments.
+            </Typography.Text>
+          </div>
+        )}
+        <SearchFilters
+          departments={session?.departments ?? []}
+          q={search.q}
+          departmentId={search.departmentId}
+          source={search.source}
+          resolvedFrom={search.resolvedFrom}
+          resolvedTo={search.resolvedTo}
+          onChange={search.setFilter}
+          onResolvedChange={search.setResolved}
+        />
+      </div>
+      {hasQuery && (
+        <section aria-label="Results" className={styles.results}>
           <SearchResultList
             results={results.data?.content}
             total={results.data?.page.totalElements ?? 0}
@@ -35,8 +53,8 @@ export function SearchPage() {
             page={search.page}
             onPageChange={search.setPage}
           />
-        )}
-      </section>
+        </section>
+      )}
     </Flex>
   );
 }

@@ -701,3 +701,56 @@ The list shows the 20 newest conversations and a Load more button (user, 18/11),
 - The changeset is renumbered `051-chatbot-chat-session` (047 to 050 are taken on main).
 - The KAN-183 bugs BUG-332 – BUG-343 are renumbered BUG-373 – BUG-384 (main used those ids for other bugs);
   the earlier test reports of this feature keep the old ids.
+
+## RAG measurement (change of 2026-11-25, STORY-014, STORY-015)
+
+Decisions with their options: `iteration-4/decisions.md`. Paths: `…/` is `backend/src/main/java/vn/tsolve/chatbot/`.
+
+### Sources of an answer (STORY-014)
+- search: `RetrievedSolution` gains `UUID ticketId` first (search AC-010.2); `SolutionRetrievalRepository.nearest`
+  selects `t.public_id AS "ticketId"` as `nearestInProjectDepartment` does. `nearestInProjectDepartment` is unchanged.
+- `ChatbotSource` gains `kind` (`TICKET` / `WIKI`) and `id`: `of(RetrievedSolution)` and `of(RetrievedTicketSolution)`
+  take `ticketId`, `of(WikiPassage)` the `documentId`. `ChatbotCitation` (the response) is unchanged (AC-006.3).
+- New record `…/answer/entity/AnswerSource(int n, String kind, UUID id, double similarity, boolean cited)`.
+  `ChatbotAnswer.sources` is `List<AnswerSource>` mapped with `@JdbcTypeCode(SqlTypes.JSON)`, `updatable = false`,
+  default `List.of()`; the factories (`new ChatbotAnswer(...)`, `forProject`) take it.
+- `ChatbotAnswerServiceImpl.answer`: after `Citations.of`, build the list from `kept` (similarity
+  `Math.round(x * 10_000) / 10_000.0`, `cited` = the number is in `cited.citations()`); the `NO_SOURCE` of AC-005.5
+  stores the kept list with every `cited` false; the early returns (greeting, refused, no kept source) store
+  `List.of()`.
+- Changeset `056-chatbot-answer-sources.sql` (next free number on `main`):
+  `ALTER TABLE chatbot_answer ADD COLUMN sources JSONB NOT NULL DEFAULT '[]'::jsonb;` with
+  `--rollback ALTER TABLE chatbot_answer DROP COLUMN sources;`
+
+### Offline evaluation (STORY-015)
+- Retrieval is shared, not copied: the merge in `answer` (sort by similarity, ticket first on a tie, keep `limit`)
+  moves into `…/answer/service/ChatbotRetrieval` (public, `@Component`), method
+  `List<ChatbotSource> rank(List<RetrievedSolution> solutions, List<WikiPassage> passages, int limit)`. `ask`,
+  `askForProject` and the runner call it, so the run measures exactly what the Chatbot keeps. `ChatbotSource` becomes
+  public because the runner reads its kind, id and similarity.
+- `…/eval/RagEvalRunner` — `ApplicationRunner`, `@Profile("rag-eval")`:
+  1. Parse the whole gold file first (`GoldFile.parse(Path)` returns `List<GoldLine>`; Jackson per line; failures
+     are `IllegalArgumentException("line N: <reason>")`, never the line text) (AC-015.2, AC-015.5).
+  2. `TenantContext.runIn(RAG_EVAL_WORKSPACE_ID, …)`; inside it `AccountLookupService.findActive(RAG_EVAL_USER_ID)`
+     (empty fails, AC-015.5); per line `EmbeddingClient.embed(List.of(question))`, `SolutionRetrieval.nearest(v, 0,
+     k)`, `WikiSources.nearest(user, v, 0, k)`, `ChatbotRetrieval.rank(…, k)`.
+  3. `RagEvalReport.of(lines, results, minSimilarity, sourceLimit, k)` computes AC-015.3 and AC-015.4 (pure,
+     unit-tested); the report is written with `ObjectMapper.writerWithDefaultPrettyPrinter()` to `RAG_EVAL_REPORT`
+     only after every line passed.
+  4. Exit: `System.exit(SpringApplication.exit(context, () -> code))`, 0 on success and 1 on any failure (logged as
+     `rag-eval failed: <reason>`).
+- `application-rag-eval.yml`: `spring.main.web-application-type: none`, `tsolve.worker.enabled: false`,
+  `TSOLVE_SESSION_SWEEP_CRON: "-"` (Spring's disabled cron) and the Liquibase run turned off, so the run writes
+  nothing (AC-015.7). The builder checks every other `@Scheduled` or startup writer and turns it off here.
+- Run command (written in the PR; against the AI server and a copy of the demo Workspace database):
+  `mvn -q spring-boot:run -Dspring-boot.run.profiles=rag-eval` with the five `RAG_EVAL_*` variables set.
+- `backend/rag-eval/gold.example.jsonl`: three lines, a `TICKET` and a `WIKI` expected source, one `groups`
+  (AC-015.8); a test parses it.
+
+### Edge cases
+- Two expected sources on one line: the first match in result order counts.
+- A ticket and a Wiki document with the same UUID cannot collide: the kind is part of the match.
+- A repeated question: scored twice, as written.
+- Empty Workspace (no embeddings): every line has `rank` null and `noSourceRate` is 1, a valid report, not a failure.
+- `RAG_EVAL_K` below `CHATBOT_SOURCE_LIMIT`: the run cannot start (AC-015.5), so recall stays computable. Decided in
+  planning (builder check).

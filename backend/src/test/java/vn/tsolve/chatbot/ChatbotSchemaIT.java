@@ -70,11 +70,11 @@ class ChatbotSchemaIT {
                         "SELECT column_name FROM information_schema.columns WHERE table_name = 'chatbot_answer'",
                         String.class))
                 .containsExactlyInAnyOrder(
-                        "chatbot_answer_id", "user_id", "question", "outcome", "answer_text", "created_at");
+                        "chatbot_answer_id", "user_id", "question", "outcome", "answer_text", "created_at", "sources");
         assertThat(jdbc.queryForObject("""
                         SELECT count(*) FROM information_schema.columns
                         WHERE table_name = 'chatbot_answer' AND is_nullable = 'NO'
-                        """, Integer.class)).isEqualTo(6);
+                        """, Integer.class)).isEqualTo(7);
         assertThat(jdbc.queryForObject("""
                         SELECT data_type FROM information_schema.columns
                         WHERE table_name = 'chatbot_answer' AND column_name = 'created_at'
@@ -127,10 +127,13 @@ class ChatbotSchemaIT {
     void rollsBackToTwoOutcomes_AC_009_8() throws Exception {
         try (Liquibase liquibase = liquibase()) {
             List<ChangeSet> changesets = liquibase.getDatabaseChangeLog().getChangeSets();
-            assertThat(changesets.subList(changesets.size() - 2, changesets.size()))
+            assertThat(changesets.subList(changesets.size() - 3, changesets.size()))
                     .extracting(ChangeSet::getId)
-                    .containsExactly("046-chatbot-answer-outcomes", "050-search-embedding-text-version");
-            liquibase.rollback(2, "");
+                    .containsExactly(
+                            "046-chatbot-answer-outcomes",
+                            "050-search-embedding-text-version",
+                            "056-chatbot-answer-sources");
+            liquibase.rollback(3, "");
             UUID user = insertUser();
             assertThatThrownBy(() -> insertAnswer(user, "GREETING", ""))
                     .isInstanceOf(DataIntegrityViolationException.class)
@@ -160,6 +163,36 @@ class ChatbotSchemaIT {
                     .isEqualTo("ticket_feedback");
             liquibase.update("");
             assertThat(insertAnswer(insertUser(), "NO_SOURCE", "")).isNotNull();
+        }
+    }
+
+    @Test
+    void sourcesDefaultsToEmptyArray_AC_014_4() {
+        UUID answer = insertAnswer(insertUser(), "NO_SOURCE", "");
+        assertThat(jdbc.queryForObject(
+                        "SELECT sources::text FROM chatbot_answer WHERE chatbot_answer_id = ?", String.class, answer))
+                .isEqualTo("[]");
+        assertThat(jdbc.queryForObject("""
+                        SELECT data_type FROM information_schema.columns
+                        WHERE table_name = 'chatbot_answer' AND column_name = 'sources' AND is_nullable = 'NO'
+                        """, String.class)).isEqualTo("jsonb");
+        assertThatThrownBy(() ->
+                        jdbc.update("UPDATE chatbot_answer SET sources = NULL WHERE chatbot_answer_id = ?", answer))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void rollbackDropsSources_AC_014_4() throws Exception {
+        try (Liquibase liquibase = liquibase()) {
+            List<ChangeSet> changesets = liquibase.getDatabaseChangeLog().getChangeSets();
+            assertThat(changesets.getLast().getId()).isEqualTo("056-chatbot-answer-sources");
+            liquibase.rollback(1, "");
+            assertThat(jdbc.queryForObject("""
+                            SELECT count(*) FROM information_schema.columns
+                            WHERE table_name = 'chatbot_answer' AND column_name = 'sources'
+                            """, Integer.class)).isZero();
+            liquibase.update("");
+            assertThat(insertAnswer(insertUser(), "ANSWERED", "Answer [1]")).isNotNull();
         }
     }
 
