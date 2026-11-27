@@ -1031,6 +1031,10 @@ log capture (Edge #62); a source scan fails when a class outside the Console, `o
 - `ProvisioningLock` takes the primary DataSource unbound and throws `NoTenantException` with routing on. Move it to the Registry pool (bound; its lock would cover one Workspace database only).
 - Validate `db_name` before it goes into the JDBC URL (`TenantPoolRegistry`, review M1).
 
+**Note (from the Task 11a review, KAN-475):**
+- Fix the `schema_version` bug (BUG-414): the column must hold the newest non-runAlways changeset, in `TenantMigrator` and `registry-adopt-workspace.sh`.
+- Add `!ops` to the startup migrator runner only; keep the bean.
+
 ---
 
 ## Task 8: Invitation job queue: the minimal `InvitationJobQueue` on JobRunr in the Jobs database
@@ -1408,6 +1412,8 @@ no trigger from pull requests (Edge #49).
 **Dependencies:** Tasks 2, 8, 10, 12, 13, 14; `be-foundation` Task 2 (401 `MSG07` on `/api/**` without a session)
 **Estimated size:** medium
 **Done when:** a merge to `main` ends with a green smoke test on staging.
+
+**Note (from the Task 11a review, KAN-475):** when `up --wait` fails, `deploy.sh` prints `docker compose logs --tail=100 backend` so CD names the failing site (AC-010.5).
 
 ---
 

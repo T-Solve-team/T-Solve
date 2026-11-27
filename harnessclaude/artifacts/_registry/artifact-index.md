@@ -340,3 +340,6 @@ Master registry of all artifacts in this workspace.
 | — | review | platform | pass | artifacts/06-evaluation/platform/task-10b-web-tenant-isolation-review.md |
 | — | test-report | platform | pass | artifacts/06-evaluation/platform/task-10b-web-tenant-isolation-test-report.md |
 | — | session-log | platform | passing | artifacts/05-implementation/platform/task-10b-web-tenant-isolation.md |
+| — | session-log | platform | passing | artifacts/05-implementation/platform/task-11-startup-migrator.md |
+| — | review | platform | pass | artifacts/06-evaluation/platform/task-11-startup-migrator-review.md |
+| — | test-report | platform | pass | artifacts/06-evaluation/platform/task-11-startup-migrator-test-report.md |
