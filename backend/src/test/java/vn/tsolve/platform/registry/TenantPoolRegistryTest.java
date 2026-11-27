@@ -35,7 +35,8 @@ class TenantPoolRegistryTest {
     // JobRunrRuntime.java:58)
     private static final int WEB_JOBS = 6;
     private static final int WORKER_JOBS_ON_TOP_OF_WORKERS = 2; // JobRunrRuntime.java:58
-    private static final int MIGRATION_PER_PROCESS = 1; // Boot's tenant Liquibase DataSource
+    // TenantMigrator's one connection at startup (web only); counted per process as headroom
+    private static final int MIGRATION_PER_PROCESS = 1;
     private static final int RESERVED_FOR_SUPERUSERS = 3; // PostgreSQL default, not set in compose
 
     private static final String KEY = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";

@@ -1,6 +1,8 @@
 package vn.tsolve.platform.registry;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -21,7 +23,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import javax.sql.DataSource;
-import liquibase.integration.spring.SpringLiquibase;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -39,6 +40,8 @@ import org.springframework.core.io.ClassPathResource;
 import vn.tsolve.common.tenant.AcceptingKnownWorkspaces;
 import vn.tsolve.common.tenant.TenantRoutingDataSource;
 import vn.tsolve.platform.service.WorkspaceCatalog;
+import vn.tsolve.platform.tenantdb.TenantMigrator;
+import vn.tsolve.platform.tenantdb.TenantStartupMigrator;
 import vn.tsolve.support.PostgresTestBase;
 
 /**
@@ -259,15 +262,17 @@ class RegistryChangelogIT {
     }
 
     @Test
-    @DisplayName("edge 72 with routing the primary is the router and the tenant Liquibase runs through "
-            + "spring.liquibase.url")
-    void keepsPrimaryDataSourceAndTenantLiquibase_edge_72() {
+    @DisplayName("AC-008.4 edge 72 with routing the primary is the router, and the startup migrator replaces Boot's "
+            + "tenant Liquibase")
+    void routingReplacesBootTenantLiquibaseWithStartupMigrator_AC_008_4_edge_72() {
         String registry = PostgresTestBase.emptyDatabase("e72");
         String host = PostgresTestBase.instance().getHost();
         String port = String.valueOf(PostgresTestBase.instance().getMappedPort(5432));
+        TenantMigrator migrator = mock(TenantMigrator.class);
 
         webRunner(registry)
-                .withUserConfiguration(TenantDataSourceConfig.class, NoEntities.class)
+                .withBean(TenantMigrator.class, () -> migrator)
+                .withUserConfiguration(TenantDataSourceConfig.class, TenantStartupMigrator.class, NoEntities.class)
                 .withConfiguration(AutoConfigurations.of(
                         DataSourceAutoConfiguration.class,
                         LiquibaseAutoConfiguration.class,
@@ -289,14 +294,9 @@ class RegistryChangelogIT {
                             .hasBean("registryJdbcClient");
                     assertThat(context).hasSingleBean(WorkspaceCatalog.class);
                     assertThat(context.getBean(DataSource.class)).isInstanceOf(TenantRoutingDataSource.class);
-                    assertThat(context).hasBean("liquibase");
-                    SpringLiquibase liquibase = context.getBean("liquibase", SpringLiquibase.class);
-                    assertThat(liquibase.getChangeLog()).endsWith("db/changelog/db.changelog-master.xml");
-                    assertThat(liquibase.getDataSource()).isNotInstanceOf(TenantRoutingDataSource.class);
-                    try (Connection connection = liquibase.getDataSource().getConnection()) {
-                        assertThat(scalar(connection, "SELECT current_database()"))
-                                .isEqualTo(PostgresTestBase.APP_DB);
-                    }
+                    assertThat(context).doesNotHaveBean("liquibase");
+                    assertThat(context).hasSingleBean(TenantStartupMigrator.class);
+                    verify(migrator).applyAll();
                 });
     }
 

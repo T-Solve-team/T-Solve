@@ -9,13 +9,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.actuate.jdbc.DataSourceHealthIndicator;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
-import org.springframework.boot.autoconfigure.liquibase.LiquibaseConnectionDetails;
 import org.springframework.boot.autoconfigure.orm.jpa.HibernatePropertiesCustomizer;
 import org.springframework.boot.autoconfigure.transaction.TransactionManagerCustomizers;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
-import org.springframework.core.env.Environment;
 import org.springframework.transaction.PlatformTransactionManager;
 import vn.tsolve.common.tenant.TenantAwareJpaTransactionManager;
 import vn.tsolve.common.tenant.TenantDataSources;
@@ -62,30 +60,6 @@ public class TenantDataSourceConfig {
             properties.put("hibernate.boot.allow_jdbc_metadata_access", false);
             properties.put(AvailableSettings.DIALECT, PostgreSQLDialect.class.getName());
             properties.put(AvailableSettings.HBM2DDL_AUTO, "none");
-        };
-    }
-
-    /**
-     * The tenant changelog keeps its own connection to {@code DB_*}. The url is always given: with a user and no url
-     * Boot would build the migration connection from the router.
-     */
-    @Bean
-    LiquibaseConnectionDetails tenantLiquibaseConnection(Environment environment) {
-        return new LiquibaseConnectionDetails() {
-            @Override
-            public String getJdbcUrl() {
-                return environment.getRequiredProperty("spring.datasource.url");
-            }
-
-            @Override
-            public String getUsername() {
-                return environment.getRequiredProperty("spring.datasource.username");
-            }
-
-            @Override
-            public String getPassword() {
-                return environment.getRequiredProperty("spring.datasource.password");
-            }
         };
     }
 

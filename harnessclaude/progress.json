@@ -525,9 +525,10 @@
         "catalog-lookups": "passing",
         "catalog-worker-tenant": "passing",
         "background-work-bound": "passing",
-        "web-tenant-isolation": "passing"
+        "web-tenant-isolation": "passing",
+        "startup-migrator": "passing"
       },
-      "lastUpdated": "2026-11-27T13:53:15.662Z",
+      "lastUpdated": "2026-11-27T15:07:11.118Z",
       "branch": "feat/platform",
       "repos": [
         "default"

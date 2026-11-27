@@ -9,7 +9,9 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import vn.tsolve.platform.dto.WorkspaceStatus;
 import vn.tsolve.platform.dto.WorkspaceSummary;
 
-/** Reads the Registry tables and claims Workspace emails over {@code registryJdbcClient}. */
+/**
+ * Reads the Registry tables, claims Workspace emails and records schema versions over {@code registryJdbcClient}.
+ */
 public class RegistryRepository {
 
     private static final String SUMMARY_COLUMNS =
@@ -64,6 +66,37 @@ public class RegistryRepository {
                         rs.getString("db_password"),
                         rs.getString("site_name")))
                 .optional();
+    }
+
+    /** One row's database, for the startup migrator; {@code dbPassword} is the encrypted value. Never logged. */
+    public record WorkspaceDatabase(
+            UUID workspaceId,
+            String siteName,
+            WorkspaceStatus status,
+            String dbName,
+            String dbUser,
+            String dbPassword) {}
+
+    /** Every row, whatever its status, ordered by {@code site_name}. Only for {@code platform} (AC-004.18). */
+    public List<WorkspaceDatabase> findAllConnections() {
+        return jdbc.sql("SELECT workspace_id, site_name, status, db_name, db_user, db_password FROM tenant_workspace "
+                        + "ORDER BY site_name")
+                .query((rs, rowNum) -> new WorkspaceDatabase(
+                        rs.getObject("workspace_id", UUID.class),
+                        rs.getString("site_name"),
+                        WorkspaceStatus.valueOf(rs.getString("status")),
+                        rs.getString("db_name"),
+                        rs.getString("db_user"),
+                        rs.getString("db_password")))
+                .list();
+    }
+
+    /** The tenant changelog version last applied to that Workspace's database (AC-001.15). */
+    public void updateSchemaVersion(UUID workspaceId, String schemaVersion) {
+        jdbc.sql("UPDATE tenant_workspace SET schema_version = ?, updated_at = now() WHERE workspace_id = ?")
+                .param(schemaVersion)
+                .param(workspaceId)
+                .update();
     }
 
     public List<WorkspaceSummary> findByStatus(WorkspaceStatus status) {
