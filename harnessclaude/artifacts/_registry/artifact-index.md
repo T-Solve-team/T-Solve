@@ -212,6 +212,8 @@ Master registry of all artifacts in this workspace.
 | — | design | tracker | draft | artifacts/04-plans/tracker/iteration-1/design.md |
 | — | tasks | tracker | draft | artifacts/04-plans/tracker/iteration-1/tasks.md |
 | RESEARCH-002 | research | tracker | in-progress | artifacts/01-research/RESEARCH-002-servicenow-and-zendesk-trackers.md |
+| — | review | tracker | pass | artifacts/06-evaluation/tracker/quick-bug-403-bind-issue-created-review.md |
+| — | test-report | tracker | pass | artifacts/06-evaluation/tracker/quick-bug-403-bind-issue-created-test-report.md |
 | RESEARCH-004 | research | jira-app | complete | artifacts/01-research/RESEARCH-004-ask-ai-before-creating-a-jira-issue.md |
 | RESEARCH-005 | research | platform | complete | artifacts/01-research/RESEARCH-005-signed-url-route-on-caddy.md |
 | RESEARCH-006 | research | chatbot | complete | artifacts/01-research/RESEARCH-006-chatbot-question-classification.md |

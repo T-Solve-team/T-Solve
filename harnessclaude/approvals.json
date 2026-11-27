@@ -974,8 +974,8 @@
     }
   },
   "tracker": {
-    "specHash": "66a60ca94d8a7e1e6ce3b68a9ea453fb4041843e75e8ebc0632aa8975ab231a6",
-    "approvedAt": "2026-11-18T04:26:46.702Z",
+    "specHash": "9bc2419a3c1005885b68de6770b6bc5b92376f4187c4073742202a1ddea9858b",
+    "approvedAt": "2026-11-27T03:11:47.263Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a request to the Jira App API carries a FIT whose signature verifies against Atlassian's JWKS, whose issuer is , whose audience equals the configured app id, which is within its / window, and which has a , THE tracker SHALL pass the request to its handler with the cloudId and the principal (if any).",
@@ -989,6 +989,7 @@
       "AC-003.4": "IF a suggestion result for the event's issue key already exists (Forge delivered the event again), THEN THE tracker SHALL respond 202 without storing a second one or changing the existing one.",
       "AC-003.6": "IF the event body is not a valid \"issue created\" event (no issue key, an issue key longer than 50 characters, or no ), THEN THE tracker SHALL respond 400 with the team's validation message code (missing field MSG01, too long MSG02, unreadable body MSG06) and store nothing.",
       "AC-003.8": "IF the event's project key is not the Jira project key of an ACTIVE T-Solve Project, THEN THE tracker SHALL respond 202 and store nothing.",
+      "AC-003.9": "IF an \"issue created\" event arrives and the FIT's cloudId belongs to no Workspace in the platform's catalog, or the process has no Workspace catalog, THEN THE tracker SHALL respond 202, store nothing and queue no suggestion job.",
       "AC-007.1": "WHEN a principal linked to an active T-Solve user requests panel data for an issue of a T-Solve Project, THE tracker SHALL return the stored suggestions (as search allows that user, including MSG76 when search is not available to them) and the Solution Form state from the ticket package: AI draft or MSG67, unsubmitted draft (MSG77), submitted and awaiting review (MSG65), or changes requested (MSG64).",
       "AC-007.2": "IF the principal is not linked to a T-Solve user, THEN THE tracker SHALL return panel data that only asks the user to sign in (MSG62), plus the MSG81 question when STORY-010 applies.",
       "AC-007.3": "IF the principal is linked to a deactivated T-Solve user, THEN THE tracker SHALL return panel data with MSG10 and nothing else.",

@@ -20,7 +20,10 @@ Database: "T-Solve Database Tables" (31/10), `01_catalog.sql`, `02_tenant.sql` �
 Forge trigger ──POST + FIT──────────────►  [JiraAppSecurityConfig: FIT filter chain, /api/v1/jira-app/**]
 Issue Panel  ──invokeRemote + FIT (+ system token)─►      │ JiraAppPrincipal(cloudId, accountId)
                                                           ▼
-       JiraAppEventController ─► IssueCreatedService.receive(payload)
+       JiraAppEventController ─► IssueCreatedService.receive(caller, payload)
+                                   ├─ WorkspaceCatalog.findByCloudId(caller.cloudId)      (module platform)
+                                   │     unknown site or no catalog → 202, nothing stored, no job (AC-003.9)
+                                   │     else TenantContext.runIn(workspace), for the steps below
                                    ├─ ProjectService.findActiveIdByJiraProjectKey(key)   (module project)
                                    │     none → 202, nothing stored (AC-003.8)
                                    └─ insert suggestion_result(project_id, jira_issue_key) → 202
@@ -28,12 +31,14 @@ Issue Panel  ──invokeRemote + FIT (+ system token)─►      │ JiraAppPri
        JiraAppIssueController ─► JiraPanelService (panel, refresh, draft, submit, answer)   — later tasks
                                    └─ JiraClient with the request's system token (never stored)
 
-discovery (not tracker) ─► picks the tenant database for the request before the controller runs
+platform owns how a bound Workspace is routed to its tenant database; refusing an unknown cloudId is discovery's
 ```
 
-- **One tenant database, already chosen.** The tracker runs as if the request is already connected to the right
-  tenant database (Non-Functional 8). Tenant tables have no Workspace ID, so entities carry none and there is no
-  Hibernate multi-tenancy. Locally the single datasource of `application.yml` is the tenant database.
+- **One tenant database per Workspace.** The "issue created" webhook binds the Workspace of the caller's Jira site —
+  the FIT's `cloudId`, never anything in the body — through platform's `WorkspaceCatalog` and `TenantContext`, as
+  `jira-app` "issue updated" does (Non-Functional 8, AC-003.9; KAN-467, BUG-403). Platform owns routing the bound
+  Workspace to its database. Tenant tables have no Workspace ID, so entities carry none and there is no Hibernate
+  multi-tenancy.
 - **FIT chain.** `JiraAppSecurityConfig` keeps its `@Order(1)` chain with `securityMatcher("/api/v1/jira-app/**")`:
   stateless, CSRF off, `oauth2ResourceServer().jwt()` with the Nimbus `JwtDecoder` (RS256 only). Validators check
   `iss`, `aud` = app id and that `context.cloudId` is present; any failure is 401 MSG08. The converter builds
@@ -115,8 +120,8 @@ Entities (no Workspace ID):
 | Where a new issue is stored | `suggestion_result` row (Project + issue key) | own `jira_issue` table; `ticket` table | Table already in the DB design for "one row per issue, dedupe Forge retries"; `ticket` needs a Solution (user, 2026-11-01) |
 | Project key | `issue.fields.project.key` from the payload | cut from the issue key | User choice 2026-11-01; confirm the field on the first real delivery (step 4) |
 | Unknown project | 202, nothing stored | 4xx | Forge must not retry; issues of non-T-Solve projects are normal |
-| Tenant | Request already runs in its tenant DB; no Workspace ID | `@TenantId` (2026-10-27) | One DB per Workspace (31/10); discovery picks the DB (user) |
-| cloudId check | Not in tracker (discovery) | env `TSOLVE_JIRA_CLOUD_ID` | User, 2026-11-01; until discovery exists any site with the app is accepted |
+| Tenant | No Workspace ID in tenant tables; "issue created" binds the Workspace of the FIT's `cloudId`, platform routes it to its DB | `@TenantId` (2026-10-27); leave the binding to discovery (2026-11-01, replaced 2026-11-27) | One DB per Workspace (31/10); the webhook reached no site's DB unbound (BUG-403; Hiếu, KAN-467) |
+| cloudId check | "Issue created": looked up in platform's Workspace catalog; unknown site or no catalog → 202, nothing stored, no job (AC-003.9). Refusing the call stays with discovery | env `TSOLVE_JIRA_CLOUD_ID`; no check in tracker (2026-11-01, replaced 2026-11-27) | Hiếu, KAN-467 |
 | System token | Not requested for events; panel uses it in-request only | store encrypted for a worker | No background job (user, 2026-11-01) |
 | Reading Project | Minimal `project` module with `ProjectService` | native query in tracker | AGENTS: other modules only through their `service/` (user, 2026-11-01) |
 | Schema | Temporary changeset (department, project, suggestion_result) | wait for the team's tenant changeset | App must run for the demo (user, 2026-11-01) |
@@ -160,7 +165,8 @@ jira-app/TSolve_JiraApp/manifest.yml (remove auth.appSystemToken on the event en
 - `spring-boot-starter-oauth2-resource-server`: FIT verification. **New dependency** — team approves in the PR.
 - Atlassian Forge JWKS `https://forge.cdn.prod.atlassian-dev.net/.well-known/jwks.json` (configurable).
 - Jira Cloud REST API v3 — panel calls only, with the request's system token.
-- Discovery (other owner): connects each Jira App API request to its tenant database.
+- `platform`: `WorkspaceCatalog` and `TenantContext` bind the Workspace for "issue created" (AC-003.9); platform owns
+  database routing. Discovery (other owner) stays responsible for refusing an unknown cloudId.
 
 ## Edge Cases & Risks
 
@@ -177,7 +183,7 @@ no state machine left in receive; 6 Environment — server-to-server; 12 Busines
 | 5 | STORY-001 | Error cascades | JWKS endpoint down, no cached key matches | High | 503 MSG06, error type recorded | Task 3 |
 | 6 | STORY-001 | Timing | Server clock 30 s behind Atlassian (`nbf` in the future) | Medium | Accepted within 60 s clock skew | Task 3 |
 | 7 | STORY-001 | Compliance | Rejected request — FIT reaching a log line or ProblemDetail | Critical | Never logged; ProblemDetail has only code + generic text | Task 3, Task 6 |
-| 8 | STORY-001 | Authorization | FIT from a Jira site of no Workspace (discovery not built yet) | High | Accepted by tracker — accepted risk until discovery; noted in the PR | — |
+| 8 | STORY-001 | Authorization | FIT from a Jira site of no Workspace (discovery not built yet) | High | The FIT is accepted (refusal is discovery's); "issue created" answers 202, stores nothing, queues no job (AC-003.9) | — |
 | 11 | STORY-003 | Timing | Forge retries the same event after a slow 202 | High | Unique key hit → 202, one row | Task 6 |
 | 12 | STORY-003 | Timing | Two deliveries of the same event in parallel | High | One insert wins; the other catches `uq_suggestion_issue` → 202 | Task 6 |
 | 13 | STORY-003 | Input extremes | Body without `issue.key` or `issue.fields.project.key`, or non-JSON | Medium | 400 MSG06, nothing stored | Task 6 |
@@ -223,7 +229,7 @@ Forge trigger → JiraAppEventController → IssueCreatedServiceImpl.receive
 | Stand-in search | `StubSuggestionSearch`, property `tsolve.stub.suggestion` ← `TSOLVE_STUB_SUGGESTION`: empty = no suggestion, `unavailable` = throws, any other text = that text with no sources | always "no suggestion" | Demo of the whole flow and test of the failure path (user, 2026-11-07); same pattern as the other `TSOLVE_STUB_*` |
 | `sources_used` format | `[{"type": "TICKET" | "WIKI", "id", "title", "similarity"}]` | own format | What triage's `SourcesUsed` already reads (KAN-149) |
 | Double run | Guard in the job (AC-011.7) + conditional update `… WHERE suggested_solution IS NULL` | lock row | A JobRunr retry or a parallel run cannot overwrite a stored suggestion |
-| Tenant | Job runs in the single current DB; with tenancy the JobRunr adapter wraps it in `runInTenant` (KAN-102) | carry tenant now | No tenant routing on `main` yet |
+| Tenant | Job runs in the single current DB; with tenancy the JobRunr adapter wraps it in `runInTenant` (KAN-102) | carry tenant now | No tenant routing on `main` yet (2026-11-07; "issue created" now binds its Workspace, AC-003.9) |
 
 Files (Task 15):
 
@@ -262,8 +268,7 @@ frontend/openapi/tsolve-api.yaml              (IssueCreatedPayload: summary, des
 receive: saveAndFlush(SuggestionResult with jobRef = random UUID, issueSummary, issueDescription)
    → SuggestionJobQueue.enqueue(SuggestionJobRequest(jobRef, issueKey))          → 202
         worker enabled  (tsolve.worker.enabled=true): WorkerSuggestionJobQueue
-            workspace bound? → TenantJobService.enqueue("tracker.suggestion", jobRef)
-            else dev workspace configured? → WorkerTenantService.runIn(devId, enqueue)
+            workspace bound and may enqueue? → TenantJobService.enqueue("tracker.suggestion", jobRef)
             else / enqueue error → log issue key + error type, job lost (never throws)
         worker disabled (default): InProcessSuggestionJobQueue (AC-011.9, no retry)
 SuggestionJobHandler (TenantJobHandler "tracker.suggestion").execute(jobRef) → SuggestionJobService.run(jobRef)
@@ -278,7 +283,7 @@ SuggestionJobHandler (TenantJobHandler "tracker.suggestion").execute(jobRef) →
 | Record id for the worker | ~~New column `job_ref UUID NOT NULL UNIQUE`~~ — superseded by "Change 2026-11-07: UUID keys" below: the job carries `suggestion_id` | change the BIGSERIAL key to UUID | Triage reads `suggestion_id`; a new column changes nothing for it |
 | Retries | The job throws on failure; JobRunr's native retries | swallow (old AC-011.6) | User, 2026-11-07; the guard and conditional update make reruns safe |
 | Failure exception | `SuggestionJobFailedException extends CodedException`, message = issue key + error type, **no cause** | rethrow the original | JobRunr stores the exception and its causes in the Jobs DB; a cause message can quote issue text |
-| Workspace at enqueue | Use the bound one; else `tsolve.tracker.dev-workspace-id` (`TSOLVE_TRACKER_DEV_WORKSPACE_ID`) through `WorkerTenantService.runIn` | in-process fallback when unbound | User chose (a), 2026-11-07. Dev/mock only; removed when platform binds the request's Workspace |
+| Workspace at enqueue | The bound one only ("issue created" binds it, AC-003.9); none bound → not queued | in-process fallback when unbound; a configured dev Workspace (2026-11-07, removed by KAN-385) | No Workspace fallbacks (KAN-385) |
 | Which queue | `@ConditionalOnProperty(tsolve.worker.enabled)`: true → `WorkerSuggestionJobQueue`, false/missing → `InProcessSuggestionJobQueue` | `@ConditionalOnBean` | Bean-presence conditions on components depend on registration order |
 | Handler bean | Always registered | only with the worker | Harmless when the worker is off; the worker collects every `TenantJobHandler` |
 
@@ -297,7 +302,7 @@ changelog master; create `service/impl/WorkerSuggestionJobQueue`, `service/impl/
 |---|-------|-----------|----------|----------|-------------------|-----------|
 | 45 | STORY-011 | Error cascades | Search keeps failing | Medium | JobRunr retries, then marks the job failed; row unchanged | Task 16 |
 | 46 | STORY-011 | Compliance | Search exception message quotes the issue text | Critical | Stored failure has key + type only (no cause) | Task 16 |
-| 47 | STORY-011 | Environment | Worker on, no Workspace bound, no dev Workspace set | Medium | Logged, 202, no job (never 5xx) | Task 16 |
+| 47 | STORY-011 | Environment | Worker on, no Workspace bound | Medium | Logged, 202, no job (never 5xx) | Task 16 |
 | 48 | STORY-011 | Data integrity | Rows created before the changeset | Low | Get a `job_ref`; no text, so a job for them would send empty text | Task 16 |
 
 Search timeout: the job sets none of its own; AC-011.6 "does not answer" is met by the `SuggestionSearch`
@@ -400,8 +405,8 @@ Risk: the service account must be allowed to comment in every T-Solve Project; a
 Still applies: the FIT chain and its ordering with `identity`'s chain; the new pom dependency; SSRF through the
 FIT `apiBaseUrl` for panel Jira calls (host allowlist, no redirects); panel token used in-request only.
 No longer applies: token storage, worker crash/claim, FAILED events, site URL registration.
-New: until discovery exists, every Jira site that installs the app writes into the one database (edge case 8) —
-acceptable on the demo site only.
+The 2026-11-01 risk that every site with the app writes into one database no longer applies to "issue created": it
+binds the caller's Workspace, and an unknown site stores nothing (edge case 8, AC-003.9).
 
 ## Builder Check — 2026-11-01 (inline)
 
@@ -481,7 +486,8 @@ Risk Review: **CAUTION** for the retained Basic-auth/scoped-token mismatch; this
 
 Staging runs the web process with `tsolve.worker.enabled=false` and the worker in its own container. The in-process
 queue (AC-011.9) ran the job on its own thread with no Workspace bound, so `WorkspaceJiraServiceAccount.current()`
-threw and MSG80 was never posted. The Jira App webhook (FIT bearer, stateless chain) binds no Workspace either.
+threw and MSG80 was never posted. The Jira App webhook (FIT bearer, stateless chain) bound no Workspace either (since
+KAN-467, "issue created" binds its site's Workspace, AC-003.9).
 
 - New flag `tsolve.worker.web-jobs-enabled` (`TSOLVE_WORKER_WEB_JOBS_ENABLED`, default false). Chosen over reusing
   `outbox-enabled` (its name says email) and over turning on `tsolve.worker.enabled` in the web process (needs a
@@ -494,7 +500,7 @@ threw and MSG80 was never posted. The Jira App webhook (FIT bearer, stateless ch
   start is retried on the next job. No `JobRunrRuntime`, `TenantJobService`, `WorkerTenantService` or `TenantContext`
   bean is created, so Wiki and `WorkspaceJiraServiceAccount` keep their web paths.
 - The Workspace is `OutboxWorkspace` (request TenantContext, else the single Active Workspace of
-  `TSOLVE_MOCK_ACTIVE_WORKSPACES`, never a guess). That bean exists only with `outbox-enabled`; web jobs require it and
+  `TSOLVE_MOCK_ACTIVE_WORKSPACES`, never a guess; "issue created" always has its own bound, AC-003.9). That bean exists only with `outbox-enabled`; web jobs require it and
   the start fails with a message naming both flags otherwise. Staging sets both.
 - `tracker/service/impl/WebSuggestionJobQueue` — same condition; enqueues `SuggestionJobHandler.TYPE`, never throws,
   logs only the issue key and the error type (AC-011.11).
@@ -503,6 +509,6 @@ threw and MSG80 was never posted. The Jira App webhook (FIT bearer, stateless ch
   (AC-011.6, AC-012.7).
 - `infra/compose.staging.yml` backend: `TSOLVE_WORKER_WEB_JOBS_ENABLED: "true"`; `.env.example` documents the flag.
 
-Edge cases: 66 — several or no mock Workspaces → no job, WARN (AC-011.11). 67 — Jobs database down at the first job →
+Edge cases: 66 — no Workspace bound and several or no mock Workspaces → no job, WARN (AC-011.11; does not arise for "issue created", AC-003.9). 67 — Jobs database down at the first job →
 no job, WARN, the next job retries the start; the web start is unaffected (AC-011.11). 68 — web-jobs on without
 outbox → start fails, naming both flags. Decisions: `iteration-1/kan-370-decisions.md`.
