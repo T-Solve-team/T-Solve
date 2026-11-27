@@ -51,6 +51,21 @@ public class RegistryRepository {
                 .optional();
     }
 
+    /** What the pool of a Workspace connects with; {@code dbPassword} is the encrypted value. Never logged. */
+    record WorkspaceConnection(String dbName, String dbUser, String dbPassword, String siteName) {}
+
+    /** For tenant routing only: connection data never leaves {@code platform} (AC-004.18). */
+    Optional<WorkspaceConnection> findConnection(UUID workspaceId) {
+        return jdbc.sql("SELECT db_name, db_user, db_password, site_name FROM tenant_workspace WHERE workspace_id = ?")
+                .param(workspaceId)
+                .query((rs, rowNum) -> new WorkspaceConnection(
+                        rs.getString("db_name"),
+                        rs.getString("db_user"),
+                        rs.getString("db_password"),
+                        rs.getString("site_name")))
+                .optional();
+    }
+
     public List<WorkspaceSummary> findByStatus(WorkspaceStatus status) {
         return jdbc.sql("SELECT " + SUMMARY_COLUMNS + " FROM tenant_workspace WHERE status = ?")
                 .param(status.name())

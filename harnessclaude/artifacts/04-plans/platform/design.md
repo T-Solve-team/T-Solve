@@ -109,7 +109,8 @@ the target, not built here — H-Q1):
   `JdbcTemplate` use it. It overrides `determineTargetDataSource()`: no Workspace bound → throws `NoTenantException`
   before any connection is opened (AC-002.21); else it returns the pool of that Workspace from the port
   `TenantDataSources` (`DataSource poolOf(UUID)`), which `platform/registry/TenantPoolRegistry` implements. Boot's health
-  check must not call it with nothing bound: `management.health.db.ignore-routing-data-sources: true`.
+  check must not call it with nothing bound: a `dbHealthContributor` bean on the Registry pool (Boot's own contributor
+  backs off).
 - `TenantPoolRegistry` opens a HikariCP pool for a Workspace on first use (`ConcurrentHashMap.computeIfAbsent`, so two
   first requests share one pool): `maximumPoolSize = TENANT_DB_POOL_MAX` (default 5), `minimumIdle = 0`,
   `idleTimeout` 10 minutes, so an idle Workspace keeps no connection (AC-002.22). Connection data comes from the
@@ -440,7 +441,9 @@ another's; no such use exists yet (see Out of Scope of the spec).
 | AI VPS | Ollama as a native systemd service bound to the WireGuard address (decision P11) | `infra/scripts/ollama-setup.sh`, `infra/scripts/wireguard-setup.sh` |
 
 - PostgreSQL: `max_connections = 300` in the compose file (decision R2: Workspaces in use × `TENANT_DB_POOL_MAX` × 2
-  (backend and worker) + 2 × 5 Registry + Jobs + Keycloak + migration must stay below it), `shared_buffers` and memory limit as the staging VPS allows.
+  (backend and worker) + 2 × 5 Registry + Jobs (web 2 × 3, worker `TSOLVE_WORKER_COUNT` + 2) + Keycloak
+  (`KC_DB_POOL_MAX_SIZE` 15) + migration (1 per process) must stay within `max_connections` − 3 reserved: 289 ≤ 297),
+  `shared_buffers` and memory limit as the staging VPS allows.
   `infra/compose.staging.yml` still has 100; Task 6-2 raises it to 300, and the `db` container is recreated (restarts)
   by hand right after that deploy, because CD does not apply it.
 - Redis and Garage run **one per environment** (in the staging or production compose file, not in the shared
@@ -698,12 +701,12 @@ High row into a task.
 | 12 | STORY-001 | Data integrity | A table is added to the legacy allow-list, or one meeting AC-001.20 stays on it | High | Guard test fails ("the allow-list only shrinks"); so does an entry naming a table that does not exist | ConventionGuardIT (AC-001.22) |
 | 13 | STORY-001 | Error cascades | `CATALOG_SECRET_KEY` missing or wrong | High | Missing: startup refuses; wrong: that Workspace's pool refuses, logs the site name without the password, others keep working | PasswordCipherTest, TenantRoutingIT |
 | 14 | STORY-001 | Compliance | A connection URL or exception with the database password reaches the log | High | No password in any log line | TenantRoutingIT (log capture) |
-| 15 | STORY-002 | Scale | 25 Workspaces open their pools at once in both routing processes (25 × 5 × 2 + 2 × 5 Registry + Jobs + Keycloak + migration) | High | Stays below `max_connections` 300; idle pools release their connections | TenantPoolRegistryTest, TenantRoutingIT, `infra/tests` config check |
+| 15 | STORY-002 | Scale | 25 Workspaces open their pools at once in both routing processes (25 × 5 × 2 + 10 Registry + 12 Jobs + 15 Keycloak + 2 migration = 289) | High | Stays within `max_connections` 300 − 3 reserved; idle pools release their connections | TenantPoolRegistryTest (reads compose, staging env example, application.yml), TenantRoutingIT |
 | 16 | STORY-002 | Timing | Two first requests for the same Workspace | Medium | One pool is opened | TenantRoutingIT |
 | 17 | STORY-002 | Error cascades | One Workspace database is down; the Registry is down | High | That Workspace answers 500 `MSG06`, the others work; Registry down fails every resolution closed, logged | TenantRoutingIT |
 | 18 | STORY-002 | Authorization | Unknown site or Suspended Workspace with no session | High | 404 `MSG151` / 403 `MSG150`, not 401 | TenantResolverFilterTest |
 | 19 | STORY-002 | Input extremes | Host `ACME.tsolve.io.vn:443`, trailing dot, `xn--…` label, 64-char label, `-acme` | High | Lower-cased, port stripped; trailing dot and invalid labels `MSG151` without a lookup | HostClassifierTest |
-| 20 | STORY-002 | Environment of hosts | Docker health check on `localhost:8080/actuator/health` | High | 200; the routing `DataSource` is not asked (`ignore-routing-data-sources`, Task 6-2) | TenantResolverFilterTest |
+| 20 | STORY-002 | Environment of hosts | Docker health check on `localhost:8080/actuator/health` | High | 200; the routing `DataSource` is not asked (Registry `dbHealthContributor`, Task 6-2) | TenantRoutingIT |
 | 21 | STORY-002 | User types | Console reads a Suspended Workspace with `runIn` | Medium | Allowed (AC-002.15) | ThreadLocalTenantContextTest |
 | 22 | STORY-002 | Compliance | Logs of refused requests | Medium | Host and code only; no token, cookie or body | TenantResolverFilterTest, NimbusForgeTokenVerifierTest |
 | 23 | STORY-002 | Environment | Hibernate asks the database for metadata at startup with no Workspace bound | High | Startup succeeds (R15) | TenantRoutingIT |
