@@ -42,7 +42,9 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
     public Connection getConnection() throws SQLException {
         UUID bound = TenantBinding.require();
         Connection connection = pools.poolOf(bound).getConnection();
-        // Inside a transaction TenantAwareJpaTransactionManager sets the value for the transaction only.
+        // Inside a transaction TenantAwareJpaTransactionManager sets the value for the transaction only. A JPA
+        // transaction's connection is still wrapped: doBegin takes it before the transaction is marked active (safe,
+        // two extra statements).
         return TransactionSynchronizationManager.isActualTransactionActive()
                 ? connection
                 : withTenant(connection, bound);
