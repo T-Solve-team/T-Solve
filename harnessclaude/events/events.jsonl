@@ -2407,3 +2407,5 @@
 {"ts":"2026-11-26T16:52:14.210Z","type":"feature-status","module":"platform","feature":"web-tenant-resolver","from":"pending","to":"in-progress"}
 {"ts":"2026-11-26T16:52:14.523Z","type":"feature-status","module":"platform","feature":"web-tenant-resolver","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-26T16:52:14.804Z","type":"feature-status","module":"platform","feature":"web-tenant-resolver","from":"evaluating","to":"passing"}
+{"ts":"2026-11-27T03:11:21.692Z","type":"quick-opened","what":"try forkCount=2 on the integration test parts (KAN-472)","files":[".github/workflows/ci.yml","backend/AGENTS.md"]}
+{"ts":"2026-11-27T03:23:21.868Z","type":"quick-closed","what":"try forkCount=2 on the integration test parts (KAN-472)","files":[".github/workflows/ci.yml","backend/AGENTS.md"]}
