@@ -337,3 +337,6 @@ Master registry of all artifacts in this workspace.
 | — | review | platform | pass | artifacts/06-evaluation/platform/task-6-2-tenant-routing-review.md |
 | — | session-log | platform | passing | artifacts/05-implementation/platform/task-6-2-tenant-routing.md |
 | — | test-report | platform | pass | artifacts/06-evaluation/platform/task-6-2-tenant-routing-test-report.md |
+| — | review | platform | pass | artifacts/06-evaluation/platform/task-10b-web-tenant-isolation-review.md |
+| — | test-report | platform | pass | artifacts/06-evaluation/platform/task-10b-web-tenant-isolation-test-report.md |
+| — | session-log | platform | passing | artifacts/05-implementation/platform/task-10b-web-tenant-isolation.md |
