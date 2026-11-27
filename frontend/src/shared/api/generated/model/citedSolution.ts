@@ -8,10 +8,12 @@
  */
 
 export interface CitedSolution {
-  symptoms: string;
+  /** @nullable */
+  symptoms: string | null;
   rootCause: string;
   resolutionSteps: string;
   /** @nullable */
   workaround: string | null;
-  scopeOfApplicability: string;
+  /** @nullable */
+  scopeOfApplicability: string | null;
 }

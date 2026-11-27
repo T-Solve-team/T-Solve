@@ -5649,7 +5649,7 @@ components:
       required: [symptoms, rootCause, resolutionSteps, workaround, scopeOfApplicability]
       properties:
         symptoms:
-          type: string
+          type: [string, 'null']
         rootCause:
           type: string
         resolutionSteps:
@@ -5657,7 +5657,7 @@ components:
         workaround:
           type: [string, 'null']
         scopeOfApplicability:
-          type: string
+          type: [string, 'null']
     ChatbotRating:
       type: object
       required: [rating]

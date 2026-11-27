@@ -45,6 +45,14 @@ class AnswerPromptTest {
     }
 
     @Test
+    void writesNoNullForEmptySymptomsOrScope_AC_005_3() {
+        var source =
+                ChatbotSource.of(new RetrievedSolution(UUID.randomUUID(), null, "cause", "steps", null, null, 0.9));
+
+        assertThat(source.text()).contains("Symptoms: \n", "Root cause: cause").doesNotContain("null");
+    }
+
+    @Test
     void asksForOneNumberPerMarker_AC_005_3_BUG_348() {
         var source = ChatbotSource.of(
                         new RetrievedSolution(UUID.randomUUID(), "symptoms", "cause", "steps", null, "scope", 0.9))
