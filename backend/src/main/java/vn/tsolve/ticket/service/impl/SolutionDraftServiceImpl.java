@@ -59,13 +59,23 @@ public class SolutionDraftServiceImpl implements SolutionDraftService {
 
     @Override
     @Transactional
-    public void recordIssueStatus(IssueStatusChange change) {
+    public boolean recordIssueStatus(IssueStatusChange change) {
         Instant now = clock.instant();
         doneStates.record(change.projectId(), change.issueKey(), change.done(), now);
-        if (change.draftOwner() != null) {
-            drafts.insertIfAbsent(
-                    change.draftOwner(), change.projectId(), change.issueKey(), content(change.draftSections()), now);
-        }
+        return change.draftOwner() != null
+                && drafts.insertIfAbsent(
+                                change.draftOwner(),
+                                change.projectId(),
+                                change.issueKey(),
+                                content(change.draftSections()),
+                                now)
+                        == 1;
+    }
+
+    @Override
+    @Transactional
+    public boolean replaceUnsavedDraft(UUID creatorId, UUID projectId, String issueKey, SolutionSections sections) {
+        return drafts.replaceIfUnsaved(creatorId, projectId, issueKey, content(sections), clock.instant()) == 1;
     }
 
     private String content(SolutionSections sections) {

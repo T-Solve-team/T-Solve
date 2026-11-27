@@ -2,6 +2,7 @@ package vn.tsolve.jiraapp.service.impl;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,12 +17,14 @@ import vn.tsolve.jiraapp.dto.IssueUpdatedPayload.Item;
 import vn.tsolve.jiraapp.service.IssueUpdatedService;
 import vn.tsolve.jiraapp.service.JiraAskerLookup;
 import vn.tsolve.jiraapp.service.JiraWorkspaceLookup;
+import vn.tsolve.jiraapp.service.SolutionFormAi;
 import vn.tsolve.project.service.ProjectService;
 import vn.tsolve.ticket.dto.IssueStatusChange;
 import vn.tsolve.ticket.dto.SolutionSections;
 import vn.tsolve.ticket.service.SolutionDraftService;
 import vn.tsolve.ticket.service.SolutionFormTicketService;
 import vn.tsolve.tracker.service.JiraServiceAccount;
+import vn.tsolve.tracker.service.TrackerIssueService;
 
 /**
  * Reads run inside the site's Workspace first, then — only for an issue T-Solve has not recorded yet — Jira is asked
@@ -45,6 +48,8 @@ public class IssueUpdatedServiceImpl implements IssueUpdatedService {
     private final SolutionDraftService drafts;
     private final JiraServiceAccount jiraAccounts;
     private final JiraStatusClient statuses;
+    private final TrackerIssueService issues;
+    private final SolutionFormAi formAi;
 
     public IssueUpdatedServiceImpl(
             JiraWorkspaceLookup workspaces,
@@ -55,7 +60,9 @@ public class IssueUpdatedServiceImpl implements IssueUpdatedService {
             SolutionFormTicketService tickets,
             SolutionDraftService drafts,
             JiraServiceAccount jiraAccounts,
-            JiraStatusClient statuses) {
+            JiraStatusClient statuses,
+            TrackerIssueService issues,
+            SolutionFormAi formAi) {
         this.workspaces = workspaces;
         this.tenantScope = tenantScope;
         this.projects = projects;
@@ -65,6 +72,8 @@ public class IssueUpdatedServiceImpl implements IssueUpdatedService {
         this.drafts = drafts;
         this.jiraAccounts = jiraAccounts;
         this.statuses = statuses;
+        this.issues = issues;
+        this.formAi = formAi;
     }
 
     @Override
@@ -94,15 +103,35 @@ public class IssueUpdatedServiceImpl implements IssueUpdatedService {
         boolean movedIntoDone = done
                 && !wasDone(
                         workspace.get(), before.get().recorded(), change.get().from());
-        tenantScope.runIn(workspace.get(), () -> {
+        String description = AdfText.issueText(event.description());
+        Optional<UUID> created = tenantScope.runIn(workspace.get(), () -> {
             Optional<UUID> owner = movedIntoDone ? owner(caller, event, project, issueKey) : Optional.empty();
-            SolutionSections sections = owner.isPresent()
-                    ? IssueText.sections(event.summary(), AdfText.issueText(event.description()))
-                    : null;
-            drafts.recordIssueStatus(new IssueStatusChange(project, issueKey, done, owner.orElse(null), sections));
-            return null;
+            SolutionSections sections = owner.isPresent() ? IssueText.sections(event.summary(), description) : null;
+            boolean isCreated = drafts.recordIssueStatus(
+                    new IssueStatusChange(project, issueKey, done, owner.orElse(null), sections));
+            return isCreated ? owner : Optional.<UUID>empty();
         });
         log.info("Issue status recorded: {} done={} draftOffered={}", issueKey, done, movedIntoDone);
+        created.ifPresent(
+                owner -> startAiDraft(workspace.get(), project, issueKey, owner, event.summary(), description));
+    }
+
+    // AC-005.11: in the background, so the event is still answered at once; any failure keeps the Draft (AC-005.12).
+    private void startAiDraft(
+            UUID workspace, UUID project, String issueKey, UUID owner, String summary, String description) {
+        try {
+            formAi.startDraft(
+                    summary,
+                    description,
+                    () -> tenantScope.runIn(workspace, () -> issues.comments(issueKey)),
+                    sections -> {
+                        boolean isReplaced = tenantScope.runIn(
+                                workspace, () -> drafts.replaceUnsavedDraft(owner, project, issueKey, sections));
+                        log.info("Issue AI draft {}: {}", isReplaced ? "applied" : "dropped, Draft saved", issueKey);
+                    });
+        } catch (RejectedExecutionException e) {
+            log.info("Issue AI draft not started, pool full: {}", issueKey);
+        }
     }
 
     // A failed or unknown read counts as "not Done before": a missing Draft costs a reminder, an extra one nothing.
