@@ -38,6 +38,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import vn.tsolve.tracker.dto.JiraAccount;
+import vn.tsolve.tracker.dto.TrackerComment;
 import vn.tsolve.tracker.dto.TrackerCreateField;
 import vn.tsolve.tracker.dto.TrackerProjectLookup;
 import vn.tsolve.tracker.dto.TrackerProjectLookup.Outcome;
@@ -118,6 +119,28 @@ class JiraClientTest {
 
         assertThat(client.findComment(ACCOUNT, "ITSUP-1", "T-Solve suggestion:"))
                 .contains("3");
+    }
+
+    @Test
+    void readsOtherAuthorsCommentsAsPlainTextOldestFirst_AC_014_1() {
+        jira.expect(requestTo(GATEWAY + "/rest/api/3/myself"))
+                .andExpect(header("Authorization", BEARER))
+                .andRespond(withSuccess("{\"accountId\": \"bot-1\"}", MediaType.APPLICATION_JSON));
+        jira.expect(requestTo(COMMENTS))
+                .andExpect(header("Authorization", BEARER))
+                .andRespond(withSuccess(
+                        """
+                        {"comments": [
+                          {"id": "3", "author": {"accountId": "dev"}, "body": %s},
+                          {"id": "2", "author": {"accountId": "bot-1"}, "body": %s},
+                          {"id": "1", "author": {"accountId": "reporter"}, "body": %s}
+                        ]}
+                        """.formatted(adf("Restarted the service"), adf("T-Solve suggestion:"), adf("It fails")),
+                        MediaType.APPLICATION_JSON));
+
+        assertThat(client.comments(ACCOUNT, "ITSUP-1"))
+                .containsExactly(
+                        new TrackerComment("reporter", "It fails"), new TrackerComment("dev", "Restarted the service"));
     }
 
     @Test
