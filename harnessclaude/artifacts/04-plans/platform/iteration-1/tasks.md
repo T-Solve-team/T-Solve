@@ -979,6 +979,10 @@ log capture (Edge #62); a source scan fails when a class outside the Console, `o
 **Estimated size:** medium
 **Done when:** `WorkspaceProvisioningIT` passes including the compensation at every step and the race.
 
+**Note (from the Task 6-2 review, KAN-254):**
+- `ProvisioningLock` takes the primary DataSource unbound and throws `NoTenantException` with routing on. Move it to the Registry pool (bound; its lock would cover one Workspace database only).
+- Validate `db_name` before it goes into the JDBC URL (`TenantPoolRegistry`, review M1).
+
 ---
 
 ## Task 8: Invitation job queue: the minimal `InvitationJobQueue` on JobRunr in the Jobs database

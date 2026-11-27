@@ -334,3 +334,6 @@ Master registry of all artifacts in this workspace.
 | — | session-log | platform | passing | artifacts/05-implementation/platform/task-6-1-background-work-bound.md |
 | — | review | platform | pass | artifacts/06-evaluation/platform/task-6-1-background-work-bound-review.md |
 | — | test-report | platform | pass | artifacts/06-evaluation/platform/task-6-1-background-work-bound-test-report.md |
+| — | review | platform | pass | artifacts/06-evaluation/platform/task-6-2-tenant-routing-review.md |
+| — | session-log | platform | passing | artifacts/05-implementation/platform/task-6-2-tenant-routing.md |
+| — | test-report | platform | pass | artifacts/06-evaluation/platform/task-6-2-tenant-routing-test-report.md |
