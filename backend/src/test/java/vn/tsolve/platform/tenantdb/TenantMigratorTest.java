@@ -1,6 +1,7 @@
 package vn.tsolve.platform.tenantdb;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -150,6 +151,16 @@ class TenantMigratorTest {
 
         verifyNoInteractions(runner);
         verify(registry, never()).updateSchemaVersion(any(), any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", " "})
+    @DisplayName("AC-008.5 a blank TENANT_DB_HOST is refused, naming the variable")
+    void refusesABlankTenantDbHost_AC_008_5(String host) {
+        assertThatThrownBy(() -> new TenantMigrator(registry, cipher, host, 6543, runner))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("TENANT_DB_HOST");
+        verifyNoInteractions(registry, runner);
     }
 
     private static WorkspaceDatabase row(PasswordCipher encryptedWith, String site, WorkspaceStatus status) {

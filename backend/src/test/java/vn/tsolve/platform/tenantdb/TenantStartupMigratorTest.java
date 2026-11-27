@@ -22,6 +22,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
@@ -41,7 +44,8 @@ import vn.tsolve.platform.registry.TenantDataSourceConfig;
 
 /**
  * Where the startup migrator runs and what happens to Boot's tenant Liquibase there. No database: every
- * {@link SpringLiquibase} is a spy that does not run and {@link TenantMigrator} is a mock.
+ * {@link SpringLiquibase} is a spy that does not run and {@link TenantMigrator} is a mock, except in the runs that check
+ * the gate of {@link TenantMigratorConfig}.
  */
 class TenantStartupMigratorTest {
 
@@ -85,12 +89,7 @@ class TenantStartupMigratorTest {
                 .withUserConfiguration(NoEntities.class)
                 .withConfiguration(routingAutoConfigurations())
                 .run(context -> {
-                    assertThat(context).hasNotFailed();
-                    if (context.containsBean("liquibase")) {
-                        assertThat(ReflectionTestUtils.getField(liquibaseSpies.get("liquibase"), "shouldRun"))
-                                .as("Boot's tenant Liquibase would run in the worker")
-                                .isEqualTo(false);
-                    }
+                    assertThat(context).hasNotFailed().doesNotHaveBean("liquibase");
                     assertThat(context).doesNotHaveBean(TenantStartupMigrator.class);
                     verify(migrator, never()).applyAll();
                 });
@@ -125,6 +124,56 @@ class TenantStartupMigratorTest {
                 Arguments.of("dev profile", registryVariables(), new String[] {"spring.profiles.active=dev"}));
     }
 
+    @Test
+    @DisplayName("AC-008.4 the routing dataSource is created only after the startup migration")
+    void dataSourceWaitsForTheStartupMigration_AC_008_4() {
+        routing().run(context -> {
+            assertThat(context).hasNotFailed().hasSingleBean(TenantStartupMigrator.class);
+            var definitions = (BeanDefinitionRegistry) context.getSourceApplicationContext();
+            assertThat(definitions.getBeanDefinition("dataSource").getDependsOn())
+                    .contains(context.getBeanNamesForType(TenantStartupMigrator.class));
+        });
+    }
+
+    @Test
+    @DisplayName("AC-008.4 waiting for the startup migration keeps what dataSource already depended on")
+    void keepsTheDependenciesDataSourceAlreadyHad_AC_008_4() {
+        var definitions = new DefaultListableBeanFactory();
+        var dataSource = new RootBeanDefinition(DataSource.class);
+        dataSource.setDependsOn("earlierDependency");
+        definitions.registerBeanDefinition("dataSource", dataSource);
+        definitions.registerBeanDefinition(
+                "tenantStartupMigrator", new RootBeanDefinition(TenantStartupMigrator.class));
+
+        TenantStartupMigrator.startupMigrationReplacesBootLiquibase().postProcessBeanDefinitionRegistry(definitions);
+
+        assertThat(definitions.getBeanDefinition("dataSource").getDependsOn())
+                .containsExactlyInAnyOrder("earlierDependency", "tenantStartupMigrator");
+    }
+
+    @Test
+    @DisplayName("AC-008.4 TenantMigratorConfig creates the TenantMigrator in the web process")
+    void createsTheTenantMigratorInTheWebProcess_AC_008_4() {
+        realGate(registryVariables())
+                .run(context -> assertThat(context).hasNotFailed().hasSingleBean(TenantMigrator.class));
+    }
+
+    @ParameterizedTest(name = "AC-008.4 {0}: TenantMigratorConfig creates no TenantMigrator")
+    @MethodSource("migratorOff")
+    @DisplayName("AC-008.4 the worker, dev and a process without a Registry get no TenantMigrator")
+    void createsNoTenantMigratorWhereItMustNotRun_AC_008_4(
+            String label, Map<String, Object> variables, String[] properties) {
+        realGate(variables)
+                .withPropertyValues(properties)
+                .run(context -> assertThat(context).hasNotFailed().doesNotHaveBean(TenantMigrator.class));
+    }
+
+    static Stream<Arguments> migratorOff() {
+        var worker =
+                Arguments.of("worker profile", registryVariables(), new String[] {"spring.profiles.active=worker"});
+        return Stream.concat(routingOff(), Stream.of(worker));
+    }
+
     // ---- helpers ----
 
     private ApplicationContextRunner routing() {
@@ -155,8 +204,26 @@ class TenantStartupMigratorTest {
                 "DB_PASSWORD", "fake-app-password");
     }
 
-    /** The given yml files (first wins), no machine environment, exactly the given variables. */
+    /** The startup migrator and its gate, with a mock {@link TenantMigrator}. */
     private ApplicationContextRunner runner(Map<String, Object> variables, String... ymlFiles) {
+        return environment(variables, ymlFiles)
+                .withBean(TenantMigrator.class, () -> migrator)
+                .withUserConfiguration(
+                        RegistryDataSourceConfig.class,
+                        TenantDataSourceConfig.class,
+                        AcceptingKnownWorkspaces.class,
+                        TenantStartupMigrator.class);
+    }
+
+    /** The real {@link TenantMigratorConfig} and no mock, so its own gate decides. */
+    private ApplicationContextRunner realGate(Map<String, Object> variables) {
+        return environment(variables, "application.yml")
+                .withUserConfiguration(
+                        RegistryDataSourceConfig.class, AcceptingKnownWorkspaces.class, TenantMigratorConfig.class);
+    }
+
+    /** The given yml files (first wins), no machine environment, exactly the given variables. */
+    private ApplicationContextRunner environment(Map<String, Object> variables, String... ymlFiles) {
         return new ApplicationContextRunner()
                 .withInitializer(context -> {
                     var sources = context.getEnvironment().getPropertySources();
@@ -173,13 +240,7 @@ class TenantStartupMigratorTest {
                     }
                     sources.addFirst(new MapPropertySource("variables", new LinkedHashMap<>(variables)));
                 })
-                .withBean("skipMigrations", BeanPostProcessor.class, this::skipMigrations)
-                .withBean(TenantMigrator.class, () -> migrator)
-                .withUserConfiguration(
-                        RegistryDataSourceConfig.class,
-                        TenantDataSourceConfig.class,
-                        AcceptingKnownWorkspaces.class,
-                        TenantStartupMigrator.class);
+                .withBean("skipMigrations", BeanPostProcessor.class, this::skipMigrations);
     }
 
     private BeanPostProcessor skipMigrations() {
