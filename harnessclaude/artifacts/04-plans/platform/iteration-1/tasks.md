@@ -1507,8 +1507,8 @@ no cookie; other paths on `api.` → 404 `MSG06`).
 **Edge rows (Critical/High):** #30 (Forge token on a Workspace site, `login.` or `admin.`). Verifier rows #28 and #29 are
 re-asserted through the HTTP chain.
 **From the Task 10a review (26/11):** share one constant for the AC-002.19 path list between `SecurityConfig` and
-`TenantResolverFilter` (finding 4); if Task 10b did not add it, add the `RANDOM_PORT` real-Tomcat test for
-`/api/v1/jira%2Dapp/x` and `/api/v1/jira-app;x/y` on a site host (finding 2).
+`TenantResolverFilter` (finding 4). Task 10b added the `RANDOM_PORT` real-Tomcat test (`TenantResolverTomcatIT`, finding 2),
+so this task keeps only the shared path-list constant.
 **Tests (about 6):** `ForgeSecurityIT` (Edge #30, a refused token reaches no handler and no Workspace lookup, no `Set-Cookie` on
 `api.`, other paths on `api.` → 404 `MSG06`, AC-005.7; the claims are visible only for the request, AC-005.5).
 **Files:**
