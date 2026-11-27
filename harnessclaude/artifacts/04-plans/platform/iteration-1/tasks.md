@@ -854,7 +854,10 @@ Decisions P5, R2, R3, R15.
   `DB_HOST=unused` and are migrated through the primary `DataSource`.
 - Configuration: `TENANT_DB_HOST` (required where routing is on; startup fails naming it, AC-008.5), `TENANT_DB_PORT`
   (default 5432), `TENANT_DB_POOL_MAX` (default 5; staging 10), for backend and worker;
-  `management.health.db.ignore-routing-data-sources: true`.
+  where routing is on, `TenantDataSourceConfig` registers the bean `dbHealthContributor`, a
+  `DataSourceHealthIndicator` on the Registry pool, so Boot's db health check backs off and never asks the router.
+  `ignore-routing-data-sources: true` alone stops startup ("Beans must not be empty": the router is then the only
+  autowirable `DataSource`).
 - bluefin is routed with its Registry row as it is (its `db_user` owns the tables; wave 4 changes that).
 - **Password check (N1, Hiếu, 25/11):** `RegistryPasswordCli` gets a `verify` mode (argument `verify`; a ninth
   production file, accepted over the size guide). It decrypts the stored value for the Workspace id, compares it with
@@ -874,18 +877,24 @@ fails, others work), #14 (no password in any log line, log capture), #15 (25 Wor
 **Must close #87 (accepted Critical risk since Task 4b):** with routing in place, a second Registry row must reach only
 its own database (edge #5 in `TenantRoutingIT`, with two rows); this task's hand-off repeats "one Registry row until
 routing; do not insert a row by hand before Task 6-2".
-**Tests (about 13):** `RegistryPasswordCliTest` (+1, Edge #89): `verify` prints only `OK` for the matching password
-and only `FAIL` with a non-zero exit for another password, a wrong key or a malformed value; no output holds the
-password, the key or the stored value. `ThreadLocalTenantContextTest` (+1): `runIn` opens no transaction and the
-routing reads the same binding. `TenantPoolRegistryTest` (2): pool settings and the #15 arithmetic; without a Registry, or in `dev`, no routing
-bean exists. `TenantRoutingIT` (about 9) on `TwoWorkspaceDatabases`: a JPA and a JDBC query of A reach A's database and
-B's reach B's (AC-002.20, closes #87); nothing bound → throws before a connection and the port is never called
-(AC-002.21); lazy open, maximum size, two concurrent first uses share one pool (AC-002.22, #16); a transaction stays on
-its database and `runIn(B)` inside it is refused (AC-002.23); `app.tenant_id` is set inside and outside a transaction
-and cleared after, with a pool of one (AC-002.24, #3); an injected misroute reads nothing and its write is refused
-(AC-002.25, #5); a wrong key for one Workspace refuses only that pool and logs the site name without the password
-(AC-001.25, #13, #14); one Workspace database down, Registry down (#17); the context starts with nothing bound and
-Hibernate opens no connection (#23).
+**Tests (12 plus 1 updated):** `ThreadLocalTenantContextTest` (+1): `runIn` opens no transaction and the routing
+`DataSource` reads the same binding (AC-002.1). `RegistryPasswordCliTest` (+1, parameterized, Edge #89): `verify`
+prints exactly `OK` (exit 0) for the matching password and exactly `FAIL` (exit 1) for another password, another valid
+key, another Workspace id or a malformed or truncated value, with empty stderr and no password, key or stored value in
+any output; the existing Edge #14 test gains two rows (`verify` without `STORED_DB_PASSWORD`, or with a key that is not
+32 bytes: the variable is named on stderr, stdout empty, exit 1). `TenantPoolRegistryTest` (2): the #15 sum, read from
+the compose file, `infra/staging.env.example` and `application.yml` (a missing value fails by name), stays within
+`max_connections` − 3; routing is on only with a Registry outside `dev` and then needs `TENANT_DB_HOST` (AC-002.20,
+AC-008.5). `TenantRoutingIT` (8) on `TwoWorkspaceDatabases`: JPA, native and JDBC queries of A reach A's database and
+B's reach B's (AC-002.20, closes #87); a pool opens on first use with `maximumPoolSize` 5, `minimumIdle` 0 and
+`idleTimeout` 10 minutes, caps the backends and is shared by concurrent first uses (AC-002.22, #16); a transaction
+stays on its database and `runIn(B)` inside it is refused (AC-002.23, AC-002.13); with `TENANT_DB_POOL_MAX=1`,
+`app.tenant_id` is set inside and outside a transaction and cleared after (AC-002.24, AC-002.25, #3); an injected
+misroute reads nothing and writes nothing (AC-002.25, #5); a wrong key for one Workspace refuses only that pool and logs
+the site name without the password, captured at DEBUG (AC-001.25, #13, #14); one Workspace database down or the Registry
+down fails closed without caching the failure, log captured at DEBUG (#17, #14); with nothing bound the context starts,
+`db` health is UP from the Registry, every query throws before a connection and the port is never called (AC-002.21,
+#23, #20). Updated: `RegistryChangelogIT` (Edge #72).
 **Shared fixture (Task 10's `TenantIsolationIT` reuses it):** `common/tenant/TwoWorkspaceDatabases`. **Decided in
 planning (builder check):** it builds two `TenantGuardDatabase`s (non-owner runtime role, Task 5's policies,
 `tenant_identity` rows) and a Registry database from `PostgresTestBase` with the two rows and encrypted passwords.
@@ -898,17 +907,17 @@ planning (builder check):** it builds two `TenantGuardDatabase`s (non-owner runt
   `backend/src/main/java/vn/tsolve/platform/registry/RegistryPasswordCli.java` (`verify`)
 - Config: `backend/src/main/resources/application.yml`, `.env.example`, `infra/staging.env.example`,
   `infra/compose.staging.yml` (`TENANT_DB_HOST: db` and the pool size for backend and worker; `max_connections=300`
-  for `db`), `infra/README.md` (the pre-deploy check of #89 and the `db` restart, see Pre-deploy and Staging notes)
+  for `db`; `KC_DB_POOL_MAX_SIZE: "15"` for `keycloak` (R2 sum, Edge #15)), `infra/README.md` (the pre-deploy check of #89 and the `db` restart, see Pre-deploy and Staging notes)
 - Test: create `backend/src/test/java/vn/tsolve/common/tenant/TenantRoutingIT.java`, `TwoWorkspaceDatabases.java`,
   `backend/src/test/java/vn/tsolve/platform/registry/TenantPoolRegistryTest.java`; extend
   `common/tenant/ThreadLocalTenantContextTest.java`; update `platform/registry/RegistryChangelogIT`
   (`keepsPrimaryDataSourceAndTenantLiquibase_edge_72`: with routing the primary is the router and the tenant Liquibase
-  still runs through `spring.liquibase.url`) and give `TENANT_DB_HOST` to any runner that loads the routing config
-  (`CatalogLookupsIT`, `WorkspaceCatalogIT`); extend `platform/registry/RegistryPasswordCliTest.java`
+  still runs through `spring.liquibase.url`); `CatalogLookupsIT` and `WorkspaceCatalogIT` load only
+  `RegistryDataSourceConfig` and stay unchanged (`TenantDataSourceConfig` is not imported by it); extend `platform/registry/RegistryPasswordCliTest.java`
 **Pre-deploy (Hiếu, on the VPS, before the merge, because CD deploys every merge to `main`):** Task 6-1 is deployed;
 `TENANT_DB_HOST` reaches backend and worker (set in the compose file); the env file has every new name of
 `infra/staging.env.example` (CD fails otherwise); bluefin's row password passes `verify` with the deployed
-`CATALOG_SECRET_KEY` (#89; on `FAIL` do not merge); still one Registry row. **Decided in planning (builder check):**
+`CATALOG_SECRET_KEY` (#89; on anything but `OK` do not merge); still one Registry row. **Decided in planning (builder check):**
 the running image has no `verify`, so the `infra/README.md` step builds the PR head from a separate checkout (not
 `/srv/tsolve/src`) as `tsolve-backend:verify`, reads the stored value with `psql` from `tenant_workspace` into
 `STORED_DB_PASSWORD`, and runs the CLI once (`docker run --rm --network none --entrypoint java`, variables passed by
@@ -918,7 +927,7 @@ CD run, on the VPS: `dc up -d --wait db`. **The database restarts** (a short out
 staging); then `SHOW max_connections` gives 300, and sign in on bluefin again.
 **Dependencies:** Tasks 3a, 4a-1 to 4c, 5, 6a-2; **Task 6-1 merged and deployed on staging** (the row guard of Task 5 is
 switched on after this task, in wave 4)
-**Estimated size:** medium (9 production files plus config, about 13 tests; over the size guide, accepted in N1). One
+**Estimated size:** medium (9 production files plus config, 12 tests plus one updated; over the size guide, accepted in N1). One
 QA card and one developer card. Branch `feat/KAN-254-platform-tenant-routing`.
 **Done when:** `TenantRoutingIT` and `RegistryPasswordCliTest` pass (routing with a pool of one connection and with two
 databases), CI is green on the PR, `verify` printed `OK` before the merge, and after the deploy and the `db` restart
