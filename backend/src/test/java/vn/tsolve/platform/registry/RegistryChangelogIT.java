@@ -25,14 +25,19 @@ import liquibase.integration.spring.SpringLiquibase;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration;
+import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
+import org.springframework.boot.autoconfigure.transaction.TransactionAutoConfiguration;
 import org.springframework.boot.env.YamlPropertySourceLoader;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.core.io.ClassPathResource;
 import vn.tsolve.common.tenant.AcceptingKnownWorkspaces;
+import vn.tsolve.common.tenant.TenantRoutingDataSource;
 import vn.tsolve.platform.service.WorkspaceCatalog;
 import vn.tsolve.support.PostgresTestBase;
 
@@ -254,17 +259,28 @@ class RegistryChangelogIT {
     }
 
     @Test
-    @DisplayName("edge 72 the Registry beans leave the primary DataSource and the tenant Liquibase in place")
+    @DisplayName("edge 72 with routing the primary is the router and the tenant Liquibase runs through "
+            + "spring.liquibase.url")
     void keepsPrimaryDataSourceAndTenantLiquibase_edge_72() {
         String registry = PostgresTestBase.emptyDatabase("e72");
+        String host = PostgresTestBase.instance().getHost();
+        String port = String.valueOf(PostgresTestBase.instance().getMappedPort(5432));
 
         webRunner(registry)
-                .withConfiguration(
-                        AutoConfigurations.of(DataSourceAutoConfiguration.class, LiquibaseAutoConfiguration.class))
+                .withUserConfiguration(TenantDataSourceConfig.class, NoEntities.class)
+                .withConfiguration(AutoConfigurations.of(
+                        DataSourceAutoConfiguration.class,
+                        LiquibaseAutoConfiguration.class,
+                        HibernateJpaAutoConfiguration.class,
+                        TransactionAutoConfiguration.class))
                 .withPropertyValues(
-                        "spring.datasource.url=" + PostgresTestBase.url(PostgresTestBase.APP_DB),
-                        "spring.datasource.username=" + PostgresTestBase.APP_USER,
-                        "spring.datasource.password=" + PostgresTestBase.APP_PASSWORD)
+                        "TENANT_DB_HOST=" + host,
+                        "TENANT_DB_PORT=" + port,
+                        "DB_HOST=" + host,
+                        "DB_PORT=" + port,
+                        "DB_NAME=" + PostgresTestBase.APP_DB,
+                        "DB_USER=" + PostgresTestBase.APP_USER,
+                        "DB_PASSWORD=" + PostgresTestBase.APP_PASSWORD)
                 .run(context -> {
                     assertThat(context).hasNotFailed();
                     assertThat(context)
@@ -272,17 +288,22 @@ class RegistryChangelogIT {
                             .hasBean("registryTransactionManager")
                             .hasBean("registryJdbcClient");
                     assertThat(context).hasSingleBean(WorkspaceCatalog.class);
-                    try (Connection connection =
-                            context.getBean(DataSource.class).getConnection()) {
+                    assertThat(context.getBean(DataSource.class)).isInstanceOf(TenantRoutingDataSource.class);
+                    assertThat(context).hasBean("liquibase");
+                    SpringLiquibase liquibase = context.getBean("liquibase", SpringLiquibase.class);
+                    assertThat(liquibase.getChangeLog()).endsWith("db/changelog/db.changelog-master.xml");
+                    assertThat(liquibase.getDataSource()).isNotInstanceOf(TenantRoutingDataSource.class);
+                    try (Connection connection = liquibase.getDataSource().getConnection()) {
                         assertThat(scalar(connection, "SELECT current_database()"))
                                 .isEqualTo(PostgresTestBase.APP_DB);
                     }
-                    assertThat(context).hasBean("liquibase");
-                    assertThat(context.getBean("liquibase", SpringLiquibase.class)
-                                    .getChangeLog())
-                            .endsWith("db/changelog/db.changelog-master.xml");
                 });
     }
+
+    /** JPA starts as in the application, with no entity: this test is about the DataSources. */
+    @TestConfiguration(proxyBeanMethods = false)
+    @EntityScan(basePackages = "tsolvetest.none")
+    static class NoEntities {}
 
     @Test
     @DisplayName("AC-008.4 the worker process never runs the catalog changelog")

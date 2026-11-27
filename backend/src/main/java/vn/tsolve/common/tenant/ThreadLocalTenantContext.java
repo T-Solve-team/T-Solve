@@ -10,15 +10,14 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 /**
- * The only per-thread Workspace binding. The {@link ThreadLocal} is static, so every instance (and every delegate)
- * sees the same binding. It is a plain {@code ThreadLocal}: threads started inside a binding start unbound.
+ * The {@link TenantContext} over {@link TenantBinding}, which is static, so every instance (and every delegate) sees
+ * the same binding. It opens no transaction.
  */
 @Component
 @Primary
 public class ThreadLocalTenantContext implements TenantContext {
 
     private static final Logger LOG = LoggerFactory.getLogger(ThreadLocalTenantContext.class);
-    private static final ThreadLocal<UUID> BOUND = new ThreadLocal<>();
     private static final String PLATFORM_TENANT_SCOPE = "vn.tsolve.identity.signin.port.PlatformTenantScope";
 
     private final KnownWorkspaces known;
@@ -29,12 +28,12 @@ public class ThreadLocalTenantContext implements TenantContext {
 
     @Override
     public Optional<UUID> currentWorkspaceId() {
-        return Optional.ofNullable(BOUND.get());
+        return Optional.ofNullable(TenantBinding.current());
     }
 
     @Override
     public UUID requireWorkspaceId() {
-        UUID id = BOUND.get();
+        UUID id = TenantBinding.current();
         if (id == null) {
             logCaller();
             throw new NoTenantException("no Workspace is bound to this thread");
@@ -54,16 +53,16 @@ public class ThreadLocalTenantContext implements TenantContext {
      */
     public RequestBinding bindRequest(UUID workspaceId) {
         Objects.requireNonNull(workspaceId);
-        if (BOUND.get() != null) {
+        if (TenantBinding.current() != null) {
             throw new IllegalStateException("a Workspace is already bound to this thread");
         }
-        BOUND.set(workspaceId);
-        return BOUND::remove;
+        TenantBinding.set(workspaceId);
+        return TenantBinding::clear;
     }
 
     @Override
     public <T> T runIn(UUID workspaceId, Supplier<T> action) {
-        UUID outer = BOUND.get();
+        UUID outer = TenantBinding.current();
         // Whoever bound this id has already checked that it exists.
         if (workspaceId == null || (!workspaceId.equals(outer) && !known.exists(workspaceId))) {
             throw new IllegalArgumentException("the Workspace is not known");
@@ -71,14 +70,14 @@ public class ThreadLocalTenantContext implements TenantContext {
         if (outer != null && !outer.equals(workspaceId)) {
             throw new IllegalStateException("another Workspace is already bound to this thread");
         }
-        BOUND.set(workspaceId);
+        TenantBinding.set(workspaceId);
         try {
             return action.get();
         } finally {
             if (outer == null) {
-                BOUND.remove();
+                TenantBinding.clear();
             } else {
-                BOUND.set(outer);
+                TenantBinding.set(outer);
             }
         }
     }

@@ -50,6 +50,7 @@ class RegistryPasswordCliTest {
         ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
         ByteArrayOutputStream errBytes = new ByteArrayOutputStream();
         int exit = RegistryPasswordCli.run(
+                new String[0],
                 env,
                 new PrintStream(outBytes, true, StandardCharsets.UTF_8),
                 new PrintStream(errBytes, true, StandardCharsets.UTF_8));
@@ -71,6 +72,7 @@ class RegistryPasswordCliTest {
         ByteArrayOutputStream secondOutBytes = new ByteArrayOutputStream();
         ByteArrayOutputStream secondErrBytes = new ByteArrayOutputStream();
         int secondExit = RegistryPasswordCli.run(
+                new String[0],
                 env,
                 new PrintStream(secondOutBytes, true, StandardCharsets.UTF_8),
                 new PrintStream(secondErrBytes, true, StandardCharsets.UTF_8));
@@ -82,11 +84,12 @@ class RegistryPasswordCliTest {
     @MethodSource("invalidEnvs")
     @DisplayName("edge 14 a missing or invalid variable is named and nothing secret is printed")
     void missingOrInvalidVariableIsNamedWithoutPrintingSecrets_edge_14(
-            String expectedVar, Map<String, String> env, String secretKey, String secretPassword) {
+            String expectedVar, String[] args, Map<String, String> env, String secretKey, String secretPassword) {
         ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
         ByteArrayOutputStream errBytes = new ByteArrayOutputStream();
 
         int exit = RegistryPasswordCli.run(
+                args,
                 env,
                 new PrintStream(outBytes, true, StandardCharsets.UTF_8),
                 new PrintStream(errBytes, true, StandardCharsets.UTF_8));
@@ -126,7 +129,66 @@ class RegistryPasswordCliTest {
                 envCase("TSOLVE_DEMO_WORKSPACE_ID", validKey, "", validPassword, validKey, validPassword),
                 envCase("TSOLVE_DEMO_WORKSPACE_ID", validKey, "not-a-uuid", validPassword, validKey, validPassword),
                 envCase("DB_PASSWORD", validKey, WORKSPACE_ID.toString(), null, validKey, null),
-                envCase("DB_PASSWORD", validKey, WORKSPACE_ID.toString(), "  ", validKey, null));
+                envCase("DB_PASSWORD", validKey, WORKSPACE_ID.toString(), "  ", validKey, null),
+                verifyCase("STORED_DB_PASSWORD", validKey, null, validPassword),
+                verifyCase("CATALOG_SECRET_KEY", shortKey, "v1:AAAA", validPassword));
+    }
+
+    private static Arguments verifyCase(String expectedVar, String key, String stored, String password) {
+        Map<String, String> env = new HashMap<>();
+        env.put("CATALOG_SECRET_KEY", key);
+        env.put("TSOLVE_DEMO_WORKSPACE_ID", WORKSPACE_ID.toString());
+        env.put("DB_PASSWORD", password);
+        if (stored != null) {
+            env.put("STORED_DB_PASSWORD", stored);
+        }
+        return Arguments.of(expectedVar, new String[] {"verify"}, Map.copyOf(env), key, password);
+    }
+
+    @ParameterizedTest(name = "edge 89 {0}")
+    @MethodSource("verifyRows")
+    @DisplayName("edge 89 verify prints only OK or FAIL and no secret")
+    void verifyPrintsOnlyOkOrFailWithoutSecrets_edge_89(
+            String row, String key, String password, String stored, String expectedLine, int expectedExit) {
+        Map<String, String> env = Map.of(
+                "CATALOG_SECRET_KEY", key,
+                "TSOLVE_DEMO_WORKSPACE_ID", WORKSPACE_ID.toString(),
+                "DB_PASSWORD", password,
+                "STORED_DB_PASSWORD", stored);
+        ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
+        ByteArrayOutputStream errBytes = new ByteArrayOutputStream();
+
+        int exit = RegistryPasswordCli.run(
+                new String[] {"verify"},
+                env,
+                new PrintStream(outBytes, true, StandardCharsets.UTF_8),
+                new PrintStream(errBytes, true, StandardCharsets.UTF_8));
+
+        String out = outBytes.toString(StandardCharsets.UTF_8);
+        String err = errBytes.toString(StandardCharsets.UTF_8);
+
+        assertThat(out.lines().toList()).containsExactly(expectedLine);
+        assertThat(exit).isEqualTo(expectedExit);
+        assertThat(err).isEmpty();
+        assertThat(out).doesNotContain(password, key, stored);
+    }
+
+    static Stream<Arguments> verifyRows() {
+        String key = randomKeyBase64();
+        String password = randomPassword();
+        PasswordCipher cipher =
+                new PasswordCipher(new MockEnvironment().withProperty("tsolve.registry.secret-key", key));
+        String stored = cipher.encrypt(WORKSPACE_ID, password);
+
+        return Stream.of(
+                Arguments.of("matching password", key, password, stored, "OK", 0),
+                Arguments.of("another password", key, randomPassword(), stored, "FAIL", 1),
+                Arguments.of("another valid key", randomKeyBase64(), password, stored, "FAIL", 1),
+                Arguments.of(
+                        "another Workspace id", key, password, cipher.encrypt(OTHER_WORKSPACE_ID, password), "FAIL", 1),
+                Arguments.of("not Base64", key, password, "v1:###", "FAIL", 1),
+                Arguments.of("no v1 prefix", key, password, stored.substring(3), "FAIL", 1),
+                Arguments.of("truncated value", key, password, stored.substring(0, stored.length() - 8), "FAIL", 1));
     }
 
     private static Arguments envCase(
@@ -146,6 +208,6 @@ class RegistryPasswordCliTest {
         if (password != null) {
             env.put("DB_PASSWORD", password);
         }
-        return Arguments.of(expectedVar, Map.copyOf(env), secretKey, secretPassword);
+        return Arguments.of(expectedVar, new String[0], Map.copyOf(env), secretKey, secretPassword);
     }
 }

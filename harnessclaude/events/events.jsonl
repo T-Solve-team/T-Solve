@@ -2408,3 +2408,6 @@
 {"ts":"2026-11-26T16:52:14.210Z","type":"feature-status","module":"platform","feature":"web-tenant-resolver","from":"pending","to":"in-progress"}
 {"ts":"2026-11-26T16:52:14.523Z","type":"feature-status","module":"platform","feature":"web-tenant-resolver","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-26T16:52:14.804Z","type":"feature-status","module":"platform","feature":"web-tenant-resolver","from":"evaluating","to":"passing"}
+{"ts":"2026-11-27T11:53:27.080Z","type":"feature-status","module":"platform","feature":"tenant-routing","from":"pending","to":"in-progress"}
+{"ts":"2026-11-27T11:53:27.344Z","type":"feature-status","module":"platform","feature":"tenant-routing","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-27T11:53:27.608Z","type":"feature-status","module":"platform","feature":"tenant-routing","from":"evaluating","to":"passing"}

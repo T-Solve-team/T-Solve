@@ -502,7 +502,7 @@
         "registry-db": "passing",
         "workspace-catalog": "passing",
         "row-guard": "passing",
-        "tenant-routing": "pending",
+        "tenant-routing": "passing",
         "provisioning-core": "pending",
         "invitation-job-queue": "pending",
         "ops-script": "pending",
@@ -527,7 +527,7 @@
         "background-work-bound": "passing",
         "web-tenant-isolation": "pending"
       },
-      "lastUpdated": "2026-11-26T16:52:14.802Z",
+      "lastUpdated": "2026-11-27T11:53:27.606Z",
       "branch": "feat/platform",
       "repos": [
         "default"
