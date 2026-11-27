@@ -164,24 +164,26 @@ jobs:
           - part: unit
             fetch-depth: 0
             mvn-args: -DskipITs
+          # Every IT part runs its test classes in two JVMs side by side (-DforkCount=2, KAN-472), each with its own
+          # containers, so a test must not use a fixed port, container name or file that a second JVM would also use.
           # The Keycloak integration tests (Failsafe), in two parts of about the same length (each class starts
           # its own Keycloak, 30-70 s); no unit tests, no Spotless.
           - part: it-keycloak-a
             fetch-depth: 1
-            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -Dit.test=KeycloakThemeIT,ProvisioningRaceIT,KeycloakFailurePlacementIT,OpsRealmImportIT
+            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -DforkCount=2 -Dit.test=KeycloakThemeIT,ProvisioningRaceIT,KeycloakFailurePlacementIT,OpsRealmImportIT
           - part: it-keycloak-b
             fetch-depth: 1
-            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -Dit.test=KeycloakWorkspaceSignInProvisionerIT,KeycloakSignInEndToEndIT,RealmImportIT,ProvisioningUndoIT
+            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -DforkCount=2 -Dit.test=KeycloakWorkspaceSignInProvisionerIT,KeycloakSignInEndToEndIT,RealmImportIT,ProvisioningUndoIT
           # Every other integration test (Failsafe), split by package; no unit tests, no Spotless. A new Keycloak IT
           # is not in the lists above, so it runs in one of these two until it is added to one of them.
           - part: it-other-a
             fetch-depth: 1
-            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -Dit.test=vn/tsolve/worker/**/*IT,vn/tsolve/review/**/*IT,vn/tsolve/wiki/**/*IT,vn/tsolve/platform/**/*IT
+            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -DforkCount=2 -Dit.test=vn/tsolve/worker/**/*IT,vn/tsolve/review/**/*IT,vn/tsolve/wiki/**/*IT,vn/tsolve/platform/**/*IT
           # `*IT` must be listed: a filter with only `!` patterns would replace Failsafe's default include and run
           # the unit tests again.
           - part: it-other-b
             fetch-depth: 1
-            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -Dit.test=*IT,!vn/tsolve/worker/**/*IT,!vn/tsolve/review/**/*IT,!vn/tsolve/wiki/**/*IT,!vn/tsolve/platform/**/*IT,!KeycloakThemeIT,!ProvisioningRaceIT,!KeycloakFailurePlacementIT,!OpsRealmImportIT,!KeycloakWorkspaceSignInProvisionerIT,!KeycloakSignInEndToEndIT,!RealmImportIT,!ProvisioningUndoIT
+            mvn-args: -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dspotless.check.skip=true -DforkCount=2 -Dit.test=*IT,!vn/tsolve/worker/**/*IT,!vn/tsolve/review/**/*IT,!vn/tsolve/wiki/**/*IT,!vn/tsolve/platform/**/*IT,!KeycloakThemeIT,!ProvisioningRaceIT,!KeycloakFailurePlacementIT,!OpsRealmImportIT,!KeycloakWorkspaceSignInProvisionerIT,!KeycloakSignInEndToEndIT,!RealmImportIT,!ProvisioningUndoIT
     defaults:
       run:
         working-directory: backend

@@ -219,6 +219,8 @@ change updates the contract first, then the code. On the controller, keep annota
 - A new Keycloak IT is added to one of the two `it-keycloak-*` lists in `.github/workflows/ci.yml` (the shorter one).
   Left out, it still runs in an `it-other-*` part, but the parts get unbalanced. Classes that share
   `KeycloakItStack` stay in the same list.
+- CI runs the IT classes of one part in two JVMs side by side (`-DforkCount=2`). An IT must not use a fixed port,
+  container name or shared file; a "one per JVM" container exists once in each.
 - `*Test` classes run in the `unit` part without Docker and never wait on the clock: a test that polls with a
   timeout (BUG_173) fails when the machine is loaded. A test that needs Docker is an `*IT`.
 - CI time budget: no part of the backend check above ~4 min. If one goes over, move classes between the lists or
