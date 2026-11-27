@@ -40,15 +40,15 @@
         "fill-solution-screen": "passing",
         "publish-preview-row": "passing",
         "apply-and-publish-popup": "passing",
-        "csv-optional-sections": "pending"
+        "csv-optional-sections": "passing"
       },
-      "lastUpdated": "2026-11-27T07:59:41.814Z",
+      "lastUpdated": "2026-11-27T12:01:52.287Z",
       "branch": "feat/import-ticket-list",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "720ef9d22a5ea3a54ce8d2f50575ad569ad41ea8"
+        "default": "2b09e3f185b0e768b036334ad40256f959def73d"
       }
     },
     "be-foundation": {
@@ -291,15 +291,15 @@
         "ticket-decision-table": "passing",
         "drop-legacy-solution-tables": "passing",
         "jira-import-workspace-account": "passing",
-        "optional-solution-sections": "pending"
+        "optional-solution-sections": "passing"
       },
-      "lastUpdated": "2026-11-27T07:59:41.523Z",
+      "lastUpdated": "2026-11-27T11:51:54.866Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "8df363cacc0817b64bf93e432b413b571e869f1e"
+        "default": "e20b07bdfa01f43eaa0f0af0ac17e42129403bf0"
       }
     },
     "search": {
@@ -332,15 +332,15 @@
         "list-review-due-date": "evaluating",
         "ticket-detail-feedback": "evaluating",
         "search-start-layout": "evaluating",
-        "nullable-sections": "pending"
+        "nullable-sections": "passing"
       },
-      "lastUpdated": "2026-11-27T07:59:42.105Z",
+      "lastUpdated": "2026-11-27T12:08:32.760Z",
       "branch": "feat/search",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "2395ae692403866a3f15468c3442690b19a6864f"
+        "default": "8f9146c1a38397eaf17de32bd3f8607b8b3ebb53"
       }
     },
     "triage": {
@@ -400,15 +400,15 @@
         "marker-only-answer": "evaluating",
         "answer-sources": "passing",
         "rag-eval-runner": "passing",
-        "nullable-cited-sections": "pending"
+        "nullable-cited-sections": "passing"
       },
-      "lastUpdated": "2026-11-27T07:59:42.395Z",
+      "lastUpdated": "2026-11-27T12:08:59.309Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "1484dc0e248f25084ed46d10b9c31f9308f21640"
+        "default": "04930221812bdcb46b8f21472fe17b9c8df175b2"
       }
     },
     "jira-app": {
@@ -453,16 +453,16 @@
         "draft-at-done-backend": "evaluating",
         "issue-updated-trigger": "evaluating",
         "draft-reminder-done-only": "evaluating",
-        "optional-form-sections": "pending",
-        "ai-draft-on-done": "pending"
+        "optional-form-sections": "passing",
+        "ai-draft-on-done": "passing"
       },
-      "lastUpdated": "2026-11-27T07:59:43.577Z",
+      "lastUpdated": "2026-11-27T12:50:32.877Z",
       "branch": "feat/KAN-337-jira-app-reject-reason",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "89dd9005967af8d83f6ff323eec985b5f8578329"
+        "default": "61c8fa22a4d0c25b59add924631f137b17b2f15e"
       }
     },
     "dashboard-audit": {
@@ -576,14 +576,16 @@
         "solution-draft": "passing",
         "solution-rewrite": "passing",
         "solution-review-fixes": "passing",
-        "draft-leaves-unknown-empty": "pending"
+        "draft-leaves-unknown-empty": "passing"
       },
-      "lastUpdated": "2026-11-27T07:59:42.680Z",
+      "lastUpdated": "2026-11-27T12:12:11.102Z",
       "branch": "feat/ai",
       "repos": [
         "default"
       ],
-      "lastCommit": {}
+      "lastCommit": {
+        "default": "54224653b22b6612f6a8aa2c9198e9a749b942cc"
+      }
     },
     "tracker": {
       "status": "implementing",
@@ -610,15 +612,15 @@
         "jira-project-read": "passing",
         "jira-gateway-bearer": "evaluating",
         "suggestion-web-jobs": "evaluating",
-        "issue-comments-read": "pending"
+        "issue-comments-read": "passing"
       },
-      "lastUpdated": "2026-11-27T07:59:42.980Z",
+      "lastUpdated": "2026-11-27T12:16:11.654Z",
       "branch": "feat/tracker",
       "repos": [
         "default"
       ],
       "lastCommit": {
-        "default": "92c551d28cb61c60a32d50b5dfef93c5a19b8117"
+        "default": "6dc6c2ee6c23dd8aab17d2ac401cac13d1af21f8"
       }
     },
     "ticket-review": {
