@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 /**
  * Runs {@link TenantMigrator#applyAll()} while the web context starts, after the Registry changelog. A failure stops the
@@ -31,9 +32,10 @@ public class TenantStartupMigrator {
             if (registry.containsBeanDefinition("liquibase")) {
                 registry.removeBeanDefinition("liquibase");
             }
-            registry.getBeanDefinition("dataSource")
-                    .setDependsOn(((ListableBeanFactory) registry)
-                            .getBeanNamesForType(TenantStartupMigrator.class, false, false));
+            var dataSource = registry.getBeanDefinition("dataSource");
+            dataSource.setDependsOn(StringUtils.concatenateStringArrays(
+                    dataSource.getDependsOn(),
+                    ((ListableBeanFactory) registry).getBeanNamesForType(TenantStartupMigrator.class, false, false)));
         };
     }
 }

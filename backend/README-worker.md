@@ -10,6 +10,8 @@ JobRunr OSS stores requests in a **separate PostgreSQL Jobs database**. The work
 
 Without the worker profile, processing is disabled. `TSOLVE_WORKER_ENABLED=true` enables the enqueue/storage integration for a web process; it does not enable processing. Missing Jobs DB configuration is a startup error when integration is enabled; there is no fallback to Spring's business DataSource. The private Jobs pool is not registered as a DataSource bean, so it cannot replace the business pool.
 
+The worker no longer creates the tenant schema; the web process migrates the tenant databases at startup (`TenantStartupMigrator`).
+
 ## The worker's tenant service
 
 `CatalogWorkerTenantService` is the one `WorkerTenantService`, registered only when `tsolve.worker.enabled=true` (the worker container; never the web process). It reads the Workspaces from the Registry catalog and binds through the `TenantContext` holder. Without a `WorkspaceCatalog` bean the worker fails at startup. Its methods:
