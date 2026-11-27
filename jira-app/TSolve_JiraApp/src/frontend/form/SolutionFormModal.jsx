@@ -6,6 +6,7 @@ import {
   Button,
   ButtonGroup,
   ErrorMessage,
+  Grid,
   Inline,
   Label,
   Modal,
@@ -19,7 +20,6 @@ import {
   Stack,
   Text,
   TextArea,
-  xcss,
 } from '@forge/react';
 import { rewriteSolution, saveSolutionDraft, submitSolution } from '../api/tsolveClient';
 import { message } from '../messages';
@@ -40,7 +40,6 @@ export const LABELS = {
   savedAsDraft: 'Saved as draft',
 };
 
-const columnStyle = xcss({ flexGrow: 1 });
 
 /** The Jira flag shown once the form is gone: MSG66 after Finish (AC-004.2), "Saved as draft" after Close (AC-005.1). */
 export function doneFlag(issueKey, outcome) {
@@ -240,8 +239,9 @@ function RewritePreview({ current, rewritten }) {
       {SECTIONS.map(({ field, label }) => (
         <Stack key={field} space="space.050">
           <Text weight="semibold">{label}</Text>
-          <Inline space="space.200" alignBlock="start">
-            <Box xcss={columnStyle}>
+          {/* Two equal columns, so Current and Rewritten line up in every section (BUG-411). */}
+          <Grid templateColumns="1fr 1fr" columnGap="space.200" alignItems="start">
+            <Box>
               <Stack space="space.025">
                 <Text size="small" color="color.text.subtlest">
                   {LABELS.current}
@@ -249,7 +249,7 @@ function RewritePreview({ current, rewritten }) {
                 <Text>{current[field] || '—'}</Text>
               </Stack>
             </Box>
-            <Box xcss={columnStyle}>
+            <Box>
               <Stack space="space.025">
                 <Text size="small" color="color.text.subtlest">
                   {LABELS.rewritten}
@@ -257,7 +257,7 @@ function RewritePreview({ current, rewritten }) {
                 <Text>{rewritten[field] || '—'}</Text>
               </Stack>
             </Box>
-          </Inline>
+          </Grid>
         </Stack>
       ))}
     </Stack>

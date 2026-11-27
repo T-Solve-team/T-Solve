@@ -28,6 +28,9 @@ const TICKET = {
 const ANSWERED = { answerId: 'a-1', outcome: 'ANSWERED', text: 'Update the VPN client [1] [2]', citations: [WIKI, TICKET] };
 const NO_SOURCE = { answerId: 'a-2', outcome: 'NO_SOURCE', text: '', citations: [] };
 
+// The answer text, whose "[n]" markers are separate elements (BUG-410).
+const answerText = (text) => (_, node) => node?.tagName === 'P' && node.textContent === text;
+
 const failure = (code) => Object.assign(new Error(code), { code });
 
 let open;
@@ -146,7 +149,7 @@ describe('AskTsolvePage', () => {
     expect(screen.getByLabelText('loading')).toBeInTheDocument();
     await act(async () => jest.advanceTimersByTimeAsync(1500));
 
-    expect(screen.getByText(ANSWERED.text)).toBeInTheDocument();
+    expect(screen.getByText(answerText(ANSWERED.text))).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'Solved' }));
     expect(rateAnswer).toHaveBeenCalledWith(ANSWERED.answerId, 'HELPFUL');
@@ -191,14 +194,32 @@ describe('AskTsolvePage', () => {
 
     await ask('VPN fails', ANSWERED);
 
-    expect(screen.getByText('Update the VPN client [1] [2]')).toBeInTheDocument();
+    expect(screen.getByText(answerText('Update the VPN client [1] [2]'))).toBeInTheDocument();
     expect(screen.getByText('[1] Solution from a ticket')).toBeInTheDocument();
     expect(screen.getByText('[2] VPN guide · Wiki document')).toBeInTheDocument();
-    expect(screen.getByText('Symptoms: VPN drops')).toBeInTheDocument();
-    expect(screen.getByText('Resolution steps: Update the client')).toBeInTheDocument();
+    expect(screen.getByText('Symptoms')).toBeInTheDocument();
+    expect(screen.getByText('Update the client')).toBeInTheDocument();
     expect(screen.queryByText(/Workaround/)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Solved' })).toBeInTheDocument();
     expect(box()).toHaveValue('');
+  });
+
+  it('AC-010.6 lays out the answer like the web chatbot: markers, one source per line, Solution under its source (BUG-410)', async () => {
+    await renderLinked();
+
+    await ask('VPN fails', ANSWERED);
+
+    expect(screen.getByText('[1]', { selector: 'code' })).toBeInTheDocument();
+    expect(screen.getByText('[2]', { selector: 'code' })).toBeInTheDocument();
+    const ticket = screen.getByText('[1] Solution from a ticket').parentElement;
+    expect(ticket).toHaveTextContent('Root cause');
+    expect(ticket).toHaveTextContent('Old client');
+    expect(ticket).not.toHaveTextContent('VPN guide');
+    const wiki = screen.getByText('[2] VPN guide · Wiki document').parentElement;
+    expect(wiki).not.toHaveTextContent('Symptoms');
+    expect(screen.getByText('[1] Solution from a ticket').compareDocumentPosition(screen.getByText('[2] VPN guide · Wiki document'))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
   });
 
   it('AC-010.1 shows the card heading and the box placeholder of the page design', async () => {

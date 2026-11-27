@@ -3,6 +3,7 @@ import React, { useEffect, useReducer, useRef, useState } from 'react';
 import {
   Box,
   Button,
+  Code,
   ErrorMessage,
   Icon,
   Inline,
@@ -81,6 +82,8 @@ const avatarStyle = xcss({
   padding: 'space.050',
 });
 const growStyle = xcss({ flexGrow: 1 });
+// A ticket source's Solution sits under its "[n] Solution from a ticket", indented as on the web (BUG-410).
+const solutionStyle = xcss({ paddingInlineStart: 'space.300' });
 
 export function AskTsolvePage() {
   const context = useProductContext();
@@ -315,35 +318,41 @@ function Turn({ turn, children }) {
     );
   }
   const sources = [...answer.citations].sort((a, b) => a.number - b.number);
-  const tickets = sources.filter((citation) => citation.type === 'TICKET_SOLUTION');
+  // As the web chatbot (BUG-410): "[n]" markers stand out in the text, each source has its own numbered line,
+  // and a ticket source's Solution is listed under it. UI Kit cannot scroll to a source, so a marker is not a button.
   return (
     <Stack space="space.150">
       <Question text={question} />
       <Answer>
-        <Text>{answer.text}</Text>
+        <Text>
+          {answer.text.split(/(\[\d+\])/).map((part, index) => (index % 2 === 0 ? part : <Code key={index}>{part}</Code>))}
+        </Text>
         {sources.length > 0 && (
-          <Inline space="space.050" alignBlock="center" shouldWrap>
+          <Stack space="space.100">
             <Text size="small" color="color.text.subtle">
               {SOURCES}
             </Text>
-            <Inline space="space.050" shouldWrap separator="·">
-              {sources.map((citation) => (
-                <Text key={citation.number} size="small" color="color.link">
-                  {sourceLabel(citation)}
-                </Text>
-              ))}
-            </Inline>
-          </Inline>
-        )}
-        {tickets.map((citation) => (
-          <Stack key={citation.number} space="space.025">
-            {SOLUTION_SECTIONS.filter(([, field]) => citation.solution[field]).map(([label, field]) => (
-              <Text key={field} size="small" color="color.text.subtle">
-                {`${label}: ${citation.solution[field]}`}
-              </Text>
+            {sources.map((citation) => (
+              <Stack key={citation.number} space="space.050">
+                <Text color={citation.type === 'WIKI_DOCUMENT' ? 'color.link' : undefined}>{sourceLabel(citation)}</Text>
+                {citation.type === 'TICKET_SOLUTION' && (
+                  <Box xcss={solutionStyle}>
+                    <Stack space="space.100">
+                      {SOLUTION_SECTIONS.filter(([, field]) => citation.solution[field]).map(([label, field]) => (
+                        <Stack key={field} space="space.025">
+                          <Text size="small" weight="semibold">
+                            {label}
+                          </Text>
+                          <Text size="small">{citation.solution[field]}</Text>
+                        </Stack>
+                      ))}
+                    </Stack>
+                  </Box>
+                )}
+              </Stack>
             ))}
           </Stack>
-        ))}
+        )}
         {children}
       </Answer>
     </Stack>

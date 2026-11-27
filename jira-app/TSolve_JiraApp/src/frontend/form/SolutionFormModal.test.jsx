@@ -210,6 +210,18 @@ describe('SolutionFormModal', () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
+  it('AC-007.1 puts Current and Rewritten in two equal columns in every section (BUG-411)', async () => {
+    rewriteSolution.mockResolvedValue({ ...FULL, symptoms: 'The VPN drops every hour, on every laptop of the office.' });
+    open();
+
+    click(LABELS.rewrite);
+    await screen.findByText(LABELS.rewriteTitle);
+
+    const rows = screen.getAllByText('Rewritten').map((label) => label.closest('[data-template-columns]'));
+    expect(rows).toHaveLength(5);
+    rows.forEach((row) => expect(row).toHaveAttribute('data-template-columns', '1fr 1fr'));
+  });
+
   it('AC-007.1 AC-007.2 shows the rewrite next to the Solution and Accept replaces it (BUG-345)', async () => {
     rewriteSolution.mockResolvedValue({ ...FULL, symptoms: 'The VPN drops every hour.' });
     open();
