@@ -27,7 +27,7 @@ HEAD `c381a7f8` (= PR #354 head `c381a7f8b0eb…`), working tree clean.
   job are green.
 
 ### Developer's verify (from the card, not re-run)
-- `mvn spotless:check test` 3343 passed on `a8b2df00` (BUG-404 state); 5 targeted ITs 27 passed on `c608475b`;
+- `mvn spotless:check test` 3343 passed on `a8b2df00` (BUG-412 state); 5 targeted ITs 27 passed on `c608475b`;
   `generate:api` no diff; `format:check` clean. Commits after it: the merge of `main` (`2ea35697`, plan docs only) and
   the bug-log PR number (`c381a7f8`), both covered by CI below.
 

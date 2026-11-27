@@ -33,7 +33,7 @@ met, so it does not fail the task; it needs a decision.
 | Criterion | Result | Detail |
 |-----------|--------|--------|
 | Functionality | pass | Stage 1 table below: every covered AC is PASS |
-| Completeness | pass | No MISSING. No EXTRA behaviour beyond the BUG-404 hardening of `SecurityProblemWriter` (logged, tested) |
+| Completeness | pass | No MISSING. No EXTRA behaviour beyond the BUG-412 hardening of `SecurityProblemWriter` (logged, tested) |
 | Correctness | pass | 95/95 targeted tests; CI green on `c381a7f8`; no CRITICAL code finding |
 | Integration | pass | `bindRequest` / `runIn` contract as designed; contract text + generated model in sync (CI `frontend-checks`); full-context ITs without a catalog green on CI. Finding 1 is the open integration edge with identity's `WebSessionFilter` |
 
@@ -146,7 +146,7 @@ No CRITICAL finding.
 - Dependencies: none added (no `pom.xml` / `package.json` change); no audit run.
 - Spoofing: raw `Host` only; forwarded headers and ids ignored for the binding (finding 1 is the forwarded-host gap
   outside the resolver).
-- Tampering: decoded-path matching, encoded variants tested; `//` no longer a 500 (BUG-404).
+- Tampering: decoded-path matching, encoded variants tested; `//` no longer a 500 (BUG-412).
 - Repudiation / information disclosure: refusals log host and code; lookup failure logs the exception class only;
   bodies hold code, SRS text and the request path.
 - Denial of service: finding 5.

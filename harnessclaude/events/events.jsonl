@@ -2412,3 +2412,8 @@
 {"ts":"2026-11-27T11:53:27.344Z","type":"feature-status","module":"platform","feature":"tenant-routing","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-27T11:53:27.608Z","type":"feature-status","module":"platform","feature":"tenant-routing","from":"evaluating","to":"passing"}
 {"ts":"2026-11-27T13:09:39.805Z","type":"feature-status","module":"platform","feature":"startup-migrator","from":null,"to":"pending"}
+{"ts":"2026-11-27T14:00:58.734Z","type":"quick-opened","what":"Rename the BUG-404 test of TenantResolverFilterTest to BUG-412 after the duplicate id is renumbered (KAN-476)","files":["backend/src/test/java/vn/tsolve/platform/web/TenantResolverFilterTest.java"]}
+{"ts":"2026-11-27T14:02:57.587Z","type":"quick-closed","what":"Rename the BUG-404 test of TenantResolverFilterTest to BUG-412 after the duplicate id is renumbered (KAN-476)","files":["backend/src/test/java/vn/tsolve/platform/web/TenantResolverFilterTest.java"]}
+{"ts":"2026-11-27T13:53:14.909Z","type":"feature-status","module":"platform","feature":"web-tenant-isolation","from":"pending","to":"in-progress"}
+{"ts":"2026-11-27T13:53:15.266Z","type":"feature-status","module":"platform","feature":"web-tenant-isolation","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-27T13:53:15.664Z","type":"feature-status","module":"platform","feature":"web-tenant-isolation","from":"evaluating","to":"passing"}
