@@ -86,6 +86,47 @@ when present (never typed by hand). Locally, `docker-compose.yml` has no `backen
 script at a compose file with `db` and `backend` services and an env file holding `CATALOG_SECRET_KEY` and the other
 required variables: `TSOLVE_COMPOSE_FILE=<compose-file> TSOLVE_ENV_FILE=<env-file> infra/scripts/registry-adopt-workspace.sh`.
 
+### Tenant routing: once, before and after the deploy that turns it on (KAN-254)
+
+The backend and the worker then open each Workspace's database with the user and password of its Registry row. CD
+deploys every merge to `main`, so check these on the VPS **before** the merge:
+
+1. The previous task (KAN-461, background work bound to a Workspace) is deployed.
+2. `/srv/tsolve/staging/.env` has every name of the new `staging.env.example`, `TENANT_DB_*` included (CD fails
+   otherwise).
+3. The Registry holds one row, bluefin's. Do not insert a row by hand before routing is deployed.
+4. bluefin's stored password matches `DB_PASSWORD` under the deployed `CATALOG_SECRET_KEY`. The running image has no
+   `verify`, so build the pull request's head in a separate checkout (never `/srv/tsolve/src`). The variables are passed
+   by name, so no value reaches a command line:
+
+   ```bash
+   envfile="${TSOLVE_ENV_FILE:-/srv/tsolve/staging/.env}"
+   git clone /srv/tsolve/src /tmp/tsolve-verify
+   git -C /tmp/tsolve-verify fetch "$(git -C /srv/tsolve/src remote get-url origin)" pull/<pr-number>/head
+   git -C /tmp/tsolve-verify checkout --detach FETCH_HEAD
+   docker build -t tsolve-backend:verify /tmp/tsolve-verify/backend
+   (
+     set -eu
+     value() { sed -n "s/^$1=//p" "$envfile" | tail -n 1; }
+     export CATALOG_SECRET_KEY="$(value CATALOG_SECRET_KEY)" DB_PASSWORD="$(value DB_PASSWORD)"
+     export TSOLVE_DEMO_WORKSPACE_ID="$(value TSOLVE_DEMO_WORKSPACE_ID)"
+     export STORED_DB_PASSWORD="$(dc exec -T db psql -U postgres -d "$(value REGISTRY_DB_NAME)" -Atc \
+       "SELECT db_password FROM tenant_workspace WHERE workspace_id = '$TSOLVE_DEMO_WORKSPACE_ID'")"
+     docker run --rm --network none --entrypoint java \
+       -e CATALOG_SECRET_KEY -e TSOLVE_DEMO_WORKSPACE_ID -e DB_PASSWORD -e STORED_DB_PASSWORD \
+       tsolve-backend:verify -cp /app/app.jar -Dloader.main=vn.tsolve.platform.registry.RegistryPasswordCli \
+       org.springframework.boot.loader.launch.PropertiesLauncher verify
+   )
+   docker image rm tsolve-backend:verify
+   rm -rf /tmp/tsolve-verify
+   ```
+
+   It prints `OK`. **On anything but `OK`, do not merge.**
+
+After the CD run: it does not recreate `db` and only warns "manual step needed" for the compose file. Run
+`dc up -d --wait db`. **The database restarts** (a short outage for the app and Keycloak);
+`dc exec db psql -U postgres -c "SHOW max_connections"` then gives 300. Sign in on bluefin again.
+
 ## 5. AI: the GPU server
 
 `COMPOSE_PROFILES` in the env file picks where the AI runs: `gpu` (staging) or `local-ai` (Ollama on this VPS, CPU,
