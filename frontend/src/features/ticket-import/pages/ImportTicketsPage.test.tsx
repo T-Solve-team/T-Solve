@@ -270,7 +270,7 @@ describe('ImportTicketsPage', () => {
   it('AC-008.7 shows MSG29 with the missing columns and keeps the chosen Project and file', async () => {
     server.use(
       http.post('*/api/v1/imports/csv', () =>
-        problem(400, 'MSG29', { params: { column_names: 'root_cause, scope' } }),
+        problem(400, 'MSG29', { params: { column_names: 'root_cause, resolution_steps' } }),
       ),
     );
     const { user, router } = await openImport();
@@ -280,7 +280,7 @@ describe('ImportTicketsPage', () => {
     await user.click(screen.getByRole('button', { name: 'Upload' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      msg('MSG29', { column_names: 'root_cause, scope' }),
+      msg('MSG29', { column_names: 'root_cause, resolution_steps' }),
     );
     expect(router.state.location.pathname).toBe('/import');
     expect(screen.getByText('tickets.csv')).toBeInTheDocument();

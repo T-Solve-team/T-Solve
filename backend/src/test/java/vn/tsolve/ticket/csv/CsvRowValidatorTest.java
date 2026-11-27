@@ -98,7 +98,7 @@ class CsvRowValidatorTest {
 
         assertThat(errorsOf(v))
                 .extracting(RowError::code, RowError::field)
-                .containsExactly(tuple("MSG01", "title"), tuple("MSG01", "symptoms"), tuple("MSG39", "resolved_date"));
+                .containsExactly(tuple("MSG01", "title"), tuple("MSG39", "resolved_date"));
     }
 
     @Test
@@ -108,13 +108,21 @@ class CsvRowValidatorTest {
         assertThat(errorsOf(v))
                 .allMatch(e -> e.code().equals("MSG01"))
                 .extracting(RowError::field)
-                .containsExactly("ticket_id", "title", "symptoms", "root_cause", "resolution_steps", "scope");
+                .containsExactly("ticket_id", "title", "root_cause", "resolution_steps");
         assertThat(errorsOf(v).get(0).params()).isEqualTo(Map.of("field_name", "ticket_id"));
     }
 
     @Test
     void workaroundDescriptionAuthorAndDateAreOptional_AC_002_2() {
         assertThat(errorsOf(valid("T-1"))).isEmpty();
+    }
+
+    @Test
+    void symptomsAndScopeAreOptional_AC_002_2() {
+        var v = new ImportPreviewRow.Values(
+                "T-1", "Login fails", null, null, null, " ", "Bad token", "Restart", null, null);
+
+        assertThat(errorsOf(v)).isEmpty();
     }
 
     @Test

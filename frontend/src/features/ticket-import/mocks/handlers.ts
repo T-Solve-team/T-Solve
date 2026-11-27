@@ -217,7 +217,7 @@ export const handlers: HttpHandler[] = [
       form.get('importType') === 'WITHOUT_SOLUTION' ? 'WITHOUT_SOLUTION' : 'WITH_SOLUTION';
     const fileName = file instanceof File ? file.name : '';
     if (fileName.includes('missing-columns')) {
-      return problem(400, 'MSG29', { params: { column_names: 'root_cause, scope' } });
+      return problem(400, 'MSG29', { params: { column_names: 'root_cause, resolution_steps' } });
     }
     if (fileName.includes('empty')) return problem(400, 'MSG04');
     replacePreview(
