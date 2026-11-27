@@ -290,3 +290,19 @@ Staging compose and `.env.example`. Bug-log row BUG-342.
 - Test: `WebSuggestionJobQueueTest`, `WebJobsConfigurationTest`, `SuggestionJobQueueSelectionTest`
 **Dependencies:** Task 16
 **Estimated size:** small
+
+---
+
+## Task 22: Read an issue's comments for the AI Solution draft (KAN-474)
+
+**Story:** STORY-014
+**Feature:** issue-comments-read
+**Description:** AC-014.1 to AC-014.3. `TicketTrackerClient.comments` reads the newest 100 comments (ADF flattened
+to plain text) with their author; `TrackerIssueService.comments` drops empty ones and the service account's own,
+returns oldest first, and an empty list on any failure.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/tracker/service/TrackerIssueService.java`, `service/impl/TrackerIssueServiceImpl.java`, `dto/TrackerComment.java`
+- Modify: `backend/src/main/java/vn/tsolve/tracker/client/TicketTrackerClient.java`, `JiraClient.java`
+- Test: `JiraClientTest`, `TrackerIssueServiceImplTest`
+**Dependencies:** none
+**Estimated size:** small

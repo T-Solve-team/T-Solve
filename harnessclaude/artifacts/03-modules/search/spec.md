@@ -26,6 +26,7 @@ owner: BA
 | 2026-11-25 | STORY-007, STORY-009 | **Backend change.** AC-007.1, AC-007.2: tickets with the same Solution count and appear once, as their best-ranked copy; suggestions (AC-009.1) rank with AC-007.1, so they follow (KAN-447) | BUG-372: 25 copies of one CSV sample Solution filled page 1 and pushed a matching ticket to rank 26; user 25/11 chose to collapse exact duplicates |
 | 2026-11-25 | STORY-006 | **Backend change.** AC-006.7: `reviewDueDate` is the start of `ticket.review_due_date` in Asia/Ho_Chi_Minh while the ticket is Pending review or Changes requested, null otherwise, and its sort key sorts by it (KAN-454) | BUG-401: ticket-review now stores the due date, so the Ticket List shows "—" where the Review Queue shows a date |
 | 2026-11-25 | STORY-003 | **Frontend change (KAN-389, BUG-361).** New AC-003.12 and AC-003.13: the "Give feedback" button on 5.5 Ticket Detail, shown for a Published ticket to a Ticket Resolver or Project Manager, opens `GiveFeedbackModal`; it is the component `GiveFeedbackButton` of `features/feedback`, which Ticket Detail mounts. Out of Scope no longer lists the button; the screen itself stays `ticket-repository`'s | System test W-2.14 failed (BUG-361): the popup of KAN-148 was never mounted, because ticket-repository and search each left the button out of scope. The user, 25/11: search owns the button as well as the popup, Ticket Detail only mounts it |
+| 2026-11-27 | STORY-010, STORY-011 | AC-010.2, AC-011.2 and the retrieval records: Symptoms and Scope of applicability are null when blank, like Workaround. | User decision 2026-11-27 (KAN-474): a Solution requires only Root cause and Resolution steps; Symptoms, Workaround and Scope of applicability may be empty, everywhere a Solution is written. An empty section is stored as null and not shown, as Workaround already was. |
 
 ## Requirements
 
@@ -399,7 +400,7 @@ Used by STORY-005 to STORY-009:
     at most `limit` Workspace Solutions that have a `ticket_embedding` row whose cosine similarity to `queryVector`
     is at least `minSimilarity`, most similar first, the internal ticket id as the tie-breaker.
   - AC-010.2: THE backend SHALL return each hit with the ticket's `public_id` as `ticketId`, its Symptoms, Root
-    cause, Resolution steps, Workaround (null when blank) and Scope of applicability, and its similarity; it SHALL
+    cause, Resolution steps, Workaround and Scope of applicability (Symptoms, Workaround and Scope null when blank), and its similarity; it SHALL
     return no title, Project, Department, writer, snapshot or Evidence, and the `ticketId` is for the server side
     only (chatbot AC-006.3, GBR-36).
   - AC-010.3: IF a ticket is unpublished, inactive or too far, THEN THE backend SHALL leave it out (not
@@ -418,7 +419,7 @@ Used by STORY-005 to STORY-009:
     that have a `ticket_embedding` row whose cosine similarity to `queryVector` is at least `minSimilarity`, most
     similar first, the internal ticket id as the tie-breaker.
   - AC-011.2: THE backend SHALL return each hit with the ticket's `public_id`, Symptoms, Root cause, Resolution steps,
-    Workaround (null when blank), Scope of applicability and similarity; it SHALL return no title, Jira key,
+    Workaround, Scope of applicability (Symptoms, Workaround and Scope null when blank) and similarity; it SHALL return no title, Jira key,
     Project, Department, writer, snapshot or Evidence.
   - AC-011.3: IF a ticket is unpublished, of another Department, of an inactive Department or below `minSimilarity`, THEN THE backend SHALL leave it out, and SHALL return an empty list when no Project has `public_id` `projectId`.
   - AC-011.4: IF an argument is out of range, THEN THE service SHALL throw `IllegalArgumentException` and SHALL run
@@ -619,7 +620,7 @@ public interface SolutionRetrieval {
 public record RetrievedSolution(
         UUID ticketId, // ticket.public_id, server side only (AC-010.2)
         String symptoms, String rootCause, String resolutionSteps, String workaround, String scopeOfApplicability,
-        double similarity) {} // workaround null when blank
+        double similarity) {} // symptoms, workaround and scopeOfApplicability null when blank
 ```
 
 Same service, for the `triage` module (STORY-011):
@@ -632,7 +633,7 @@ Same service, for the `triage` module (STORY-011):
 // vn.tsolve.search.retrieval.dto
 public record RetrievedTicketSolution(
         UUID ticketId, String symptoms, String rootCause, String resolutionSteps, String workaround,
-        String scopeOfApplicability, double similarity) {} // ticketId = ticket.public_id; workaround null when blank
+        String scopeOfApplicability, double similarity) {} // ticketId = ticket.public_id; symptoms, workaround, scopeOfApplicability null when blank
 ```
 
 ### Required from other modules

@@ -77,8 +77,8 @@
     }
   },
   "import-ticket-list": {
-    "specHash": "3ecb20ecca3158384edc5faad0c847bf9c74c7053f42087b6779756c8cd2c35a",
-    "approvedAt": "2026-11-19T03:28:12.626Z",
+    "specHash": "307191b28fa0964c0a79949cdb37870fbf6325be1037270ed7af05638d2e13c2",
+    "approvedAt": "2026-11-27T07:57:42.362Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager uploads a file with the  extension that is valid UTF-8, at most 10 MB, has every required column and at least one data row, for a Project they manage, THE system SHALL create an Import Preview and return its counts and the first page of its rows.",
@@ -94,7 +94,7 @@
       "AC-001.11": "WHEN a Project Manager uploads a file while they already have an unconfirmed preview, THE system SHALL delete the previous preview and keep only the new one.",
       "AC-001.12": "WHEN a field value is enclosed in double quotes, THE system SHALL read commas, doubled quotes and line breaks inside it as part of the value.",
       "AC-002.1": "WHEN a preview of a file with Solutions is created, THE system SHALL mark a row Valid when every rule in AC-002.2 to AC-002.7 passes, and Error otherwise, listing every failed rule of that row.",
-      "AC-002.2": "IF a row of a file with Solutions has an empty , , , ,  or  (blank after trimming), THEN THE system SHALL mark the row Error with MSG01 for each empty field.",
+      "AC-002.2": "IF a row of a file with Solutions has an empty , ,  or  (blank after trimming; an empty ,  or  is stored as null), THEN THE system SHALL mark the row Error with MSG01 for each empty field.",
       "AC-002.3": "IF a row has  over 50,  over 200,  over 10,000 or  over 100 characters, THEN THE system SHALL mark the row Error with MSG02 for each field over its limit.",
       "AC-002.4": "IF the five Solution sections of a row together exceed 10,000 characters, THEN THE system SHALL mark the row Error with MSG02 for the Solution.",
       "AC-002.5": "IF a row's  already exists as a Ticket, THEN THE system SHALL mark the row Error with MSG31.",
@@ -164,7 +164,7 @@
       "AC-012.6": "IF a row of a file without Solutions has an empty  or  (blank after trimming), THEN THE system SHALL mark the row Error with MSG01 for each empty field.",
       "AC-012.7": "THE system SHALL return the import type and the number of Needs Solution rows with every , and SHALL accept Needs Solution as a result filter when listing rows (AC-002.11).",
       "AC-013.1": "WHEN the Project Manager saves a Solution for rows of a preview of a file without Solutions, THE system SHALL store a separate copy of the sections, with surrounding spaces trimmed, in each row and mark each row Valid.",
-      "AC-013.2": "IF the saved Solution has an empty , ,  or , or its five sections together exceed 10,000 characters, THEN THE system SHALL reject the request with HTTP 400 and MSG01 for each empty section or MSG02 for the Solution, and change no row.",
+      "AC-013.2": "IF the saved Solution has an empty  or , or its five sections together exceed 10,000 characters, THEN THE system SHALL reject the request with HTTP 400 and MSG01 for each empty section or MSG02 for the Solution, and change no row.",
       "AC-013.3": "IF the preview is a file with Solutions, or any requested row is Error or Removed, THEN THE system SHALL reject the request with HTTP 409 (MSG06) and change no row.",
       "AC-013.4": "IF the preview belongs to another user, has been confirmed, or no longer exists, or a requested row number does not exist in it, THEN THE system SHALL reject the request with HTTP 404 and change no row.",
       "AC-013.5": "IF the caller no longer manages the preview's Project or the Project is no longer Active, THEN THE system SHALL reject the request with HTTP 403 (MSG08) and change no row.",
@@ -242,8 +242,8 @@
     }
   },
   "chatbot": {
-    "specHash": "6d9da370c0b66d9adef9edcc8dcabefb745ccc7fcbaec9bc53826172928c58fa",
-    "approvedAt": "2026-11-26T10:37:30.945Z",
+    "specHash": "35b73334e2c96a46fe9de63aad94ae5c52e854d72f8cd1ef201a0d5dca2254c9",
+    "approvedAt": "2026-11-27T07:58:22.891Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",
@@ -794,8 +794,8 @@
     }
   },
   "search": {
-    "specHash": "ff4fac26063f1f9096eb85121703bede46469d8fc0f5aace3c9cdd33aa0ceb66",
-    "approvedAt": "2026-11-26T14:29:01.901Z",
+    "specHash": "1fb3af80dda1290625c1c68ec35882fe541e02d2078ed7c6f801ebb1972cefb1",
+    "approvedAt": "2026-11-27T07:58:10.858Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Ticket Resolver or Project Manager opens , THE web app SHALL show 6.2 Ticket List",
@@ -974,8 +974,8 @@
     }
   },
   "tracker": {
-    "specHash": "9bc2419a3c1005885b68de6770b6bc5b92376f4187c4073742202a1ddea9858b",
-    "approvedAt": "2026-11-27T03:11:47.263Z",
+    "specHash": "16ac36a31dae5e30adb4d083ff9118e2d93a0639685c83193b7dd36c6277bee9",
+    "approvedAt": "2026-11-27T07:58:27.647Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a request to the Jira App API carries a FIT whose signature verifies against Atlassian's JWKS, whose issuer is , whose audience equals the configured app id, which is within its / window, and which has a , THE tracker SHALL pass the request to its handler with the cloudId and the principal (if any).",
@@ -1037,7 +1037,10 @@
       "AC-013.10": "THE lookup SHALL use  and the  gateway Bearer authentication of AC-012.9 with a 5-second connect timeout and a 10-second read timeout, as STORY-012 does.",
       "AC-013.11": "IF the project read fails, THEN THE tracker SHALL make no statuses call.",
       "AC-013.12": "THE lookup's logs SHALL carry only the project key, HTTP status when available and lookup outcome, never the service-account API token or a Jira response body.",
-      "AC-013.13": "THE lookup SHALL persist no data and return no service-account credential or Jira response body."
+      "AC-013.13": "THE lookup SHALL persist no data and return no service-account credential or Jira response body.",
+      "AC-014.1": "WHEN  is called for a Workspace that has a service account, THE tracker SHALL read the newest 100 comments of the issue from  with that account and SHALL return their plain text oldest first, leaving out empty comments and the comments written by the service account itself (T-Solve's suggestion comments).",
+      "AC-014.2": "IF the Workspace has no service account, or the read answers anything but 200, times out, is unreachable or has an unreadable body, THEN THE tracker SHALL return an empty list and SHALL not let an exception cross the service boundary.",
+      "AC-014.3": "THE read SHALL use the  gateway Bearer authentication and timeouts of AC-013.10, SHALL persist no data, and its logs SHALL carry only the issue key, the HTTP status when available and the outcome, never a comment's text or the API token."
     }
   },
   "ticket-review": {
@@ -1154,8 +1157,8 @@
     }
   },
   "ai": {
-    "specHash": "bd7dbb0f81b7f436d9d60afbc40dd6e6965ab5d189ac8a91dfce8548af0ea181",
-    "approvedAt": "2026-11-06T11:57:13.982Z",
+    "specHash": "2bc51f9b31e3d80687df4ec0c0e858848a5619920aafa55081e16ba98bfcf6bb",
+    "approvedAt": "2026-11-27T07:58:25.275Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a caller asks  for a chat completion with a list of messages (each with the role ,  or  and its text), THE ai module SHALL send them in one  with the model  and , and SHALL return the text of the answer's message.",
@@ -1172,8 +1175,8 @@
       "AC-003.6": "THE ai module SHALL log no message text, issue text, Solution text, answer or vector; the log line of a call SHALL hold only the operation ( or ), the model, the duration, the outcome and, on a failure, the class of the error.",
       "AC-003.7": "WHEN the backend starts while Ollama cannot be reached, THE backend SHALL start and serve the requests that need no AI.",
       "AC-003.8": "IF an  is not caught by its caller and reaches the global error handler, THEN THE backend SHALL answer  with a  whose  is .",
-      "AC-004.1": "WHEN a caller asks  to draft a Solution from an issue's summary, description and comments, THE ai module SHALL ask the LLM for the five sections of the Solution template (Symptoms, Root cause, Resolution steps, Workaround, Scope of applicability; GBR-33) as a JSON object and SHALL return them with  true.",
-      "AC-004.2": "IF the LLM call fails, or the answer leaves Symptoms, Root cause, Resolution steps or Scope of applicability empty, or the five sections together are longer than 10,000 characters, THEN THE ai module SHALL return the fallback draft — Symptoms is the issue's description cut to 10,000 characters, Resolution steps is the issue's last comment cut to the characters that remain of the 10,000, the other sections are empty, and no cut splits a character — with  false, so the caller shows MSG67 (UC-19 Step 3).",
+      "AC-004.1": "WHEN a caller asks  to draft a Solution from an issue's summary, description and comments, THE ai module SHALL ask the LLM for the five sections of the Solution template (Symptoms, Root cause, Resolution steps, Workaround, Scope of applicability; GBR-33) as a JSON object, telling it to write each section only from what the summary, description and comments say and to leave a section empty when they do not say it, and SHALL return the sections as answered, empty ones included, with  true (KAN-474).",
+      "AC-004.2": "IF the LLM call fails, or the answer is not the JSON object of AC-004.1, or the five sections together are longer than 10,000 characters, THEN THE ai module SHALL return the fallback draft — Symptoms is the issue's description cut to 10,000 characters, Resolution steps is the issue's last comment cut to the characters that remain of the 10,000, the other sections are empty, and no cut splits a character — with  false, so the caller shows MSG67 (UC-19 Step 3).",
       "AC-004.3": "THE  operation SHALL never throw because of an AI failure; its only failure result is the fallback draft of AC-004.2.",
       "AC-004.4": "WHEN the description and the comments together are longer than 12,000 characters, THE ai module SHALL send the summary, the description cut to 12,000 characters and then, newest first, only the comments that still fit in 12,000 characters in all.",
       "AC-004.5": "IF the issue has no description, or has no comment, THEN THE fallback draft SHALL leave Symptoms, or Resolution steps, empty.",
@@ -1275,8 +1278,8 @@
     }
   },
   "ticket-repository": {
-    "specHash": "e68f238274c7ce54fee268676117b04f4c8a1a803a3a2d2203a50a0ccf4e496b",
-    "approvedAt": "2026-11-16T20:10:10.421Z",
+    "specHash": "3cf1dbe798dfe7b54f2a14359f9054a6e5d8707edd5dec34ab2abbca7f1ba666",
+    "approvedAt": "2026-11-27T07:57:28.935Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Project Manager pulls issues for an Active Project they manage with a valid date range, THE system SHALL read from Jira the issues of the Project's Jira project whose resolution date falls within the range (both dates included, Vietnam time), skip every issue whose Jira key is already a Ticket ID, keep at most 100 issues ordered by resolution date oldest first, and create an Import Preview of source Jira with one row per kept issue, numbered from 1 in that order, each with the result Needs Solution.",
@@ -1296,7 +1299,7 @@
       "AC-002.1": "WHEN the Project Manager lists the rows of a Jira preview, THE system SHALL return them page by page (at most 100 per page) in row-number order with the Jira key, summary, assignee, resolved date and result (Needs Solution or Valid), and the preview SHALL report its source Jira, its date range, the number of rows and the number of Needs Solution rows.",
       "AC-002.2": "WHEN the Project Manager opens one row of a Jira preview, THE system SHALL return its full snapshot (AC-001.2) and its Solution, if any.",
       "AC-002.3": "WHEN the Project Manager fills a Solution into one or several Needs Solution or Valid rows of a Jira preview, THE system SHALL store a separate copy of the Solution on each of those rows, replacing any Solution they had, and mark each of them Valid.",
-      "AC-002.4": "IF a filled Solution lacks Symptoms, Root cause, Resolution steps or Scope (blank after trimming), THEN THE system SHALL reject it with MSG01 naming the missing sections and change no row.",
+      "AC-002.4": "IF a filled Solution lacks Root cause or Resolution steps (blank after trimming; Symptoms, Workaround and Scope may be empty and are stored as null), THEN THE system SHALL reject it with MSG01 naming the missing sections and change no row.",
       "AC-002.5": "IF the sections of a filled Solution are longer than 10,000 characters in total, THEN THE system SHALL reject it with MSG02 and change no row.",
       "AC-002.6": "WHEN the Project Manager selects several issues and clicks Fill solution while some of them already have a Solution, THE web app SHALL ask MSG36 with the number of issues that will be overwritten before it applies the Solution.",
       "AC-002.7": "WHEN the Project Manager removes rows from a Jira preview, THE system SHALL mark them Removed, never save them as Tickets, and keep no record of them after the preview is finished or deleted, so that a later pull can return them again.",
@@ -1328,7 +1331,7 @@
       "AC-005.5": "WHEN a request moves one or more Tickets to Unpublished, THE system SHALL publish one \"tickets unpublished\" event with the ids of all those Tickets, for listeners to handle after the transaction commits.",
       "AC-006.1": "WHEN a Project Manager saves a manual entry with valid fields for an Active Project they manage, THE system SHALL, in one transaction, save a Ticket of that Project with the entered Ticket ID, title, description, resolved date and Solution, source Manual, status Published, writer = the caller's full name and writer id = the caller's user id (D15); record an approve decision by the caller; record one Import Batch of source Manual with status Completed, 1 published, 0 skipped and 0 removed; and return MSG32 (1 published, 0 skipped).",
       "AC-006.2": "WHEN a manual entry is saved, THE system SHALL publish one \"tickets published\" event with the new Ticket's id, for listeners to handle after the transaction commits.",
-      "AC-006.3": "IF Project, Ticket ID, Title, Description, Symptoms, Root cause, Resolution steps or Scope is missing or blank after trimming, THEN THE system SHALL reject the save with HTTP 400 and MSG01 for each missing field and save nothing.",
+      "AC-006.3": "IF Project, Ticket ID, Title, Description, Root cause or Resolution steps is missing or blank after trimming, THEN THE system SHALL reject the save with HTTP 400 and MSG01 for each missing field and save nothing.",
       "AC-006.4": "IF the Ticket ID is longer than 50 characters, the Title longer than 200, the Description longer than 10,000, or the Solution sections longer than 10,000 characters in total, THEN THE system SHALL reject the save with HTTP 400 and MSG02 for each such field with its limit, and save nothing.",
       "AC-006.5": "IF the Resolved date is after today (Vietnam time), THEN THE system SHALL reject the save with HTTP 400 and MSG39 for that field and save nothing (D16). A missing Resolved date is allowed.",
       "AC-006.6": "WHEN a save is rejected for invalid fields, THE system SHALL report every invalid field of the request in the one answer, each with its message.",
@@ -1388,8 +1391,8 @@
     }
   },
   "jira-app": {
-    "specHash": "7d2193ec5b6a3cb57488f3fb9ed44db57b0923d292ce6fd1bfa746e2f40d5f95",
-    "approvedAt": "2026-11-18T09:17:11.986Z",
+    "specHash": "e038f65df0a6540f62a09ce2e556f0044484884909cf007ac5d27b0e9def8ee2",
+    "approvedAt": "2026-11-27T07:57:25.215Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the issue being viewed changes to a status of the Done status category, THE Jira App SHALL ask the server whether the form may open and open the form when it may.",
@@ -1398,9 +1401,9 @@
       "AC-001.4": "WHILE the issue is in a Done status, the user may open the form and the issue's ticket does not exist, THE panel SHALL show a button that opens the form.",
       "AC-001.5": "IF an issue whose ticket already exists is reopened and moved to Done again, THEN THE Jira App SHALL not open the form (GBR-04).",
       "AC-002.1": "WHEN the form opens without a Draft, THE Jira App SHALL fill Symptoms with the **issue text** — the issue summary, a blank line, then the description as plain text (the summary alone when the description is empty) — and leave Root cause, Resolution steps, Workaround and Scope of applicability empty; THE server SHALL call no AI to open the form and the form SHALL show no MSG67.",
-      "AC-002.3": "WHEN the user clicks Finish with a required section empty (every section except Workaround), THE Jira App SHALL show MSG01 under that section and not submit.",
+      "AC-002.3": "WHEN the user clicks Finish with Root cause or Resolution steps empty (the only required sections; Symptoms, Workaround and Scope of applicability may be empty), THE Jira App SHALL show MSG01 under that section and not submit.",
       "AC-002.4": "WHEN the user clicks Finish and the five sections together exceed 10,000 characters, THE Jira App SHALL show MSG02 and not submit.",
-      "AC-002.5": "IF a submission has an empty required section or more than 10,000 characters in total, THEN THE server SHALL reject it with 400 MSG01 or 400 MSG02 respectively, whatever the Jira App checked.",
+      "AC-002.5": "IF a submission has an empty Root cause or Resolution steps, or more than 10,000 characters in total, THEN THE server SHALL reject it with 400 MSG01 or 400 MSG02 respectively, whatever the Jira App checked.",
       "AC-004.1": "WHEN the user clicks Finish with a valid Solution, THE server SHALL create exactly one Solution Form ticket in Pending review for the issue — source ticket id = the issue key, title = the issue summary, the Project, the Solution and the user as writer — that enters 's Review Queue with its entry time and review due date set as  requires (its AC-009.11, GBR-08, GBR-10), and SHALL delete the user's Draft for the issue.",
       "AC-004.2": "WHEN the submission succeeds, THE Jira App SHALL close the form and show MSG66.",
       "AC-004.3": "IF the issue's ticket already exists, THEN THE server SHALL not create a Solution Form ticket and SHALL answer 409 MSG31.",
@@ -1415,6 +1418,8 @@
       "AC-005.8": "IF the owner of AC-005.7 is not linked to an active T-Solve Account, is not a member of the Project, already has a Draft for the issue, or the issue's ticket already exists, or the issue's project key is no Project's, THEN THE server SHALL create no Draft and SHALL leave any existing Draft unchanged; a change made by an app or automation with no assignee on the issue creates no Draft.",
       "AC-005.9": "WHEN the event's changelog changes the issue's status, THE server SHALL record whether the issue's new status is in the Done status category, for issues of a Project only; a later move out of Done keeps every Draft for the issue (AC-008.11).",
       "AC-005.10": "IF the event cannot be read (no issue key, no status change in the changelog) or the issue is not in a Project, THEN THE server SHALL answer 202 and change nothing; IF storing the Draft or the Done state fails, THEN THE server SHALL answer 5xx and store neither, and THE Jira App SHALL not retry (the next status change records the state again).",
+      "AC-005.11": "WHEN the server has created the Draft of AC-005.7, THE server SHALL start a background job (the event is still answered at once) that reads the issue's comments (tracker AC-014.1) and asks the ai module to draft a Solution from the issue summary, description and comments (ai AC-004.1); WHEN the draft comes back with  true and the Draft has not been saved since it was created, THE server SHALL replace the Draft's five sections with the AI draft, keeping empty every section the AI left empty (KAN-474).",
+      "AC-005.12": "IF the AI draft has  false, the job fails or does not finish within  (the rewrite's limit), or the user has saved the Draft since it was created, THEN THE server SHALL leave the Draft as it is and tell the user nothing.",
       "AC-007.1": "WHEN the user clicks Rewrite with AI, THE Jira App SHALL call  with the five sections, then call  every 1.5 seconds until the job is  or , and when it is  SHALL show 4.2 AI Rewrite Preview with the current Solution and the rewritten Solution section by section.",
       "AC-007.2": "WHEN the user clicks Accept, THE Jira App SHALL replace the form's five sections with the rewritten ones and go back to the form.",
       "AC-007.3": "WHEN the user clicks Discard, THE Jira App SHALL go back to the form with the Solution unchanged.",

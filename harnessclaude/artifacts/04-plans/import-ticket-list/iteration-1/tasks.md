@@ -505,3 +505,17 @@ Design: master design, section "Change 2026-11-01". `F` = `frontend/src/features
 - Test: `frontend/src/features/ticket-import/pages/ImportPreviewPage.test.tsx` (AC-017.8 to AC-017.10)
 **Dependencies:** Task 31
 **Estimated size:** small
+
+---
+
+## Task 33: CSV columns symptoms and scope optional (KAN-474)
+
+**Story:** STORY-001, STORY-002, STORY-013
+**Feature:** csv-optional-sections
+**Description:** D1, D4, AC-001.5, AC-002.2, AC-013.2 (2026-11-27). The required header columns are `ticket_id, title,
+root_cause, resolution_steps`; an empty `symptoms`, `workaround` or `scope` is no row error and is stored as null.
+**Files:**
+- Modify: `backend/src/main/java/vn/tsolve/ticket/csv/CsvColumns.java`, `CsvRowValidator.java`, `service/impl/ImportConfirmServiceImpl.java`, the CSV template in the web app if it marks them required
+- Test: `CsvTicketParserTest`, `CsvRowValidatorTest`, `ImportConfirmServiceImplTest`
+**Dependencies:** ticket-repository Task 32 (nullable columns)
+**Estimated size:** small

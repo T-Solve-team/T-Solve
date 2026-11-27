@@ -42,6 +42,7 @@ is one row of such a preview.
 | 2026-11-15 | STORY-010 | New STORY-010 (KAN-137): AC-010.1–AC-010.7, decisions D38–D43; "Required from other modules" names `ticket_decision` | KAN-137: two decision tables and the unused Solution tables of changeset 001 are left from before the ticket model was one; user decisions 2026-11-15 (planned as STORY-007 / D17–D22 in PR #246, renumbered after KAN-134–KAN-136 took those numbers) |
 | 2026-11-16 | STORY-001 | KAN-345: D2 and AC-001.12 reworded, new AC-001.14 — a pull takes the Workspace's Jira service account from `workspace` (`JiraServiceAccount.current()`: site URL, cloud id, scoped token; KAN-344) for every pull, instead of the environment (`JIRA_SITE_URL`, `JIRA_CLOUD_ID`, `JIRA_API_TOKEN` removed); Out of Scope and Required from other modules follow | BUG-308: on staging the env was empty, so every pull answered MSG50 although the Admin had entered the service account; user decision 16/11 (one account per Workspace, KAN-344 part 1) |
 | 2026-11-17 | STORY-001 | KAN-349: D2 notes that the account behind `JiraServiceAccount` is now the T-Solve Jira App's app token; no acceptance criterion changes | RESEARCH-005, user decision 17/11 |
+| 2026-11-27 | STORY-002, STORY-006 | AC-002.4 and AC-006.3: Symptoms and Scope are no longer required (Root cause and Resolution steps are); `ManualTicketRequest.symptoms` and `scope` optional. | User decision 2026-11-27 (KAN-474): a Solution requires only Root cause and Resolution steps; Symptoms, Workaround and Scope of applicability may be empty, everywhere a Solution is written. An empty section is stored as null and not shown, as Workaround already was. |
 
 ## Decisions taken while planning (2026-11-07, with the user)
 | # | Question | Decision |
@@ -135,7 +136,7 @@ is one row of such a preview.
   - AC-002.1: WHEN the Project Manager lists the rows of a Jira preview, THE system SHALL return them page by page (at most 100 per page) in row-number order with the Jira key, summary, assignee, resolved date and result (Needs Solution or Valid), and the preview SHALL report its source Jira, its date range, the number of rows and the number of Needs Solution rows.
   - AC-002.2: WHEN the Project Manager opens one row of a Jira preview, THE system SHALL return its full snapshot (AC-001.2) and its Solution, if any.
   - AC-002.3: WHEN the Project Manager fills a Solution into one or several Needs Solution or Valid rows of a Jira preview, THE system SHALL store a separate copy of the Solution on each of those rows, replacing any Solution they had, and mark each of them Valid.
-  - AC-002.4: IF a filled Solution lacks Symptoms, Root cause, Resolution steps or Scope (blank after trimming), THEN THE system SHALL reject it with MSG01 naming the missing sections and change no row.
+  - AC-002.4: IF a filled Solution lacks Root cause or Resolution steps (blank after trimming; Symptoms, Workaround and Scope may be empty and are stored as null), THEN THE system SHALL reject it with MSG01 naming the missing sections and change no row.
   - AC-002.5: IF the sections of a filled Solution are longer than 10,000 characters in total, THEN THE system SHALL reject it with MSG02 and change no row.
   - AC-002.6: WHEN the Project Manager selects several issues and clicks Fill solution while some of them already have a Solution, THE web app SHALL ask MSG36 with the number of issues that will be overwritten before it applies the Solution.
   - AC-002.7: WHEN the Project Manager removes rows from a Jira preview, THE system SHALL mark them Removed, never save them as Tickets, and keep no record of them after the preview is finished or deleted, so that a later pull can return them again.
@@ -183,7 +184,7 @@ is one row of such a preview.
 - Acceptance:
   - AC-006.1: WHEN a Project Manager saves a manual entry with valid fields for an Active Project they manage, THE system SHALL, in one transaction, save a Ticket of that Project with the entered Ticket ID, title, description, resolved date and Solution, source Manual, status Published, writer = the caller's full name and writer id = the caller's user id (D15); record an approve decision by the caller; record one Import Batch of source Manual with status Completed, 1 published, 0 skipped and 0 removed; and return MSG32 (1 published, 0 skipped).
   - AC-006.2: WHEN a manual entry is saved, THE system SHALL publish one "tickets published" event with the new Ticket's id, for listeners to handle after the transaction commits.
-  - AC-006.3: IF Project, Ticket ID, Title, Description, Symptoms, Root cause, Resolution steps or Scope is missing or blank after trimming, THEN THE system SHALL reject the save with HTTP 400 and MSG01 for each missing field and save nothing.
+  - AC-006.3: IF Project, Ticket ID, Title, Description, Root cause or Resolution steps is missing or blank after trimming, THEN THE system SHALL reject the save with HTTP 400 and MSG01 for each missing field and save nothing.
   - AC-006.4: IF the Ticket ID is longer than 50 characters, the Title longer than 200, the Description longer than 10,000, or the Solution sections longer than 10,000 characters in total, THEN THE system SHALL reject the save with HTTP 400 and MSG02 for each such field with its limit, and save nothing.
   - AC-006.5: IF the Resolved date is after today (Vietnam time), THEN THE system SHALL reject the save with HTTP 400 and MSG39 for that field and save nothing (D16). A missing Resolved date is allowed.
   - AC-006.6: WHEN a save is rejected for invalid fields, THE system SHALL report every invalid field of the request in the one answer, each with its message.
@@ -291,7 +292,7 @@ New endpoints:
 | `POST /imports/previews/{previewId}/draft` | — | `{ previewId, savedAt, message MSG41 }` |
 | `GET /imports/drafts` | — | list of `ImportDraftSummary` (previewId, source, projectId, rowCount, savedAt) |
 | `DELETE /imports/drafts/{previewId}` | — | 204 (also a Manual Draft, AC-006.13) |
-| `POST /imports/manual` | `ManualTicketRequest { projectId (uuid), ticketId, title, description, resolvedDate?, symptoms, rootCause, resolutionSteps, workaround?, scope, draftId? }` | 201 `ImportResultResponse` (MSG32) |
+| `POST /imports/manual` | `ManualTicketRequest { projectId (uuid), ticketId, title, description, resolvedDate?, symptoms?, rootCause, resolutionSteps, workaround?, scope?, draftId? }` | 201 `ImportResultResponse` (MSG32) |
 | `POST /imports/manual/drafts` | `ManualTicketRequest` (only `projectId` required; `draftId` updates that Draft) | `DraftSavedResponse` (MSG41) |
 | `GET /imports/manual/drafts/{previewId}` | — | `ManualTicketDraft { previewId, projectId, ticketId?, title?, description?, resolvedDate?, symptoms?, rootCause?, resolutionSteps?, workaround?, scope?, savedAt }` |
 | `POST /reviews/unpublish` | `ApproveTicketsRequest { ticketIds (uuid, 1–500, unique) }` | 200 `ReviewDecisionResult { count }` |

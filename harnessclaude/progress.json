@@ -5,8 +5,8 @@
   "status": "active",
   "modules": {
     "import-ticket-list": {
-      "status": "completed",
-      "currentPhase": "evaluate",
+      "status": "planned",
+      "currentPhase": "plan",
       "features": {
         "csv-import-contract": "passing",
         "csv-import-schema": "passing",
@@ -39,9 +39,10 @@
         "row-solution-popup": "passing",
         "fill-solution-screen": "passing",
         "publish-preview-row": "passing",
-        "apply-and-publish-popup": "passing"
+        "apply-and-publish-popup": "passing",
+        "csv-optional-sections": "pending"
       },
-      "lastUpdated": "2026-11-19T08:32:46.509Z",
+      "lastUpdated": "2026-11-27T07:59:41.814Z",
       "branch": "feat/import-ticket-list",
       "repos": [
         "default"
@@ -289,9 +290,10 @@
         "ticket-publication-buttons": "passing",
         "ticket-decision-table": "passing",
         "drop-legacy-solution-tables": "passing",
-        "jira-import-workspace-account": "passing"
+        "jira-import-workspace-account": "passing",
+        "optional-solution-sections": "pending"
       },
-      "lastUpdated": "2026-11-16T17:48:57.779Z",
+      "lastUpdated": "2026-11-27T07:59:41.523Z",
       "branch": "feat/ticket-repository",
       "repos": [
         "default"
@@ -329,9 +331,10 @@
         "collapse-duplicate-solutions": "evaluating",
         "list-review-due-date": "evaluating",
         "ticket-detail-feedback": "evaluating",
-        "search-start-layout": "evaluating"
+        "search-start-layout": "evaluating",
+        "nullable-sections": "pending"
       },
-      "lastUpdated": "2026-11-25T14:28:30.791Z",
+      "lastUpdated": "2026-11-27T07:59:42.105Z",
       "branch": "feat/search",
       "repos": [
         "default"
@@ -396,9 +399,10 @@
         "cite-retry": "evaluating",
         "marker-only-answer": "evaluating",
         "answer-sources": "passing",
-        "rag-eval-runner": "passing"
+        "rag-eval-runner": "passing",
+        "nullable-cited-sections": "pending"
       },
-      "lastUpdated": "2026-11-26T05:15:42.277Z",
+      "lastUpdated": "2026-11-27T07:59:42.395Z",
       "branch": "feat/chatbot",
       "repos": [
         "default"
@@ -448,9 +452,11 @@
         "form-from-issue": "evaluating",
         "draft-at-done-backend": "evaluating",
         "issue-updated-trigger": "evaluating",
-        "draft-reminder-done-only": "evaluating"
+        "draft-reminder-done-only": "evaluating",
+        "optional-form-sections": "pending",
+        "ai-draft-on-done": "pending"
       },
-      "lastUpdated": "2026-11-18T09:05:35.529Z",
+      "lastUpdated": "2026-11-27T07:59:43.577Z",
       "branch": "feat/KAN-337-jira-app-reject-reason",
       "repos": [
         "default"
@@ -569,9 +575,10 @@
         "ollama-clients": "passing",
         "solution-draft": "passing",
         "solution-rewrite": "passing",
-        "solution-review-fixes": "passing"
+        "solution-review-fixes": "passing",
+        "draft-leaves-unknown-empty": "pending"
       },
-      "lastUpdated": "2026-11-06T12:13:56.733Z",
+      "lastUpdated": "2026-11-27T07:59:42.680Z",
       "branch": "feat/ai",
       "repos": [
         "default"
@@ -602,9 +609,10 @@
         "suggestion-comment": "passing",
         "jira-project-read": "passing",
         "jira-gateway-bearer": "evaluating",
-        "suggestion-web-jobs": "evaluating"
+        "suggestion-web-jobs": "evaluating",
+        "issue-comments-read": "pending"
       },
-      "lastUpdated": "2026-11-18T05:13:46.348Z",
+      "lastUpdated": "2026-11-27T07:59:42.980Z",
       "branch": "feat/tracker",
       "repos": [
         "default"

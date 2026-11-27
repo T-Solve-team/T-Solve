@@ -37,6 +37,7 @@ owner: BA
 | 2026-11-25 | STORY-005 | AC-005.5: a reply with no `[n]` marker of a kept source gets one more chat call with a reminder to cite; only a second reply without a marker answers `NO_SOURCE`. AC-005.3 follows | BUG-246 (KAN-431): the same answerable question was ANSWERED or `NO_SOURCE` at random because the model sometimes wrote no marker. The user, 25/11: ask once more rather than cite the passed sources, so GBR-36 holds; a question with no answer takes one more call |
 | 2026-11-25 | STORY-014, STORY-015 (new), Requirement 12 | **Backend change (RAG measurement).** New STORY-014: every answer stores the sources it kept, with kind, id, similarity and whether it was cited, in a new `chatbot_answer.sources` JSONB column, never returned. New STORY-015: an offline `rag-eval` run measures retrieval (recall within the kept sources, MRR, no-source rate, per group) against a gold file, with no chat model. Requirement 12 added; Out of Scope, Interface Contracts, Required from other modules (search `nearest` returns the ticket's public id) and Definition of Done follow. Earlier criteria unchanged | RAG review of 21/11: every retrieval change (hybrid search, per-source thresholds, embedding text) needs a measurement first; decisions logged in `04-plans/chatbot/rag-eval-decisions.md` |
 | 2026-11-25 | STORY-005 | AC-005.5: a reply with no letter or digit outside its `[n]` markers (only `[2]` or `[2].`) counts as no answer, like a reply with no marker: one more chat call, then `NO_SOURCE`. The reminder asks for an answer in words | BUG-364 (KAN-390, W-3.04): a follow-up was ANSWERED with the text `[2]` and one citation, so the user saw no answer |
+| 2026-11-27 | STORY-001 | AC-001.11 and `CitedSolution`: Symptoms and Scope of applicability may be null and are shown only when present, like Workaround. | User decision 2026-11-27 (KAN-474): a Solution requires only Root cause and Resolution steps; Symptoms, Workaround and Scope of applicability may be empty, everywhere a Solution is written. An empty section is stored as null and not shown, as Workaround already was. |
 
 ## Requirements
 
@@ -130,8 +131,8 @@ owner: BA
   - AC-001.10: WHEN a citation is a ticket Solution, THE web app SHALL show "[n] Solution from a ticket", and SHALL
     show no ticket ID, link, title, Project, writer, snapshot or Evidence.
   - AC-001.11: THE web app SHALL show the Solution of a ticket Solution citation open under its "[n] Solution from a
-    ticket" line — Symptoms, Root cause, Resolution steps, Workaround (only when it has one) and Scope of
-    applicability — with no Show or Hide button (KAN-380).
+    ticket" line — Symptoms, Root cause, Resolution steps, Workaround and Scope of applicability, each only when
+    it has one (KAN-474) — with no Show or Hide button (KAN-380).
   - AC-001.12: WHEN the answer arrives with `outcome` `NO_SOURCE`, THE web app SHALL show MSG109 as the answer, with
     `{tracker_name}` filled as "Jira", and no citations.
   - AC-001.13: IF the request fails, not with a 401 or a field error on the question, THEN THE web app SHALL show
@@ -671,7 +672,7 @@ ChatbotCitation: oneOf, discriminator type
   TicketSolutionCitation: { number: int, type: TICKET_SOLUTION, solution: CitedSolution }
 CitedSolution:
   required: [symptoms, rootCause, resolutionSteps, workaround, scopeOfApplicability]
-  workaround: string | null                # the other four: string
+  symptoms, workaround, scopeOfApplicability: string | null   # null when blank (KAN-474); rootCause, resolutionSteps: string
 ChatbotRating:
   required: [rating]
   rating:  HELPFUL | NOT_HELPFUL

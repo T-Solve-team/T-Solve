@@ -560,3 +560,32 @@ rating for a greeting. Dev-site check after `forge deploy`: ask "hi".
   `askTsolve/AskTsolvePage.test.jsx`, `docs/bug-log.md`
 **Dependencies:** Task 25
 **Estimated size:** small
+
+---
+
+## Task 33: Symptoms and Scope optional in the Solution Form (KAN-474)
+
+**Story:** STORY-002
+**Feature:** optional-form-sections
+**Description:** AC-002.3, AC-002.5 (2026-11-27): Finish requires only Root cause and Resolution steps, in the Jira App
+and on the server; a blank Symptoms or Scope is stored as null.
+**Files:**
+- Modify: `jira-app/TSolve_JiraApp/src/frontend/form/SolutionFormModal.jsx` (or its validation helper), `backend/src/main/java/vn/tsolve/ticket/service/impl/SolutionFormTicketServiceImpl.java`
+- Test: `SolutionFormModal.test.jsx`, `SolutionFormTicketServiceImplTest`
+**Dependencies:** ticket-repository Task 32
+**Estimated size:** small
+
+---
+
+## Task 34: AI drafts the Solution after the issue moves to Done (KAN-474)
+
+**Story:** STORY-005
+**Feature:** ai-draft-on-done
+**Description:** AC-005.11, AC-005.12. After the Done event creates the Draft, a background job (the rewrite's pool and
+`JIRA_APP_REWRITE_TIMEOUT`) reads the comments (tracker Task 22), calls `SolutionAiService.draft` (ai Task 5) and, when
+`isAiDraft` is true and the Draft has not been saved since, replaces its five sections. Any failure leaves the Draft.
+**Files:**
+- Modify: the Done-event service that creates the Draft (`vn.tsolve.jiraapp`), `SolutionFormAi`/`SolutionFormAiImpl`, the Draft entity or repository (to tell "saved since created")
+- Test: the Done-event service test, `SolutionFormAiImplTest`
+**Dependencies:** ai Task 5, tracker Task 22
+**Estimated size:** medium

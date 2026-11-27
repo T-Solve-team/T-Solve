@@ -801,3 +801,17 @@ Spec: STORY-005 to STORY-009 · Design: master section "Backend". Rules: `backen
 **Covers:** AC-003.12, AC-003.13
 **Dependencies:** Task 3 (the popup)
 **Estimated size:** small
+
+---
+
+## Task 27: Null Symptoms and Scope in retrieval, excerpts and embeddings (KAN-474)
+
+**Story:** STORY-010, STORY-011
+**Feature:** nullable-sections
+**Description:** AC-010.2, AC-011.2 (2026-11-27): Symptoms and Scope of applicability are null when blank, like
+Workaround; excerpts and embedding text skip a null section.
+**Files:**
+- Modify: `backend/src/main/java/vn/tsolve/search/retrieval/service/impl/SolutionRetrievalImpl.java`, `search/embedding/service/impl/EmbeddingText.java`, the `Excerpts` helper
+- Test: `SolutionRetrievalImplTest`, `EmbeddingTextTest`, `ExcerptsTest`
+**Dependencies:** ticket-repository Task 32
+**Estimated size:** small
