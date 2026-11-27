@@ -363,8 +363,8 @@ class TenantResolverFilterTest {
     }
 
     @Test
-    @DisplayName("BUG-404 AC-002.4 AC-002.5 refuses a request for the path // with its own code, not an exception")
-    void refusesTheDoubleSlashPath_BUG_404() throws Exception {
+    @DisplayName("BUG-412 AC-002.4 AC-002.5 refuses a request for the path // with its own code, not an exception")
+    void refusesTheDoubleSlashPath_BUG_412() throws Exception {
         TenantResolverFilter filter = filter(providerWith(catalog));
         catalog.put(A, "acme", WorkspaceStatus.SUSPENDED);
 
