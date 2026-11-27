@@ -183,7 +183,8 @@ Stand-ins: `InProcessSuggestionJobQueue` on its own bounded pool, `StubSuggestio
 stores the text and a `job_ref`, enqueues `SuggestionJobRequest(jobRef, issueKey)` (AC-011.1). `SuggestionJobService
 .run(jobRef)` reads the text from the row and throws `SuggestionJobFailedException` (key + error type, no cause) on any
 failure (AC-011.6). `SuggestionJobHandler` ("tracker.suggestion") runs it for the worker; `WorkerSuggestionJobQueue`
-enqueues through `TenantJobService`, binding `TSOLVE_TRACKER_DEV_WORKSPACE_ID` when no Workspace is bound, and never
+enqueues through `TenantJobService`, binding `TSOLVE_TRACKER_DEV_WORKSPACE_ID` when no Workspace is bound (fallback
+since removed, KAN-385; "issue created" binds its own Workspace, AC-003.9), and never
 throws; `InProcessSuggestionJobQueue` only while `tsolve.worker.enabled` is false (AC-011.9). Edge cases 45–48.
 **Files:** design "Change 2026-11-07: run the job on the worker".
 **Test:** `IssueCreatedServiceImplTest`, `SuggestionJobServiceImplTest`, `SuggestionJobHandlerTest`,
