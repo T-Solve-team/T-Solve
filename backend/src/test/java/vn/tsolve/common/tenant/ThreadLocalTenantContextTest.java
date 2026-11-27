@@ -212,6 +212,46 @@ class ThreadLocalTenantContextTest {
     }
 
     @Test
+    @DisplayName("AC-002.11 edge 2 bindRequest binds for the request, refuses a second bind and unbinds on close")
+    void bindRequestBindsRefusesASecondBindAndUnbindsOnClose_AC_002_11() throws Exception {
+        AtomicInteger knownChecks = new AtomicInteger();
+        ThreadLocalTenantContext counted = new ThreadLocalTenantContext(id -> {
+            knownChecks.incrementAndGet();
+            return known.contains(id);
+        });
+        AtomicInteger ran = new AtomicInteger();
+
+        try (AutoCloseable request = counted.bindRequest(A)) {
+            assertThat(counted.currentWorkspaceId()).contains(A);
+            assertThat(knownChecks)
+                    .as("bindRequest does not ask KnownWorkspaces")
+                    .hasValue(0);
+
+            assertThatThrownBy(() -> counted.bindRequest(A)).isInstanceOf(RuntimeException.class);
+            assertThatThrownBy(() -> counted.bindRequest(B)).isInstanceOf(RuntimeException.class);
+            assertThat(counted.currentWorkspaceId()).contains(A);
+
+            counted.runIn(A, (Runnable) ran::incrementAndGet);
+            assertThat(ran).hasValue(1);
+            assertThat(knownChecks)
+                    .as("runIn with the bound id does not ask KnownWorkspaces")
+                    .hasValue(0);
+            assertThat(counted.currentWorkspaceId())
+                    .as("the request binding survives a nested runIn")
+                    .contains(A);
+
+            assertThatThrownBy(() -> counted.runIn(B, (Runnable) ran::incrementAndGet))
+                    .isInstanceOf(RuntimeException.class);
+            assertThat(ran).hasValue(1);
+            assertThat(counted.currentWorkspaceId()).contains(A);
+        }
+        assertThat(counted.currentWorkspaceId()).isEmpty();
+
+        counted.runIn(A, () -> assertThatThrownBy(() -> counted.bindRequest(A)).isInstanceOf(RuntimeException.class));
+        assertThat(counted.currentWorkspaceId()).isEmpty();
+    }
+
+    @Test
     @DisplayName("edge 4 a second holder instance sees the binding of the first and refuses another Workspace")
     void theBindingIsSharedBetweenHolderInstances() {
         ThreadLocalTenantContext second = new ThreadLocalTenantContext(knownWorkspaces);

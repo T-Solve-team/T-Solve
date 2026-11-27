@@ -116,7 +116,7 @@ all as in the master's Data Model.
 - KAN-140 (the chat model) for the chat-model part of Task 22; its `bge-m3` part does not wait.
 ## Edge cases covered here
 
-Master rows 1 – 55, 57 – 64, 69 – 71, 72 – 89, 90 and 91 (STORY-001, STORY-002, STORY-004, STORY-005, STORY-006, STORY-007, STORY-008,
+Master rows 1 – 55, 57 – 64, 69 – 71, 72 – 89, 90, 91 and 92 (STORY-001, STORY-002, STORY-004, STORY-005, STORY-006, STORY-007, STORY-008,
 STORY-009, STORY-010, STORY-011, STORY-012 without the contributors, STORY-013 and the edge limits of STORY-014). Rows 45
 (also in Task 25), 56 and 65 – 68 belong to iteration 2.
 

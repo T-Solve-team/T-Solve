@@ -2394,7 +2394,17 @@
 {"ts":"2026-11-26T16:12:44.035Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-26T16:12:44.335Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":"evaluating","to":"passing"}
 {"ts":"2026-11-26T16:04:26.299Z","type":"feature-status","module":"platform","feature":"web-tenant-isolation","from":null,"to":"pending"}
+{"ts":"2026-11-26T16:33:17.830Z","type":"feature-status","module":"platform","feature":"web-tenant-resolver","from":"pending","to":"in-progress"}
+{"ts":"2026-11-26T16:33:18.114Z","type":"feature-status","module":"platform","feature":"web-tenant-resolver","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-26T16:33:18.376Z","type":"feature-status","module":"platform","feature":"web-tenant-resolver","from":"evaluating","to":"passing"}
 {"ts":"2026-11-26T16:15:47.522Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":"pending","to":"in-progress"}
 {"ts":"2026-11-26T16:15:50.672Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":"in-progress","to":"evaluating"}
 {"ts":"2026-11-26T16:15:53.357Z","type":"feature-status","module":"platform","feature":"background-work-bound","from":"evaluating","to":"passing"}
 {"ts":"2026-11-27T03:11:47.267Z","type":"spec-approved","module":"tracker","specHash":"9bc2419a3c1005885b68de6770b6bc5b92376f4187c4073742202a1ddea9858b"}
+{"ts":"2026-11-26T16:52:08.870Z","type":"quick-opened","what":"split it-other into two parts and move OpsRealmImportIT to the Keycloak list (KAN-470)","files":[".github/workflows/ci.yml","backend/AGENTS.md"]}
+{"ts":"2026-11-26T16:59:32.021Z","type":"quick-closed","what":"split it-other into two parts and move OpsRealmImportIT to the Keycloak list (KAN-470)","files":[".github/workflows/ci.yml","backend/AGENTS.md"]}
+{"ts":"2026-11-26T17:24:14.668Z","type":"quick-opened","what":"move the chatbot integration tests to it-other-b (KAN-471)","files":[".github/workflows/ci.yml"]}
+{"ts":"2026-11-26T17:27:13.552Z","type":"quick-closed","what":"move the chatbot integration tests to it-other-b (KAN-471)","files":[".github/workflows/ci.yml"]}
+{"ts":"2026-11-26T16:52:14.210Z","type":"feature-status","module":"platform","feature":"web-tenant-resolver","from":"pending","to":"in-progress"}
+{"ts":"2026-11-26T16:52:14.523Z","type":"feature-status","module":"platform","feature":"web-tenant-resolver","from":"in-progress","to":"evaluating"}
+{"ts":"2026-11-26T16:52:14.804Z","type":"feature-status","module":"platform","feature":"web-tenant-resolver","from":"evaluating","to":"passing"}

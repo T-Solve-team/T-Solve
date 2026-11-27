@@ -87,6 +87,10 @@ npm run dev
 
 The frontend also runs without the backend (mock mode); see `frontend/README.md`.
 
+With a local Registry (`REGISTRY_DB_URL` set), the backend takes the Workspace from the `Host` header, using the base
+domain of `TSOLVE_SITE_ORIGIN_TEMPLATE` (required then). The `dev` Workspaces `acme` and `beta` answer 404 `MSG151`
+unless you adopt them with `infra/scripts/registry-adopt-workspace.sh`.
+
 Sign-in runs on Keycloak. Besides the DB values, `.env` needs: `REDIS_PASSWORD` (password of the Redis service),
 `KEYCLOAK_DB_PASSWORD` (password of the Keycloak database user), `KEYCLOAK_WEB_CLIENT_SECRET` (secret of the Keycloak
 client `tsolve-web`; Keycloak and the backend read the same value), `KEYCLOAK_CONSOLE_CLIENT_SECRET` (secret of the
