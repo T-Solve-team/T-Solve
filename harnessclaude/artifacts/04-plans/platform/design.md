@@ -129,8 +129,8 @@ the target, not built here — H-Q1):
   their own). Hibernate must not ask the database for metadata at startup, when no Workspace is bound:
   `hibernate.boot.allow_jdbc_metadata_access=false`, `hibernate.dialect` set to `PostgreSQLDialect` explicitly, and
   `ddl-auto: none`. With routing off, `ddl-auto: validate` stays.
-- Until Task 11a (Startup migration, below), Boot's tenant Liquibase has its own connection where routing is on (the
-  bean `tenantLiquibaseConnection`, from `spring.datasource.*`, so from `DB_*`).
+- Where routing is on, Boot's tenant Liquibase does not run: the web process migrates every Workspace database itself
+  (Startup migration, below), and the worker sets `spring.liquibase.enabled: false`.
 - A transaction stays on the database it began on (AC-002.23): the pool is chosen when the connection is acquired in
   `doBegin`, and `runIn` of another Workspace inside it is refused.
 
