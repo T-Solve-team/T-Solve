@@ -129,11 +129,22 @@ the target, not built here — H-Q1):
   their own). Hibernate must not ask the database for metadata at startup, when no Workspace is bound:
   `hibernate.boot.allow_jdbc_metadata_access=false`, `hibernate.dialect` set to `PostgreSQLDialect` explicitly, and
   `ddl-auto: none`. With routing off, `ddl-auto: validate` stays.
-- Until `TenantStartupMigrator` (R14) or wave 4's owner role, Boot's tenant Liquibase has its own connection where
-  routing is on: `spring.liquibase.url/user/password` from `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`,
-  never set unconditionally (the ITs migrate through the primary `DataSource`).
+- Until Task 11a (Startup migration, below), Boot's tenant Liquibase has its own connection where routing is on (the
+  bean `tenantLiquibaseConnection`, from `spring.datasource.*`, so from `DB_*`).
 - A transaction stays on the database it began on (AC-002.23): the pool is chosen when the connection is acquired in
   `doBegin`, and `runIn` of another Workspace inside it is refused.
+
+### Startup migration (Task 11a, KAN-475; AC-008.4, AC-008.9; R14)
+
+- Until provisioning (Task 7) and the owner role (wave 4) exist, each Workspace database is owned by its Registry
+  `db_user`, and the migrator connects as that user (decrypted `db_password`, `TENANT_DB_HOST/PORT`): it is the "owner
+  user" of AC-008.4. A hand-made database must therefore be owned by its own `db_user`, with the `vector` extension
+  created by a superuser. Wave 4 changes the user the migrator connects as.
+- All Registry rows are migrated, `ACTIVE` and `SUSPENDED`; each success writes `schema_version` (AC-001.15).
+- A failure stops the web process during context startup, so `deploy.sh` (`up -d --wait`) turns CD red and the log
+  names the site (AC-008.9). R14's second half, a separate CD `migrate` step (AC-010.3), is not built now; it stays with
+  Task 15, and AC-010.3 stays unmet as the KAN-14 deviation records.
+- bluefin's first run is a no-op: the same changelog file and changeset ids.
 
 ### The row guard (STORY-001; AC-001.28 – AC-001.32)
 
@@ -730,7 +741,7 @@ High row into a task.
 | 41 | STORY-007 | Input extremes | An uploaded HTML or SVG file opened through its signed URL | High | Stored as `application/octet-stream` with `nosniff`: downloaded, not rendered | `caddy-routing.test.sh` |
 | 42 | STORY-007 | Timing | Two `delete` calls for one key | Low | Both succeed (AC-007.10) | ObjectFileStorageIT |
 | 43 | STORY-008 | Environment | `.env` missing a required variable (for example `DB_MIGRATION_PASSWORD`, `REDIS_PASSWORD`) | Medium | Backend refuses to start naming it | start-up test |
-| 44 | STORY-008 | Error cascades | Tenant changelog fails on one Workspace at startup | High | Stops, names that site name, leaves the others untouched | WorkspaceProvisioningIT / TenantMigrator test |
+| 44 | STORY-008 | Error cascades | Tenant changelog fails on one Workspace at startup | High | Stops, names that site name, leaves the others untouched | TenantStartupMigratorTest (Task 11a) |
 | 45 | STORY-008 | Error cascades | Redis down at start; Redis full under `noeviction` | High | Backend is not healthy without Redis; a full Redis fails writes loudly and the memory alert fires | `infra/tests` health check, monitoring rule |
 | 46 | STORY-008 | State transitions | Bucket init fails or the bucket is missing | Medium | `garage-init` exits non-zero; backend and worker do not start | `infra/tests` |
 | 47 | STORY-009 | Integration | Cloudflare token expired at renewal time | High | Existing certificates keep serving (renewal starts 30 days early); Caddy logs it; runbook rotates the token | `caddy-routing.test.sh` |

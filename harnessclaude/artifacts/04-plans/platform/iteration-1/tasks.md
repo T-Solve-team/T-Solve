@@ -1,7 +1,7 @@
 ---
 module: platform
 date: 2026-11-04
-total_tasks: 30
+total_tasks: 31
 owner: Dev
 iteration: 1
 ---
@@ -54,6 +54,8 @@ Items of one wave run in parallel; "after" names the items that must be on `main
   bluefin would silently get no Jira site. Also here: bluefin's Registry `db_user` is still staging's app user, which owns
   the tables (Task 6-2 routes with the row as it is, so AC-001.32 stays unmet on staging until this task): create
   bluefin's runtime user and update the row (password re-encrypted) before the guard is switched on.
+- **Before wave 5** (Hiếu; KAN-475). Task 11a, the startup migrator, split out of Task 11: before Tasks 7 – 10 and 12
+  (provisioning, KAN-255 – 257 and 260, is cut for now); it blocks the second staging Workspace `northwind` (KAN-97).
 - **Wave 5.** (8) Task 7, provisioning, in parallel with the rest of `identity` KAN-247 (identity Task 14) — plumbing
   for items 9 and 10; (9) Task 8, the invitation queue; (10) Task 9, the ops script — create a Workspace by hand on
   staging; then Task 12, the demo seed — a second Workspace on staging.
@@ -935,6 +937,52 @@ bluefin signs in and works as before.
 
 ---
 
+## Task 11a: Startup migrator: every Workspace database migrated at web startup
+
+**Story:** STORY-008, STORY-001
+**Feature:** startup-migrator
+**Assignee:** Trần Trung Hiếu; Jira KAN-475
+**After this task you can:** deploy a merge that adds a tenant changeset and see it applied to every Workspace database
+in the Registry, its id in that row's `schema_version`; a broken database turns CD red and the log names its site.
+**Covers:** AC-008.4, AC-008.9, AC-001.15 (the `schema_version` part: the version last applied is kept current).
+**Design:** Startup migration (Task 11a); Database routing; Key Decisions R14.
+**Description:** `TenantMigrator` (new, `applyAll()` only; Task 7 adds `apply(workspace)`): for **every** Registry row,
+`ACTIVE` and `SUSPENDED`, one at a time, ordered by `site_name`, it applies `spring.liquibase.change-log`
+(`classpath:db/changelog/db.changelog-master.xml`, the same path and changeset ids, so a database already migrated is a
+no-op) as the row's `db_user` (decrypted `db_password`, `TENANT_DB_HOST` / `TENANT_DB_PORT`, a connection of its own,
+`db_name` checked before it goes into the JDBC URL), then writes the id of the last tenant changeset into that row's
+`schema_version`. The first failure (decrypt, connect or changeset) throws an error that names the site name, holds no
+password, and stops the run: later databases are not touched, earlier ones stay migrated, the failed row keeps its old
+`schema_version`. `TenantStartupMigrator` runs it during context startup, after the Registry changelog and before the
+routing `DataSource` is ready (R14), so the web process never reports healthy after a failure. Where it runs (routing on
+and not the `worker` profile) Boot's tenant Liquibase is off and the `tenantLiquibaseConnection` bean goes. With no
+Registry URL or in the `dev` profile, behaviour stays as today. `application-worker.yml` sets
+`spring.liquibase.enabled: false`: the worker never runs Liquibase.
+**Check while building:** routing ITs whose Registry rows point at no real database would now fail at startup, and a
+test that runs the `worker` profile may rely on Boot's Liquibase for its schema: fix the test setup, not the gate. The
+staging health check (`start_period` and retries) must outlast the migration.
+**Edge rows (Critical/High):** #44 (changelog fails on one Workspace → startup stops, names the site name, leaves the
+others as they are).
+**Tests (about 8):** `TenantStartupMigratorTest` (doubles): every row migrated, `SUSPENDED` included (AC-008.4); a
+failure names the site name with no password in the message, and later rows are not touched (AC-008.9, Edge #44);
+`schema_version` written only for a database that succeeded (AC-001.15); an empty Registry starts; no migrator bean in
+the `worker` and `dev` profiles or with no Registry URL, and Boot's tenant Liquibase is off where it runs (AC-008.4).
+`TenantStartupMigratorIT` (real PostgreSQL): two databases, each owned by its `db_user`, get the changelog and the last
+changeset id; a second run applies nothing; one broken database fails the context start with its site name.
+**Files:**
+- Create: `backend/src/main/java/vn/tsolve/platform/tenantdb/TenantMigrator.java`, `TenantStartupMigrator.java`
+- Modify: `backend/src/main/java/vn/tsolve/platform/registry/RegistryRepository.java` (list every row's connection;
+  write `schema_version`), `backend/src/main/java/vn/tsolve/platform/registry/TenantDataSourceConfig.java`,
+  `backend/src/main/resources/application-worker.yml`
+- Test: `backend/src/test/java/vn/tsolve/platform/TenantStartupMigratorTest.java`, `TenantStartupMigratorIT.java`
+**Dependencies:** Tasks 3a, 4a-2, 6-2 (merged). Done before Tasks 7 – 10 and 12; blocks the second staging Workspace
+`northwind` (KAN-97), whose hand-made database must be owned by its own `db_user`, with the `vector` extension created by
+a superuser.
+**Estimated size:** small
+**Done when:** merged, CD green, bluefin still signs in.
+
+---
+
 ## Task 7: Provisioning service: create a Workspace in one all-or-nothing saga
 
 **Story:** STORY-013, STORY-001, STORY-004
@@ -950,13 +998,12 @@ AC-001.32 (Workspace users), AC-004.28 (no REST endpoint creates a Workspace: so
 **Design:** Provisioning; Roles and grants; Key Decisions R9, R10, R6.
 **Description:** `WorkspaceProvisioning` (interface), `WorkspaceProvisioningService` (`create` only; steps and compensation of the
 design), `TenantDatabaseProvisioner` (role, `CREATE DATABASE … TEMPLATE tsolve_template`, grants, drop `WITH (FORCE)`),
-`TenantMigrator` (owner user; `apply(workspace)`, `applyAll()` that stops and names the first failing Workspace; reads
-the last changeset id into `schema_version`; decide who keeps the adopted row's `schema_version` current after a deploy
-(the adopt script sets it once)), `FirstAdminCreator` and `InvitationJobQueue` (ports, no implementation
+`TenantMigrator.apply(workspace)` (added to Task 11a's class; owner user; returns the last changeset id for
+`schema_version`), `FirstAdminCreator` and `InvitationJobQueue` (ports, no implementation
 here), `WorkspaceRuleException` (extends `BusinessRuleException`). A start-up check refuses the `ops` and Console profiles
 without a bean for each port (AC-013.15). This task also adds `insert(row)` (password already encrypted) and
 `updateStatus` to `RegistryRepository` (left out of Task 4a-1), with their tests.
-**Edge rows (Critical/High):** #44 (changelog fails on one Workspace → stops, names the site name), #57 (any step or
+**Edge rows (Critical/High):** #57 (any step or
 `createFirstAdmin` fails → compensation, nothing visible), #58 (two creations for the same email or site name),
 #62 (no password or email in logs or the Jobs database), #64 (no port bean → refuses to start). Medium: #60, #61.
 **Tests (about 12; ports are doubles in test sources):** happy path (every step, `schema_version` set, the pool of the
@@ -970,11 +1017,12 @@ log capture (Edge #62); a source scan fails when a class outside the Console, `o
 - Create: `backend/src/main/java/vn/tsolve/platform/service/WorkspaceProvisioning.java`, `FirstAdminCreator.java`,
   `InvitationJobQueue.java`
 - Create: `backend/src/main/java/vn/tsolve/platform/service/impl/WorkspaceProvisioningService.java`
-- Create: `backend/src/main/java/vn/tsolve/platform/tenantdb/TenantDatabaseProvisioner.java`, `TenantMigrator.java`
+- Create: `backend/src/main/java/vn/tsolve/platform/tenantdb/TenantDatabaseProvisioner.java`
+- Modify: `backend/src/main/java/vn/tsolve/platform/tenantdb/TenantMigrator.java` (`apply`)
 - Create: `backend/src/main/java/vn/tsolve/platform/exception/WorkspaceRuleException.java`
 - Modify: `backend/src/main/java/vn/tsolve/platform/registry/RegistryRepository.java` (`insert`, `updateStatus`)
 - Test: `backend/src/test/java/vn/tsolve/platform/WorkspaceProvisioningIT.java`, `ProvisioningSourceScanTest.java`
-**Dependencies:** Tasks 3a, 4, 5, 6-2; `be-foundation` Task 1. The real `FirstAdminCreator` (`identity`, KAN-247) and
+**Dependencies:** Tasks 3a, 4, 5, 6-2, 11a; `be-foundation` Task 1. The real `FirstAdminCreator` (`identity`, KAN-247) and
 `InvitationJobQueue` (`platform`, JobRunr; Task 8) are needed from Task 9 on.
 **Estimated size:** medium
 **Done when:** `WorkspaceProvisioningIT` passes including the compensation at every step and the race.
@@ -1215,30 +1263,24 @@ If Task 6-2 brings a two-Workspace test fixture, this test reuses it.
 **Assignee:** Trần Trung Hiếu (KAN-94); Jira sub-task KAN-259
 **After this task you can:** run `docker compose up`, create a Workspace with Task 9's script, and open
 `http://acme.localhost` in a browser (and `login.`, `admin.`, `api.localhost` answering by their routing).
-**Covers:** AC-008.1, AC-008.2, AC-008.3, AC-008.4 (tenant changelog applied to every Workspace database at startup of
-the web process; the worker never runs Liquibase), AC-008.5, AC-008.6, AC-008.7, AC-008.9, AC-009.2, AC-009.4, AC-009.5,
-AC-009.11 (local routing).
-**Design:** Infrastructure — Local; Configuration; Key Decisions R14, R16.
+**Covers:** AC-008.1, AC-008.2, AC-008.3, AC-008.5, AC-008.6, AC-008.7, AC-009.2, AC-009.4, AC-009.5, AC-009.11 (local
+routing).
+**Design:** Infrastructure — Local; Configuration; Key Decisions R16.
 **Description:** `docker-compose.yml`: add `backend`, `worker` (same image, `SPRING_PROFILES_ACTIVE=worker`, depends on
 Redis and `garage-init`), `web`, `ollama` + one-shot `ollama-pull` (`bge-m3`, `OLLAMA_CHAT_MODEL`), `caddy`; health
 checks; every credential from `.env`. `infra/caddy/Caddyfile.local`: `*.localhost`, `admin.localhost`, `login.localhost`,
 `api.localhost` with the routing of the criteria, served on port 80 over HTTP only: site addresses written with the
 scheme (`http://*.localhost`, …) or the global option `auto_https off`, because a bare `*.localhost` turns on automatic
-HTTPS and redirects :80 to :443 (308), which breaks the signed URLs of Task 17 (`http://{site}.localhost`, no port). `application-worker.yml` (Liquibase off). `TenantStartupMigrator` (web
-process only: runs `TenantMigrator.applyAll()` after the Registry changelog; stops naming the failing Workspace and
-leaves the others as they are, AC-008.9). `.env.example` complete; `infra/README.md` lists variables and the start command.
-**Edge rows:** #43 (a missing required variable → the backend refuses to start and names it), #44 (start-up migration
-failure), #45 (the web process is not healthy without Redis), #46 (`garage-init` fails → backend and worker do not start).
-**Tests:** `TenantStartupMigratorTest` (names the failing Workspace, others untouched, AC-008.9; not run in the `worker`
-profile); `infra/tests/local-stack.test.sh` (about 10 checks: all healthy; a created Workspace resolves on
+HTTPS and redirects :80 to :443 (308), which breaks the signed URLs of Task 17 (`http://{site}.localhost`, no port). `.env.example` complete; `infra/README.md` lists variables and the start command.
+**Edge rows:** #43 (a missing required variable → the backend refuses to start and names it), #45 (the web process is not healthy without Redis), #46 (`garage-init` fails → backend and worker do not start).
+**Tests:** `infra/tests/local-stack.test.sh` (about 10 checks: all healthy; a created Workspace resolves on
 `<site>.localhost`; `login.` and `api.` answer 404 outside their paths; `admin.` reaches the web app; backend reaches
 Ollama; Edge #43 and #45; `.env.example` has no value).
 **Files:**
 - Modify: `docker-compose.yml`, `.env.example`, `infra/README.md`
-- Create: `infra/caddy/Caddyfile.local`, `backend/src/main/resources/application-worker.yml`
-- Create: `backend/src/main/java/vn/tsolve/platform/tenantdb/TenantStartupMigrator.java`
-- Test: `backend/src/test/java/vn/tsolve/platform/TenantStartupMigratorTest.java`, `infra/tests/local-stack.test.sh`
-**Dependencies:** Tasks 1, 2 (Dockerfile), 7, 9, 10; `fe-foundation` web image; coordinate `docker-compose.yml` /
+- Create: `infra/caddy/Caddyfile.local`
+- Test: `infra/tests/local-stack.test.sh`
+**Dependencies:** Tasks 1, 2 (Dockerfile), 7, 9, 10, 11a; `fe-foundation` web image; coordinate `docker-compose.yml` /
 `.env.example` with `identity` Task 10
 **Estimated size:** medium
 **Done when:** a teammate starts the stack from `infra/README.md` and opens the Workspace site.
