@@ -8,7 +8,8 @@
  */
 
 export interface ReviewSolution {
-  symptoms: string;
+  /** @nullable */
+  symptoms: string | null;
   rootCause: string;
   resolutionSteps: string;
   /** @nullable */

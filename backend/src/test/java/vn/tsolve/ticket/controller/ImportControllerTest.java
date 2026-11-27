@@ -345,8 +345,7 @@ class ImportControllerTest {
                                 "{\"rowNumbers\":[1],\"symptoms\":\"   \",\"resolutionSteps\":\"\",\"scope\":\"All\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("MSG01"))
-                .andExpect(jsonPath("$.fieldErrors[*].field")
-                        .value(containsInAnyOrder("symptoms", "rootCause", "resolutionSteps")))
+                .andExpect(jsonPath("$.fieldErrors[*].field").value(containsInAnyOrder("rootCause", "resolutionSteps")))
                 .andExpect(jsonPath("$.fieldErrors[*].code").value(everyItem(is("MSG01"))));
         verifyNoInteractions(previews);
     }
@@ -358,11 +357,11 @@ class ImportControllerTest {
         mvc.perform(post("/api/v1/imports/previews/42/fill-solution")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"rowNumbers\":[1],\"symptoms\":\"　 \",\"rootCause\":\"a\","
+                        .content("{\"rowNumbers\":[1],\"symptoms\":\"a\",\"rootCause\":\"　 \","
                                 + "\"resolutionSteps\":\"b\",\"scope\":\"All\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("MSG01"))
-                .andExpect(jsonPath("$.fieldErrors[*].field").value(containsInAnyOrder("symptoms")));
+                .andExpect(jsonPath("$.fieldErrors[*].field").value(containsInAnyOrder("rootCause")));
         verifyNoInteractions(previews);
     }
 

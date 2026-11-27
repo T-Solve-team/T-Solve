@@ -55,7 +55,7 @@ public class Ticket {
     @Column(name = "source_link", length = 500, updatable = false)
     private String sourceLink;
 
-    @Column(nullable = false, columnDefinition = "text")
+    @Column(columnDefinition = "text")
     private String symptoms;
 
     @Column(name = "root_cause", nullable = false, columnDefinition = "text")
@@ -67,7 +67,7 @@ public class Ticket {
     @Column(columnDefinition = "text")
     private String workaround;
 
-    @Column(nullable = false, columnDefinition = "text")
+    @Column(columnDefinition = "text")
     private String scope;
 
     @Column(name = "import_batch_id", updatable = false)
@@ -173,7 +173,7 @@ public class Ticket {
         return t;
     }
 
-    /** The five Solution sections (GBR-33); Workaround is the only optional one. */
+    /** The five Solution sections (GBR-33); Symptoms, Workaround and Scope are optional, null when empty (KAN-474). */
     public record Solution(
             String symptoms, String rootCause, String resolutionSteps, String workaround, String scope) {}
 

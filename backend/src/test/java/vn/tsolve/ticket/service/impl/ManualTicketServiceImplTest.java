@@ -164,6 +164,31 @@ class ManualTicketServiceImplTest {
     }
 
     @Test
+    void AC_006_3_savesABlankSymptomsAndScopeAsNull() {
+        ManualTicketRequest v = valid();
+        ManualTicketRequest request = new ManualTicketRequest(
+                v.projectId(),
+                v.ticketId(),
+                v.title(),
+                v.description(),
+                v.resolvedDate(),
+                "  ",
+                v.rootCause(),
+                v.resolutionSteps(),
+                null,
+                "",
+                null,
+                null);
+
+        service.create(PM, request);
+
+        ArgumentCaptor<Ticket> ticket = ArgumentCaptor.forClass(Ticket.class);
+        verify(tickets).saveAndFlush(ticket.capture());
+        assertThat(ticket.getValue().getSolution())
+                .isEqualTo(new Ticket.Solution(null, "Bad token", "Restart", null, null));
+    }
+
+    @Test
     void AC_006_1_savesPublishedTicketWithApproveDecisionAndBatch() {
         ImportResultResponse result = service.create(PM, valid());
 
@@ -240,10 +265,8 @@ class ManualTicketServiceImplTest {
                         org.assertj.core.groups.Tuple.tuple("ticketId", "MSG01"),
                         org.assertj.core.groups.Tuple.tuple("title", "MSG01"),
                         org.assertj.core.groups.Tuple.tuple("description", "MSG01"),
-                        org.assertj.core.groups.Tuple.tuple("symptoms", "MSG01"),
                         org.assertj.core.groups.Tuple.tuple("rootCause", "MSG01"),
-                        org.assertj.core.groups.Tuple.tuple("resolutionSteps", "MSG01"),
-                        org.assertj.core.groups.Tuple.tuple("scope", "MSG01"));
+                        org.assertj.core.groups.Tuple.tuple("resolutionSteps", "MSG01"));
         assertThat(errors.get(1).params()).isEqualTo(Map.of("field_name", "ticketId"));
         verifyNoInteractions(projects);
         verifyNothingSaved();

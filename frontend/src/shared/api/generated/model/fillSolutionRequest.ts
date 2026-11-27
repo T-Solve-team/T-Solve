@@ -7,16 +7,21 @@
  * OpenAPI spec version: 0.1.0-stub
  */
 
+/**
+ * Only Root cause and Resolution steps are required; a blank Symptoms, Workaround or Scope is stored as null (KAN-474).
+ */
 export interface FillSolutionRequest {
   /**
    * @minItems 1
    * @items.minimum 1
    */
   rowNumbers: number[];
-  symptoms: string;
+  /** @nullable */
+  symptoms?: string | null;
   rootCause: string;
   resolutionSteps: string;
   /** @nullable */
   workaround?: string | null;
-  scope: string;
+  /** @nullable */
+  scope?: string | null;
 }

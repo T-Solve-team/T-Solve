@@ -437,6 +437,30 @@ describe('ManualEntryForm', () => {
     expect(screen.getByLabelText('Title')).toHaveValue(FIELDS.Title);
   });
 
+  it('AC-006.3 saves with Symptoms and Scope empty and still requires Root cause and Resolution steps', async () => {
+    const saves = captureBodies('/api/v1/imports/manual');
+    const { user } = await openManualTab();
+    const { Symptoms: _s, Scope: _sc, ...withoutOptional } = FIELDS;
+    const { 'Root cause': _r, 'Resolution steps': _rs, ...withoutRequired } = withoutOptional;
+    await fillAll(user, withoutRequired);
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText(msg('MSG01', { field_name: 'Root cause' }))).toBeInTheDocument();
+    expect(screen.getByText(msg('MSG01', { field_name: 'Resolution steps' }))).toBeInTheDocument();
+    expect(screen.queryByText(msg('MSG01', { field_name: 'Symptoms' }))).not.toBeInTheDocument();
+    expect(screen.queryByText(msg('MSG01', { field_name: 'Scope' }))).not.toBeInTheDocument();
+    expect(saves).toHaveLength(0);
+
+    await user.click(screen.getByLabelText('Root cause'));
+    await user.paste(FIELDS['Root cause']);
+    await user.click(screen.getByLabelText('Resolution steps'));
+    await user.paste(FIELDS['Resolution steps']);
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText(msg('MSG32', { created: 1, skipped: 0 }))).toBeInTheDocument();
+  });
+
   it('AC-006.14 a successful save returns HTTP 201, shows MSG32 and clears the form', async () => {
     const saves = captureBodies('/api/v1/imports/manual');
     const statuses: number[] = [];

@@ -65,21 +65,18 @@ class JiraPreviewControllerTest {
     @Test
     @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
     void fillSolutionNamesAllMissingSectionsAndChangesNoRow_AC_002_4() throws Exception {
-        mvc.perform(
-                        post("/api/v1/imports/previews/42/fill-solution")
-                                .with(csrf())
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(
-                                        """
+        mvc.perform(post("/api/v1/imports/previews/42/fill-solution")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
                                 {"rowNumbers":[1,2],"symptoms":"   ","rootCause":null,
                                  "resolutionSteps":"","scope":"\\t"}
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("MSG01"))
-                .andExpect(jsonPath("$.fieldErrors[*].field")
-                        .value(containsInAnyOrder("symptoms", "rootCause", "resolutionSteps", "scope")))
+                .andExpect(jsonPath("$.fieldErrors[*].field").value(containsInAnyOrder("rootCause", "resolutionSteps")))
                 .andExpect(jsonPath("$.fieldErrors[*].params.field_name")
-                        .value(containsInAnyOrder("symptoms", "rootCause", "resolutionSteps", "scope")))
+                        .value(containsInAnyOrder("rootCause", "resolutionSteps")))
                 .andExpect(jsonPath("$.fieldErrors[*].code").value(everyItem(is("MSG01"))));
         verifyNoInteractions(previews);
     }
@@ -87,23 +84,21 @@ class JiraPreviewControllerTest {
     @Test
     @WithMockUser(username = "pm@company.vn", roles = "PROJECT_MANAGER")
     void fillSolutionRejectsSectionsOfUnicodeSpacesOnly_AC_002_4_BUG_187() throws Exception {
-        mvc.perform(
-                        post("/api/v1/imports/previews/42/fill-solution")
-                                .with(csrf())
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(
-                                        """
-                                {"rowNumbers":[1],"symptoms":"\\u3000","rootCause":"Bad token",
-                                 "resolutionSteps":"Restart","scope":" \\u2003 "}
+        mvc.perform(post("/api/v1/imports/previews/42/fill-solution")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"rowNumbers":[1],"symptoms":"Error 500","rootCause":"\\u3000",
+                                 "resolutionSteps":" \\u2003 ","scope":"All"}
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("MSG01"))
-                .andExpect(jsonPath("$.fieldErrors[*].field").value(containsInAnyOrder("symptoms", "scope")));
+                .andExpect(
+                        jsonPath("$.fieldErrors[*].field").value(containsInAnyOrder("rootCause", "resolutionSteps")));
         verifyNoInteractions(previews);
     }
 
-    private static final String SOLUTION =
-            """
+    private static final String SOLUTION = """
             "symptoms":"Error 500","rootCause":"Bad token","resolutionSteps":"Restart","scope":"All"
             """;
 

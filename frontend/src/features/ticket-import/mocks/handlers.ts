@@ -66,16 +66,14 @@ export function resetMockData(): void {
 /** A Ticket ID the mock repository already holds: MSG31 on a manual save (AC-006.7). */
 const TAKEN_TICKET_ID = 'ITSUP-0871';
 
-/** The manual entry fields Save requires (AC-006.3), with their labels. */
+/** The manual entry fields Save requires (AC-006.3; Symptoms and Scope optional since KAN-474), with their labels. */
 const MANUAL_REQUIRED = [
   ['projectId', 'Project'],
   ['ticketId', 'Ticket ID'],
   ['title', 'Title'],
   ['description', 'Description'],
-  ['symptoms', 'Symptoms'],
   ['rootCause', 'Root cause'],
   ['resolutionSteps', 'Resolution steps'],
-  ['scope', 'Scope'],
 ] as const;
 
 /** Evidence rules run before changing a Ticket or Draft (AC-006.16–AC-006.19). */

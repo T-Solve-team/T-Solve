@@ -205,6 +205,9 @@ function RowFields({ previewId, rowNo }: { previewId: number; rowNo: number }) {
   );
 }
 
+/** Only Root cause and Resolution steps are required (AC-002.4, AC-006.3, KAN-474). */
+const REQUIRED_SECTIONS: ReadonlySet<string> = new Set(['rootCause', 'resolutionSteps']);
+
 /** The Solution sections as fields, in template order — also on the Manual entry tab. */
 export function SolutionFields({
   values,
@@ -219,7 +222,7 @@ export function SolutionFields({
           name={field}
           label={label}
           initialValue={values?.[field] ?? undefined}
-          rules={field === 'workaround' ? [] : [rules.required(label)]}
+          rules={REQUIRED_SECTIONS.has(field) ? [rules.required(label)] : []}
         >
           <Input.TextArea rows={3} />
         </FormField>

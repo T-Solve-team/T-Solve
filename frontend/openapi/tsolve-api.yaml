@@ -4769,7 +4769,7 @@ components:
       type: object
       required: [symptoms, rootCause, resolutionSteps, workaround, scope]
       properties:
-        symptoms: { type: string }
+        symptoms: { type: [string, 'null'] }
         rootCause: { type: string }
         resolutionSteps: { type: string }
         workaround: { type: [string, 'null'] }
@@ -5246,7 +5246,8 @@ components:
             minimum: 1
     FillSolutionRequest:
       type: object
-      required: [rowNumbers, symptoms, rootCause, resolutionSteps, scope]
+      required: [rowNumbers, rootCause, resolutionSteps]
+      description: Only Root cause and Resolution steps are required; a blank Symptoms, Workaround or Scope is stored as null (KAN-474).
       properties:
         rowNumbers:
           type: array
@@ -5255,7 +5256,7 @@ components:
             type: integer
             minimum: 1
         symptoms:
-          type: string
+          type: [string, 'null']
         rootCause:
           type: string
         resolutionSteps:
@@ -5263,7 +5264,7 @@ components:
         workaround:
           type: [string, 'null']
         scope:
-          type: string
+          type: [string, 'null']
     ImportResultResponse:
       type: object
       required: [importBatchId, created, skipped, message]
