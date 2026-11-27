@@ -58,6 +58,11 @@ class SolutionRetrievalImplTest {
                 .containsExactly(new RetrievedSolution(ticket, "symptoms", "cause", "steps", null, "scope", 0.9));
         when(row.getWorkaround()).thenReturn("temporary fix");
         assertThat(retrieval.nearest(vector(), 0.7, 5).getFirst().workaround()).isEqualTo("temporary fix");
+        when(row.getSymptoms()).thenReturn(" ");
+        when(row.getScopeOfApplicability()).thenReturn(null);
+        assertThat(retrieval.nearest(vector(), 0.7, 5).getFirst())
+                .extracting(RetrievedSolution::symptoms, RetrievedSolution::scopeOfApplicability)
+                .containsExactly(null, null);
         assertThat(Arrays.stream(RetrievedSolution.class.getRecordComponents()).map(component -> component.getName()))
                 .containsExactly(
                         "ticketId",
@@ -124,6 +129,13 @@ class SolutionRetrievalImplTest {
                         .getFirst()
                         .workaround())
                 .isEqualTo("temporary fix");
+        when(row.getSymptoms()).thenReturn("	");
+        when(row.getScopeOfApplicability()).thenReturn("");
+        assertThat(retrieval
+                        .nearestInProjectDepartment(PROJECT, vector(), 0.7, 5)
+                        .getFirst())
+                .extracting(RetrievedTicketSolution::symptoms, RetrievedTicketSolution::scopeOfApplicability)
+                .containsExactly(null, null);
         assertThat(Arrays.stream(RetrievedTicketSolution.class.getRecordComponents())
                         .map(component -> component.getName()))
                 .containsExactly(

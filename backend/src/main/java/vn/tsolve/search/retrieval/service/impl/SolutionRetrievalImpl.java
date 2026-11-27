@@ -25,11 +25,11 @@ public class SolutionRetrievalImpl implements SolutionRetrieval {
         return repository.nearest(vector, minSimilarity, limit).stream()
                 .map(row -> new RetrievedSolution(
                         row.getTicketId(),
-                        row.getSymptoms(),
+                        blankToNull(row.getSymptoms()),
                         row.getRootCause(),
                         row.getResolutionSteps(),
                         blankToNull(row.getWorkaround()),
-                        row.getScopeOfApplicability(),
+                        blankToNull(row.getScopeOfApplicability()),
                         row.getSimilarity()))
                 .toList();
     }
@@ -45,11 +45,11 @@ public class SolutionRetrievalImpl implements SolutionRetrieval {
         return repository.nearestInProjectDepartment(projectId, vector, minSimilarity, limit).stream()
                 .map(row -> new RetrievedTicketSolution(
                         row.getTicketId(),
-                        row.getSymptoms(),
+                        blankToNull(row.getSymptoms()),
                         row.getRootCause(),
                         row.getResolutionSteps(),
                         blankToNull(row.getWorkaround()),
-                        row.getScopeOfApplicability(),
+                        blankToNull(row.getScopeOfApplicability()),
                         row.getSimilarity()))
                 .toList();
     }
