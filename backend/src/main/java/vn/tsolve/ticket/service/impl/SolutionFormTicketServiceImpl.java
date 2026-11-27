@@ -54,11 +54,11 @@ public class SolutionFormTicketServiceImpl implements SolutionFormTicketService 
                         title(submission.title(), submission.issueKey()),
                         submission.writerName(),
                         submission.writerId(),
-                        sections.symptoms(),
+                        blankToNull(sections.symptoms()),
                         sections.rootCause(),
                         sections.resolutionSteps(),
-                        sections.workaround().isBlank() ? null : sections.workaround(),
-                        sections.scopeOfApplicability(),
+                        blankToNull(sections.workaround()),
+                        blankToNull(sections.scopeOfApplicability()),
                         today)
                 .orElseThrow(() -> notCreated(submission.issueKey()));
         drafts.deleteDraft(submission.writerId(), submission.projectId(), submission.issueKey());
@@ -87,26 +87,28 @@ public class SolutionFormTicketServiceImpl implements SolutionFormTicketService 
         UUID id = tickets.resubmitSolutionFormTicket(
                         submission.issueKey(),
                         submission.writerId(),
-                        sections.symptoms(),
+                        blankToNull(sections.symptoms()),
                         sections.rootCause(),
                         sections.resolutionSteps(),
-                        sections.workaround().isBlank() ? null : sections.workaround(),
-                        sections.scopeOfApplicability(),
+                        blankToNull(sections.workaround()),
+                        blankToNull(sections.scopeOfApplicability()),
                         today)
                 .orElseThrow(TicketNotResubmittableException::new);
         drafts.deleteDraft(submission.writerId(), submission.projectId(), submission.issueKey());
         return new SubmittedSolutionTicket(id, submission.issueKey(), TicketStatus.PENDING_REVIEW);
     }
 
-    // The order of the form, so MSG01 is shown under the first empty section (AC-002.3).
+    // Only Root cause and Resolution steps are required, in the order of the form (AC-002.3, KAN-474).
     private static void requireSections(SolutionSections sections) {
-        required(sections.symptoms(), "Symptoms", "symptoms");
         required(sections.rootCause(), "Root cause", "rootCause");
         required(sections.resolutionSteps(), "Resolution steps", "resolutionSteps");
-        required(sections.scopeOfApplicability(), "Scope of applicability", "scopeOfApplicability");
         if (sections.length() > MAX_SOLUTION_LENGTH) {
             throw new SolutionTooLongException(MAX_SOLUTION_LENGTH);
         }
+    }
+
+    private static String blankToNull(String text) {
+        return text.isBlank() ? null : text;
     }
 
     private static void required(String text, String fieldName, String field) {

@@ -1,11 +1,11 @@
 // The five Solution sections of the Solution Form (GBR-33): their API field, their label, and whether they are
-// required. Workaround is the only optional one (AC-002.3).
+// required. Only Root cause and Resolution steps are required (AC-002.3, KAN-474).
 export const SECTIONS = [
-  { field: 'symptoms', label: 'Symptoms', required: true },
+  { field: 'symptoms', label: 'Symptoms', required: false },
   { field: 'rootCause', label: 'Root cause', required: true },
   { field: 'resolutionSteps', label: 'Resolution steps', required: true },
   { field: 'workaround', label: 'Workaround', required: false },
-  { field: 'scopeOfApplicability', label: 'Scope of applicability', required: true },
+  { field: 'scopeOfApplicability', label: 'Scope of applicability', required: false },
 ];
 
 /** The five sections together may hold this many characters (AC-002.4). */
