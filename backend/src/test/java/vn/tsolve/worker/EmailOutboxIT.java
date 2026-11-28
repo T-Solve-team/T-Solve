@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
@@ -18,11 +19,12 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -159,8 +161,21 @@ class EmailOutboxIT {
         return id.get();
     }
 
+    private static SmtpEmailSender recordingSender(Collection<OutboundEmail> sent) {
+        var sender = mock(SmtpEmailSender.class);
+        doAnswer(call -> {
+                    assertThat(TransactionSynchronizationManager.isActualTransactionActive())
+                            .isFalse();
+                    sent.add(call.getArgument(0));
+                    return null;
+                })
+                .when(sender)
+                .send(any());
+        return sender;
+    }
+
     @Test
-    void sendsNewerActiveRowPast25HeldRows_AC_004_4_BUG_218() throws Exception {
+    void sendsNewerActiveRowPast25HeldRows_AC_004_4_BUG_218_BUG_346() throws Exception {
         var dataSource = jobs();
         var jdbc = new JdbcTemplate(dataSource);
         var repository = new EmailOutboxRepository(dataSource);
@@ -174,10 +189,9 @@ class EmailOutboxIT {
                     new OutboundEmail("held@example.test", "Held", "Text", null),
                     NOW.minusSeconds(30 - i));
         UUID active = queue(repository, tenants, "Active");
-        var mailpit = WorkerMailpit.instance();
-        mailpit.clear();
+        var sent = new ArrayList<OutboundEmail>();
 
-        dispatcher(repository, tenants, mailpit.sender()).run(new EmailOutboxDispatchRequest());
+        dispatcher(repository, tenants, recordingSender(sent)).run(new EmailOutboxDispatchRequest());
 
         assertThat(jdbc.queryForMap("select * from email_outbox where email_outbox_id = ?", active))
                 .containsEntry("status", "SENT")
@@ -186,11 +200,11 @@ class EmailOutboxIT {
                         "select count(*) from email_outbox where status = 'PENDING' and attempt_count = 0",
                         Integer.class))
                 .isEqualTo(25);
-        assertThat(mailpit.onlyMessage().getSubject()).isEqualTo("Active");
+        assertThat(sent).extracting(OutboundEmail::subject).containsExactly("Active");
     }
 
     @Test
-    void sendsAnActiveRowBehindMoreHeldRowsThanOneRunReads_AC_004_9_BUG_228() throws Exception {
+    void sendsAnActiveRowBehindMoreHeldRowsThanOneRunReads_AC_004_9_BUG_228_BUG_346() throws Exception {
         var dataSource = jobs();
         var jdbc = new JdbcTemplate(dataSource);
         var repository = new EmailOutboxRepository(dataSource);
@@ -205,9 +219,8 @@ class EmailOutboxIT {
                     new OutboundEmail("held@example.test", "Held", "Text", null),
                     NOW.minusSeconds(1000 - i));
         UUID active = queue(repository, tenants, "Active");
-        var mailpit = WorkerMailpit.instance();
-        mailpit.clear();
-        var handler = dispatcher(repository, tenants, mailpit.sender());
+        var sent = new ArrayList<OutboundEmail>();
+        var handler = dispatcher(repository, tenants, recordingSender(sent));
 
         handler.run(new EmailOutboxDispatchRequest());
         clock.now = NOW.plusSeconds(30);
@@ -219,6 +232,7 @@ class EmailOutboxIT {
                         "select count(*) from email_outbox where status = 'PENDING' and attempt_count = 0",
                         Integer.class))
                 .isEqualTo(250);
+        assertThat(sent).extracting(OutboundEmail::subject).containsExactly("Active");
     }
 
     @Test
@@ -280,14 +294,14 @@ class EmailOutboxIT {
     static class Transactions {}
 
     @Test
-    void recurringJobDispatchesThroughJobRunr_AC_004_4_BUG_221() throws Exception {
+    void recurringJobDispatchesThroughJobRunr_AC_004_4_BUG_221_BUG_313() throws Exception {
         var dataSource = jobs();
         var jdbc = new JdbcTemplate(dataSource);
         var database = WorkerJobsDatabase.instance();
         var tenants =
                 new FixedWorkerTenantService(Set.of(WORKSPACE), Set.of(), new ThreadLocalTenantContext(id -> true));
-        var mailpit = WorkerMailpit.instance();
-        mailpit.clear();
+        var sent = new ConcurrentLinkedQueue<OutboundEmail>();
+        var sender = recordingSender(sent);
         new ApplicationContextRunner()
                 .withInitializer(new ConfigDataApplicationContextInitializer())
                 .withUserConfiguration(
@@ -298,16 +312,17 @@ class EmailOutboxIT {
                         Transactions.class)
                 .withBean(WorkerTenantService.class, () -> tenants)
                 .withBean("clock", Clock.class, Clock::systemUTC)
-                .withBean(SmtpEmailSender.class, mailpit::sender)
+                .withBean(SmtpEmailSender.class, () -> sender)
                 .withBean(
                         "transactionManager",
                         DataSourceTransactionManager.class,
                         () -> new DataSourceTransactionManager(dataSource))
                 .withPropertyValues(
                         "spring.profiles.active=worker",
-                        "spring.mail.host=" + mailpit.host(),
                         "tsolve.worker.enabled=true",
                         "jobrunr.background-job-server.enabled=true",
+                        // Satisfies SmtpEmailSender's class-level condition; the recording mock never connects.
+                        "spring.mail.host=localhost",
                         "tsolve.worker.email.interval=5s",
                         "tsolve.worker.jdbc-url=" + database.getJdbcUrl(),
                         "tsolve.worker.username=" + database.getUsername(),
@@ -329,11 +344,14 @@ class EmailOutboxIT {
                     // ApplicationContextRunner does not publish ApplicationReadyEvent.
                     context.getBean(EmailOutboxRegistration.class).register();
                     try {
+                        // JobRunr polls every 15 s even with a 5 s recurrence. SMTP is covered separately:
+                        // a transport timeout here would back off for 5 min, beyond this scheduling wait.
                         await().atMost(Duration.ofSeconds(60)).untilAsserted(() -> assertThat(jdbc.queryForMap(
                                         "select * from email_outbox where email_outbox_id = ?", id.get()))
                                 .containsEntry("status", "SENT")
                                 .containsEntry("attempt_count", 1));
-                        assertThat(mailpit.onlyMessage().getSubject()).isEqualTo("Recurring");
+                        assertThat(sent)
+                                .containsExactly(new OutboundEmail("writer@example.test", "Recurring", "Text", null));
                     } finally {
                         runtime.scheduler().deleteRecurringJob(EmailOutboxRegistration.ID);
                     }
@@ -418,26 +436,93 @@ class EmailOutboxIT {
 
     @Test
     @DisplayName("AC-004.8 AC-004.12 two concurrent dispatch runs send every due row exactly once")
-    void concurrentClaims() throws Exception {
+    void concurrentClaims_AC_004_8_BUG_298_BUG_317_BUG_346() throws Exception {
         var dataSource = jobs();
         var jdbc = new JdbcTemplate(dataSource);
         var repository = new EmailOutboxRepository(dataSource);
         var tenants =
                 new FixedWorkerTenantService(Set.of(WORKSPACE), Set.of(), new ThreadLocalTenantContext(id -> true));
-        var mailpit = WorkerMailpit.instance();
-        mailpit.clear();
         for (int i = 0; i < 25; i++) queue(repository, tenants, "Concurrent " + i);
-        var sender = spy(mailpit.sender());
+        var sent = new ConcurrentLinkedQueue<OutboundEmail>();
+        var sender = mock(SmtpEmailSender.class);
         var sending = new CountDownLatch(2);
         doAnswer(call -> {
+                    // Neither run can finish sending before the other has committed its claims.
                     sending.countDown();
                     assertThat(sending.await(10, TimeUnit.SECONDS)).isTrue();
-                    call.callRealMethod();
+                    assertThat(TransactionSynchronizationManager.isActualTransactionActive())
+                            .isFalse();
+                    sent.add(call.getArgument(0));
                     return null;
                 })
                 .when(sender)
                 .send(any());
         var handler = dispatcher(repository, tenants, sender);
+        runConcurrently(handler);
+        assertThat(jdbc.queryForObject(
+                        "select count(*) from email_outbox where status = 'SENT' and attempt_count = 1 and claimed_at is null",
+                        Integer.class))
+                .isEqualTo(25);
+        assertThat(sent)
+                .extracting(OutboundEmail::subject)
+                .containsExactlyInAnyOrderElementsOf(
+                        IntStream.range(0, 25).mapToObj(i -> "Concurrent " + i).toList());
+    }
+
+    @Test
+    void concurrentRunsDeferFailedSendUntilBackoff_AC_004_7_BUG_317() throws Exception {
+        var dataSource = jobs();
+        var jdbc = new JdbcTemplate(dataSource);
+        var repository = new EmailOutboxRepository(dataSource);
+        var tenants =
+                new FixedWorkerTenantService(Set.of(WORKSPACE), Set.of(), new ThreadLocalTenantContext(id -> true));
+        UUID retry = queue(repository, tenants, "Retry");
+        for (int i = 0; i < 24; i++) queue(repository, tenants, "Concurrent " + i);
+        var sent = new ConcurrentLinkedQueue<OutboundEmail>();
+        var sender = recordingSender(sent);
+        var retryEmail = new OutboundEmail("writer@example.test", "Retry", "Text", null);
+        doThrow(new SmtpEmailSender.DeliveryException()).when(sender).send(retryEmail);
+        var handler = dispatcher(repository, tenants, sender);
+
+        runConcurrently(handler);
+
+        assertThat(jdbc.queryForObject("select count(*) from email_outbox where status = 'SENT'", Integer.class))
+                .isEqualTo(24);
+        var pending = jdbc.queryForMap("select * from email_outbox where email_outbox_id = ?", retry);
+        assertThat(pending)
+                .containsEntry("status", "PENDING")
+                .containsEntry("attempt_count", 1)
+                .containsEntry("claimed_at", null)
+                .containsEntry("finished_at", null);
+        assertThat(((Timestamp) pending.get("next_attempt_at")).toInstant()).isEqualTo(NOW.plusSeconds(300));
+        assertThat(sent).hasSize(24);
+
+        // Neither concurrent run can reclaim the failed row before its retry is due.
+        handler.run(new EmailOutboxDispatchRequest());
+        assertThat(jdbc.queryForMap("select * from email_outbox where email_outbox_id = ?", retry))
+                .isEqualTo(pending);
+        doAnswer(call -> {
+                    assertThat(TransactionSynchronizationManager.isActualTransactionActive())
+                            .isFalse();
+                    sent.add(call.getArgument(0));
+                    return null;
+                })
+                .when(sender)
+                .send(retryEmail);
+        clock.now = NOW.plusSeconds(300);
+        handler.run(new EmailOutboxDispatchRequest());
+
+        assertThat(jdbc.queryForObject("select count(*) from email_outbox where status = 'SENT'", Integer.class))
+                .isEqualTo(25);
+        assertThat(jdbc.queryForMap("select * from email_outbox where email_outbox_id = ?", retry))
+                .containsEntry("status", "SENT")
+                .containsEntry("attempt_count", 2)
+                .containsEntry("claimed_at", null);
+        assertThat(sent).hasSize(25);
+        assertThat(sent).extracting(OutboundEmail::subject).doesNotHaveDuplicates();
+    }
+
+    private static void runConcurrently(EmailOutboxDispatchHandler handler) throws Exception {
         var start = new CountDownLatch(1);
         try (var executor = Executors.newFixedThreadPool(2)) {
             Callable<Void> run = () -> {
@@ -451,15 +536,6 @@ class EmailOutboxIT {
             first.get(30, TimeUnit.SECONDS);
             second.get(30, TimeUnit.SECONDS);
         }
-        assertThat(jdbc.queryForObject(
-                        "select count(*) from email_outbox where status = 'SENT' and attempt_count = 1 and claimed_at is null",
-                        Integer.class))
-                .isEqualTo(25);
-        assertThat(mailpit.messages().size()).isEqualTo(25);
-        var subjects = new HashSet<String>();
-        mailpit.messages()
-                .forEach(message -> subjects.add(message.required("Subject").asText()));
-        assertThat(subjects).hasSize(25);
     }
 
     @Test
