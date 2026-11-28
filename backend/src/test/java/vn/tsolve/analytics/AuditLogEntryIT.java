@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -71,8 +72,8 @@ class AuditLogEntryIT {
     }
 
     @Test
-    void storesRowAndOptionalDetails_AC_002_1() {
-        Instant before = Instant.now();
+    void storesRowAndOptionalDetails_AC_002_1_BUG_170() {
+        Instant before = Instant.now().truncatedTo(ChronoUnit.MICROS);
         new TransactionTemplate(manager)
                 .executeWithoutResult(s -> audit.record(AuditAction.IMPORT, "PROJECT", target, Map.of("created", 2)));
         var row = jdbc.queryForMap("select * from audit_log_entry where target_id = ?", target);
