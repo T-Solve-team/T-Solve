@@ -22,13 +22,13 @@ import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.worker.dto.TenantJobRequest;
 import vn.tsolve.worker.service.TenantJobHandler;
 import vn.tsolve.worker.service.WorkerTenantService;
-import vn.tsolve.worker.service.mock.MockWorkerTenantService;
+import vn.tsolve.worker.support.FixedWorkerTenantService;
 
 class TenantJobServiceImplTest {
     private final UUID workspace = UUID.randomUUID();
     private final UUID recordId = UUID.randomUUID();
-    private final MockWorkerTenantService context =
-            new MockWorkerTenantService(Set.of(workspace), Set.of(), new ThreadLocalTenantContext(id -> true));
+    private final FixedWorkerTenantService context =
+            new FixedWorkerTenantService(Set.of(workspace), Set.of(), new ThreadLocalTenantContext(id -> true));
     private final InMemoryStorageProvider storage = new InMemoryStorageProvider();
     private final JobMapper mapper = new JobMapper(new JacksonJsonMapper());
     private final AtomicInteger calls = new AtomicInteger();
@@ -87,7 +87,7 @@ class TenantJobServiceImplTest {
         UUID other = UUID.randomUUID();
         // Two Workspaces, so only the request's bound Workspace can be chosen.
         var holder = new ThreadLocalTenantContext(Set.of(workspace, other)::contains);
-        var tenants = new MockWorkerTenantService(Set.of(workspace, other), Set.of(), holder);
+        var tenants = new FixedWorkerTenantService(Set.of(workspace, other), Set.of(), holder);
         var queue = new TenantJobServiceImpl(tenants, new JobRequestScheduler(storage), handler);
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest()));
         try {
@@ -103,7 +103,7 @@ class TenantJobServiceImplTest {
             RequestContextHolder.resetRequestAttributes();
         }
         var unbound = new TenantJobServiceImpl(
-                new MockWorkerTenantService(
+                new FixedWorkerTenantService(
                         Set.of(workspace, other), Set.of(), new ThreadLocalTenantContext(id -> true)),
                 new JobRequestScheduler(storage),
                 handler);
@@ -118,7 +118,7 @@ class TenantJobServiceImplTest {
         storage.setJobMapper(mapper);
         UUID suspended = UUID.randomUUID();
         var holder = new ThreadLocalTenantContext(Set.of(workspace, suspended)::contains);
-        var tenants = new MockWorkerTenantService(Set.of(workspace), Set.of(suspended), holder);
+        var tenants = new FixedWorkerTenantService(Set.of(workspace), Set.of(suspended), holder);
         var queue = new TenantJobServiceImpl(tenants, new JobRequestScheduler(storage), handler);
         holder.runIn(suspended, () -> assertThatThrownBy(() -> queue.enqueueFromRequest("test-record", recordId))
                 .isInstanceOf(IllegalStateException.class)
@@ -134,7 +134,7 @@ class TenantJobServiceImplTest {
         UUID unlisted = UUID.randomUUID();
         // The holder knows the id, so it binds, but the mock lists do not name it.
         var holder = new ThreadLocalTenantContext(Set.of(workspace, unlisted)::contains);
-        var tenants = new MockWorkerTenantService(Set.of(workspace), Set.of(), holder);
+        var tenants = new FixedWorkerTenantService(Set.of(workspace), Set.of(), holder);
         var queue = new TenantJobServiceImpl(tenants, new JobRequestScheduler(storage), handler);
         holder.runIn(unlisted, () -> assertThatThrownBy(() -> queue.enqueueFromRequest("test-record", recordId))
                 .isInstanceOf(IllegalStateException.class)

@@ -1,9 +1,11 @@
 package vn.tsolve.tracker.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -33,8 +35,7 @@ import vn.tsolve.tracker.service.IssueCreatedService;
 class JiraAppEventControllerTest {
 
     private static final String URL = "/api/v1/jira-app/events/issue-created";
-    private static final String BODY =
-            """
+    private static final String BODY = """
             {"issue": {"id": "10001", "key": "ITSUP-1",
                        "fields": {"summary": "ignored", "project": {"id": "10000", "key": "ITSUP"}}},
              "timestamp": "1730000000000", "atlassianId": "ignored"}
@@ -56,15 +57,14 @@ class JiraAppEventControllerTest {
         mvc.perform(fromSite().content(BODY)).andExpect(status().isAccepted());
 
         ArgumentCaptor<IssueCreatedPayload> payload = ArgumentCaptor.forClass(IssueCreatedPayload.class);
-        verify(issueCreatedService).receive(payload.capture());
+        verify(issueCreatedService).receive(eq(SITE), payload.capture());
         assertThat(payload.getValue().issueKey()).isEqualTo("ITSUP-1");
         assertThat(payload.getValue().projectKey()).isEqualTo("ITSUP");
     }
 
     @Test
     void passesTheSummaryAdfDescriptionAndLabelsOfTheEventOn_AC_011_1() throws Exception {
-        String body =
-                """
+        String body = """
                 {"issue": {"key": "ITSUP-2", "fields": {
                    "project": {"key": "ITSUP"}, "summary": "VPN drops every hour",
                    "description": {"type": "doc", "version": 1, "content": [
@@ -75,7 +75,7 @@ class JiraAppEventControllerTest {
         mvc.perform(fromSite().content(body)).andExpect(status().isAccepted());
 
         ArgumentCaptor<IssueCreatedPayload> payload = ArgumentCaptor.forClass(IssueCreatedPayload.class);
-        verify(issueCreatedService).receive(payload.capture());
+        verify(issueCreatedService).receive(eq(SITE), payload.capture());
         assertThat(payload.getValue().summary()).isEqualTo("VPN drops every hour");
         assertThat(payload.getValue().description().path("type").asText()).isEqualTo("doc");
         assertThat(payload.getValue().issue().fields().labels()).containsExactly("tsolve-chatbot");
@@ -120,6 +120,16 @@ class JiraAppEventControllerTest {
     void rejectsCallWithoutFit_AC_001_2() throws Exception {
         mvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON).content(BODY))
                 .andExpect(status().isUnauthorized());
+        verifyNoInteractions(issueCreatedService);
+    }
+
+    @Test
+    void rejectsCallOfAnAuthenticationThatIsNotTheJiraApp_BUG_403() throws Exception {
+        mvc.perform(post(URL)
+                        .with(user("someone").roles("ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(BODY))
+                .andExpect(status().isForbidden());
         verifyNoInteractions(issueCreatedService);
     }
 

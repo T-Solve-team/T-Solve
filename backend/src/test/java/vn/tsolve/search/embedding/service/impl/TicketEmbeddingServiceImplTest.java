@@ -32,6 +32,7 @@ import org.springframework.transaction.support.DefaultTransactionStatus;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import vn.tsolve.ai.client.EmbeddingClient;
 import vn.tsolve.ai.exception.AiUnavailableException;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.search.embedding.repository.EmbeddingTicketRepository;
 import vn.tsolve.search.embedding.repository.TicketEmbeddingRepository;
 import vn.tsolve.search.scope.entity.SearchTicket;
@@ -172,7 +173,8 @@ class TicketEmbeddingServiceImplTest {
         }
         assertThat(service.skippedIds()).containsExactly(id(1));
         doReturn(List.of(new float[1024])).when(client).embed(anyList());
-        new TicketsPublishedListener(service, Runnable::run).on(new TicketsPublishedEvent(List.of(id(1))));
+        new TicketsPublishedListener(service, Runnable::run, new ThreadLocalTenantContext(workspace -> true))
+                .on(new TicketsPublishedEvent(List.of(id(1))));
         assertThat(service.skippedIds()).isEmpty();
         verify(embeddings).upsert(eq(id(1)), any(), any());
         doThrow(new AiUnavailableException()).when(client).embed(anyList());

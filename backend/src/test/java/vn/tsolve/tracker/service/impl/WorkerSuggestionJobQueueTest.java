@@ -25,7 +25,7 @@ import vn.tsolve.common.tenant.ThreadLocalTenantContext;
 import vn.tsolve.tracker.dto.SuggestionJobRequest;
 import vn.tsolve.worker.service.TenantJobService;
 import vn.tsolve.worker.service.WorkerTenantService;
-import vn.tsolve.worker.service.mock.MockWorkerTenantService;
+import vn.tsolve.worker.support.FixedWorkerTenantService;
 
 /**
  * The queue is wired by Spring, so these tests do not depend on how its constructor is declared (Task 6a-2 drops the
@@ -89,7 +89,7 @@ class WorkerSuggestionJobQueueTest {
     @DisplayName("AC-002.13 inside a bound call the suggestion job is queued for the bound Workspace")
     void queuesForTheBoundWorkspaceInsideABoundCall_AC_002_13() {
         var holder = new ThreadLocalTenantContext(Set.of(BOUND, OTHER)::contains);
-        var realTenants = org.mockito.Mockito.spy(new MockWorkerTenantService(Set.of(BOUND, OTHER), Set.of(), holder));
+        var realTenants = org.mockito.Mockito.spy(new FixedWorkerTenantService(Set.of(BOUND, OTHER), Set.of(), holder));
         var recordingJobs = org.mockito.Mockito.mock(TenantJobService.class);
         var boundWhenQueued = new AtomicReference<Optional<UUID>>();
         given(recordingJobs.enqueue(SuggestionJobHandler.TYPE, JOB_REF)).willAnswer(call -> {

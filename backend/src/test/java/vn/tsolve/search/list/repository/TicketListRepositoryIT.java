@@ -1,6 +1,7 @@
 package vn.tsolve.search.list.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
@@ -20,8 +21,12 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -31,14 +36,22 @@ import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.TSolveUser;
 import vn.tsolve.common.security.WithTSolveUser;
 import vn.tsolve.common.session.lookup.ProjectMembershipLookup;
+import vn.tsolve.common.session.lookup.WorkspaceStatusLookup;
+import vn.tsolve.common.tenant.KnownWorkspaces;
 import vn.tsolve.identity.service.ScopeAccessService;
+import vn.tsolve.identity.signin.port.PlatformWorkspaceLookup;
 import vn.tsolve.identity.signin.port.TenantScope;
+import vn.tsolve.identity.signin.port.WorkspaceLookup;
+import vn.tsolve.jiraapp.service.JiraWorkspaceLookup;
+import vn.tsolve.jiraapp.service.impl.CatalogJiraWorkspaceLookup;
+import vn.tsolve.platform.service.WorkspaceCatalog;
 import vn.tsolve.search.list.dto.TicketListQuery;
 import vn.tsolve.search.list.dto.TicketSummaryResponse;
 import vn.tsolve.search.list.service.TicketListService;
 import vn.tsolve.search.scope.repository.ScopeTicketRepository;
 import vn.tsolve.search.scope.service.VisibleScope;
 import vn.tsolve.search.scope.service.impl.MembershipVisibleScope;
+import vn.tsolve.workspace.service.impl.WorkspaceStatusLookupImpl;
 
 /** Exercises the real query, mapper, migrations and HTTP serialization against PostgreSQL. */
 @SpringBootTest
@@ -60,13 +73,19 @@ import vn.tsolve.search.scope.service.impl.MembershipVisibleScope;
             "DB_PASSWORD=unused",
             "OLLAMA_BASE_URL=http://127.0.0.1:11434",
             "OLLAMA_CHAT_MODEL=test",
-            "SEARCH_DEV_SCOPE=",
-            // The one holder binds only a known Workspace (AC-002.14); this is the stub's one Workspace.
-            "TSOLVE_STUB_WORKSPACES=it.workspace.test|it|" + TicketListRepositoryIT.WORKSPACE_ID
-                    + "|example.test|it-org"
+            "SEARCH_DEV_SCOPE="
         })
 class TicketListRepositoryIT {
     static final String WORKSPACE_ID = "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b";
+
+    @TestConfiguration(proxyBeanMethods = false)
+    static class KnownWorkspaceConfig {
+        @Bean
+        @Primary
+        KnownWorkspaces itWorkspace() {
+            return id -> id.equals(UUID.fromString(WORKSPACE_ID));
+        }
+    }
 
     @ServiceConnection
     static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>(
@@ -78,6 +97,9 @@ class TicketListRepositoryIT {
 
     private static final TSolveUser USER =
             new TSolveUser(UUID.randomUUID(), "writer@example.test", "Writer", Set.of(Role.TICKET_RESOLVER));
+
+    @Autowired
+    private ApplicationContext context;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -189,6 +211,43 @@ class TicketListRepositoryIT {
         assertThat(row.department().name()).isEqualTo("IT");
         assertThat(row.reviewDueDate()).isNull();
         assertThat(row.updatedAt()).isEqualTo(Instant.parse("2026-11-01T00:00:00Z"));
+    }
+
+    @Test
+    void returnsAndSortsTheReviewDueDateOnlyWhileInReview_AC_006_7_BUG_401() {
+        jdbc.update("UPDATE ticket SET review_due_date = '2026-11-27' WHERE source_ticket_id = 'HR-3'");
+        jdbc.update("UPDATE ticket SET review_due_date = '2026-11-26' WHERE source_ticket_id = 'HR-1'");
+        // A Published ticket keeps the column from its review; the list must not show it.
+        jdbc.update("UPDATE ticket SET review_due_date = '2026-11-01' WHERE source_ticket_id = 'IT-1'");
+
+        var rows = tickets.list(USER, new TicketListQuery(null, null, null, null, 0, 20, "reviewDueDate,asc"))
+                .getContent();
+
+        assertThat(rows)
+                .extracting(TicketSummaryResponse::sourceTicketId, TicketSummaryResponse::reviewDueDate)
+                .containsExactly(
+                        tuple("HR-1", Instant.parse("2026-11-25T17:00:00Z")),
+                        tuple("HR-3", Instant.parse("2026-11-26T17:00:00Z")),
+                        tuple("IT-2", null),
+                        tuple("IT-1", null));
+    }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName(
+            "edge 83 the full context with the Registry gate off has one JiraWorkspaceLookup and one WorkspaceLookup, both catalog-backed and empty, and no WorkspaceCatalog")
+    void gateOffContextHasOneCatalogLookupEach_edge83() {
+        assertThat(context.getBeansOfType(WorkspaceCatalog.class)).isEmpty();
+        assertThat(context.getBeansOfType(JiraWorkspaceLookup.class).values())
+                .singleElement()
+                .isInstanceOf(CatalogJiraWorkspaceLookup.class);
+        assertThat(context.getBean(JiraWorkspaceLookup.class).workspaceOf("any"))
+                .isEmpty();
+        assertThat(context.getBeansOfType(WorkspaceLookup.class).values())
+                .singleElement()
+                .isInstanceOf(PlatformWorkspaceLookup.class);
+        assertThat(context.getBeansOfType(WorkspaceStatusLookup.class).values())
+                .singleElement()
+                .isInstanceOf(WorkspaceStatusLookupImpl.class);
     }
 
     @Test

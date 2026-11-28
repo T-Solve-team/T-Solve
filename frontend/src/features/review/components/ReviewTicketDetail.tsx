@@ -7,6 +7,7 @@ import { showMessage } from '@/shared/messages';
 import { paths } from '@/shared/routing';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/ui';
 import { useApproveSelectedTickets } from '../hooks/useReviewDecisions';
+import { AiReviewPanel } from './AiReviewPanel';
 import { RejectTicketModal } from './RejectTicketModal';
 import { RequestChangesModal } from './RequestChangesModal';
 import { ReviewTicketContent } from './ReviewTicketContent';
@@ -90,6 +91,7 @@ export function ReviewTicketDetail({ ticketId }: { ticketId: string }) {
                 </Button>
               </Flex>
             )}
+            {canDecide && <AiReviewPanel ticketId={ticketId} />}
             <ReviewTicketContent ticket={ticket} />
           </>
         )

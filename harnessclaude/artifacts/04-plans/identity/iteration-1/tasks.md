@@ -243,6 +243,12 @@ runs before `WebSessionFilter`).
 
 > **Changed 2026-11-22 (KAN-384).** `PlatformTenantScope` is delivered in platform Task 6a-1 as a delegate to `ThreadLocalTenantContext` (`common/tenant`), together with the removal of `LocalTenantScope` and `LocalTenantScopeTest` and the new `PlatformTenantScopeTest`. This task no longer creates, deletes or tests those; the routing of every `Account`, `user_role` and `jira_account_links` query comes from platform Task 6 without a bean change here.
 
+> **Added 2026-11-25 (KAN-252, platform Task 4a-1; no acceptance criterion changes).** The `WorkspaceEmailRegistry` adapter that replaces `AcceptAllWorkspaceEmailRegistry` (`AcceptAllWorkspaceEmailRegistry.java`, Task 33) over `WorkspaceCatalog.claimEmail`:
+> - **Precondition (Hiếu, 25/11):** the adapter trims and rejects a null or blank email before it calls `claimEmail`. The catalog does not validate it: a null gives a 500 today and a blank would be recorded. No spec code is given to this case in platform Task 4 (PR #324 review Minor 4).
+> - **Translation:** identity's `claim` returns a boolean (`WorkspaceEmailRegistry.java:6`); `claimEmail` is void and throws `MSG155` on `email` when another Workspace owns it. The adapter catches that refusal and returns false.
+> - **`release`:** the adapter needs a `release` (`UserCreationServiceImpl.java:151-154`) that the `WorkspaceCatalog` contract lacks; adding it is a contract change by the time this task starts (platform spec change and re-approval).
+> - **Backfill:** the email backfill of existing Accounts belongs here, not in the adopt script: lower-case the `app_user` emails and `INSERT … ON CONFLICT (email) DO NOTHING` for bluefin's id, in the same deploy as the adapter (until then `AcceptAllWorkspaceEmailRegistry` records nothing).
+
 **Story:** STORY-001, STORY-010
 **Feature:** platform-adapters
 **Acceptance criteria:** AC-010.1…AC-010.8 (the port `FirstAdminCreator`, added 2026-11-04; traces to platform AC-013.14…AC-013.19). For STORY-001 none new. It ends the backend AGENTS.md §7 exception of design Key decisions "Platform gap" (KAN-231 Q10, HLA Q4) and meets the HLA change of 2026-11-03: the sign-in states and hand-off codes in the Platform / Tenant Registry database (Q2), one database per company for the account tables (Q4). The AC-001.7 and AC-001.15 two-Workspace tests keep passing on the platform adapters.

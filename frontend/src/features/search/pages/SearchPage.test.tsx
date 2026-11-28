@@ -34,6 +34,17 @@ function results(): HTMLElement {
   return screen.getByRole('region', { name: 'Results' });
 }
 
+function expectStartState() {
+  expect(screen.getByRole('heading', { level: 2, name: 'Find a Solution' })).toBeVisible();
+  expect(
+    screen.getByText(
+      'Describe the problem in your own words. T-Solve searches the Published tickets of your Departments.',
+    ),
+  ).toBeVisible();
+  expect(screen.queryByRole('region', { name: 'Results' })).not.toBeInTheDocument();
+  expect(screen.queryByText(msg('MSG04'))).not.toBeInTheDocument();
+}
+
 function cardTitles(): string[] {
   return within(results())
     .queryAllByRole('article')
@@ -108,7 +119,7 @@ describe('SearchPage', () => {
   });
 
   it('AC-002.1 shows the Search box and the filters above the results area to a Ticket Resolver', async () => {
-    await openSearch('/search', { role: 'TICKET_RESOLVER' });
+    await openSearch('/search?q=vpn', { role: 'TICKET_RESOLVER' });
     expect(screen.getByRole('heading', { name: 'Search' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Department' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Source' })).toBeInTheDocument();
@@ -121,17 +132,26 @@ describe('SearchPage', () => {
     expect(screen.getByRole('heading', { name: 'Search' })).toBeInTheDocument();
   });
 
-  it('AC-002.2 calls nothing and shows an empty results area with no query, or one of white space', async () => {
+  it('AC-002.2 shows the start state and sends no search request with no query', async () => {
+    const requests = recordRequests();
+    await openSearch();
+    expectStartState();
+    expect(requests).toHaveLength(0);
+  });
+
+  it('AC-002.2 shows the start state and sends no search request for a white-space query', async () => {
     const requests = recordRequests();
     const { user } = await openSearch('/search?q=%20%20');
-    expect(results()).toBeEmptyDOMElement();
+    expectStartState();
+    expect(requests).toHaveLength(0);
     // A search afterwards is the first request: the white-space query sent none.
     await user.type(screen.getByRole('searchbox', { name: 'Search' }), 'vpn{Enter}');
     await waitFor(() => expect(cardTitles()).toHaveLength(3));
     expect(requests.map((r) => r.toString())).toEqual(['q=vpn&page=0&size=20']);
   });
 
-  it('AC-002.2 empties the results area when the query is cleared with the clear icon', async () => {
+  it('AC-002.16 shows the start state again when the query is cleared with the clear icon', async () => {
+    const requests = recordRequests();
     const { user, router } = await openResults('/search?q=vpn');
     const clear = screen
       .getByRole('searchbox', { name: 'Search' })
@@ -140,14 +160,16 @@ describe('SearchPage', () => {
     if (!clear) throw new Error('no clear icon');
     await user.click(clear);
     await waitFor(() => expect(router.state.location.search).toBe(''));
-    expect(results()).toBeEmptyDOMElement();
+    expectStartState();
     expect(screen.getByRole('searchbox', { name: 'Search' })).toHaveValue('');
+    expect(requests.map((request) => request.get('q'))).toEqual(['vpn']);
   });
 
-  it('AC-002.2 calls nothing for a link with filters but no query, and the filters show their values', async () => {
+  it('AC-002.2 shows the start state and selected filters without a search request for a link with no query', async () => {
     const requests = recordRequests();
     const { user } = await openSearch(`/search?departmentId=${IT_ID}&source=CSV`);
-    expect(results()).toBeEmptyDOMElement();
+    expectStartState();
+    expect(requests).toHaveLength(0);
     expect(selected('Department')).toBe('IT');
     expect(selected('Source')).toBe('CSV');
     // A search afterwards is the first request, with the filters of the link.
@@ -203,6 +225,14 @@ describe('SearchPage', () => {
     await user.click(box);
     await user.paste('x'.repeat(220));
     expect(box).toHaveValue('x'.repeat(200));
+  });
+
+  it('AC-002.4 shows the placeholder in the Search box', async () => {
+    await openSearch();
+    expect(screen.getByRole('searchbox', { name: 'Search' })).toHaveAttribute(
+      'placeholder',
+      'For example: VPN drops every few minutes',
+    );
   });
 
   it('AC-002.5 offers my Departments and sends the picked one by its id; All Departments removes it', async () => {
@@ -296,7 +326,7 @@ describe('SearchPage', () => {
     const { user, router } = await openSearch();
     await pick(user, 'Source', 'CSV');
     await waitFor(() => expect(router.state.location.search).toBe('?source=CSV'));
-    expect(results()).toBeEmptyDOMElement();
+    expect(screen.queryByRole('region', { name: 'Results' })).not.toBeInTheDocument();
     // A search afterwards is the first request, already with the kept filter.
     await user.type(screen.getByRole('searchbox', { name: 'Search' }), 'onedrive{Enter}');
     await waitFor(() =>
@@ -399,7 +429,7 @@ describe('SearchPage', () => {
     await waitFor(() => expect(cardTitles()).toHaveLength(3));
     await act(() => router.navigate(-1));
     await waitFor(() => expect(screen.getByRole('searchbox', { name: 'Search' })).toHaveValue(''));
-    expect(results()).toBeEmptyDOMElement();
+    expect(screen.queryByRole('region', { name: 'Results' })).not.toBeInTheDocument();
   });
 
   it('AC-002.11 shows the loading state while a search loads', async () => {
@@ -447,5 +477,38 @@ describe('SearchPage', () => {
     expect(screen.getByText(title)).toBeInTheDocument();
     expect(screen.getByText(excerpt)).toBeInTheDocument();
     expect(results().querySelector('img, b, i, script')).toBeNull();
+  });
+
+  it('AC-002.15 shows "Resolved —" when a result has no resolved date (BUG-392)', async () => {
+    server.use(onePage([{ ...RESULT, resolvedAt: null }]));
+    await openResults('/search?q=vpn');
+    expect(cardOf(RESULT.title)).toHaveTextContent('ITSUP · IT · Resolved —');
+  });
+
+  it('AC-002.16 moves the Search box to the top and keeps the focus after a search', async () => {
+    const { user } = await openSearch();
+    const box = screen.getByRole('searchbox', { name: 'Search' });
+    const heading = screen.getByRole('heading', { name: 'Find a Solution' });
+    expect(heading.compareDocumentPosition(box)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+
+    await user.type(box, 'vpn{Enter}');
+
+    const resultsRegion = await screen.findByRole('region', { name: 'Results' });
+    expect(heading).not.toBeInTheDocument();
+    expect(box.compareDocumentPosition(resultsRegion)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(box).toHaveFocus();
+  });
+
+  it('AC-002.16 shows the start state again when going back in history', async () => {
+    const { user, router } = await openSearch('/search?source=CSV');
+    const box = screen.getByRole('searchbox', { name: 'Search' });
+    await user.type(box, 'onedrive{Enter}');
+    await screen.findByRole('link', { name: 'OneDrive sync stuck at processing changes' });
+
+    await act(() => router.navigate(-1));
+
+    expectStartState();
+    expect(box).toHaveValue('');
+    expect(selected('Source')).toBe('CSV');
   });
 });

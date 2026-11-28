@@ -25,13 +25,16 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import vn.tsolve.common.tenant.AcceptingKnownWorkspaces;
+import vn.tsolve.platform.dto.WorkspaceStatus;
+import vn.tsolve.platform.service.WorkspaceCatalog;
 import vn.tsolve.worker.config.JobRunrRuntime;
 import vn.tsolve.worker.config.WorkerConfiguration;
-import vn.tsolve.worker.config.WorkerMockConfiguration;
 import vn.tsolve.worker.dto.TenantJobRequest;
 import vn.tsolve.worker.service.TenantJobHandler;
 import vn.tsolve.worker.service.TenantJobService;
 import vn.tsolve.worker.service.WorkerTenantService;
+import vn.tsolve.worker.service.impl.CatalogWorkerTenantService;
+import vn.tsolve.worker.support.FixedWorkspaceCatalog;
 
 class JobRunrTenantIT {
     private static final PostgreSQLContainer<?> DB = WorkerJobsDatabase.instance();
@@ -58,37 +61,35 @@ class JobRunrTenantIT {
         AtomicReference<UUID> retryJob = new AtomicReference<>();
         var runner = runner(observations);
 
-        runner.withPropertyValues("spring.profiles.active=worker-mock", "tsolve.worker.enabled=true")
-                .run(context -> {
-                    assertThat(context).hasNotFailed();
-                    assertThat(context.getBean(JobRunrRuntime.class).isRunning())
-                            .isFalse();
-                    assertThat(context.getBeansOfType(DataSource.class)).hasSize(1);
-                    var business = new JdbcTemplate(context.getBean(DataSource.class));
-                    assertThat(business.queryForObject("select current_database()", String.class))
-                            .isEqualTo("business");
-                    assertThat(business.queryForList("select tablename from pg_tables where schemaname='public'"))
-                            .isEmpty();
-                    WorkerTenantService tenants = context.getBean(WorkerTenantService.class);
-                    TenantJobService queue = context.getBean(TenantJobService.class);
-                    tenants.runIn(A, () -> {
-                        firstJob.set(queue.enqueue("record-test", FIRST));
-                        retryJob.set(queue.enqueue("record-test", RETRY));
-                    });
-                    tenants.runIn(B, () -> secondJob.set(queue.enqueue("record-test", SECOND)));
-                    assertThat(tenants.currentWorkspaceId()).isEmpty();
-                    assertThat(observations.seen).isEmpty();
-                    String json = jobsJdbc()
-                            .queryForObject(
-                                    "select jobasjson from jobrunr_jobs where id::text=?",
-                                    String.class,
-                                    firstJob.get().toString());
-                    var job = new JobMapper(new JacksonJsonMapper()).deserializeJob(json);
-                    assertThat(job.getJobDetails().getJobParameterValues())
-                            .containsExactly(new TenantJobRequest(A, "record-test", FIRST));
-                });
+        runner.withPropertyValues("tsolve.worker.enabled=true").run(context -> {
+            assertThat(context).hasNotFailed();
+            assertThat(context.getBean(JobRunrRuntime.class).isRunning()).isFalse();
+            assertThat(context.getBeansOfType(DataSource.class)).hasSize(1);
+            var business = new JdbcTemplate(context.getBean(DataSource.class));
+            assertThat(business.queryForObject("select current_database()", String.class))
+                    .isEqualTo("business");
+            assertThat(business.queryForList("select tablename from pg_tables where schemaname='public'"))
+                    .isEmpty();
+            WorkerTenantService tenants = context.getBean(WorkerTenantService.class);
+            TenantJobService queue = context.getBean(TenantJobService.class);
+            tenants.runIn(A, () -> {
+                firstJob.set(queue.enqueue("record-test", FIRST));
+                retryJob.set(queue.enqueue("record-test", RETRY));
+            });
+            tenants.runIn(B, () -> secondJob.set(queue.enqueue("record-test", SECOND)));
+            assertThat(tenants.currentWorkspaceId()).isEmpty();
+            assertThat(observations.seen).isEmpty();
+            String json = jobsJdbc()
+                    .queryForObject(
+                            "select jobasjson from jobrunr_jobs where id::text=?",
+                            String.class,
+                            firstJob.get().toString());
+            var job = new JobMapper(new JacksonJsonMapper()).deserializeJob(json);
+            assertThat(job.getJobDetails().getJobParameterValues())
+                    .containsExactly(new TenantJobRequest(A, "record-test", FIRST));
+        });
 
-        runner.withPropertyValues("spring.profiles.active=worker,worker-mock").run(context -> {
+        runner.withPropertyValues("spring.profiles.active=worker").run(context -> {
             assertThat(context).hasNotFailed();
             assertThat(context.getBean(JobRunrRuntime.class).isRunning()).isTrue();
             await().atMost(Duration.ofSeconds(75)).untilAsserted(() -> {
@@ -125,15 +126,17 @@ class JobRunrTenantIT {
                 .withConfiguration(AutoConfigurations.of(DataSourceAutoConfiguration.class))
                 .withUserConfiguration(
                         WorkerConfiguration.class,
-                        WorkerMockConfiguration.class,
+                        CatalogWorkerTenantService.class,
                         AcceptingKnownWorkspaces.class,
                         Handlers.class)
                 .withBean(Observations.class, () -> observations)
+                .withBean(
+                        WorkspaceCatalog.class,
+                        () -> new FixedWorkspaceCatalog(Map.of(A, WorkspaceStatus.ACTIVE, B, WorkspaceStatus.ACTIVE)))
                 .withPropertyValues(
                         "tsolve.worker.jdbc-url=" + DB.getJdbcUrl(),
                         "tsolve.worker.username=" + DB.getUsername(),
                         "tsolve.worker.password=" + DB.getPassword(),
-                        "tsolve.worker.mock.active-workspaces=" + A + "," + B,
                         "spring.datasource.url=" + businessUrl,
                         "spring.datasource.username=" + DB.getUsername(),
                         "spring.datasource.password=" + DB.getPassword());

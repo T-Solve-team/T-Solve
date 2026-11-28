@@ -21,6 +21,11 @@ owner: BA
 | 2026-11-17 | STORY-001 | AC-001.1, AC-001.3 and AC-001.8 reworded, Requirement 1 follows: the Ticket List table drops the Ticket ID column and starts with a "No." column (the row's position across pages, not sortable); the Title, not the Ticket ID, is the link to 5.5 Ticket Detail; Ticket ID is no longer a sortable column. The keyword still matches the Ticket ID (AC-001.4 unchanged) | KAN-360: ids are noise in the table, users open a ticket from its title (user, 17/11) |
 | 2026-11-17 | STORY-006, STORY-012 (new) | New STORY-012: `MembershipVisibleScope`, the real `VisibleScope` built from the Workspace database, replaces the fail-closed `NoVisibleScope`, which is removed. The user's Departments are the ACTIVE Departments identity's `ScopeAccessService` grants (a Project Manager's own Department and the Departments of the Projects the user is a member of); the managed Projects are the user's `PROJECT_MANAGER` memberships (`ProjectMembershipLookup`); the writer is the user's account id matched against `ticket.writer_id` instead of the `ticket.writer` name. AC-006.1, AC-006.2, AC-006.11 and AC-006.12 reworded; the Visible scope term, Out of Scope, Interface Contracts (`Scope.writerId` is a `UUID`), Required from other modules and Definition of Done follow | KAN-354: on staging the Ticket List was empty for every user because no module implemented `VisibleScope`. User decisions of 17/11: Departments are the union of `app_user.department_id` and the Departments of the user's Projects; match the writer by `writer_id` |
 | 2026-11-22 | STORY-005, STORY-006, STORY-007 | **Backend change.** AC-005.4: the embedded text adds the ticket's description, rows carry `text_version` 2. New AC-005.10: the catch-up job embeds again the rows of `text_version` 1 after the tickets with no row; the old vector serves until then; `ticket_embedding` gains `text_version`. AC-006.4 (Ticket List keyword) and AC-007.2 (search keyword fallback) also match the description. Interface Contracts follow | KAN-380 (the user, 22/11): find tickets by their description too, wherever `ticket_embedding` is used (chatbot, search, suggestions); re-embed without a gap in search (decision log of KAN-380) |
+| 2026-11-22 | STORY-002 | 6.1 Search gets two layouts: AC-002.2 reworded (before a query the start state shows the heading "Find a Solution", one line on what is searched, and the Search box and filters centred; still no API call and no result message), AC-002.4 adds the Search box placeholder, new AC-002.16 (a query moves the Search box and filters to the top, above the results, with the focus kept in the box; removing it brings the start state back). No other criterion changes | KAN-383: the screen looked bare before a search; design option C "Search first" chosen by the user (22/11) |
+| 2026-11-25 | STORY-010 | AC-010.2 reworded: each hit also carries the ticket's `public_id` (`ticketId`) for the server side; the chatbot still returns no ticket id to a client (chatbot AC-006.3). Interface Contracts: `RetrievedSolution` gains `ticketId` | chatbot STORY-014 and STORY-015 (RAG measurement) need to know which ticket a source is; decisions logged in `04-plans/chatbot/rag-eval-decisions.md` |
+| 2026-11-25 | STORY-007, STORY-009 | **Backend change.** AC-007.1, AC-007.2: tickets with the same Solution count and appear once, as their best-ranked copy; suggestions (AC-009.1) rank with AC-007.1, so they follow (KAN-447) | BUG-372: 25 copies of one CSV sample Solution filled page 1 and pushed a matching ticket to rank 26; user 25/11 chose to collapse exact duplicates |
+| 2026-11-25 | STORY-006 | **Backend change.** AC-006.7: `reviewDueDate` is the start of `ticket.review_due_date` in Asia/Ho_Chi_Minh while the ticket is Pending review or Changes requested, null otherwise, and its sort key sorts by it (KAN-454) | BUG-401: ticket-review now stores the due date, so the Ticket List shows "—" where the Review Queue shows a date |
+| 2026-11-25 | STORY-003 | **Frontend change (KAN-389, BUG-361).** New AC-003.12 and AC-003.13: the "Give feedback" button on 5.5 Ticket Detail, shown for a Published ticket to a Ticket Resolver or Project Manager, opens `GiveFeedbackModal`; it is the component `GiveFeedbackButton` of `features/feedback`, which Ticket Detail mounts. Out of Scope no longer lists the button; the screen itself stays `ticket-repository`'s | System test W-2.14 failed (BUG-361): the popup of KAN-148 was never mounted, because ticket-repository and search each left the button out of scope. The user, 25/11: search owns the button as well as the popup, Ticket Detail only mounts it |
 
 ## Requirements
 
@@ -111,12 +116,15 @@ owner: BA
   - AC-002.1: WHEN a Ticket Resolver or Project Manager opens `/search`, THE web app SHALL show 6.1 Search with
     the Search box and the filters Department, Source and Resolved date, above the results area.
   - AC-002.2: WHILE the URL has no query, or only white space, THE web app SHALL not call the search API and
-    SHALL show the results area empty, with no message (decision Q3).
+    SHALL show the start state instead of the results area: the heading "Find a Solution", the line "Describe the
+    problem in your own words. T-Solve searches the Published tickets of your Departments.", and the Search box and
+    the filters centred under them; no result and no result message (decision Q3).
   - AC-002.3: WHEN the user presses Enter in the Search box with a non-blank text, THE web app SHALL call
     `GET /api/v1/search/tickets` with the trimmed text as `q`, the current filters, page 0 and size 20;
     pressing Enter with an empty or white-space text SHALL do nothing, and typing without Enter SHALL not
     search.
-  - AC-002.4: THE Search box SHALL accept at most 200 characters.
+  - AC-002.4: THE Search box SHALL accept at most 200 characters. The box's placeholder is "For example: VPN drops
+    every few minutes".
   - AC-002.5: THE Department filter SHALL offer "All Departments" (the default) and each Department of the
     session's `departments`, sent as that Department's id as a string in `departmentId`; THE Source filter SHALL
     offer "All" (the default) and the four source labels, sent as `source`; THE Resolved date filter SHALL be an
@@ -142,6 +150,9 @@ owner: BA
   - AC-002.14: THE web app SHALL show the title, the excerpt and every text field as plain text, never as HTML.
   - AC-002.15: IF a result's `resolvedAt` is null (the ticket has no resolved date), THEN THE web app SHALL show
     "Resolved —" in that card's line instead of a date and time.
+  - AC-002.16: WHEN the URL gets a query, THE web app SHALL show the Search box and the filters at the top of the
+    page, above the results area, and SHALL keep the focus in the Search box; WHEN the query is removed (the clear
+    icon, or going back in history), THE web app SHALL show the start state of AC-002.2 again.
 
 ### STORY-003: Give Feedback popup
 - As a Ticket Resolver or Project Manager, I want to say whether a Published ticket helped me, so that good
@@ -173,6 +184,13 @@ owner: BA
   - AC-003.11: THE popup SHALL be the component `GiveFeedbackModal` exported by `features/feedback/index.ts`,
     with the props `ticketId` (UUID string), `isOpen` and `onClose`, so that 5.5 Ticket Detail can mount it behind
     its "Give feedback" button (decision Q1).
+  - AC-003.12: WHILE Ticket Detail (5.5) shows a `PUBLISHED` ticket, THE web app SHALL show a "Give feedback"
+    button on that screen to a user who holds TICKET_RESOLVER or PROJECT_MANAGER, and no such button for any other
+    status or role or while the ticket is loading or failed to load (KAN-389, BUG-361).
+  - AC-003.13: WHEN the user clicks "Give feedback", THE web app SHALL open the popup of STORY-003 for that ticket's
+    id; the button SHALL be the component `GiveFeedbackButton` exported by `features/feedback/index.ts` with the
+    prop `ticketId`, reading the ticket with the query 5.5 Ticket Detail already uses, so it adds no request
+    (KAN-389).
 
 ### STORY-004: Mocks behind the contract
 - As a developer, I want realistic mocks behind the contract, so that the three screens can be built and shown
@@ -271,8 +289,9 @@ Used by STORY-005 to STORY-009:
   - AC-006.6: THE backend SHALL return `project.name` as the Project's `jira_project_key` (e.g. ITSUP) in every
     `TicketProject` it answers (Ticket List, search, suggestions), and the `project` sort key SHALL sort by it; this
     is a stand-in until project-integration adds a Project name column.
-  - AC-006.7: THE backend SHALL return `reviewDueDate` as null for every ticket until ticket-review stores a review
-    due date; THE sort key `reviewDueDate` SHALL be accepted and order the rows by the tie-breaker of AC-006.3 alone.
+  - AC-006.7: WHILE a ticket is `PENDING_REVIEW` or `CHANGES_REQUESTED`, THE backend SHALL return `reviewDueDate`
+    as the start of `ticket.review_due_date` in Asia/Ho_Chi_Minh (null without one), and null in any other status;
+    THE sort key `reviewDueDate` SHALL sort by that value, then by the tie-breaker of AC-006.3 (BUG-401).
   - AC-006.8: IF the caller has no session, THEN THE backend SHALL answer 401 with MSG07; IF the caller holds neither
     TICKET_RESOLVER nor PROJECT_MANAGER, THEN THE backend SHALL answer 403 with MSG08 and return no ticket.
   - AC-006.9: IF `keyword` is longer than 100 characters, THEN THE backend SHALL answer 400 with field error MSG02 on
@@ -298,12 +317,14 @@ Used by STORY-005 to STORY-009:
     (`GET /api/v1/search/tickets`) with the `EmbeddingClient` and return, as `TicketSearchResultPage`, only
     searchable tickets with a `ticket_embedding` row whose cosine similarity to the query (1 − cosine distance) is at
     least `SEARCH_MIN_SIMILARITY` (default 0.5), most similar first, the internal ticket id as the tie-breaker; page 0
-    of 20 results when no page or size is given.
+    of 20 results when no page or size is given. Tickets with the same Solution (identical Symptoms, Root cause,
+    Resolution steps, Workaround and Scope) SHALL count and appear once, as their first copy in this order (BUG-372).
   - AC-007.2: IF the query embedding fails or times out (`AiUnavailableException`), THEN THE backend SHALL answer
     200 from a keyword match instead: searchable tickets whose title, description (KAN-380), Symptoms or Resolution
     steps contain the trimmed
     `q` (case-insensitive, `%` and `_` taken literally), newest `resolved_date` first with tickets without one last,
-    the internal ticket id descending as the tie-breaker, with the same filters and paging.
+    the internal ticket id descending as the tie-breaker, with the same filters and paging and the same one copy per
+    Solution as AC-007.1.
   - AC-007.3: WHEN `departmentId`, `source`, `resolvedFrom` or `resolvedTo` is given, THE backend SHALL combine them
     with AND inside the searchable tickets; `resolvedFrom` and `resolvedTo` SHALL include both days and SHALL not
     match a ticket without a `resolved_date`; a `departmentId` that is not one of the user's Departments SHALL give an
@@ -377,9 +398,10 @@ Used by STORY-005 to STORY-009:
   - AC-010.1: WHEN `SolutionRetrieval.nearest(queryVector, minSimilarity, limit)` is called, THE backend SHALL return
     at most `limit` Workspace Solutions that have a `ticket_embedding` row whose cosine similarity to `queryVector`
     is at least `minSimilarity`, most similar first, the internal ticket id as the tie-breaker.
-  - AC-010.2: THE backend SHALL return each hit with the ticket's Symptoms, Root cause, Resolution steps, Workaround
-    (null when blank) and Scope of applicability, and its similarity; it SHALL return no ticket id, title, Project,
-    Department, writer, snapshot or Evidence (GBR-36).
+  - AC-010.2: THE backend SHALL return each hit with the ticket's `public_id` as `ticketId`, its Symptoms, Root
+    cause, Resolution steps, Workaround (null when blank) and Scope of applicability, and its similarity; it SHALL
+    return no title, Project, Department, writer, snapshot or Evidence, and the `ticketId` is for the server side
+    only (chatbot AC-006.3, GBR-36).
   - AC-010.3: IF a ticket is unpublished, inactive or too far, THEN THE backend SHALL leave it out (not
     `PUBLISHED`, its Department not `ACTIVE`, or its similarity below `minSimilarity`) and SHALL return an empty
     list when none is left.
@@ -446,8 +468,7 @@ Used by STORY-005 to STORY-009:
   `main` when the changesets are written; then they follow it.
 - Retrieval of Wiki documents (KAN-38); the ticket retrieval for the Chatbot and triage is STORY-010 and STORY-011.
 - Converting or dropping the legacy table `reuse_record` (platform AC-001.21).
-- The "Give feedback" button on 5.5 Ticket Detail and that screen (`ticket-repository`); it mounts
-  `GiveFeedbackModal` (AC-003.11).
+- 5.5 Ticket Detail itself (`ticket-repository`); it only mounts `GiveFeedbackButton` (AC-003.13).
 - Showing the user's previous Feedback in the popup; a new Feedback replaces it on the backend (UC-28).
 - A search before a query or a "latest tickets" list on 6.1 (decision Q3).
 - Row actions, row selection, export and polling of the Ticket List; a Project filter (Report3 §III 6.2).
@@ -596,6 +617,7 @@ public interface SolutionRetrieval {
 }
 // vn.tsolve.search.retrieval.dto
 public record RetrievedSolution(
+        UUID ticketId, // ticket.public_id, server side only (AC-010.2)
         String symptoms, String rootCause, String resolutionSteps, String workaround, String scopeOfApplicability,
         double similarity) {} // workaround null when blank
 ```
@@ -628,7 +650,7 @@ public record RetrievedTicketSolution(
   `MembershipVisibleScope` reads (STORY-012); the session principal `TSolveUser` (its `id` is `app_user.id`).
 - `project-integration` / `workspace`: the `project` and `department` tables of changeset `002` (search adds only
   `public_id`); the session `departments` of the web app carry `department.public_id` as `departmentId`.
-- `ticket-review` (later): the review due date; until then `reviewDueDate` is null (AC-006.7).
+- `ticket-review` (done): `ticket.review_due_date`, set when a ticket enters review (AC-006.7).
 - `project-integration` (later): a Project name column; until then `project.name` is `jira_project_key` (AC-006.6),
   changed in one mapping line (the `project_name` expression).
 - `platform`: `TenantContext` and the tenant row guard; the search tables follow them when they reach `main`.

@@ -193,8 +193,8 @@
     }
   },
   "be-foundation": {
-    "specHash": "045771d2bbca1abf203acc1bc361c2bb5133a937987e910ce56a074869b1c922",
-    "approvedAt": "2026-11-13T16:31:24.803Z",
+    "specHash": "c11bedeba95e6a426a0f12561ab1f63abc0edc2042b62575dd47c3405aaad96c",
+    "approvedAt": "2026-11-24T13:44:27.422Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a request fails with a , THE backend SHALL answer 404 with content type",
@@ -227,7 +227,6 @@
       "AC-003.2": "WHEN  is answered, THE backend SHALL take  from the Department lookup,",
       "AC-003.3": "WHEN  is answered, THE backend SHALL set  to the user's  (if any) plus the",
       "AC-003.4": "WHILE a lookup has no implementation yet (its module is not built), THE backend SHALL answer  with",
-      "AC-003.7": "WHILE the staging stub flag  is true, THE backend SHALL report",
       "AC-003.5": "IF nobody is signed in, THEN THE backend SHALL answer  with 401 and  .",
       "AC-003.6": "THE response of  SHALL match the  schema of",
       "AC-004.1": "THE backend SHALL list the audited actions as : , , ,",
@@ -243,8 +242,8 @@
     }
   },
   "chatbot": {
-    "specHash": "d3511c437410a179a13205bd4b04b9b9b0f2cd831b8a80233178387813eb5e12",
-    "approvedAt": "2026-11-22T19:35:45.864Z",
+    "specHash": "6d9da370c0b66d9adef9edcc8dcabefb745ccc7fcbaec9bc53826172928c58fa",
+    "approvedAt": "2026-11-26T10:37:30.945Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a signed-in user opens , THE web app SHALL show 12.1 Knowledge Chatbot with the",
@@ -296,9 +295,9 @@
       "AC-004.8": "THE mock SHALL keep conversations in memory as STORY-013 does: an ask with no  starts",
       "AC-005.1": "WHEN STORY-009 classifies a valid  as a question, THE backend SHALL embed",
       "AC-005.2": "THE backend SHALL keep at most  (default 5) sources of both kinds together, most",
-      "AC-005.3": "WHEN at least one source is kept, THE backend SHALL call the  module's  once with a",
+      "AC-005.3": "WHEN at least one source is kept, THE backend SHALL call the  module's  once (once more only as in",
       "AC-005.4": "IF no source reaches , THEN THE backend SHALL not call the chat model and",
-      "AC-005.5": "IF the model's text has no  marker of a kept source, THEN THE backend SHALL answer  as",
+      "AC-005.5": "IF the model's text has no kept  marker or no letter or digit outside its markers, THEN THE backend SHALL",
       "AC-005.6": "WHEN an answer is returned, THE backend SHALL store one  row (the user's id, the",
       "AC-005.7": "IF the AI fails or the ask is too slow, THEN THE backend SHALL answer 503 with MSG06, store no row",
       "AC-005.8": "IF  is missing or blank, THEN THE backend SHALL answer 400 with field error MSG01 on",
@@ -370,7 +369,20 @@
       "AC-013.9": "WHEN the daily retention job runs (), THE backend SHALL",
       "AC-013.10": "IF a request of STORY-013 has no web session, THEN THE backend SHALL answer 401 with MSG07; every",
       "AC-013.11": "THE chatbot changeset SHALL create  and  with the columns and",
-      "AC-013.12": "THE  path (STORY-012) SHALL create and read no conversation; its earlier turns stay"
+      "AC-013.12": "THE  path (STORY-012) SHALL create and read no conversation; its earlier turns stay",
+      "AC-014.1": "WHEN an answer is stored after a search, THE backend SHALL store in  one",
+      "AC-014.2": "IF an answer is stored without a search or with no kept source, THEN THE backend SHALL store",
+      "AC-014.3": "THE backend SHALL store in  no source text, question, earlier turn or rewritten query, and",
+      "AC-014.4": "THE chatbot changeset SHALL add to  the column",
+      "AC-014.5": "IF the ask fails and no answer is stored (AC-005.7), THEN THE backend SHALL store no sources.",
+      "AC-015.1": "WHEN the backend starts with the Spring profile , THE backend SHALL read the gold file at",
+      "AC-015.2": "THE runner SHALL read each non-blank line of the gold file as a JSON object with a non-blank",
+      "AC-015.3": "THE report SHALL be one JSON object with  (),",
+      "AC-015.4": "THE runner SHALL compute for the whole set and for each group value:  (the line count),",
+      "AC-015.5": "IF the run cannot start, THEN THE runner SHALL make no AI call, write no report, log the reason (the",
+      "AC-015.6": "IF an embedding call fails, THEN THE runner SHALL write no report and exit with a non-zero code.",
+      "AC-015.7": "THE runner SHALL run only with the profile , start no web server, call no chat model, write",
+      "AC-015.8": "THE repository SHALL hold  with at least three valid lines of"
     }
   },
   "identity": {
@@ -587,8 +599,8 @@
     }
   },
   "platform": {
-    "specHash": "7f8f7b7e9225e1de02900c25a5fbeea0450fc787385874881b3c4d89d3ff959d",
-    "approvedAt": "2026-11-23T16:21:55.934Z",
+    "specHash": "fd8881657a2452ae9cb0e3c13fad76cad7f046acb43c974150b51e452c5aa039",
+    "approvedAt": "2026-11-25T16:28:45.650Z",
     "by": "user",
     "acs": {
       "AC-001.15": "THE catalog database (the Platform / Tenant Registry of the HLA, named ) SHALL hold the table  with  (UUID, primary key),  (not null, unique),  ( or , not null),  (not null, unique),  (not null),  (not null, encrypted as AC-001.24 says),  (the tenant changelog version last applied to that database, not null),  (nullable),  (nullable, unique),  and  (, not null) (GBR-24, GBR-37).",
@@ -612,7 +624,7 @@
       "AC-001.32": "THE runtime user of a Workspace database, the catalog user and the Jobs database user SHALL be neither superuser nor , and SHALL not own the tables on which a policy depends (HLA isolation layer ③).",
       "AC-001.33": "THE Jobs database , on the same PostgreSQL server as the catalog, SHALL hold only JobRunr's own tables, and its user SHALL be able to connect to that database only. It SHALL hold no Workspace data (H-Q3). The catalog changelog and the tenant changelog SHALL create nothing in it.",
       "AC-002.1": "THE backend SHALL offer  in :",
-      "AC-002.2": "WHEN a request arrives whose host is  followed by the configured base domain (), and the label is the site name of a Workspace, THE Tenant Resolver SHALL bind that Workspace for the whole request.",
+      "AC-002.2": "WHEN a request arrives whose host is  followed by the base domain of  (the host part after ), and the label is the site name of a Workspace, THE Tenant Resolver SHALL bind that Workspace for the whole request.",
       "AC-002.3": "THE Tenant Resolver SHALL read the Workspace site from the  header only, compared without case and without the port. It SHALL ignore ,  and any Workspace id in a header, a parameter, a cookie or the body (GBR-37).",
       "AC-002.4": "IF the label is not an RFC 1123 label (lowercase letters, digits and hyphens, starting and ending with a letter or a digit, at most 63 characters), THEN THE Tenant Resolver SHALL answer 404 with a  with   without looking up the catalog (D11).",
       "AC-002.5": "IF the label is not ,  or  (AC-002.10) and is the site name of no Workspace, THEN THE Tenant Resolver SHALL answer 404 with  .",
@@ -649,6 +661,7 @@
       "AC-004.26": "IF the email is already recorded for another Workspace, THEN THE catalog SHALL refuse with   on field  and record nothing; IF it is already recorded for the bound Workspace, THEN it SHALL change nothing and succeed.",
       "AC-004.27": "THE catalog service SHALL read and write only catalog tables and SHALL never bind a Workspace itself (GBR-37).",
       "AC-004.28": "THE catalog service SHALL offer no REST endpoint to create, suspend, reactivate or delete a Workspace or to change its site name. The only such endpoint is the Platform Console's, in , on  for an allow-listed Platform Operator, and it calls the  service of STORY-013; no endpoint deletes a Workspace or changes its site name (GBR-38; decision Q5, 4/11).",
+      "AC-004.29": "THE  SHALL list the Workspaces that are Active at the moment of the call, without connection data (AC-004.18), and SHALL bind no Workspace; it SHALL return an empty list when none is Active (used by , AC-003.1 there).",
       "AC-005.1": "WHEN a request comes to  (followed by the base domain) on a path under , THE backend SHALL require an  header and verify the token before any Workspace lookup or handler (GBR-14, GBR-19).",
       "AC-005.2": "THE  SHALL accept a token only when it is signed by one of the keys Atlassian publishes for Forge Invocation Tokens (key set from ), has not expired, has issuer , and has audience  followed by .",
       "AC-005.3": "IF the header is missing, the token is unsigned, signed by another key, expired, or has another issuer or audience, THEN THE backend SHALL answer 401 with a  without . It SHALL run no handler and look up no Workspace (TS-022, decision Q8).",
@@ -707,7 +720,7 @@
       "AC-010.3": "WHEN the images are pushed, THE CD workflow SHALL deploy staging through the self-hosted deploy runner, in this order (KAN-14):",
       "AC-010.4": "THE smoke test SHALL call  plus the staging base domain plus  and expect UP. It SHALL load one staging Workspace site's page (200) and call its  expecting 401 with  , which proves the resolver found the Workspace.",
       "AC-010.5": "IF a build, a migration, a health check, the seed or the smoke test fails, THEN THE CD workflow SHALL fail with the failing step, and for a migration the failing Workspace, in its log.",
-      "AC-010.6": "THE staging environment SHALL use the hosts , ,  and , through  =  (decision Q11). The site name  is reserved (D44 (25/10); AC-002.6, AC-013.3), so no production Workspace can own .",
+      "AC-010.6": "THE staging environment SHALL use the hosts , ,  and , with the base domain  given by  =  (AC-002.2; decision Q11). The site name  is reserved (D44 (25/10); AC-002.6, AC-013.3), so no production Workspace can own .",
       "AC-010.7": "THE staging secrets SHALL live only in the server's  (mode 600, owned by the deploy user) and in GitHub secrets, never in the repository.",
       "AC-010.8": "THE staging stack SHALL have a memory and CPU limit and a health check on every container, and restart  (KAN-12).",
       "AC-010.9": "THE application VPS SHALL refuse password login over SSH and allow key login only. Only ports 22, 80 and 443 SHALL be open to the internet (KAN-10).",
@@ -781,8 +794,8 @@
     }
   },
   "search": {
-    "specHash": "e273f3e90de0fb2b82d43a283b79e539aadc442af53a4f321ff848feff75f4ff",
-    "approvedAt": "2026-11-22T04:50:06.181Z",
+    "specHash": "ff4fac26063f1f9096eb85121703bede46469d8fc0f5aace3c9cdd33aa0ceb66",
+    "approvedAt": "2026-11-26T14:29:01.901Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a Ticket Resolver or Project Manager opens , THE web app SHALL show 6.2 Ticket List",
@@ -802,7 +815,7 @@
       "AC-002.1": "WHEN a Ticket Resolver or Project Manager opens , THE web app SHALL show 6.1 Search with",
       "AC-002.2": "WHILE the URL has no query, or only white space, THE web app SHALL not call the search API and",
       "AC-002.3": "WHEN the user presses Enter in the Search box with a non-blank text, THE web app SHALL call",
-      "AC-002.4": "THE Search box SHALL accept at most 200 characters.",
+      "AC-002.4": "THE Search box SHALL accept at most 200 characters. The box's placeholder is \"For example: VPN drops",
       "AC-002.5": "THE Department filter SHALL offer \"All Departments\" (the default) and each Department of the",
       "AC-002.6": "WHEN the user changes a filter while the URL has a query, THE web app SHALL search again from page",
       "AC-002.7": "THE web app SHALL show each result, in the order the API returns them, as a card with the title as",
@@ -814,6 +827,7 @@
       "AC-002.13": "IF the search fails with an error other than 401, THEN THE web app SHALL show the error state in",
       "AC-002.14": "THE web app SHALL show the title, the excerpt and every text field as plain text, never as HTML.",
       "AC-002.15": "IF a result's  is null (the ticket has no resolved date), THEN THE web app SHALL show",
+      "AC-002.16": "WHEN the URL gets a query, THE web app SHALL show the Search box and the filters at the top of the",
       "AC-003.1": "WHEN the popup is opened for a ticket, THE web app SHALL show 8.1 Give Feedback with the required",
       "AC-003.2": "WHEN the user clicks Helpful or Not helpful, THE web app SHALL show that button as selected and the",
       "AC-003.3": "IF the user clicks Send with neither button selected, THEN THE web app SHALL show MSG01 (\"The",
@@ -825,6 +839,8 @@
       "AC-003.9": "IF the request fails with another error than 401 or a field error, THEN THE web app SHALL keep",
       "AC-003.10": "WHEN the user clicks Cancel or the close icon, THE web app SHALL close the popup and send",
       "AC-003.11": "THE popup SHALL be the component  exported by ,",
+      "AC-003.12": "WHILE Ticket Detail (5.5) shows a  ticket, THE web app SHALL show a \"Give feedback\"",
+      "AC-003.13": "WHEN the user clicks \"Give feedback\", THE web app SHALL open the popup of STORY-003 for that ticket's",
       "AC-004.1": "WHILE mock mode is on, THE MSW handler of  SHALL return at least 25 tickets",
       "AC-004.2": "THE Ticket List mock SHALL apply  (case-insensitive, on Ticket ID, title and Solution",
       "AC-004.3": "THE MSW handler of  SHALL return only the Published mock tickets whose",
@@ -845,7 +861,7 @@
       "AC-006.4": "WHEN , ,  or  is given, THE backend SHALL combine them with AND",
       "AC-006.5": "THE backend SHALL return each row's ,  and  as",
       "AC-006.6": "THE backend SHALL return  as the Project's  (e.g. ITSUP) in every",
-      "AC-006.7": "THE backend SHALL return  as null for every ticket until ticket-review stores a review",
+      "AC-006.7": "WHILE a ticket is  or , THE backend SHALL return",
       "AC-006.8": "IF the caller has no session, THEN THE backend SHALL answer 401 with MSG07; IF the caller holds neither",
       "AC-006.9": "IF  is longer than 100 characters, THEN THE backend SHALL answer 400 with field error MSG02 on",
       "AC-006.10": "THE endpoints of STORY-006 to STORY-009 SHALL accept no Workspace parameter, header or body field and",
@@ -871,7 +887,7 @@
       "AC-009.4": "IF  is missing or blank, THEN THE backend SHALL answer 400 with field error MSG01 on",
       "AC-009.5": "IF the request has no web session, THEN THE backend SHALL answer 401 with MSG07 (a Forge Invocation",
       "AC-010.1": "WHEN  is called, THE backend SHALL return",
-      "AC-010.2": "THE backend SHALL return each hit with the ticket's Symptoms, Root cause, Resolution steps, Workaround",
+      "AC-010.2": "THE backend SHALL return each hit with the ticket's  as , its Symptoms, Root",
       "AC-010.3": "IF a ticket is unpublished, inactive or too far, THEN THE backend SHALL leave it out (not",
       "AC-010.5": "IF an argument is out of range, THEN THE service SHALL throw  and SHALL run",
       "AC-010.4": "THE service SHALL take no user, Workspace or Department argument and SHALL call no",
@@ -958,8 +974,8 @@
     }
   },
   "tracker": {
-    "specHash": "66a60ca94d8a7e1e6ce3b68a9ea453fb4041843e75e8ebc0632aa8975ab231a6",
-    "approvedAt": "2026-11-18T04:26:46.702Z",
+    "specHash": "9bc2419a3c1005885b68de6770b6bc5b92376f4187c4073742202a1ddea9858b",
+    "approvedAt": "2026-11-27T03:11:47.263Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN a request to the Jira App API carries a FIT whose signature verifies against Atlassian's JWKS, whose issuer is , whose audience equals the configured app id, which is within its / window, and which has a , THE tracker SHALL pass the request to its handler with the cloudId and the principal (if any).",
@@ -973,6 +989,7 @@
       "AC-003.4": "IF a suggestion result for the event's issue key already exists (Forge delivered the event again), THEN THE tracker SHALL respond 202 without storing a second one or changing the existing one.",
       "AC-003.6": "IF the event body is not a valid \"issue created\" event (no issue key, an issue key longer than 50 characters, or no ), THEN THE tracker SHALL respond 400 with the team's validation message code (missing field MSG01, too long MSG02, unreadable body MSG06) and store nothing.",
       "AC-003.8": "IF the event's project key is not the Jira project key of an ACTIVE T-Solve Project, THEN THE tracker SHALL respond 202 and store nothing.",
+      "AC-003.9": "IF an \"issue created\" event arrives and the FIT's cloudId belongs to no Workspace in the platform's catalog, or the process has no Workspace catalog, THEN THE tracker SHALL respond 202, store nothing and queue no suggestion job.",
       "AC-007.1": "WHEN a principal linked to an active T-Solve user requests panel data for an issue of a T-Solve Project, THE tracker SHALL return the stored suggestions (as search allows that user, including MSG76 when search is not available to them) and the Solution Form state from the ticket package: AI draft or MSG67, unsubmitted draft (MSG77), submitted and awaiting review (MSG65), or changes requested (MSG64).",
       "AC-007.2": "IF the principal is not linked to a T-Solve user, THEN THE tracker SHALL return panel data that only asks the user to sign in (MSG62), plus the MSG81 question when STORY-010 applies.",
       "AC-007.3": "IF the principal is linked to a deactivated T-Solve user, THEN THE tracker SHALL return panel data with MSG10 and nothing else.",
@@ -1024,8 +1041,8 @@
     }
   },
   "ticket-review": {
-    "specHash": "e69cb9f06e5c370a11a27c036624518563dc89c049948212d64403a9538b7cce",
-    "approvedAt": "2026-11-18T06:47:32.326Z",
+    "specHash": "47edc7d47960cc5f9988cf3a34523d52fe542fe89f014a07684d7be6b1e6c499",
+    "approvedAt": "2026-11-25T17:44:07.662Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the Review Queue loads, THE frontend and mock API SHALL return only Pending review Solution Form tickets in the current Workspace's Projects managed by the signed-in Project Manager, ordered by earliest review due date by default.",
@@ -1125,7 +1142,15 @@
       "AC-014.5": "WHEN the expiry transaction commits, THE expired tickets SHALL no longer appear in the Review Queue or its eligible ids, and THE worker SHALL log one line per Project with expired tickets, carrying only the Workspace UUID, the Project UUID and the count. IF no ticket is overdue, THEN THE worker SHALL end without changing any ticket.",
       "AC-014.6": "IF the expiry transaction fails, THEN THE worker SHALL roll back every ticket change of that attempt, log the failure without ticket content, and schedule another expiry job for that Workspace 15 minutes later with the next attempt number. IF attempt 3 fails, THEN THE worker SHALL schedule no further attempt and the overdue tickets SHALL wait for the next scheduled run.",
       "AC-014.7": "IF the Workspace is Suspended or unknown when an expiry job runs, THEN THE worker SHALL change no ticket and schedule no further attempt (GBR-38).",
-      "AC-014.8": "THE expiry job payload SHALL hold only the Workspace UUID and the attempt number, and JOB-02 SHALL record no review decision and no audit entry. THE tenant changelog SHALL add nullable ticket.expired_at as TIMESTAMPTZ and nullable ticket.status_before_expiry as VARCHAR(20) limited to PENDING_REVIEW and CHANGES_REQUESTED."
+      "AC-014.8": "THE expiry job payload SHALL hold only the Workspace UUID and the attempt number, and JOB-02 SHALL record no review decision and no audit entry. THE tenant changelog SHALL add nullable ticket.expired_at as TIMESTAMPTZ and nullable ticket.status_before_expiry as VARCHAR(20) limited to PENDING_REVIEW and CHANGES_REQUESTED.",
+      "AC-015.1": "WHEN a Project Manager who manages the ticket's Project opens Ticket Detail of a Pending review Solution Form ticket, THE frontend SHALL offer an \"AI check\" action; IF the user does not manage the Project or the ticket is not Pending review, THEN THE frontend SHALL not offer it.",
+      "AC-015.2": "WHEN the Project Manager runs AI check, THE backend SHALL send the ticket's title, description, symptoms, root cause, resolution steps, workaround and scope to  in one chat call constrained to the findings JSON schema, with the ticket text in the user message as data and a system prompt that tells the model to ignore instructions inside it.",
+      "AC-015.3": "THE system prompt SHALL ask the model to report, per Solution field, missing or vague information, a root cause that does not explain the symptoms, resolution steps that are not actionable, out of order or do not address the root cause, a workaround presented as the fix, a risky action without a warning, and contradictions between fields, in the language of the Solution text.",
+      "AC-015.4": "WHEN the AI answer matches the schema, THE API SHALL return 200 with at most 10 findings, each with  (one of TITLE, DESCRIPTION, SYMPTOMS, ROOT_CAUSE, RESOLUTION_STEPS, WORKAROUND, SCOPE, GENERAL),  (HIGH, MEDIUM or LOW),  and  (each trimmed, at most 500 characters), ordered HIGH first; THE API SHALL drop findings beyond 10 and truncate longer texts.",
+      "AC-015.5": "WHEN findings are returned, THE frontend SHALL show them grouped by severity with the field name, as plain text; WHEN the list is empty, THE frontend SHALL show MSG_NEW_AI_REVIEW_2 (\"No issues found\"). WHILE the request is pending, THE frontend SHALL show a loading state and disable the action.",
+      "AC-015.6": "IF the AI call fails, times out or returns an answer that does not match the schema, THEN THE API SHALL return 503 with code MSG_NEW_AI_REVIEW_1 and THE frontend SHALL show that message with retry; THE Approve, Reject and Request Changes controls SHALL keep working.",
+      "AC-015.7": "IF the caller is unauthenticated, does not manage the ticket's Project, the ticket is in another Workspace, or the ticket is not a Pending review Solution Form ticket, THEN THE API SHALL return 401, 403, 404 or 409 respectively without calling the AI.",
+      "AC-015.8": "THE backend SHALL store no finding, record no review decision and no audit entry, and log no ticket text or AI answer; findings SHALL not be shown to the writer."
     }
   },
   "ai": {
@@ -1207,8 +1232,8 @@
     }
   },
   "worker": {
-    "specHash": "b048853538841e767a735e04aaf1fbe67bc37ce5b082b04a7c4fa825f1065dd1",
-    "approvedAt": "2026-11-14T13:20:12.328Z",
+    "specHash": "5e551b167acd3be6c1132e9387eff52c05bde0d4c5869ac1a311c654747c7de1",
+    "approvedAt": "2026-11-24T13:44:29.405Z",
     "by": "user",
     "acs": {
       "AC-001.1": "WHEN the caller submits an email with one recipient, a subject, a plain-text body and an HTML body, THE SMTP sender SHALL send one multipart email holding that plain-text part and that HTML part to the recipient, from the display name \"T-Solve\" at the configured sender address, with that subject. WHEN the submitted email has no HTML body, THE SMTP sender SHALL send it as one plain-text email from the same sender.",
@@ -1228,14 +1253,13 @@
       "AC-002.8": "WHEN the same workspace is already bound, THE boundary SHALL permit nested execution and preserve the outer binding afterwards.",
       "AC-002.9": "WHEN jobs for different workspaces run concurrently or sequentially on a reused thread, THE worker SHALL keep their context bindings isolated.",
       "AC-002.10": "WHEN a handler fails, THE worker SHALL let JobRunr retain and retry the failed job with its original workspace UUID and SHALL recheck workspace eligibility on every attempt.",
-      "AC-002.11": "WHILE the explicit worker-mock profile is active, THE backend SHALL provide a temporary thread-scoped TenantContext mock and a configured allow-list of Active and Suspended workspace UUIDs, treating every unlisted UUID as unknown.",
-      "AC-002.12": "WHILE worker-mock is inactive, THE backend SHALL register no mock platform adapter; IF job processing is enabled without a real adapter, THEN THE backend SHALL fail startup rather than permit jobs using mocked tenancy.",
+      "AC-002.12": "IF job processing is enabled and no real  is registered, THEN THE backend SHALL fail startup rather than run jobs with a stand-in tenancy, and SHALL register no mock platform adapter.",
       "AC-002.13": "WHEN JobRunr integration is enabled, THE backend SHALL use a dedicated Jobs DataSource configured by environment variables and SHALL never fall back to its business or catalog DataSource.",
       "AC-002.14": "THE backend SHALL disable job execution and the JobRunr dashboard by default; WHEN the worker profile is enabled with required configuration, THE backend SHALL enable background processing while keeping the dashboard disabled.",
       "AC-002.15": "IF a persisted job names an unknown handler or has a null workspace or record UUID, THEN THE worker SHALL fail it without invoking a handler.",
       "AC-002.16": "THE test suite SHALL demonstrate enqueue, persisted payload serialization and execution through real JobRunr components, including PostgreSQL-backed job storage, with only platform dependencies mocked.",
       "AC-003.1": "WHEN a caller asks the worker tenant port for the Active Workspaces, THE port SHALL return the UUIDs of the Workspaces that are Active at that moment, without binding a Workspace on the calling thread.",
-      "AC-003.2": "WHILE the worker-mock profile is active, THE mock SHALL return exactly its configured Active allow-list and no Suspended or unlisted Workspace.",
+      "AC-003.3": "IF the Active Workspaces cannot be read from the platform catalog, THEN THE port SHALL throw to the caller and return no partial or empty list, so that a recurring job fails instead of silently skipping every Workspace.",
       "AC-004.1": "WHEN a caller queues an email while a Workspace is bound, THE email outbox SHALL store one PENDING row in the Jobs database with that Workspace UUID, the recipient, the subject, the plain-text body, the optional HTML body, an attempt count of zero and the creation time, and SHALL return the row's UUID.",
       "AC-004.2": "IF a queue call has no bound Workspace, a recipient that is not exactly one mailbox, a blank subject or one containing a line break, or a blank plain-text body, THEN THE email outbox SHALL reject it without storing a row.",
       "AC-004.3": "IF the Jobs database is not configured or cannot store the row, THEN THE email outbox SHALL report the failure to the caller without storing a partial row.",

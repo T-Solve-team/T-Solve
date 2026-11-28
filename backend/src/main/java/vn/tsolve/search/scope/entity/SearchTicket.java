@@ -20,7 +20,9 @@ import org.hibernate.annotations.Synchronize;
                t.workaround, t.scope, p.project_id, p.public_id as project_public_id,
                p.jira_project_key as project_name, d.department_id,
                d.public_id as department_public_id, d.name as department_name,
-               d.status as department_status
+               d.status as department_status,
+               case when t.status in ('PENDING_REVIEW', 'CHANGES_REQUESTED') then t.review_due_date end
+                   as review_due_date
           from ticket t join project p on (p.public_id = t.project_id
                or lpad(to_hex(p.project_id), 32, '0')::uuid = t.project_id)
           join department d on d.department_id = p.department_id
@@ -83,6 +85,10 @@ public class SearchTicket {
 
     @Column(name = "department_status")
     private String departmentStatus;
+
+    /** Null outside Pending review and Changes requested: the column keeps its value after review ends. */
+    @Column(name = "review_due_date")
+    private LocalDate reviewDueDate;
 
     protected SearchTicket() {}
 
@@ -176,5 +182,9 @@ public class SearchTicket {
 
     public String getDepartmentStatus() {
         return departmentStatus;
+    }
+
+    public LocalDate getReviewDueDate() {
+        return reviewDueDate;
     }
 }

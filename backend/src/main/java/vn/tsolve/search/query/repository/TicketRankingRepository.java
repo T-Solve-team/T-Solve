@@ -12,8 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.tsolve.search.scope.entity.SearchTicket;
 
 public interface TicketRankingRepository extends JpaRepository<SearchTicket, UUID> {
-    String COLUMNS = """
-            SELECT t.public_id AS "ticketId", t.title AS "title",
+    // BUG-372: one row per Solution. DISTINCT ON keeps the first copy in the ranking order of the subquery; the outer
+    // query sorts again, and the count counts distinct Solutions. NULL sections compare equal in DISTINCT.
+    String SOLUTION = " t.symptoms, t.root_cause, t.resolution_steps, t.workaround, t.scope ";
+    String COLUMNS = "SELECT DISTINCT ON (" + SOLUTION + ")" + """
+                t.ticket_id AS internal_id, t.public_id AS "ticketId", t.title AS "title",
                 p.public_id AS "projectId", p.jira_project_key AS "projectName",
                 d.public_id AS "departmentId", d.name AS "departmentName",
                 t.symptoms AS "symptoms", t.resolution_steps AS "resolutionSteps",
@@ -52,10 +55,12 @@ public interface TicketRankingRepository extends JpaRepository<SearchTicket, UUI
     // ponytail: exact cosine ranking has no HNSW index yet; measure on real data before adding one.
     @Transactional(readOnly = true)
     @Query(
-            value = COLUMNS + TABLES + " JOIN ticket_embedding e ON e.ticket_id = t.ticket_id " + FEEDBACK + FILTERS
-                    + SIMILARITY + " ORDER BY e.embedding <=> CAST(:query AS vector), t.ticket_id ",
-            countQuery = "SELECT count(*) " + TABLES + " JOIN ticket_embedding e ON e.ticket_id = t.ticket_id "
-                    + FILTERS + SIMILARITY,
+            value = "SELECT * FROM (" + COLUMNS + ", e.embedding <=> CAST(:query AS vector) AS distance " + TABLES
+                    + " JOIN ticket_embedding e ON e.ticket_id = t.ticket_id " + FEEDBACK + FILTERS + SIMILARITY
+                    + " ORDER BY " + SOLUTION + ", e.embedding <=> CAST(:query AS vector), t.ticket_id"
+                    + ") r ORDER BY r.distance, r.internal_id ",
+            countQuery = "SELECT count(*) FROM (SELECT DISTINCT " + SOLUTION + TABLES
+                    + " JOIN ticket_embedding e ON e.ticket_id = t.ticket_id " + FILTERS + SIMILARITY + ") r",
             nativeQuery = true)
     Page<RankedRow> semantic(
             @Param("departmentIds") Set<Long> departmentIds,
@@ -69,9 +74,10 @@ public interface TicketRankingRepository extends JpaRepository<SearchTicket, UUI
 
     @Transactional(readOnly = true)
     @Query(
-            value = COLUMNS + TABLES + FEEDBACK + FILTERS + KEYWORD
-                    + " ORDER BY t.resolved_date DESC NULLS LAST, t.ticket_id DESC ",
-            countQuery = "SELECT count(*) " + TABLES + FILTERS + KEYWORD,
+            value = "SELECT * FROM (" + COLUMNS + TABLES + FEEDBACK + FILTERS + KEYWORD
+                    + " ORDER BY " + SOLUTION + ", t.resolved_date DESC NULLS LAST, t.ticket_id DESC"
+                    + ") r ORDER BY r.\"resolvedDate\" DESC NULLS LAST, r.internal_id DESC ",
+            countQuery = "SELECT count(*) FROM (SELECT DISTINCT " + SOLUTION + TABLES + FILTERS + KEYWORD + ") r",
             nativeQuery = true)
     Page<RankedRow> keyword(
             @Param("departmentIds") Set<Long> departmentIds,
