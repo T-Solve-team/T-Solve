@@ -87,6 +87,10 @@ npm run dev
 
 The frontend also runs without the backend (mock mode); see `frontend/README.md`.
 
+With a local Registry (`REGISTRY_DB_URL` set), the backend takes the Workspace from the `Host` header, using the base
+domain of `TSOLVE_SITE_ORIGIN_TEMPLATE` (required then). The `dev` Workspaces `acme` and `beta` answer 404 `MSG151`
+unless you adopt them with `infra/scripts/registry-adopt-workspace.sh`.
+
 Sign-in runs on Keycloak. Besides the DB values, `.env` needs: `REDIS_PASSWORD` (password of the Redis service),
 `KEYCLOAK_DB_PASSWORD` (password of the Keycloak database user), `KEYCLOAK_WEB_CLIENT_SECRET` (secret of the Keycloak
 client `tsolve-web`; Keycloak and the backend read the same value), `KEYCLOAK_CONSOLE_CLIENT_SECRET` (secret of the
@@ -129,6 +133,19 @@ Read [harnessclaude/README.md](harnessclaude/README.md) before your first sessio
 cd backend  && mvn verify          # tests + Spotless format check (mvn spotless:apply fixes formatting)
 cd frontend && npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build
 ```
+
+### Local code coverage (not a CI gate)
+
+Coverage is opt-in and does not enforce thresholds:
+
+```bash
+cd backend  && mvn verify -Pcoverage    # needs Docker for integration tests
+cd frontend && npm run test:coverage
+```
+
+Backend HTML: `backend/target/site/jacoco-merged/index.html`; XML:
+`backend/target/site/jacoco-merged/jacoco.xml` (merged unit and integration test coverage).
+Frontend HTML: `frontend/coverage/index.html`.
 
 ## API (current skeleton)
 

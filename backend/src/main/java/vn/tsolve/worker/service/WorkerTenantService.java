@@ -4,7 +4,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-/** Platform integration port; the mock supplies context propagation, not database routing. */
+/** Platform integration port; the worker's implementation reads the Registry catalog (STORY-004). */
 public interface WorkerTenantService {
     Optional<UUID> currentWorkspaceId();
 

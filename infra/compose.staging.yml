@@ -79,7 +79,8 @@ services:
       - -c
       - maintenance_work_mem=128MB
       - -c
-      - max_connections=100
+      # Budget (platform edge #15): 25 Workspace pools of 5 in two processes, the Registry, Jobs, Keycloak and migrations
+      - max_connections=300
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the env file}
@@ -142,6 +143,8 @@ services:
       KC_DB_URL: jdbc:postgresql://db:5432/${KEYCLOAK_DB_NAME:-keycloak}
       KC_DB_USERNAME: ${KEYCLOAK_DB_USER:-keycloak}
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?set KEYCLOAK_DB_PASSWORD in the env file}
+      # Keycloak's default is 100, more than its share of the db container's max_connections
+      KC_DB_POOL_MAX_SIZE: "15"
       KC_HOSTNAME: https://login.${TSOLVE_DOMAIN}
       # The Admin Console is reached only through the SSH tunnel (infra/README.md section 9): its links use that address.
       KC_HOSTNAME_ADMIN: http://localhost:8081
@@ -188,6 +191,8 @@ services:
       # The web process runs with NO Spring profile (never dev, never identity-mock).
       SPRING_PROFILES_ACTIVE: ""
       <<: *no-unrelated-secrets
+      REGISTRY_DB_URL: ${REGISTRY_DB_URL:?set REGISTRY_DB_URL in the env file}
+      CATALOG_SECRET_KEY: ${CATALOG_SECRET_KEY:?set CATALOG_SECRET_KEY in the env file}
       # The web process only queues the Reject / Request Changes email in the Jobs outbox (BUG-339); the worker sends it.
       # Not TSOLVE_WORKER_ENABLED: that would also start JobRunr here and switch the tracker queue.
       TSOLVE_WORKER_OUTBOX_ENABLED: "true"
@@ -195,6 +200,10 @@ services:
       TSOLVE_WORKER_WEB_JOBS_ENABLED: "true"
       DB_HOST: db
       DB_PORT: "5432"
+      # Tenant routing: the server of the Workspace databases, and the pool size per Workspace
+      TENANT_DB_HOST: db
+      TENANT_DB_PORT: "5432"
+      TENANT_DB_POOL_MAX: ${TENANT_DB_POOL_MAX:-10}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       SERVER_PORT: "8080"
@@ -226,11 +235,16 @@ services:
     mem_limit: ${WORKER_MEM_LIMIT:-1g}
     <<: *backend-env
     environment:
-      SPRING_PROFILES_ACTIVE: worker,worker-mock
+      SPRING_PROFILES_ACTIVE: worker
       <<: *no-unrelated-secrets
+      REGISTRY_DB_URL: ${REGISTRY_DB_URL:?set REGISTRY_DB_URL in the env file}
+      CATALOG_SECRET_KEY: ${CATALOG_SECRET_KEY:?set CATALOG_SECRET_KEY in the env file}
       TSOLVE_WORKER_ENABLED: "true"
       DB_HOST: db
       DB_PORT: "5432"
+      TENANT_DB_HOST: db
+      TENANT_DB_PORT: "5432"
+      TENANT_DB_POOL_MAX: ${TENANT_DB_POOL_MAX:-10}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       SERVER_PORT: "8080"

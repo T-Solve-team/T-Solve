@@ -76,6 +76,7 @@
     <include file="changes/052-platform-tenant-guard-function.sql" relativeToChangelogFile="true"/>
     <include file="changes/054-platform-audit-log-entry-append-only.sql" relativeToChangelogFile="true"/>
     <include file="changes/055-chatbot-chat-session.sql" relativeToChangelogFile="true"/>
+    <include file="changes/056-chatbot-answer-sources.sql" relativeToChangelogFile="true"/>
 
     <!-- Last element, run on every update: gives every table above the policy tenant_guard (KAN-253, AC-001.31). -->
     <changeSet id="053-platform-tenant-guard-policies" author="platform" runAlways="true" runOnChange="true"
