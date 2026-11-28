@@ -3,6 +3,7 @@ import {
   getListProjectJiraRolesQueryKey,
   getListProjectMembersQueryKey,
   getSearchProjectMemberCandidatesQueryKey,
+  isUnauthorizedError,
   useAddProjectMembers,
 } from '@/shared/api';
 import { showMessage } from '@/shared/messages';
@@ -30,8 +31,8 @@ export function useAddMembersToProject(projectId: string) {
         client.setQueryData(getListProjectMembersQueryKey(projectId), members);
         void refreshCandidates(); // the popup closes now, not after the candidate reload
       },
-      onError: () => {
-        showMessage('MSG06');
+      onError: (error) => {
+        if (!isUnauthorizedError(error)) showMessage('MSG06');
         return refreshCandidates();
       },
     },

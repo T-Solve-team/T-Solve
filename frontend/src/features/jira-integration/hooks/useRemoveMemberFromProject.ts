@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   getListProjectMembersQueryKey,
   getSearchProjectMemberCandidatesQueryKey,
+  isUnauthorizedError,
   useRemoveProjectMember,
 } from '@/shared/api';
 import { showMessage } from '@/shared/messages';
@@ -20,7 +21,9 @@ export function useRemoveMemberFromProject(projectId: string) {
           queryKey: getSearchProjectMemberCandidatesQueryKey(projectId),
         });
       },
-      onError: () => showMessage('MSG06'),
+      onError: (error) => {
+        if (!isUnauthorizedError(error)) showMessage('MSG06');
+      },
     },
   });
 }

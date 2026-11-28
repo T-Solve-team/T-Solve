@@ -51,6 +51,31 @@ async function expectModalClosed() {
 }
 
 describe('WorkspaceSettingsPage', () => {
+  it('NewDepartmentModal shows only the MSG07 dialog when creation answers 401 (BUG-124)', async () => {
+    server.use(http.post(DEPARTMENTS_URL, () => problem(401)));
+    const user = userEvent.setup();
+    const { queryClient } = renderApp('/workspace-settings', { role: 'ADMIN' });
+    const form = await openDepartmentModal(user);
+    await user.click(departmentName(form));
+    await user.paste('Support');
+    await user.click(saveButton(form));
+    await screen.findAllByText(msg('MSG07'));
+    try {
+      await waitFor(() => expect(queryClient.isMutating()).toBe(0));
+      expect(
+        screen.getAllByRole('dialog').filter((el) => el.textContent?.includes(msg('MSG07'))),
+      ).toHaveLength(1);
+      expect(
+        screen.getAllByText(msg('MSG07')).filter((el) => !el.closest('[role="dialog"]')),
+      ).toHaveLength(0);
+    } finally {
+      const expired = screen
+        .queryAllByRole('dialog')
+        .find((el) => el.textContent?.includes(msg('MSG07')));
+      if (expired) await user.click(within(expired).getByRole('button', { name: 'OK' }));
+    }
+  });
+
   // 2.2 opens only after Setup (KAN-119): the company information section loads a set-up Workspace.
   beforeEach(() => {
     server.use(
