@@ -2318,6 +2318,8 @@
 {"ts":"2026-11-24T17:50:55.559Z","type":"quick-opened","what":"resolve the bug log merge conflict with main: keep BUG-389 and BUG-390","files":["docs/bug-log.md"]}
 {"ts":"2026-11-24T17:51:37.519Z","type":"quick-closed","what":"resolve the bug log merge conflict with main: keep BUG-389 and BUG-390","files":["docs/bug-log.md"]}
 {"ts":"2026-11-24T19:29:55.176Z","type":"spec-approved","module":"wiki","specHash":"f912468f95e47b33f3db76ea16adf6bbe8cd904d611ba98a281d30f098498d30"}
+{"ts":"2026-11-25T11:06:44.191Z","type":"quick-opened","what":"BUG-186/197/289: ReviewQueueEventsIT stream opening race (KAN-424)","files":["backend/src/test/java/vn/tsolve/review/ReviewQueueEventsIT.java","backend/src/test/java/vn/tsolve/review/ReviewQueueEventsMockMvcTest.java"]}
+{"ts":"2026-11-25T11:15:45.817Z","type":"quick-closed","what":"BUG-186/197/289: ReviewQueueEventsIT stream opening race (KAN-424)","files":["backend/src/test/java/vn/tsolve/review/ReviewQueueEventsIT.java","backend/src/test/java/vn/tsolve/review/ReviewQueueEventsMockMvcTest.java"]}
 {"ts":"2026-11-25T10:38:17.659Z","type":"quick-opened","what":"BUG-170: AuditLogEntryIT micros lower bound (KAN-423)","files":["backend/src/test/java/vn/tsolve/analytics/AuditLogEntryIT.java"]}
 {"ts":"2026-11-25T10:54:59.893Z","type":"quick-closed","what":"BUG-170: AuditLogEntryIT micros lower bound (KAN-423)","files":["backend/src/test/java/vn/tsolve/analytics/AuditLogEntryIT.java"]}
 {"ts":"2026-11-25T07:49:23.990Z","type":"spec-approved","module":"search","specHash":"0d107008fb98b61204196cf9b526ec616748fff60195d3932b92acedf07c8801"}
