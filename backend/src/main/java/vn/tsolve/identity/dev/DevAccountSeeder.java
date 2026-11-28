@@ -18,7 +18,7 @@ import vn.tsolve.identity.signin.port.TenantScope;
  * (dev profile only): an Account already there keeps its id, sub and Roles (AC-001.26).
  */
 @Component
-@Profile("dev")
+@Profile("dev & !rag-eval")
 public class DevAccountSeeder implements ApplicationRunner {
 
     private final TenantScope scope;

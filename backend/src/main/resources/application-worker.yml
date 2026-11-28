@@ -1,3 +1,7 @@
+spring:
+  liquibase:
+    enabled: false  # the worker never migrates a tenant database; the web process does (AC-008.4)
+
 tsolve:
   worker:
     enabled: true

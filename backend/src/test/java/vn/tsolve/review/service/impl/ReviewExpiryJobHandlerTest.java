@@ -29,13 +29,13 @@ import vn.tsolve.review.dto.ReviewExpiryJobRequest;
 import vn.tsolve.review.service.ReviewExpiryService;
 import vn.tsolve.worker.config.JobRunrRuntime;
 import vn.tsolve.worker.service.impl.TenantExecutionServiceImpl;
-import vn.tsolve.worker.service.mock.MockWorkerTenantService;
+import vn.tsolve.worker.support.FixedWorkerTenantService;
 
 class ReviewExpiryJobHandlerTest {
     private final UUID workspace = UUID.randomUUID();
     private final UUID suspended = UUID.randomUUID();
-    private final MockWorkerTenantService tenants =
-            new MockWorkerTenantService(Set.of(workspace), Set.of(suspended), new ThreadLocalTenantContext(id -> true));
+    private final FixedWorkerTenantService tenants = new FixedWorkerTenantService(
+            Set.of(workspace), Set.of(suspended), new ThreadLocalTenantContext(id -> true));
     private final Clock clock = Clock.fixed(Instant.parse("2026-11-08T17:30:00Z"), ZoneOffset.UTC);
     private final ReviewExpiryService expiry = mock(ReviewExpiryService.class);
     private final JobRunrRuntime runtime = mock(JobRunrRuntime.class);

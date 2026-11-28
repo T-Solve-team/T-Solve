@@ -649,4 +649,19 @@ class WebSessionFilterTest extends AbstractSessionIT {
             assertThatThrownBy(() -> Class.forName(name)).as(name).isInstanceOf(ClassNotFoundException.class);
         }
     }
+
+    @Test
+    @DisplayName(
+            "edge 80 a Registry failure in the Workspace lookup on a request with a session cookie answers 500 MSG06 and runs no endpoint")
+    void registryDownAtTheLookup_edge80() throws Exception {
+        UUID account = seed(ACME, "a@acme.example", "A", "ACTIVE");
+        String cookie = sessionOf(ACME, account);
+        workspaces.failWith(new DataAccessResourceFailureException("registry down"));
+
+        MockHttpServletResponse response = whoami(ACME_HOST, cookie);
+
+        assertThat(response.getStatus()).isEqualTo(500);
+        assertThat(body(response).path("code").asText()).isEqualTo("MSG06");
+        assertThat(WhoAmITestController.calls()).isZero();
+    }
 }

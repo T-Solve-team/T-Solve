@@ -27,6 +27,9 @@ owner: BA
 | 2026-11-14 | new STORY-015 | **Cross-module tenant-isolation tests and E2E smoke (KAN-186).** New STORY-015 with AC-015.1 – AC-015.12: backend tests on two Workspace databases (test routing until STORY-002) for the Ticket List, ticket detail and feedback, Search, Chatbot and the Review Queue; a Playwright suite under `e2e/` on the local stack (sign-in through Keycloak and the fake Google, the main pages, ACME's session refused on the BETA site); the run of 14/11 recorded. The Jira App case waits for STORY-006 (KAN-101) and is Out of Scope here. No other criterion changed | KAN-186 (Phạm Tùng Dương, 14/11): user decisions "do what can be done now", Change Mode on `platform`, Jira App left as a gap until KAN-101, E2E on the local Docker Compose stack; NFR 1 names KAN-186 as the end-to-end run |
 | 2026-11-14 | STORY-015 | AC-015.6 names the Review Queue path the backend serves, `GET /api/v1/review-queue` (ticket-review `ReviewReadController`), instead of `/api/v1/reviews/review-queue`. No behaviour changed | Found while building Task 23: the old path does not exist |
 | 2026-11-23 | STORY-001 | AC-001.21: the stale legacy list (the five tables that changeset 039 dropped) is replaced by the 12 tables that break AC-001.20 today, each with its owning module, so that the guard test of AC-001.22 can pass. AC-001.22: an allow-list entry naming a table that does not exist also fails ("the allow-list only shrinks"). AC-001.20: the key `workspace_id` of the table `workspace` is not a forbidden Workspace-id column (the table still fails the `gen_random_uuid()` default and is listed); the clause "only the timestamp columns `02_tenant.sql` gives the table" becomes a review rule that the guard test does not check. No criterion added or removed | KAN-253 test plan, step 1: the allow-list could not pass whatever Task 5 builds; answers Q1, Q2 and Q7 (all recommended, Hiếu, 23/11) |
+| 2026-11-24 | STORY-004 | New AC-004.29: `WorkspaceCatalog` lists the Active Workspaces (new method `findActive()` in Interface Contracts), without connection data and without binding a Workspace | KAN-252 Task 4 (plan step 2, Q2 answered with the recommended option by Hiếu, 24/11): `worker` needs the Active Workspaces from the catalog to replace `MockWorkerTenantService`; the method returns `WorkspaceSummary`, so AC-004.18 holds |
+| 2026-11-25 | STORY-002 | AC-002.2 reworded: the base domain is the base domain of `TSOLVE_SITE_ORIGIN_TEMPLATE` (the host part after `{slug}.`), no longer a variable `TSOLVE_BASE_DOMAIN` of its own | KAN-258 Task 10 (plan step 2, Q4 answered with the recommended option by Hiếu, 25/11): one source of truth for the domain; the template is already required once the catalog exists |
+| 2026-11-25 | STORY-010 | AC-010.6 and Interface Contracts: staging's base domain `staging.tsolve.io.vn` comes through `TSOLVE_SITE_ORIGIN_TEMPLATE`; the variable `TSOLVE_BASE_DOMAIN` is gone. No criterion added or removed | KAN-258 Task 10 (Hiếu, 25/11): follows the AC-002.2 change, approved together with it |
 
 ## Requirements
 
@@ -140,7 +143,7 @@ owner: BA
     - `currentWorkspaceId()`: the bound Workspace, or empty;
     - `requireWorkspaceId()`: the bound Workspace, or throws when none is bound;
     - `runIn(workspaceId, action)`: runs the action with that Workspace bound (decision Q5).
-  - AC-002.2: WHEN a request arrives whose host is `<label>.` followed by the configured base domain (`TSOLVE_BASE_DOMAIN`), and the label is the site name of a Workspace, THE Tenant Resolver SHALL bind that Workspace for the whole request.
+  - AC-002.2: WHEN a request arrives whose host is `<label>.` followed by the base domain of `TSOLVE_SITE_ORIGIN_TEMPLATE` (the host part after `{slug}.`), and the label is the site name of a Workspace, THE Tenant Resolver SHALL bind that Workspace for the whole request.
   - AC-002.3: THE Tenant Resolver SHALL read the Workspace site from the `Host` header only, compared without case and without the port. It SHALL ignore `X-Forwarded-Host`, `Forwarded` and any Workspace id in a header, a parameter, a cookie or the body (GBR-37).
   - AC-002.4: IF the label is not an RFC 1123 label (lowercase letters, digits and hyphens, starting and ending with a letter or a digit, at most 63 characters), THEN THE Tenant Resolver SHALL answer 404 with a `ProblemDetail` with `code` `MSG151` without looking up the catalog (D11).
   - AC-002.5: IF the label is not `login`, `api` or `admin` (AC-002.10) and is the site name of no Workspace, THEN THE Tenant Resolver SHALL answer 404 with `code` `MSG151`.
@@ -194,6 +197,7 @@ owner: BA
   - AC-004.26: IF the email is already recorded for another Workspace, THEN THE catalog SHALL refuse with `code` `MSG155` on field `email` and record nothing; IF it is already recorded for the bound Workspace, THEN it SHALL change nothing and succeed.
   - AC-004.27: THE catalog service SHALL read and write only catalog tables and SHALL never bind a Workspace itself (GBR-37).
   - AC-004.28: THE catalog service SHALL offer no REST endpoint to create, suspend, reactivate or delete a Workspace or to change its site name. The only such endpoint is the Platform Console's, in `platform-console`, on `admin.` for an allow-listed Platform Operator, and it calls the `WorkspaceProvisioning` service of STORY-013; no endpoint deletes a Workspace or changes its site name (GBR-38; decision Q5, 4/11).
+  - AC-004.29: THE `WorkspaceCatalog` SHALL list the Workspaces that are Active at the moment of the call, without connection data (AC-004.18), and SHALL bind no Workspace; it SHALL return an empty list when none is Active (used by `worker`, AC-003.1 there).
 
 ### STORY-005: Verify the Forge Invocation Token (KAN-105)
 - Owner: Trần Trung Hiếu. Sprint S2.
@@ -294,7 +298,7 @@ owner: BA
     6. run the smoke test.
   - AC-010.4: THE smoke test SHALL call `https://api.` plus the staging base domain plus `/actuator/health` and expect UP. It SHALL load one staging Workspace site's page (200) and call its `/api/v1/me` expecting 401 with `code` `MSG07`, which proves the resolver found the Workspace.
   - AC-010.5: IF a build, a migration, a health check, the seed or the smoke test fails, THEN THE CD workflow SHALL fail with the failing step, and for a migration the failing Workspace, in its log.
-  - AC-010.6: THE staging environment SHALL use the hosts `*.staging.tsolve.io.vn`, `admin.staging.tsolve.io.vn`, `api.staging.tsolve.io.vn` and `login.staging.tsolve.io.vn`, through `TSOLVE_BASE_DOMAIN` = `staging.tsolve.io.vn` (decision Q11). The site name `staging` is reserved (D44 (25/10); AC-002.6, AC-013.3), so no production Workspace can own `staging.tsolve.io.vn`.
+  - AC-010.6: THE staging environment SHALL use the hosts `*.staging.tsolve.io.vn`, `admin.staging.tsolve.io.vn`, `api.staging.tsolve.io.vn` and `login.staging.tsolve.io.vn`, with the base domain `staging.tsolve.io.vn` given by `TSOLVE_SITE_ORIGIN_TEMPLATE` = `https://{slug}.staging.tsolve.io.vn` (AC-002.2; decision Q11). The site name `staging` is reserved (D44 (25/10); AC-002.6, AC-013.3), so no production Workspace can own `staging.tsolve.io.vn`.
   - AC-010.7: THE staging secrets SHALL live only in the server's `.env` (mode 600, owned by the deploy user) and in GitHub secrets, never in the repository.
   - AC-010.8: THE staging stack SHALL have a memory and CPU limit and a health check on every container, and restart `unless-stopped` (KAN-12).
   - AC-010.9: THE application VPS SHALL refuse password login over SSH and allow key login only. Only ports 22, 80 and 443 SHALL be open to the internet (KAN-10).
@@ -481,6 +485,7 @@ public interface WorkspaceCatalog {                             // STORY-004
     Optional<WorkspaceSummary> findById(UUID workspaceId);
     Optional<WorkspaceSummary> findBySiteName(String siteName);
     Optional<WorkspaceSummary> findByCloudId(String cloudId);
+    List<WorkspaceSummary> findActive();                        // the Active Workspaces now; AC-004.29
     WorkspaceSummary linkJiraSite(String siteUrl);              // bound Workspace; AC-004.19 – AC-004.24
     void claimEmail(String email);                              // bound Workspace; AC-004.25, AC-004.26
 }
@@ -555,7 +560,8 @@ rules, `infra/loadtest/`.
 tables only (AC-001.33).
 
 **Configuration** (names in `.env.example`, no real values):
-- `TSOLVE_BASE_DOMAIN`: `tsolve.io.vn`, `staging.tsolve.io.vn` or `localhost`.
+- `TSOLVE_SITE_ORIGIN_TEMPLATE`: the origin of a Workspace site, with `{slug}` for the site name. The base domain is the
+  host part after `{slug}.` (AC-002.2): `tsolve.io.vn`, `staging.tsolve.io.vn` or `localhost`.
 - `TSOLVE_ENVIRONMENT`: `dev`, `staging` or `production`.
 - `CATALOG_DB_URL`, `CATALOG_DB_USER`, `CATALOG_DB_PASSWORD`; `TENANT_DB_HOST`; `TENANT_DB_POOL_MAX` (default 5).
 - `JOBS_DB_URL`, `JOBS_DB_USER`, `JOBS_DB_PASSWORD` (the Jobs database: the web, `ops` and `seed` processes of this module store the invitation job in it through `InvitationJobQueue`; `worker` runs jobs from it).

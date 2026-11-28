@@ -144,3 +144,11 @@ Re-evaluate `jira-project-read` (attempt 2) after the commit.
 
 ### Next up
 Re-evaluate jira-project-read (attempt 3).
+
+## Quick change KAN-467 (BUG-403): hand-off
+
+- Done: BUG-403 fixed with spec AC-003.9, review passed (attempt 2), commits 80e1efe7 and 4cf899d3.
+- Open: CI; tracker owner review; staging log check (Hiếu); staging config check before deploy (`REGISTRY_DB_URL`, lower-case `jira_cloud_id`, Workspace known); follow-up: move the Workspace lookup into tracker.
+- Next: merge before KAN-254 deploys.
+- Branch: `fix/KAN-467-tracker-bind-issue-created`.
+- PR: #358, ready to merge once CI is green and the owner has reviewed.

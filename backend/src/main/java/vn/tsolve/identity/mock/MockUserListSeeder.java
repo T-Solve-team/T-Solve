@@ -11,7 +11,7 @@ import vn.tsolve.identity.signin.port.TenantScope;
 
 /** Interim mock — replace when KAN-275 workspace-session (identity Tasks 26a/26b) lands; never enable in prod. */
 @Component
-@Profile("identity-mock")
+@Profile("identity-mock & !rag-eval")
 public class MockUserListSeeder implements ApplicationRunner {
     private final TenantScope scope;
     private final MockIdentityProperties properties;

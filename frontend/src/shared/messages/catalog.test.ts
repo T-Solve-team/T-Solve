@@ -173,6 +173,11 @@ describe('message catalog', () => {
     });
   });
 
+  it('AC-015.5 AC-015.6 holds the AI check messages MSG_NEW_AI_REVIEW_1 and _2 until System_Messages numbers them', () => {
+    expect(entry('MSG_NEW_AI_REVIEW_1')).toEqual({ type: 'inline', text: 'AI check unavailable' });
+    expect(entry('MSG_NEW_AI_REVIEW_2')).toEqual({ type: 'inline', text: 'No issues found' });
+  });
+
   it('AC-006.3 holds MSG142 and MSG143, the empty-state messages of the identity profile, as inline', () => {
     expect(entry('MSG142')).toEqual({ type: 'inline', text: 'No Spaces found' });
     expect(entry('MSG143')).toEqual({ type: 'inline', text: 'Not a member of any Project.' });
@@ -188,7 +193,7 @@ describe('message catalog', () => {
     );
   });
 
-  it('AC-006.7 holds no code other than the Report3 web codes, MSG_NEW_2 to MSG_NEW_7, MSG142, MSG143 and MSG157', () => {
+  it('AC-006.7 holds no code other than the Report3 web codes, MSG_NEW_2 to MSG_NEW_7, MSG_NEW_AI_REVIEW_1 and _2, MSG142, MSG143 and MSG157', () => {
     const expected: string[] = [
       ...webMessages.map(([code]) => code),
       'MSG_NEW_2',
@@ -197,6 +202,9 @@ describe('message catalog', () => {
       'MSG_NEW_5',
       'MSG_NEW_6',
       'MSG_NEW_7',
+      // ticket-review STORY-015: AI check.
+      'MSG_NEW_AI_REVIEW_1',
+      'MSG_NEW_AI_REVIEW_2',
       ...NOT_IN_REPORT3,
       // K121-D41: numbered in the Messages file, not yet in report3-messages.json.
       'MSG157',
