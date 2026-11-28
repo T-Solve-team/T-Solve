@@ -5,10 +5,45 @@ import { server } from '@/mocks/server';
 import { getGetUserHandoverOptionsQueryKey } from '@/shared/api';
 import { problem } from '@/shared/api/mocks';
 import { msg } from '@/shared/messages';
-import { renderWithProviders } from '@/test/render';
+import { renderApp, renderWithProviders } from '@/test/render';
 import { HandOverResponsibilitiesModal } from './HandOverResponsibilitiesModal';
 
 describe('Hand Over Responsibilities recipient refresh', () => {
+  it('shows only the MSG07 dialog when handover answers 401 (BUG-124)', async () => {
+    server.use(http.put('*/api/v1/users/:userId/status', () => problem(401)));
+    const user = userEvent.setup();
+    const { queryClient } = renderApp('/users/10000000-0000-4000-8000-000000000005', {
+      role: 'ADMIN',
+    });
+    await user.click(await screen.findByRole('button', { name: 'Deactivate' }, { timeout: 5000 }));
+    const handover = await screen.findByRole('dialog', { name: 'Hand Over Responsibilities' });
+    for (const name of ['IT Support', 'IT Network']) {
+      await user.click(await within(handover).findByRole('combobox', { name }));
+      await user.click(
+        await screen.findByRole('option', { name: /Bùi Anh Tuấn/, selected: false }),
+      );
+    }
+    await user.click(within(handover).getByRole('button', { name: 'Deactivate' }));
+    await screen.findAllByText(msg('MSG07'));
+    try {
+      await waitFor(() => expect(queryClient.isMutating()).toBe(0));
+      expect(
+        screen.getAllByRole('dialog').filter((el) => el.textContent?.includes(msg('MSG07'))),
+      ).toHaveLength(1);
+      expect(
+        screen.getAllByText(msg('MSG07')).filter((el) => !el.closest('[role="dialog"]')),
+      ).toHaveLength(0);
+    } finally {
+      const expired = screen
+        .queryAllByRole('dialog')
+        .find((el) => el.textContent?.includes(msg('MSG07')));
+      if (expired) await user.click(within(expired).getByRole('button', { name: 'OK' }));
+      cleanup();
+      await queryClient.cancelQueries();
+      queryClient.clear();
+    }
+  });
+
   it.each([
     { account: 5, names: ['IT Support', 'IT Network'], recipient: /Bùi Anh Tuấn/ },
     { account: 3, names: ['IT Knowledge'], recipient: /Võ Thanh Tâm/ },

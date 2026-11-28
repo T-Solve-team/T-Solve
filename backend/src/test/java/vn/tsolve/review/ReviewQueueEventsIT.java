@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.ServletContext;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -17,11 +19,14 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.Mergeable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrint;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -31,11 +36,15 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.mock.web.MockAsyncContext;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.RequestBuilder;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.SmartRequestBuilder;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.support.TransactionTemplate;
 import vn.tsolve.common.security.Role;
 import vn.tsolve.common.security.WithTSolveUser;
@@ -58,7 +67,8 @@ import vn.tsolve.ticket.dto.TicketReviewView.ProjectAccess;
             "server.port=0",
             "tsolve.review.events.heartbeat=PT1S"
         })
-@AutoConfigureMockMvc
+// Boot formats deferred diagnostics inside perform(), racing the SSE sender's first header write (BUG-197/289).
+@AutoConfigureMockMvc(print = MockMvcPrint.NONE)
 @Import({TwoTenantDatabases.class, ReviewQueueEventsIT.WorkspaceAccessConfiguration.class})
 @WithTSolveUser(id = ReviewQueueEventsIT.MANAGER_ID, roles = Role.PROJECT_MANAGER)
 class ReviewQueueEventsIT {
@@ -164,6 +174,10 @@ class ReviewQueueEventsIT {
             awaitUntil(() -> body().contains(":hb"));
         }
 
+        void awaitOpen() throws InterruptedException {
+            ((OpeningResponse) result.getResponse()).awaitOpen();
+        }
+
         void awaitCompleted() throws Exception {
             // MockMvc dispatches the async result on completion; it does not automatically clear asyncStarted.
             var dispatched = new CountDownLatch(1);
@@ -178,6 +192,64 @@ class ReviewQueueEventsIT {
 
         List<String> projectIds() throws Exception {
             return events().stream().map(e -> e.path("projectId").asText()).toList();
+        }
+    }
+
+    static RequestBuilder openingRequest(MockHttpServletRequestBuilder delegate, OpeningResponse response) {
+        return new OpeningRequest(delegate, response);
+    }
+
+    /** MockMvc selects the response before postProcessRequest runs, so install it during buildRequest. */
+    private static final class OpeningRequest implements RequestBuilder, Mergeable, SmartRequestBuilder {
+        private final MockHttpServletRequestBuilder delegate;
+        private final OpeningResponse response;
+
+        private OpeningRequest(MockHttpServletRequestBuilder delegate, OpeningResponse response) {
+            this.delegate = delegate;
+            this.response = response;
+        }
+
+        @Override
+        public boolean isMergeEnabled() {
+            return true;
+        }
+
+        @Override
+        public Object merge(Object parent) {
+            delegate.merge(parent);
+            return this;
+        }
+
+        @Override
+        public MockHttpServletRequest buildRequest(ServletContext servletContext) {
+            var request = delegate.buildRequest(servletContext);
+            request.setAsyncSupported(true);
+            request.setAsyncContext(new MockAsyncContext(request, response));
+            return request;
+        }
+
+        @Override
+        public MockHttpServletRequest postProcessRequest(MockHttpServletRequest request) {
+            return delegate.postProcessRequest(request);
+        }
+    }
+
+    /** The initial SSE flush signals readiness without waiting for the heartbeat scheduler (BUG-186). */
+    static class OpeningResponse extends MockHttpServletResponse {
+        private final CountDownLatch opened = new CountDownLatch(1);
+
+        @Override
+        public void flushBuffer() {
+            super.flushBuffer();
+            if (new String(getContentAsByteArray(), StandardCharsets.UTF_8).contains(":open\n\n")) {
+                opened.countDown();
+            }
+        }
+
+        void awaitOpen() throws InterruptedException {
+            assertThat(opened.await(WAIT_MS, TimeUnit.MILLISECONDS))
+                    .as("initial SSE :open flush")
+                    .isTrue();
         }
     }
 
@@ -210,12 +282,19 @@ class ReviewQueueEventsIT {
     /** Opens the stream as the default manager in ACME and waits until the listener is surely attached. */
     private Stream openReady() throws Exception {
         Stream stream = open();
-        stream.awaitHeartbeat();
+        stream.awaitOpen();
         return stream;
     }
 
     private Stream open() throws Exception {
-        ResultActions actions = inAcme(get("/api/v1/review-queue/events").accept(MediaType.TEXT_EVENT_STREAM));
+        return open(TwoTenantDatabases.ACME);
+    }
+
+    private Stream open(UUID workspaceId) throws Exception {
+        var response = new OpeningResponse();
+        ResultActions actions = inWorkspace(
+                workspaceId,
+                openingRequest(get("/api/v1/review-queue/events").accept(MediaType.TEXT_EVENT_STREAM), response));
         actions.andExpect(request().asyncStarted());
         return new Stream(actions.andReturn());
     }
@@ -361,16 +440,8 @@ class ReviewQueueEventsIT {
         REVOCABLE_PROJECTS.put(REVOCABLE_BETA, Set.of(OPS));
         JdbcTemplate beta = TwoTenantDatabases.tenantB();
         assertThat(listenSessions(beta)).isZero();
-        ResultActions actions = workspace.runIn(TwoTenantDatabases.BETA, () -> {
-            try {
-                return mvc.perform(get("/api/v1/review-queue/events").accept(MediaType.TEXT_EVENT_STREAM));
-            } catch (Exception e) {
-                throw new AssertionError(e);
-            }
-        });
-        actions.andExpect(request().asyncStarted());
-        Stream stream = new Stream(actions.andReturn());
-        stream.awaitHeartbeat();
+        Stream stream = open(TwoTenantDatabases.BETA);
+        stream.awaitOpen();
         assertThat(listenSessions(beta)).isEqualTo(1);
 
         REVOCABLE_PROJECTS.remove(REVOCABLE_BETA); // the stream ends at its next heartbeat: last subscriber leaves
@@ -466,7 +537,11 @@ class ReviewQueueEventsIT {
     }
 
     private ResultActions inAcme(RequestBuilder request) {
-        return workspace.runIn(TwoTenantDatabases.ACME, () -> {
+        return inWorkspace(TwoTenantDatabases.ACME, request);
+    }
+
+    private ResultActions inWorkspace(UUID workspaceId, RequestBuilder request) {
+        return workspace.runIn(workspaceId, () -> {
             try {
                 return mvc.perform(request);
             } catch (Exception e) {

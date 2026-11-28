@@ -1,7 +1,7 @@
 /** 11.5 Folder (popup) — SRS III.11.5, UC-41 and UC-42. */
 import { Alert, Form, Input, TreeSelect, type TreeSelectProps } from 'antd';
 import { useRef } from 'react';
-import type { UpdateWikiFolderRequest, WikiFolder } from '@/shared/api';
+import { isUnauthorizedError, type UpdateWikiFolderRequest, type WikiFolder } from '@/shared/api';
 import { applyApiErrors, rules } from '@/shared/forms';
 import { msg, showMessage } from '@/shared/messages';
 import { FormField, FormModal } from '@/shared/ui';
@@ -48,6 +48,7 @@ export function FolderModal({ spaceId, folders, folderId, onClose }: FolderModal
     const callbacks = {
       onSuccess: onClose,
       onError: (failure: NonNullable<typeof error>) => {
+        if (isUnauthorizedError(failure)) return;
         if (failure.code !== 'MSG86' && !applyApiErrors(form, failure)) {
           if (failure.code === 'MSG85') form.setFields([{ name: 'name', errors: [msg('MSG85')] }]);
           else showMessage(failure.code, failure.params);

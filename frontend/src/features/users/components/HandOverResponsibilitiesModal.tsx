@@ -1,6 +1,6 @@
 /** 1.3.3 Hand Over Responsibilities — D3 replaces the generic confirmation. */
 import { Alert, Flex, Form, Select } from 'antd';
-import type { ApiError, UpdateUserStatusRequest } from '@/shared/api';
+import { isUnauthorizedError, type ApiError, type UpdateUserStatusRequest } from '@/shared/api';
 import { rules } from '@/shared/forms';
 import { msg, showMessage } from '@/shared/messages';
 import { ErrorState, FormField, FormModal, LoadingState } from '@/shared/ui';
@@ -75,6 +75,7 @@ export function HandOverResponsibilitiesModal({
         })),
       },
       (error) => {
+        if (isUnauthorizedError(error)) return;
         const recipientErrors = error.fieldErrors.flatMap((item) => {
           const field = fields.find(
             (field) => field.name.join('.') === item.field.replace(/\[(\d+)\]/g, '.$1'),
