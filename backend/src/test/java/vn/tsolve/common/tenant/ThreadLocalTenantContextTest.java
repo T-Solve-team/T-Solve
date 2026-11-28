@@ -1,16 +1,28 @@
 package vn.tsolve.common.tenant;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.sql.Connection;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,6 +31,7 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.tsolve.common.exception.GlobalExceptionHandler;
@@ -209,6 +222,76 @@ class ThreadLocalTenantContextTest {
         });
 
         assertThat(seenByThread.get()).isNotNull().isEmpty();
+    }
+
+    @Test
+    @DisplayName("AC-002.11 edge 2 bindRequest binds for the request, refuses a second bind and unbinds on close")
+    void bindRequestBindsRefusesASecondBindAndUnbindsOnClose_AC_002_11() throws Exception {
+        AtomicInteger knownChecks = new AtomicInteger();
+        ThreadLocalTenantContext counted = new ThreadLocalTenantContext(id -> {
+            knownChecks.incrementAndGet();
+            return known.contains(id);
+        });
+        AtomicInteger ran = new AtomicInteger();
+
+        try (AutoCloseable request = counted.bindRequest(A)) {
+            assertThat(counted.currentWorkspaceId()).contains(A);
+            assertThat(knownChecks)
+                    .as("bindRequest does not ask KnownWorkspaces")
+                    .hasValue(0);
+
+            assertThatThrownBy(() -> counted.bindRequest(A)).isInstanceOf(RuntimeException.class);
+            assertThatThrownBy(() -> counted.bindRequest(B)).isInstanceOf(RuntimeException.class);
+            assertThat(counted.currentWorkspaceId()).contains(A);
+
+            counted.runIn(A, (Runnable) ran::incrementAndGet);
+            assertThat(ran).hasValue(1);
+            assertThat(knownChecks)
+                    .as("runIn with the bound id does not ask KnownWorkspaces")
+                    .hasValue(0);
+            assertThat(counted.currentWorkspaceId())
+                    .as("the request binding survives a nested runIn")
+                    .contains(A);
+
+            assertThatThrownBy(() -> counted.runIn(B, (Runnable) ran::incrementAndGet))
+                    .isInstanceOf(RuntimeException.class);
+            assertThat(ran).hasValue(1);
+            assertThat(counted.currentWorkspaceId()).contains(A);
+        }
+        assertThat(counted.currentWorkspaceId()).isEmpty();
+
+        counted.runIn(A, () -> assertThatThrownBy(() -> counted.bindRequest(A)).isInstanceOf(RuntimeException.class));
+        assertThat(counted.currentWorkspaceId()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("AC-002.1 runIn opens no transaction and the routing DataSource reads the same binding")
+    void runInOpensNoTransactionAndRoutingReadsTheBinding_AC_002_1() throws Exception {
+        TenantDataSources pools = mock(TenantDataSources.class);
+        DataSource pool = mock(DataSource.class);
+        Connection connection = mock(Connection.class, RETURNS_DEEP_STUBS);
+        when(pool.getConnection()).thenReturn(connection);
+        when(pools.poolOf(any())).thenReturn(pool);
+        TenantRoutingDataSource router = new TenantRoutingDataSource(pools);
+
+        holder.runIn(A, () -> {
+            assertThat(TransactionSynchronizationManager.isActualTransactionActive())
+                    .isFalse();
+            assertThatCode(() -> router.getConnection().close()).doesNotThrowAnyException();
+        });
+        verify(pools, atLeastOnce()).poolOf(A);
+        verify(pools, never()).poolOf(B);
+
+        clearInvocations(pools);
+        try (AutoCloseable request = holder.bindRequest(B)) {
+            router.getConnection().close();
+        }
+        verify(pools, atLeastOnce()).poolOf(B);
+        verify(pools, never()).poolOf(A);
+
+        clearInvocations(pools);
+        assertThatThrownBy(router::getConnection).isInstanceOf(NoTenantException.class);
+        verifyNoInteractions(pools);
     }
 
     @Test

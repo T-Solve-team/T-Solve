@@ -625,6 +625,11 @@ class ObjectFileStorageIT extends GarageTestBase {
         }
 
         @Override
+        public java.util.List<WorkspaceSummary> findActive() {
+            return java.util.List.copyOf(workspaces.values());
+        }
+
+        @Override
         public WorkspaceSummary linkJiraSite(String siteUrl) {
             throw new UnsupportedOperationException();
         }

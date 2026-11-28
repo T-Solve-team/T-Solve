@@ -16,7 +16,7 @@ import vn.tsolve.review.dto.ReviewExpiryDispatchRequest;
 import vn.tsolve.review.dto.ReviewExpiryJobRequest;
 import vn.tsolve.worker.config.JobRunrRuntime;
 import vn.tsolve.worker.service.WorkerTenantService;
-import vn.tsolve.worker.service.mock.MockWorkerTenantService;
+import vn.tsolve.worker.support.FixedWorkerTenantService;
 
 class ReviewExpiryDispatchHandlerTest {
     private final JobRunrRuntime runtime = mock(JobRunrRuntime.class);
@@ -26,7 +26,7 @@ class ReviewExpiryDispatchHandlerTest {
     void enqueuesOnlyActiveWorkspacesWithAttemptOne_AC_014_2() {
         UUID first = UUID.randomUUID();
         UUID second = UUID.randomUUID();
-        var tenants = new MockWorkerTenantService(
+        var tenants = new FixedWorkerTenantService(
                 Set.of(first, second), Set.of(UUID.randomUUID()), new ThreadLocalTenantContext(id -> true));
         when(runtime.scheduler()).thenReturn(scheduler);
         new ReviewExpiryDispatchHandler(tenants, runtime).run(new ReviewExpiryDispatchRequest());
@@ -38,7 +38,7 @@ class ReviewExpiryDispatchHandlerTest {
     @Test
     void emptyActiveListEnqueuesNothing_AC_014_2() {
         new ReviewExpiryDispatchHandler(
-                        new MockWorkerTenantService(Set.of(), Set.of(), new ThreadLocalTenantContext(id -> true)),
+                        new FixedWorkerTenantService(Set.of(), Set.of(), new ThreadLocalTenantContext(id -> true)),
                         runtime)
                 .run(new ReviewExpiryDispatchRequest());
         verifyNoInteractions(runtime);

@@ -22,6 +22,7 @@ spring:
       repositories:
         enabled: false      # nothing uses Redis repositories, so the multi-store scan is turned off
   jpa:
+    database: postgresql    # named, so JPA does not connect at startup to find out (no Workspace is bound then)
     open-in-view: false
     hibernate:
       ddl-auto: validate      # schema is owned by Liquibase
@@ -79,6 +80,12 @@ tsolve:
     username: ${REGISTRY_DB_USER:}
     password: ${REGISTRY_DB_PASSWORD:}
     secret-key: ${CATALOG_SECRET_KEY}
+  # The PostgreSQL server of the Workspace databases. Read where tenant routing is on (Registry configured, profile not
+  # dev; see TenantDataSourceConfig), where TENANT_DB_HOST is required. pool-max is per Workspace and per process.
+  tenant-db:
+    host: ${TENANT_DB_HOST:}
+    port: ${TENANT_DB_PORT:5432}
+    pool-max: ${TENANT_DB_POOL_MAX:5}
   # File storage (STORY-007) on Garage through the S3 API. Empty endpoint = no storage beans (see StorageConfig).
   storage:
     endpoint: ${FILE_STORAGE_ENDPOINT:}
@@ -130,12 +137,6 @@ tsolve:
     inactive-projects: ${TSOLVE_STUB_INACTIVE_PROJECTS:}
     # Jira import: "projectId:JIRAKEY,projectId:JIRAKEY". A Project without a key cannot pull from Jira (MSG50).
     jira-keys: ${TSOLVE_STUB_JIRA_KEYS:}
-    # Workspaces until the platform module's Tenant Resolver (outside the dev profile). Entries separated by ";":
-    # siteHost|slug|workspaceUuid|googleDomain|keycloakOrganizationId. Empty = no Workspace.
-    workspaces: ${TSOLVE_STUB_WORKSPACES:}
-    # Staging only (BUG-205 / KAN-329): true makes /me report the Workspace as set up until the Workspace module's
-    # lookup exists. Default false.
-    workspace-ready: ${TSOLVE_STUB_WORKSPACE_READY:false}
   triage:
     # Cosine similarity (0 to 1) a Solution or Wiki document needs to be a source of the AI Solution Suggestion.
     min-similarity: ${SUGGESTION_MIN_SIMILARITY:0.7}

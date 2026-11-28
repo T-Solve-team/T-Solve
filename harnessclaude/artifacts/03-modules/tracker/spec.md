@@ -36,6 +36,7 @@ the request belongs to; **discovery** = finding that database from the request (
 | 2026-11-16 | STORY-012, STORY-013 | KAN-344: new AC-012.9 — every `JiraClient` call sends the service account's scoped token as `Authorization: Bearer` to `https://api.atlassian.com/ex/jira/{cloudId}` instead of Basic auth on the site; `JiraAccount` becomes `(siteUrl, cloudId, apiToken)`. AC-013.10, AC-013.12, functional requirement 9, the service account term and Required from other modules follow | RESEARCH-003: a real service account's scoped token gets 401 on the site URL; user decisions of 16/11 (option B, no email, workspace and tracker in one PR) |
 | 2026-11-17 | STORY-012, STORY-013 | KAN-349: Jira calls use the T-Solve Jira App's app token held by `workspace` (STORY-014 there) instead of a customer service-account token; Non-Functional 3 and 9 and the service account term reworded; the 01/11 decision "the system token is not stored" is replaced. AC-012.9 and AC-013.10 are unchanged (same gateway and Bearer call, another token) | RESEARCH-005 and its probe; user decision 17/11 (option D) |
 | 2026-11-18 | STORY-011 | KAN-370 (BUG-342): AC-011.9 runs in-process only while web jobs are also off; new AC-011.10 (a web process with web jobs enabled queues the suggestion job on the Jobs database for the worker process, in the request's Workspace or the single Active Workspace of the configured list) and AC-011.11 (no single Workspace or a queue failure: no job, a warning, still 202). Out of Scope follows | On staging the in-process job runs with no Workspace bound and the MSG80 comment is never posted (DP-121, 17/11); the Jira App webhook binds no Workspace either. User chose to queue for the worker like the review email (KAN-366, 368, 369), which also gives the retries of AC-011.6 (user, 2026-11-18) |
+| 2026-11-27 | STORY-003, 011 | KAN-467 (BUG-403): new AC-003.9 (an "issue created" event from a site with no Workspace, or in a process with no Workspace catalog, answers 202, stores nothing and queues no job); Non-Functional 8 and Out of Scope: the tracker binds the Workspace of the FIT's `cloudId` for that webhook (the configured dev Workspace stand-in is dropped); note on AC-011.10 | The webhook bound no Workspace, so it did not reach the site's tenant database; decision 1A (Hiếu): the tracker binds it, as "issue updated" does |
 
 ## Requirements
 
@@ -62,8 +63,11 @@ the request belongs to; **discovery** = finding that database from the request (
 6. Errors are RFC 9457 `ProblemDetail` responses carrying an SRS message code: 401/403 → MSG08,
    unexpected or unavailable → MSG06, unless a criterion names another code.
 7. UI calls (panel, Solution Form) answer within 20 seconds, below Forge's 25-second limit.
-8. The tracker runs inside one tenant database: it reads and writes tenant tables without a Workspace ID and
-   never chooses or switches the database itself (discovery does).
+8. The tracker runs inside one tenant database: it reads and writes tenant tables without a Workspace ID. The
+   "issue created" webhook binds the Workspace of the caller's Jira site — the FIT's `cloudId`; nothing in the request
+   body chooses it — through the platform's Workspace catalog and tenant context, as the `jira-app` "issue updated"
+   webhook does (AC-003.9). Platform owns how a bound Workspace is routed to its database; discovery stays where it is
+   (Out of Scope).
 9. The MSG80 comment is posted as the T-Solve Jira App, with the app token read from the `workspace` module for each
    call; the tracker never stores, logs or returns the token. Every call goes to the Atlassian API gateway with the
    token as Bearer (AC-012.9).
@@ -88,6 +92,7 @@ the request belongs to; **discovery** = finding that database from the request (
   - AC-003.4: IF a suggestion result for the event's issue key already exists (Forge delivered the event again), THEN THE tracker SHALL respond 202 without storing a second one or changing the existing one.
   - AC-003.6: IF the event body is not a valid "issue created" event (no issue key, an issue key longer than 50 characters, or no `issue.fields.project.key`), THEN THE tracker SHALL respond 400 with the team's validation message code (missing field MSG01, too long MSG02, unreadable body MSG06) and store nothing.
   - AC-003.8: IF the event's project key is not the Jira project key of an ACTIVE T-Solve Project, THEN THE tracker SHALL respond 202 and store nothing.
+  - AC-003.9: IF an "issue created" event arrives and the FIT's cloudId belongs to no Workspace in the platform's catalog, or the process has no Workspace catalog, THEN THE tracker SHALL respond 202, store nothing and queue no suggestion job.
 
 ### STORY-007: Serve the Issue Panel
 - As Staff, I want the panel to show suggestions and the Solution state for the ticket I am viewing.
@@ -129,6 +134,9 @@ the request belongs to; **discovery** = finding that database from the request (
   - AC-011.8: WHERE the new issue has the label `tsolve-chatbot` (created by the Chatbot), THE tracker SHALL record it and enqueue its suggestion job like any other issue (GBR-40).
   - AC-011.9: WHERE neither the `worker` job runner nor web jobs are enabled, THE tracker SHALL run the suggestion job in its own process instead, without retries, and still respond 202 without waiting for it.
   - AC-011.10: WHERE web jobs are enabled and the `worker` job runner is not, THE tracker SHALL queue the suggestion job on the Jobs database for the worker process to run, in the request's Workspace or else the single Active Workspace of the configured list, run no job itself, and still respond 202 without waiting for it.
+    Note: an "issue created" event reaches the queue only with its site's Workspace bound (AC-003.9, as the "issue
+    updated" webhook binds its own), so for it the configured-list alternative here and the "no single Workspace" case
+    of AC-011.11 do not arise.
   - AC-011.11: IF web jobs are enabled and there is no single Workspace or the job cannot be queued, THEN THE tracker SHALL queue no job, log a warning with only the issue key and the error type, and still respond 202.
 
 ### STORY-012: Post the suggestion on the issue (KAN-131)
@@ -177,9 +185,8 @@ the request belongs to; **discovery** = finding that database from the request (
   — `worker` KAN-102 (merged) / KAN-161; tracker enqueues through the worker's `TenantJobService` when the worker is
   enabled, queues it for the worker process from a web process with web jobs enabled (AC-011.10), else runs the job
   in-process (AC-011.9).
-- Binding the request's Workspace: platform / discovery. Until then the tracker binds a configured dev Workspace when
-  it enqueues (design, dev and mock only), and a web process with web jobs enabled uses the single Active Workspace of
-  the configured list (AC-011.10; the same stand-in as the review email outbox, BUG-341).
+- Routing a bound Workspace to its tenant database — platform; and binding the Workspace of any request other than
+  the "issue created" webhook, which the tracker binds itself (Non-Functional 8, AC-003.9) — platform / discovery.
 - Skipping issues of a deleted Department (KAN-22): the `project` module does not map the Department yet; added
   when it does.
 - AI draft Solution when an issue is Done and the "issue updated" event (was STORY-006, AC-003.2, AC-003.3).

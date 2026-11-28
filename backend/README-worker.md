@@ -5,22 +5,21 @@ JobRunr OSS stores requests in a **separate PostgreSQL Jobs database**. The work
 ## Run locally
 
 1. Prepare a separate Jobs database and a user allowed to create tables there. Set `JOBS_DB_URL` (a PostgreSQL JDBC URL), `JOBS_DB_USER` and `JOBS_DB_PASSWORD` in the existing git-ignored `.env` alongside the backend's other required settings. Do not point these at a tenant or catalog database. JobRunr manages its job tables; a separate Liquibase changelog manages `email_outbox` in the same Jobs database. The tenant changelog stays separate.
-2. Until platform supplies its adapter, put workspace UUIDs in `TSOLVE_MOCK_ACTIVE_WORKSPACES` and optionally `TSOLVE_MOCK_SUSPENDED_WORKSPACES` (comma-separated). An empty allow-list permits no workspace. Overlapping or malformed entries fail startup.
-3. From `backend/`, start the existing application with `mvn spring-boot:run "-Dspring-boot.run.profiles=worker,worker-mock"`. The worker profile enables JobRunr processing. The dashboard is never started. Dedicated non-web container deployment is KAN-161; the existing web configuration is retained here.
+2. Point the worker at the Registry (`REGISTRY_DB_URL`, `REGISTRY_DB_USER`, `REGISTRY_DB_PASSWORD`, `CATALOG_SECRET_KEY`, `TSOLVE_SITE_ORIGIN_TEMPLATE`): the Workspaces and their status come from the Registry catalog, never from environment variables.
+3. From `backend/`, start the existing application with `mvn spring-boot:run "-Dspring-boot.run.profiles=worker"`. The worker profile enables JobRunr processing. The dashboard is never started. Dedicated non-web container deployment is KAN-161; the existing web configuration is retained here.
 
-Without the worker profile, processing is disabled. `TSOLVE_WORKER_ENABLED=true` enables the enqueue/storage integration for a web process; it does not enable processing. That process also needs either a real platform adapter or the explicitly selected `worker-mock` profile. Missing Jobs DB configuration is a startup error when integration is enabled; there is no fallback to Spring's business DataSource. The private Jobs pool is not registered as a DataSource bean, so it cannot replace the business pool.
+Without the worker profile, processing is disabled. `TSOLVE_WORKER_ENABLED=true` enables the enqueue/storage integration for a web process; it does not enable processing. Missing Jobs DB configuration is a startup error when integration is enabled; there is no fallback to Spring's business DataSource. The private Jobs pool is not registered as a DataSource bean, so it cannot replace the business pool.
 
-## Mock boundary and platform replacement
+The worker no longer creates the tenant schema; the web process migrates the tenant databases at startup (`TenantStartupMigrator`).
 
-`worker-mock` registers `MockWorkerTenantService`, a temporary non-inheritable ThreadLocal context and configured workspace status allow-list. **It does not route business queries to tenant databases or prove database isolation.** Do not use this mock as production tenancy. With integration enabled and no adapter, startup fails.
+## The worker's tenant service
 
-Platform will provide a `WorkerTenantService` bean backed by its real TenantContext and catalog. Its methods must:
+`CatalogWorkerTenantService` is the one `WorkerTenantService`, registered only when `tsolve.worker.enabled=true` (the worker container; never the web process). It reads the Workspaces from the Registry catalog and binds through the `TenantContext` holder. Without a `WorkspaceCatalog` bean the worker fails at startup. Its methods:
 
-- Return the current workspace via `currentWorkspaceId()`.
-- Return true only for an existing Active workspace via `isWorkspaceActive(UUID)`; lookup failures must throw.
-- Bind within `runIn(UUID, Runnable)`, reject a different already-bound workspace, and restore the previous binding in `finally`.
-
-Disable `worker-mock` when installing that adapter. No fake class is added to `common.tenant`.
+- `currentWorkspaceId()` is the holder's binding.
+- `isWorkspaceActive(UUID)` is true only for an existing Active workspace; a Registry failure throws, never "not active".
+- `activeWorkspaceIds()` lists the Active workspaces; a Registry failure throws, never an empty set.
+- `runIn(UUID, Runnable)` binds through the holder, which rejects an unknown workspace or a different already-bound one and restores the previous binding in `finally`.
 
 ## Enqueue and handle
 
@@ -43,9 +42,7 @@ Official integration references: [JobRequest and handlers](https://www.jobrunr.i
 The queue is available in both API and worker processes when `tsolve.worker.enabled=true`. A web process
 that only queues mail (staging's `backend` service) sets `tsolve.worker.outbox-enabled=true` instead
 (`OutboxOnlyConfiguration`, BUG-339): the outbox with its own Jobs pool and migration, taking the Workspace from the
-request's `TenantContext` when one exists, else the single Active Workspace of `tsolve.worker.mock.active-workspaces`
-(falling back to `TSOLVE_MOCK_ACTIVE_WORKSPACES`, since only the `worker-mock` profile maps it; BUG-341)
-(the staging web process has no `TenantContext` bean; several Workspaces are never guessed between). It starts no JobRunr, registers no handler, needs no `worker-mock`, and is ignored when
+request's `TenantContext` holder. It starts no JobRunr, registers no handler, needs no `worker` profile, and is ignored when
 `tsolve.worker.enabled=true`; the worker process still sends the mail.
 Inject `ObjectProvider<EmailOutboxService>` into a consuming module's after-commit listener.
 While its Workspace is still bound, build an `OutboundEmail` and call `queue`:

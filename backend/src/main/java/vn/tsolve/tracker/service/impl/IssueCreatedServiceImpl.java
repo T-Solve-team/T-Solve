@@ -6,8 +6,13 @@ import java.util.UUID;
 import org.hibernate.exception.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import vn.tsolve.common.security.JiraAppPrincipal;
+import vn.tsolve.common.tenant.TenantContext;
+import vn.tsolve.platform.dto.WorkspaceSummary;
+import vn.tsolve.platform.service.WorkspaceCatalog;
 import vn.tsolve.project.service.ProjectService;
 import vn.tsolve.tracker.client.AdfTextExtractor;
 import vn.tsolve.tracker.dto.IssueCreatedPayload;
@@ -24,14 +29,20 @@ public class IssueCreatedServiceImpl implements IssueCreatedService {
 
     private static final Logger log = LoggerFactory.getLogger(IssueCreatedServiceImpl.class);
 
+    private final ObjectProvider<WorkspaceCatalog> catalog;
+    private final TenantContext tenants;
     private final ProjectService projectService;
     private final SuggestionResultRepository suggestionResultRepository;
     private final SuggestionJobQueue suggestionJobQueue;
 
     public IssueCreatedServiceImpl(
+            ObjectProvider<WorkspaceCatalog> catalog,
+            TenantContext tenants,
             ProjectService projectService,
             SuggestionResultRepository suggestionResultRepository,
             SuggestionJobQueue suggestionJobQueue) {
+        this.catalog = catalog;
+        this.tenants = tenants;
         this.projectService = projectService;
         this.suggestionResultRepository = suggestionResultRepository;
         this.suggestionJobQueue = suggestionJobQueue;
@@ -41,7 +52,26 @@ public class IssueCreatedServiceImpl implements IssueCreatedService {
     // that insert and can still be answered 202 (edge cases 11, 12), and the row is committed before the job is
     // queued (AC-011.1).
     @Override
-    public void receive(IssueCreatedPayload payload) {
+    public void receive(JiraAppPrincipal caller, IssueCreatedPayload payload) {
+        Optional<UUID> workspace = workspaceOf(caller);
+        if (workspace.isEmpty()) {
+            log.info("Issue created from a site with no Workspace: {}", payload.issueKey());
+            return;
+        }
+        tenants.runIn(workspace.get(), () -> record(payload));
+    }
+
+    // Only the verified FIT's cloudId chooses the Workspace, never the body. Looked up in the platform catalog:
+    // jiraapp's JiraWorkspaceLookup would make a tracker <-> jiraapp cycle.
+    private Optional<UUID> workspaceOf(JiraAppPrincipal caller) {
+        WorkspaceCatalog activeCatalog = catalog.getIfAvailable();
+        if (activeCatalog == null || caller == null || caller.cloudId() == null) {
+            return Optional.empty();
+        }
+        return activeCatalog.findByCloudId(caller.cloudId()).map(WorkspaceSummary::id);
+    }
+
+    private void record(IssueCreatedPayload payload) {
         Optional<UUID> projectId = projectService.findActivePublicIdByJiraProjectKey(payload.projectKey());
         if (projectId.isEmpty()) {
             log.info("Issue created outside T-Solve Projects: {} {}", payload.issueKey(), payload.projectKey());
