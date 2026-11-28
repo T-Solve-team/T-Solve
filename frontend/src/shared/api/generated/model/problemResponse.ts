@@ -9,6 +9,6 @@
 import type { ProblemDetail } from './problemDetail';
 
 /**
- * Error (RFC 9457 Problem Details with an SRS MSG code).
+ * Error (RFC 9457 Problem Details with an SRS MSG code). Any API path can also answer 403 MSG150 (the Workspace of the host is suspended) or 404 MSG151 (the host names no Workspace).
  */
 export type ProblemResponse = ProblemDetail;

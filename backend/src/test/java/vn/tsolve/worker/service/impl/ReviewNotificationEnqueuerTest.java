@@ -37,7 +37,7 @@ import vn.tsolve.worker.client.ReviewEmailRenderer;
 import vn.tsolve.worker.dto.OutboundEmail;
 import vn.tsolve.worker.service.EmailOutboxService;
 import vn.tsolve.worker.service.WorkerTenantService;
-import vn.tsolve.worker.service.mock.MockWorkerTenantService;
+import vn.tsolve.worker.support.FixedWorkerTenantService;
 
 @ExtendWith(OutputCaptureExtension.class)
 class ReviewNotificationEnqueuerTest {
@@ -188,7 +188,7 @@ class ReviewNotificationEnqueuerTest {
 
     private void decideInRequestBoundTo(UUID bound, Set<UUID> known, Set<UUID> active, Set<UUID> suspended) {
         var holder = new ThreadLocalTenantContext(known::contains);
-        var realTenants = new MockWorkerTenantService(active, suspended, holder);
+        var realTenants = new FixedWorkerTenantService(active, suspended, holder);
         @SuppressWarnings("unchecked")
         ObjectProvider<WorkerTenantService> provider = mock(ObjectProvider.class);
         when(provider.getIfAvailable()).thenReturn(realTenants);
