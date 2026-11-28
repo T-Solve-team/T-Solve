@@ -19,6 +19,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import vn.tsolve.tracker.dto.JiraAccount;
+import vn.tsolve.tracker.dto.TrackerComment;
 import vn.tsolve.tracker.dto.TrackerCreateField;
 import vn.tsolve.tracker.dto.TrackerRole;
 import vn.tsolve.tracker.dto.TrackerRoleActors;
@@ -106,6 +107,23 @@ public class JiraClient implements TicketTrackerClient {
             }
         }
         return Optional.empty();
+    }
+
+    @Override
+    public List<TrackerComment> comments(JiraAccount account, String issueKey) {
+        RestClient http = http(account);
+        JsonNode me = call(() -> http.get().uri("/rest/api/3/myself").retrieve().body(JsonNode.class));
+        String accountId = requiredText(me, "accountId");
+        JsonNode page = call(() -> http.get().uri(COMMENTS, issueKey).retrieve().body(JsonNode.class));
+        List<TrackerComment> comments = new ArrayList<>();
+        for (JsonNode comment : items(page, "comments")) {
+            String author = comment.path("author").path("accountId").asText("");
+            if (!accountId.equals(author)) {
+                comments.add(new TrackerComment(author, AdfTextExtractor.toText(comment.path("body"))));
+            }
+        }
+        // COMMENTS lists the newest first
+        return comments.reversed();
     }
 
     @Override

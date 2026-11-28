@@ -28,8 +28,7 @@ import vn.tsolve.ai.exception.AiUnavailableException;
 @ExtendWith(OutputCaptureExtension.class)
 class SolutionAiServiceImplTest {
 
-    private static final String VALID_ANSWER =
-            """
+    private static final String VALID_ANSWER = """
             {"symptoms":"  Failure  ","rootCause":"  Cause  ","resolutionSteps":"  Restart  ",
              "workaround":"  Wait  ","scopeOfApplicability":"  Server  "}
             """;
@@ -57,26 +56,39 @@ class SolutionAiServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-004.2 falls back when a required section is blank")
-    void blankRequiredSectionFallsBack() {
+    @DisplayName("AC-004.1 keeps the AI draft when the LLM leaves sections empty (KAN-474)")
+    void emptySectionsKeepTheAiDraft() {
         for (String field : List.of("symptoms", "rootCause", "resolutionSteps", "scopeOfApplicability")) {
             String answer = VALID_ANSWER.replaceFirst("\"" + field + "\":\"[^\"]*\"", "\"" + field + "\":\"   \"");
             SolutionDraft draft = service(new StubLlmClient(answer))
                     .draft(new IssueContent("Summary", " Description ", List.of("First", " Last ")));
 
-            assertThat(draft.isAiDraft()).as(field).isFalse();
-            assertThat(draft.sections()).as(field).isEqualTo(new SolutionSections("Description", "", "Last", "", ""));
+            assertThat(draft.isAiDraft()).as(field).isTrue();
         }
+        String allEmpty =
+                "{\"symptoms\":\"\",\"rootCause\":\"\",\"resolutionSteps\":\"\",\"workaround\":\"\",\"scopeOfApplicability\":\"\"}";
+        SolutionDraft draft =
+                service(new StubLlmClient(allEmpty)).draft(new IssueContent("Summary", "Description", List.of("Last")));
+        assertThat(draft.isAiDraft()).isTrue();
+        assertThat(draft.sections()).isEqualTo(new SolutionSections("", "", "", "", ""));
+    }
+
+    @Test
+    @DisplayName("AC-004.1 tells the LLM to leave a section empty when the issue does not say it (KAN-474)")
+    void asksToLeaveUnknownSectionsEmpty() {
+        StubLlmClient client = new StubLlmClient(VALID_ANSWER);
+
+        service(client).draft(new IssueContent("Outage", "Service stopped", List.of("Restarted")));
+
+        assertThat(client.messages.get(0).content()).contains("Leave a field empty", "Do not invent facts");
     }
 
     @Test
     @DisplayName("AC-004.2 falls back when trimmed sections total 10001 characters")
     void oversizedAnswerFallsBack() {
-        String answer =
-                """
+        String answer = """
                 {"symptoms":"%s","rootCause":"b","resolutionSteps":"c","workaround":"d","scopeOfApplicability":"e"}
-                """
-                        .formatted("a".repeat(9_997));
+                """.formatted("a".repeat(9_997));
 
         SolutionDraft draft =
                 service(new StubLlmClient(answer)).draft(new IssueContent("Summary", "Description", List.of("Last")));
@@ -87,11 +99,9 @@ class SolutionAiServiceImplTest {
     @Test
     @DisplayName("AC-004.2 keeps a draft when trimmed sections total exactly 10000 characters")
     void exactOutputLimitIsAccepted() {
-        String answer =
-                """
+        String answer = """
                 {"symptoms":"%s","rootCause":"b","resolutionSteps":"c","workaround":"d","scopeOfApplicability":"e"}
-                """
-                        .formatted("a".repeat(9_996));
+                """.formatted("a".repeat(9_996));
 
         SolutionDraft draft =
                 service(new StubLlmClient(answer)).draft(new IssueContent("Summary", "Description", List.of()));
@@ -201,18 +211,6 @@ class SolutionAiServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-004.2 logs BLANK_SECTION once for a blank required section")
-    void logsBlankSectionFallbackReason(CapturedOutput output) {
-        String answer = VALID_ANSWER.replace("\"  Failure  \"", "\"   \"");
-
-        SolutionDraft draft =
-                service(new StubLlmClient(answer)).draft(new IssueContent("Summary", "Description", List.of("Last")));
-
-        assertThat(draft.isAiDraft()).isFalse();
-        assertThat(output.getOut()).containsOnlyOnce("op=draft outcome=fallback reason=BLANK_SECTION");
-    }
-
-    @Test
     @DisplayName("AC-004.2 logs OVERSIZE once when the answer exceeds the Solution limit")
     void logsOversizeFallbackReason(CapturedOutput output) {
         String answer = VALID_ANSWER.replace("Failure", "a".repeat(10_001));
@@ -232,13 +230,12 @@ class SolutionAiServiceImplTest {
         for (StubLlmClient client : List.of(
                 new StubLlmClient(null, new IllegalStateException(issue.description() + " PRIVATE-EXCEPTION")),
                 new StubLlmClient("{broken " + issue.description()),
-                new StubLlmClient(privateAnswer.replace("\"  Cause  \"", "\"   \"")),
                 new StubLlmClient(privateAnswer.replace("Wait", "a".repeat(10_001))))) {
             assertThat(service(client).draft(issue).isAiDraft()).isFalse();
         }
 
         assertThat(output.getAll())
-                .contains("reason=LLM_FAILURE", "reason=PARSE_ERROR", "reason=BLANK_SECTION", "reason=OVERSIZE")
+                .contains("reason=LLM_FAILURE", "reason=PARSE_ERROR", "reason=OVERSIZE")
                 .doesNotContain(
                         issue.summary(),
                         issue.description(),
@@ -403,8 +400,7 @@ class SolutionAiServiceImplTest {
     @Test
     @DisplayName("AC-004.1 preserves Vietnamese text with diacritics through JSON parsing")
     void preservesVietnameseText() {
-        String answer =
-                """
+        String answer = """
                 {"symptoms":"Lỗi đăng nhập","rootCause":"Sai cấu hình","resolutionSteps":"Khởi động lại",
                  "workaround":"Tạm chờ","scopeOfApplicability":"Máy chủ Hà Nội"}
                 """;

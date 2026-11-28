@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,6 +46,32 @@ class SolutionDraftServiceImplTest {
         ArgumentCaptor<String> content = ArgumentCaptor.forClass(String.class);
         verify(drafts).insertIfAbsent(eq(CREATOR), eq(PROJECT), eq(ISSUE), content.capture(), eq(NOW));
         assertThat(content.getValue()).contains("\"symptoms\":\"VPN drops\\n\\nAfter sleep\"");
+    }
+
+    @Test
+    void tellsWhetherTheDraftWasCreated_AC_005_11() {
+        SolutionSections issueText = new SolutionSections("VPN drops", "", "", "", "");
+        given(drafts.insertIfAbsent(any(), any(), any(), any(), any())).willReturn(1, 0);
+
+        assertThat(service.recordIssueStatus(new IssueStatusChange(PROJECT, ISSUE, true, CREATOR, issueText)))
+                .isTrue();
+        assertThat(service.recordIssueStatus(new IssueStatusChange(PROJECT, ISSUE, true, CREATOR, issueText)))
+                .isFalse();
+        assertThat(service.recordIssueStatus(new IssueStatusChange(PROJECT, ISSUE, false, null, null)))
+                .isFalse();
+    }
+
+    @Test
+    void replacesTheDraftOnlyWhileUnsaved_AC_005_11_AC_005_12() {
+        SolutionSections ai = new SolutionSections("", "Old client", "Update", "", "");
+        given(drafts.replaceIfUnsaved(eq(CREATOR), eq(PROJECT), eq(ISSUE), any(), eq(NOW)))
+                .willReturn(1, 0);
+
+        assertThat(service.replaceUnsavedDraft(CREATOR, PROJECT, ISSUE, ai)).isTrue();
+        assertThat(service.replaceUnsavedDraft(CREATOR, PROJECT, ISSUE, ai)).isFalse();
+        ArgumentCaptor<String> content = ArgumentCaptor.forClass(String.class);
+        verify(drafts, times(2)).replaceIfUnsaved(eq(CREATOR), eq(PROJECT), eq(ISSUE), content.capture(), eq(NOW));
+        assertThat(content.getValue()).contains("\"rootCause\":\"Old client\"", "\"symptoms\":\"\"");
     }
 
     @Test

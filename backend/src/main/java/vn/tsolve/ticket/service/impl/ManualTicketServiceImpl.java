@@ -348,10 +348,9 @@ public class ManualTicketServiceImpl implements ManualTicketService {
         if (resolved != null && !isPastOrToday(resolved)) {
             errors.add(new FieldError("resolvedDate", "MSG39", Map.of()));
         }
-        text(errors, "symptoms", r.symptoms(), null);
+        // Symptoms, Workaround and Scope may be empty and are stored as null (AC-006.3, KAN-474)
         text(errors, "rootCause", r.rootCause(), null);
         text(errors, "resolutionSteps", r.resolutionSteps(), null);
-        text(errors, "scope", r.scope(), null);
         int solution = Stream.of(r.symptoms(), r.rootCause(), r.resolutionSteps(), r.workaround(), r.scope())
                 .map(CsvRowValidator::trim)
                 .mapToInt(s -> s == null ? 0 : length(s))

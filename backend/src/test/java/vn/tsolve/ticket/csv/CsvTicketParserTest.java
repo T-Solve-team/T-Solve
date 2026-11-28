@@ -123,7 +123,15 @@ class CsvTicketParserTest {
         CsvFileRejectedException e = rejected(() -> parse("ticket_id,title,symptoms\nT-1,a,b\n"));
 
         assertThat(e.getCode()).isEqualTo("MSG29");
-        assertThat(e.getParams()).isEqualTo(Map.of("column_names", "root_cause, resolution_steps, scope"));
+        assertThat(e.getParams()).isEqualTo(Map.of("column_names", "root_cause, resolution_steps"));
+    }
+
+    @Test
+    void readsAFileWithoutSymptomsAndScopeColumns_AC_001_5() {
+        var csv = parse("ticket_id,title,root_cause,resolution_steps\nT-1,a,b,c\n");
+
+        assertThat(csv.rows().get(0).values().symptoms()).isNull();
+        assertThat(csv.rows().get(0).values().scope()).isNull();
     }
 
     @Test

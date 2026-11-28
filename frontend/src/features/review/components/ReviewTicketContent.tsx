@@ -86,7 +86,7 @@ export function ReviewTicketContent({ ticket }: { ticket: ReviewTicketDetail }) 
         <Descriptions
           column={1}
           items={[
-            { key: 'symptoms', label: 'Symptoms', children: ticket.solution.symptoms },
+            { key: 'symptoms', label: 'Symptoms', children: ticket.solution.symptoms ?? '—' },
             { key: 'rootCause', label: 'Root cause', children: ticket.solution.rootCause },
             {
               key: 'resolutionSteps',

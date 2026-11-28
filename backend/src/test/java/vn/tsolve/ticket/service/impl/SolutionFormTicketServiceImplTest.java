@@ -91,6 +91,27 @@ class SolutionFormTicketServiceImplTest {
     }
 
     @Test
+    void savesEmptySymptomsAndScopeAsNull_AC_002_3() {
+        givenInserted();
+
+        service.submit(submission("VPN drops", new SolutionSections(" ", "Old client", "Update to 5.2", "", "")));
+
+        verify(tickets)
+                .insertSolutionFormTicket(
+                        PROJECT,
+                        ISSUE,
+                        "VPN drops",
+                        "Ngo Bao",
+                        WRITER,
+                        null,
+                        "Old client",
+                        "Update to 5.2",
+                        null,
+                        null,
+                        VIETNAM_TODAY);
+    }
+
+    @Test
     void acceptsExactlyTenThousandCodePointsAndRefusesOneMoreWithMsg02_AC_002_5() {
         givenInserted();
         String emoji = "😀";

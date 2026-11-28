@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
@@ -18,6 +19,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import vn.tsolve.ai.dto.IssueContent;
+import vn.tsolve.ai.dto.SolutionDraft;
 import vn.tsolve.ai.exception.AiRewriteUnavailableException;
 import vn.tsolve.ai.service.SolutionAiService;
 import vn.tsolve.jiraapp.service.impl.SolutionFormAiImpl.Mode;
@@ -137,6 +140,58 @@ class SolutionFormAiImplTest {
 
         verify(rewrites).shutdownNow();
         verifyNoInteractions(completions);
+    }
+
+    @Test
+    void passesTheAiDraftOfTheIssueAndItsComments_AC_005_11() {
+        when(ai.draft(new IssueContent("VPN drops", "After sleep", List.of("Restarted"))))
+                .thenReturn(new SolutionDraft(
+                        new vn.tsolve.ai.dto.SolutionSections("", "Old client", "Update to 5.2", "", ""), true));
+        List<SolutionSections> applied = new java.util.ArrayList<>();
+
+        inline(Mode.AI, (future, limit) -> {})
+                .startDraft("VPN drops", "After sleep", () -> List.of("Restarted"), applied::add);
+
+        assertThat(applied).containsExactly(new SolutionSections("", "Old client", "Update to 5.2", "", ""));
+    }
+
+    @Test
+    void passesNothingForAFallbackAFailureOrATimeout_AC_005_12() {
+        List<SolutionSections> applied = new java.util.ArrayList<>();
+        when(ai.draft(any())).thenReturn(new SolutionDraft(AI_SECTIONS, false));
+        inline(Mode.AI, (future, limit) -> {}).startDraft("S", "D", List::of, applied::add);
+
+        when(ai.draft(any())).thenThrow(new IllegalStateException("down"));
+        inline(Mode.AI, (future, limit) -> {}).startDraft("S", "D", List::of, applied::add);
+
+        java.util.Queue<Runnable> work = new java.util.ArrayDeque<>();
+        new SolutionFormAiImpl(
+                        ai,
+                        Mode.AI,
+                        work::add,
+                        Runnable::run,
+                        Duration.ofSeconds(60),
+                        (future, limit) -> future.completeExceptionally(new TimeoutException()))
+                .startDraft("S", "D", List::of, applied::add);
+        while (!work.isEmpty()) work.remove().run();
+
+        assertThat(applied).isEmpty();
+    }
+
+    @Test
+    void draftsOnlyWithTheRealAi_AC_005_11() {
+        List<SolutionSections> applied = new java.util.ArrayList<>();
+        for (Mode stub : List.of(Mode.AVAILABLE, Mode.UNAVAILABLE)) {
+            inline(stub, (future, limit) -> {}).startDraft("S", "D", List::of, applied::add);
+        }
+
+        assertThat(applied).isEmpty();
+        verifyNoInteractions(ai);
+    }
+
+    private SolutionFormAiImpl inline(
+            Mode mode, java.util.function.BiConsumer<CompletableFuture<SolutionSections>, Duration> deadline) {
+        return new SolutionFormAiImpl(ai, mode, Runnable::run, Runnable::run, Duration.ofSeconds(60), deadline);
     }
 
     private static SolutionSections rewrite(SolutionFormAiImpl service, SolutionSections input) {

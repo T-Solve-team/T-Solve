@@ -57,7 +57,10 @@ export const getGetReviewTicketDetailResponseMock = (
     null,
   ]),
   solution: {
-    symptoms: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    symptoms: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
     rootCause: faker.string.alpha({ length: { min: 10, max: 20 } }),
     resolutionSteps: faker.string.alpha({ length: { min: 10, max: 20 } }),
     workaround: faker.helpers.arrayElement([

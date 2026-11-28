@@ -64,14 +64,20 @@ export const getGetChatbotConversationResponseTicketSolutionCitationMock = (
     number: faker.number.int(),
     type: faker.helpers.arrayElement(['TICKET_SOLUTION'] as const),
     solution: {
-      symptoms: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      symptoms: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
       rootCause: faker.string.alpha({ length: { min: 10, max: 20 } }),
       resolutionSteps: faker.string.alpha({ length: { min: 10, max: 20 } }),
       workaround: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
       ]),
-      scopeOfApplicability: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      scopeOfApplicability: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
     },
   },
   ...overrideResponse,
@@ -129,14 +135,20 @@ export const getAskChatbotResponseTicketSolutionCitationMock = (
     number: faker.number.int(),
     type: faker.helpers.arrayElement(['TICKET_SOLUTION'] as const),
     solution: {
-      symptoms: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      symptoms: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
       rootCause: faker.string.alpha({ length: { min: 10, max: 20 } }),
       resolutionSteps: faker.string.alpha({ length: { min: 10, max: 20 } }),
       workaround: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
       ]),
-      scopeOfApplicability: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      scopeOfApplicability: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
     },
   },
   ...overrideResponse,

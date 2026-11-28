@@ -3,6 +3,7 @@ package vn.tsolve.tracker.client;
 import java.util.List;
 import java.util.Optional;
 import vn.tsolve.tracker.dto.JiraAccount;
+import vn.tsolve.tracker.dto.TrackerComment;
 import vn.tsolve.tracker.dto.TrackerCreateField;
 import vn.tsolve.tracker.dto.TrackerRole;
 import vn.tsolve.tracker.dto.TrackerRoleActors;
@@ -22,6 +23,11 @@ public interface TicketTrackerClient {
      * or empty.
      */
     Optional<String> findComment(JiraAccount account, String issueKey, String textPrefix);
+
+    /**
+     * The issue's newest 100 comments as plain text, oldest first, without the ones this account wrote (STORY-014).
+     */
+    List<TrackerComment> comments(JiraAccount account, String issueKey);
 
     /** Returns the canonical project key, or empty when Jira answers 404. */
     Optional<String> findProject(JiraAccount account, String projectKey);

@@ -1,6 +1,9 @@
 package vn.tsolve.jiraapp.service;
 
+import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import vn.tsolve.ticket.dto.SolutionSections;
 
 /**
@@ -15,4 +18,14 @@ public interface SolutionFormAi {
      * @throws java.util.concurrent.RejectedExecutionException when the pool is full
      */
     void startRewrite(SolutionSections sections, BiConsumer<SolutionSections, Throwable> completion);
+
+    /**
+     * Drafts the Solution of an issue that moved to Done on the rewrite's pool and deadline (AC-005.11): reads the
+     * comments there, asks the ai module, and passes the sections to {@code onAiDraft} only for an AI draft that
+     * finished in time; a fallback, failure or timeout passes nothing (AC-005.12). Only with the real AI.
+     *
+     * @throws java.util.concurrent.RejectedExecutionException when the pool is full
+     */
+    void startDraft(
+            String summary, String description, Supplier<List<String>> comments, Consumer<SolutionSections> onAiDraft);
 }

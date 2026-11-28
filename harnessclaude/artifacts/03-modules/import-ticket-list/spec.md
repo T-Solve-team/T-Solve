@@ -27,14 +27,15 @@ The web app screens (STORY-008..010) follow the SRS v3460 screen layouts III.5.1
 | 2026-11-07 | STORY-008 | AC-008.1 and D13: the Jira tab works and the Drafts list is shown, as `ticket-repository` STORY-001 and STORY-004 say; only Manual entry stays disabled; Out of Scope updated | KAN-45 (`ticket-repository`) builds the Jira tab and the Drafts list on this screen; its evaluation found AC-008.1 contradicting the code (user decision 2026-11-07) |
 | 2026-11-14 | STORY-008 | AC-008.1 and D13: the Manual entry tab is enabled and behaves as `ticket-repository` STORY-006 says | KAN-133 (`ticket-repository`) builds manual entry on this screen; AC-008.1 still said "Manual entry disabled" |
 | 2026-11-19 | STORY-017 | New STORY-017: Apply & publish publishes one Valid row of a preview of a file without Solutions or of a Jira preview at once, in an Import Batch of its own (D21); new endpoint `POST /imports/previews/{previewId}/rows/{rowNo}/publish` | KAN-373: the Project Manager wants a ticket published as soon as its Solution is written (user decision 2026-11-19) |
+| 2026-11-27 | STORY-001, STORY-002, STORY-013 | D1, D4, AC-001.5, AC-002.2, AC-013.2: `symptoms` and `scope` are optional (column and value); only `root_cause` and `resolution_steps` are required. | User decision 2026-11-27 (KAN-474): a Solution requires only Root cause and Resolution steps; Symptoms, Workaround and Scope of applicability may be empty, everywhere a Solution is written. An empty section is stored as null and not shown, as Workaround already was. |
 
 ## Decisions taken while planning (2026-10-21, with the user)
 | # | Question | Decision |
 |---|----------|----------|
-| D1 | Required Solution sections (GBR-33 vs screen field / UC-19) | Symptoms, Root cause, Resolution steps and Scope are required; Workaround is optional. GBR-33 in the SRS must be corrected. |
+| D1 | Required Solution sections (GBR-33 vs screen field / UC-19) | Root cause and Resolution steps are required; Symptoms, Workaround and Scope are optional (user, 2026-11-27, KAN-474; was: Symptoms and Scope required too). GBR-33 in the SRS must be corrected. |
 | D2 | Existing `resolved_ticket_snapshot` / upsert model | Replaced by a new `ticket` table with an embedded Solution; the old snapshot code in `vn.tsolve.ticket` is retired. |
 | D3 | Project source | A `ProjectAccess` interface with a stub implementation; `ticket.project_id` has no FK until the workspace module exists. |
-| D4 | CSV template header | Required: `ticket_id, title, symptoms, root_cause, resolution_steps, scope`. Optional: `description, author, resolved_date, workaround`. Unknown columns are ignored. |
+| D4 | CSV template header | Required: `ticket_id, title, root_cause, resolution_steps`. Optional: `description, author, resolved_date, symptoms, workaround, scope`. Unknown columns are ignored. |
 | D5 | Same `ticket_id` twice in one file | Every row with that ID is invalid (new message `MSG_NEW_3`, D14). |
 | D6 | Non-UTF-8 / `;`-delimited / empty file | Non-UTF-8 or unparseable → MSG27; `;` → fails the header check (MSG29); no data rows → MSG04. |
 | D7 | Text limits | ticket_id ≤ 50, title ≤ 200, description ≤ 10,000, author ≤ 100, Solution sections ≤ 10,000 in total. |
@@ -83,7 +84,7 @@ The web app screens (STORY-008..010) follow the SRS v3460 screen layouts III.5.1
   - AC-001.2: IF the uploaded file name does not end in `.csv` (case-insensitive), THEN THE system SHALL reject it with MSG27 and create no preview.
   - AC-001.3: IF the uploaded file is not valid UTF-8 or cannot be parsed as RFC 4180 CSV, THEN THE system SHALL reject it with MSG27 and create no preview.
   - AC-001.4: IF the uploaded file is larger than 10 MB, THEN THE system SHALL reject it with MSG28 and create no preview.
-  - AC-001.5: IF the header row lacks any of `ticket_id, title, symptoms, root_cause, resolution_steps, scope`, THEN THE system SHALL reject the file with MSG29 listing every missing column and create no preview.
+  - AC-001.5: IF the header row lacks any of `ticket_id, title, root_cause, resolution_steps`, THEN THE system SHALL reject the file with MSG29 listing every missing column and create no preview.
   - AC-001.6: IF the file has a header row but no data rows, THEN THE system SHALL reject it with MSG04 and create no preview.
   - AC-001.7: WHEN the file starts with a UTF-8 byte-order mark, THE system SHALL ignore the mark when it reads the header.
   - AC-001.8: WHEN the header contains columns that are not in the template, THE system SHALL ignore those columns.
@@ -96,7 +97,7 @@ The web app screens (STORY-008..010) follow the SRS v3460 screen layouts III.5.1
 - As a Project Manager, I want each row checked and its errors shown so that I know exactly what will be imported.
 - Acceptance:
   - AC-002.1: WHEN a preview of a file with Solutions is created, THE system SHALL mark a row Valid when every rule in AC-002.2 to AC-002.7 passes, and Error otherwise, listing every failed rule of that row.
-  - AC-002.2: IF a row of a file with Solutions has an empty `ticket_id`, `title`, `symptoms`, `root_cause`, `resolution_steps` or `scope` (blank after trimming), THEN THE system SHALL mark the row Error with MSG01 for each empty field.
+  - AC-002.2: IF a row of a file with Solutions has an empty `ticket_id`, `title`, `root_cause` or `resolution_steps` (blank after trimming; an empty `symptoms`, `workaround` or `scope` is stored as null), THEN THE system SHALL mark the row Error with MSG01 for each empty field.
   - AC-002.3: IF a row has `ticket_id` over 50, `title` over 200, `description` over 10,000 or `author` over 100 characters, THEN THE system SHALL mark the row Error with MSG02 for each field over its limit.
   - AC-002.4: IF the five Solution sections of a row together exceed 10,000 characters, THEN THE system SHALL mark the row Error with MSG02 for the Solution.
   - AC-002.5: IF a row's `ticket_id` already exists as a Ticket, THEN THE system SHALL mark the row Error with MSG31.
@@ -210,7 +211,7 @@ The web app screens (STORY-008..010) follow the SRS v3460 screen layouts III.5.1
 - As a Project Manager, I want to write one Solution for one or several rows so that the rows can be imported.
 - Acceptance:
   - AC-013.1: WHEN the Project Manager saves a Solution for rows of a preview of a file without Solutions, THE system SHALL store a separate copy of the sections, with surrounding spaces trimmed, in each row and mark each row Valid.
-  - AC-013.2: IF the saved Solution has an empty `symptoms`, `root_cause`, `resolution_steps` or `scope`, or its five sections together exceed 10,000 characters, THEN THE system SHALL reject the request with HTTP 400 and MSG01 for each empty section or MSG02 for the Solution, and change no row.
+  - AC-013.2: IF the saved Solution has an empty `root_cause` or `resolution_steps`, or its five sections together exceed 10,000 characters, THEN THE system SHALL reject the request with HTTP 400 and MSG01 for each empty section or MSG02 for the Solution, and change no row.
   - AC-013.3: IF the preview is a file with Solutions, or any requested row is Error or Removed, THEN THE system SHALL reject the request with HTTP 409 (MSG06) and change no row.
   - AC-013.4: IF the preview belongs to another user, has been confirmed, or no longer exists, or a requested row number does not exist in it, THEN THE system SHALL reject the request with HTTP 404 and change no row.
   - AC-013.5: IF the caller no longer manages the preview's Project or the Project is no longer Active, THEN THE system SHALL reject the request with HTTP 403 (MSG08) and change no row.

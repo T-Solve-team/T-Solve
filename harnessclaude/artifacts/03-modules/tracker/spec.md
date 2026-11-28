@@ -37,6 +37,7 @@ the request belongs to; **discovery** = finding that database from the request (
 | 2026-11-17 | STORY-012, STORY-013 | KAN-349: Jira calls use the T-Solve Jira App's app token held by `workspace` (STORY-014 there) instead of a customer service-account token; Non-Functional 3 and 9 and the service account term reworded; the 01/11 decision "the system token is not stored" is replaced. AC-012.9 and AC-013.10 are unchanged (same gateway and Bearer call, another token) | RESEARCH-005 and its probe; user decision 17/11 (option D) |
 | 2026-11-18 | STORY-011 | KAN-370 (BUG-342): AC-011.9 runs in-process only while web jobs are also off; new AC-011.10 (a web process with web jobs enabled queues the suggestion job on the Jobs database for the worker process, in the request's Workspace or the single Active Workspace of the configured list) and AC-011.11 (no single Workspace or a queue failure: no job, a warning, still 202). Out of Scope follows | On staging the in-process job runs with no Workspace bound and the MSG80 comment is never posted (DP-121, 17/11); the Jira App webhook binds no Workspace either. User chose to queue for the worker like the review email (KAN-366, 368, 369), which also gives the retries of AC-011.6 (user, 2026-11-18) |
 | 2026-11-27 | STORY-003, 011 | KAN-467 (BUG-403): new AC-003.9 (an "issue created" event from a site with no Workspace, or in a process with no Workspace catalog, answers 202, stores nothing and queues no job); Non-Functional 8 and Out of Scope: the tracker binds the Workspace of the FIT's `cloudId` for that webhook (the configured dev Workspace stand-in is dropped); note on AC-011.10 | The webhook bound no Workspace, so it did not reach the site's tenant database; decision 1A (Hiếu): the tracker binds it, as "issue updated" does |
+| 2026-11-27 | STORY-014 | New STORY-014 (AC-014.1 to AC-014.3): read an issue's comments as plain text for the AI Solution draft; new `TrackerIssueService.comments` and `TicketTrackerClient.comments`. | User decision 2026-11-27 (KAN-474): when an issue moves to Done, AI fills the whole Solution form from the issue title, description and comment conversation, and leaves empty what it cannot tell; the job runs in the background so nobody waits for it. |
 
 ## Requirements
 
@@ -170,6 +171,13 @@ the request belongs to; **discovery** = finding that database from the request (
   - AC-013.12: THE lookup's logs SHALL carry only the project key, HTTP status when available and lookup outcome, never the service-account API token or a Jira response body.
   - AC-013.13: THE lookup SHALL persist no data and return no service-account credential or Jira response body.
 
+### STORY-014: Read an issue's comments for the AI Solution draft (KAN-474)
+- As the jira-app module, I want the comments of a Jira issue as plain text so that AI can draft the Solution from the conversation on the issue.
+- Acceptance:
+  - AC-014.1: WHEN `TrackerIssueService.comments(issueKey)` is called for a Workspace that has a service account, THE tracker SHALL read the newest 100 comments of the issue from `GET /rest/api/3/issue/{issueKey}/comment` with that account and SHALL return their plain text oldest first, leaving out empty comments and the comments written by the service account itself (T-Solve's suggestion comments).
+  - AC-014.2: IF the Workspace has no service account, or the read answers anything but 200, times out, is unreachable or has an unreadable body, THEN THE tracker SHALL return an empty list and SHALL not let an exception cross the service boundary.
+  - AC-014.3: THE read SHALL use the `JiraClient` gateway Bearer authentication and timeouts of AC-013.10, SHALL persist no data, and its logs SHALL carry only the issue key, the HTTP status when available and the outcome, never a comment's text or the API token.
+
 ## Out of Scope
 - Discovery: finding the tenant database from the request (catalog `tenant_workspace`, by site name or Jira
   `cloudId`), and refusing a FIT whose cloudId belongs to no Workspace (was AC-001.6).
@@ -231,6 +239,11 @@ returns no raw JSON or client exception. 429 takes precedence over the generic 4
 makes no Jira call; failed project read makes no statuses call; a failed statuses read discards the project result.
 Malformed successful responses follow KAN-127 D53. The Project module maps outcomes to HTTP; STORY-013 adds no REST
 endpoint or Forge authentication requirement.
+
+KAN-474 adds one read for STORY-014: `tracker.service.TrackerIssueService.comments(String issueKey)` → `List<String>`
+(plain-text comments, oldest first; empty on any failure), backed by
+`tracker.client.TicketTrackerClient.comments(JiraAccount account, String issueKey)` → `List<TrackerComment(String authorAccountId, String text)>`
+from `GET /rest/api/3/issue/{issueKey}/comment?orderBy=-created&maxResults=100` (ADF bodies flattened to plain text).
 
 Decisions for this change: `artifacts/04-plans/project-integration/iteration-1/kan-127-decisions.md`, D22-D6,
 D46 and D53. Since KAN-344 (AC-012.9) every `JiraClient` call, these included, uses gateway Bearer authentication

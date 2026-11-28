@@ -28,8 +28,8 @@ public final class CsvColumns {
             WORKAROUND,
             SCOPE);
 
-    public static final List<String> REQUIRED =
-            List.of(TICKET_ID, TITLE, SYMPTOMS, ROOT_CAUSE, RESOLUTION_STEPS, SCOPE);
+    /** Only Root cause and Resolution steps of the Solution are required (D1, KAN-474). */
+    public static final List<String> REQUIRED = List.of(TICKET_ID, TITLE, ROOT_CAUSE, RESOLUTION_STEPS);
 
     private CsvColumns() {}
 }

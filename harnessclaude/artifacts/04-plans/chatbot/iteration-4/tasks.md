@@ -69,3 +69,17 @@ from an up-to-date `main`, one commit per task. Paths: `…/` is `backend/src/ma
 **Covers:** AC-015.1 – AC-015.8
 **Dependencies:** Task 27 (ticket ids)
 **Estimated size:** medium
+
+---
+
+## Task 29: Cited Solutions with null Symptoms or Scope (KAN-474)
+
+**Story:** STORY-001
+**Feature:** nullable-cited-sections
+**Description:** AC-001.11, `CitedSolution` (2026-11-27): symptoms and scopeOfApplicability may be null; the LLM source
+text and the web citation leave a null section out.
+**Files:**
+- Modify: `backend/src/main/java/vn/tsolve/chatbot/answer/service/impl/ChatbotSource.java`, `frontend/openapi/tsolve-api.yaml`, `frontend/src/features/chatbot/components/TicketSolution.tsx` (if needed)
+- Test: `ChatbotSourceTest`, `TicketSolution` test
+**Dependencies:** search Task 27
+**Estimated size:** small

@@ -25,11 +25,11 @@ public record ChatbotSource(int number, UUID id, double similarity, String text,
                 solution.scopeOfApplicability());
         String text = String.join(
                 "\n",
-                "Symptoms: " + cited.symptoms(),
+                "Symptoms: " + orEmpty(cited.symptoms()),
                 "Root cause: " + cited.rootCause(),
                 "Resolution steps: " + cited.resolutionSteps(),
-                "Workaround: " + (workaround == null ? "" : workaround),
-                "Scope of applicability: " + cited.scopeOfApplicability());
+                "Workaround: " + orEmpty(workaround),
+                "Scope of applicability: " + orEmpty(cited.scopeOfApplicability()));
         return new ChatbotSource(
                 0, solution.ticketId(), solution.similarity(), text, new TicketSolutionCitation(0, cited));
     }
@@ -53,6 +53,10 @@ public record ChatbotSource(int number, UUID id, double similarity, String text,
                 passage.similarity(),
                 passage.title() + "\n" + passage.text(),
                 new WikiDocumentCitation(0, passage.wikiDocumentId(), passage.title()));
+    }
+
+    private static String orEmpty(String section) {
+        return section == null ? "" : section;
     }
 
     public ChatbotSource numbered(int number) {

@@ -2,16 +2,23 @@ package vn.tsolve.jiraapp.service.impl;
 
 import jakarta.annotation.PreDestroy;
 import java.time.Duration;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.convert.DurationStyle;
 import org.springframework.stereotype.Service;
+import vn.tsolve.ai.dto.IssueContent;
+import vn.tsolve.ai.dto.SolutionDraft;
 import vn.tsolve.ai.exception.AiRewriteUnavailableException;
 import vn.tsolve.ai.service.SolutionAiService;
 import vn.tsolve.jiraapp.service.SolutionFormAi;
@@ -19,6 +26,8 @@ import vn.tsolve.ticket.dto.SolutionSections;
 
 @Service
 public class SolutionFormAiImpl implements SolutionFormAi {
+
+    private static final Logger log = LoggerFactory.getLogger(SolutionFormAiImpl.class);
 
     /** {@code TSOLVE_STUB_AI}: empty = the `ai` module; these two serve demos without the AI server. */
     enum Mode {
@@ -96,6 +105,34 @@ public class SolutionFormAiImpl implements SolutionFormAi {
         // Queue time counts; a timed-out rewrite is skipped if still queued, interrupted if running.
         rewriteDeadline.accept(future, rewriteTimeout);
         future.whenCompleteAsync(completion, completionExecutor);
+    }
+
+    @Override
+    public void startDraft(
+            String summary, String description, Supplier<List<String>> comments, Consumer<SolutionSections> onAiDraft) {
+        if (mode != Mode.AI) {
+            return;
+        }
+        var future = JiraAppJobs.supply(
+                () -> {
+                    SolutionDraft draft = ai.draft(new IssueContent(summary, description, comments.get()));
+                    return draft.isAiDraft() ? toForm(draft.sections()) : null;
+                },
+                rewriteExecutor);
+        // A late answer is dropped: the deadline completes the future first (AC-005.12).
+        rewriteDeadline.accept(future, rewriteTimeout);
+        future.whenCompleteAsync(
+                (sections, error) -> {
+                    if (error != null) {
+                        // Only the type: a message could carry issue text (NF 3).
+                        log.info(
+                                "Issue AI draft not applied: error type {}",
+                                error.getClass().getSimpleName());
+                    } else if (sections != null) {
+                        onAiDraft.accept(sections);
+                    }
+                },
+                completionExecutor);
     }
 
     private static SolutionSections cannedRewrite(SolutionSections sections) {

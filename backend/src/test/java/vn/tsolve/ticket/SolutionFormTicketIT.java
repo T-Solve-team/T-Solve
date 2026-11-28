@@ -188,6 +188,32 @@ class SolutionFormTicketIT {
     }
 
     @Test
+    void replacesTheCreatedDraftWithTheAiDraftOnlyUntilItIsSaved_AC_005_11_AC_005_12() {
+        String issue = KEY + "-6";
+        SolutionSections issueText = new SolutionSections("From the issue", "", "", "", "");
+        SolutionSections ai = new SolutionSections("", "Old client", "Update", "", "");
+        SolutionSections typed = new SolutionSections("Typed", "", "", "", "");
+
+        assertThat(scope.runIn(TwoTenantDatabases.ACME, () -> {
+                    drafts.recordIssueStatus(new IssueStatusChange(PROJECT, issue, true, WRITER, issueText));
+                    return drafts.replaceUnsavedDraft(WRITER, PROJECT, issue, ai);
+                }))
+                .isTrue();
+        assertThat(scope.runIn(TwoTenantDatabases.ACME, () -> drafts.find(WRITER, PROJECT, issue)))
+                .contains(ai);
+
+        String saved = KEY + "-7";
+        assertThat(scope.runIn(TwoTenantDatabases.ACME, () -> {
+                    drafts.recordIssueStatus(new IssueStatusChange(PROJECT, saved, true, WRITER, issueText));
+                    drafts.save(WRITER, PROJECT, saved, typed);
+                    return drafts.replaceUnsavedDraft(WRITER, PROJECT, saved, ai);
+                }))
+                .isFalse();
+        assertThat(scope.runIn(TwoTenantDatabases.ACME, () -> drafts.find(WRITER, PROJECT, saved)))
+                .contains(typed);
+    }
+
+    @Test
     void recordsTheDoneStateAndCreatesTheDraftWithoutReplacingOne_AC_005_7_AC_005_8_AC_005_9() {
         String issue = KEY + "-5";
         SolutionSections closed = new SolutionSections("Typed before", "", "", "", "");

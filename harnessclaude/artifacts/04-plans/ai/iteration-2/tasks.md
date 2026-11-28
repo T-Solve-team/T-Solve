@@ -74,3 +74,17 @@ backend/src/test/java/vn/tsolve/ai/service/impl/SolutionAiServiceImplTest.java; 
 **Dependencies:** Task 2, Task 3.
 **Estimated size:** small.
 **Verification:** AC-004.2 and AC-004.4 tests updated; tests named with BUG-132, BUG-133, BUG-134; `mvn verify`.
+
+---
+
+## Task 5: The AI draft leaves unknown sections empty (KAN-474)
+
+**Story:** STORY-004
+**Feature:** draft-leaves-unknown-empty
+**Description:** AC-004.1, AC-004.2 (2026-11-27): the draft prompt tells the LLM to fill only what the summary,
+description and comments say and leave other sections empty; an empty section no longer triggers the fallback draft.
+**Files:**
+- Modify: `backend/src/main/java/vn/tsolve/ai/service/impl/SolutionAiServiceImpl.java`, its draft prompt resource
+- Test: `SolutionAiServiceImplTest`
+**Dependencies:** none
+**Estimated size:** small

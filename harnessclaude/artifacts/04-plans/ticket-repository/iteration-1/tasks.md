@@ -541,3 +541,21 @@ variables from `.env.example` and `infra/staging.env.example`. BUG-308 row → F
 - Test: `backend/src/test/java/vn/tsolve/ticket/client/JiraRestIssueSourceTest.java` (AC-001.12, AC-001.14, BUG-308)
 **Dependencies:** workspace Task 10 (KAN-344, merged)
 **Estimated size:** small
+
+---
+
+## Task 32: Symptoms and Scope optional in Fill solution and manual entry (KAN-474)
+
+**Story:** STORY-002, STORY-006
+**Feature:** optional-solution-sections
+**Description:** AC-002.4, AC-006.3 (2026-11-27). Only Root cause and Resolution steps are required. `ticket.symptoms`
+and `ticket.scope` become nullable (new forward-only changeset); a blank Symptoms, Workaround or Scope is stored as
+null. `FillSolutionRequest` and `ManualTicketRequest` drop `@NotBlank` on symptoms and scope; OpenAPI marks them
+nullable/optional. Web app: Fill solution popup and manual entry require only Root cause and Resolution steps; the
+review screen hides an empty section.
+**Files:**
+- Create: `backend/src/main/resources/db/changelog/changes/0xx-ticket-optional-sections.sql`
+- Modify: `backend/src/main/java/vn/tsolve/ticket/dto/FillSolutionRequest.java`, `ManualTicketRequest.java`, `entity/Ticket.java`, `service/impl/ManualTicketServiceImpl.java`, `service/impl/ImportPreviewServiceImpl.java`, `frontend/openapi/tsolve-api.yaml`, `frontend/src/features/ticket-import/components/SolutionFormModal.tsx`, `ManualEntryForm.tsx`, `frontend/src/features/review/components/ReviewTicketContent.tsx`
+- Test: `FillSolutionRequestTest`/`ImportPreviewServiceImplTest`, `ManualTicketServiceImplTest`, a migration IT, web tests of the two forms and the review screen
+**Dependencies:** none
+**Estimated size:** medium

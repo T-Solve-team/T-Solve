@@ -60,6 +60,20 @@ describe('SolutionFormModal', () => {
     expect(submit).not.toHaveBeenCalled();
   });
 
+  it('AC-002.3 sends a Solution with Symptoms and Scope of applicability empty (KAN-474)', () => {
+    open({
+      mayOpen: true,
+      origin: 'DRAFT',
+      sections: { ...FULL, symptoms: '', scopeOfApplicability: ' ' },
+      message: null,
+    });
+
+    click(LABELS.finish);
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(submit).toHaveBeenCalled();
+  });
+
   it('AC-002.4 shows MSG02 over 10,000 characters and sends nothing', () => {
     open({ mayOpen: true, origin: 'DRAFT', sections: { ...FULL, symptoms: 'a'.repeat(10000) }, message: null });
 

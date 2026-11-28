@@ -22,8 +22,18 @@ public interface SolutionDraftService {
     /**
      * Records the issue's Done state and, when the change names a Draft owner, creates that owner's Draft unless they
      * already have one — both in one transaction (jira-app AC-005.7 to AC-005.10).
+     *
+     * @return true when the Draft was created
      */
-    void recordIssueStatus(IssueStatusChange change);
+    boolean recordIssueStatus(IssueStatusChange change);
+
+    /**
+     * Replaces the creator's Draft with these sections only if nobody has saved it since it was created (jira-app
+     * AC-005.11, AC-005.12).
+     *
+     * @return true when replaced
+     */
+    boolean replaceUnsavedDraft(UUID creatorId, UUID projectId, String issueKey, SolutionSections sections);
 
     /**
      * Every Draft of the bound Workspace whose issue has no ticket of any source and is recorded in Done (AC-005.9),

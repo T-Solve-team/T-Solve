@@ -3,6 +3,7 @@ package vn.tsolve.jiraapp.service.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
@@ -15,6 +16,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +37,7 @@ import vn.tsolve.jiraapp.dto.IssueUpdatedPayload.Status;
 import vn.tsolve.jiraapp.dto.IssueUpdatedPayload.StatusCategory;
 import vn.tsolve.jiraapp.service.JiraAskerLookup;
 import vn.tsolve.jiraapp.service.JiraWorkspaceLookup;
+import vn.tsolve.jiraapp.service.SolutionFormAi;
 import vn.tsolve.project.service.ProjectService;
 import vn.tsolve.ticket.dto.IssueStatusChange;
 import vn.tsolve.ticket.dto.SolutionSections;
@@ -42,6 +46,7 @@ import vn.tsolve.ticket.service.SolutionDraftService;
 import vn.tsolve.ticket.service.SolutionFormTicketService;
 import vn.tsolve.tracker.dto.JiraAccount;
 import vn.tsolve.tracker.service.JiraServiceAccount;
+import vn.tsolve.tracker.service.TrackerIssueService;
 
 class IssueUpdatedServiceImplTest {
 
@@ -65,6 +70,8 @@ class IssueUpdatedServiceImplTest {
     private final SolutionDraftService drafts = mock(SolutionDraftService.class);
     private final JiraServiceAccount jiraAccounts = mock(JiraServiceAccount.class);
     private final JiraStatusClient statuses = mock(JiraStatusClient.class);
+    private final TrackerIssueService issues = mock(TrackerIssueService.class);
+    private final SolutionFormAi formAi = mock(SolutionFormAi.class);
     private final TenantScope tenantScope = new TenantScope() {
         @Override
         public UUID currentWorkspaceId() {
@@ -78,7 +85,7 @@ class IssueUpdatedServiceImplTest {
         }
     };
     private final IssueUpdatedServiceImpl service = new IssueUpdatedServiceImpl(
-            workspaces, tenantScope, projects, users, scopes, tickets, drafts, jiraAccounts, statuses);
+            workspaces, tenantScope, projects, users, scopes, tickets, drafts, jiraAccounts, statuses, issues, formAi);
 
     @BeforeEach
     void aConnectedSiteAndProject() {
@@ -96,6 +103,42 @@ class IssueUpdatedServiceImplTest {
         service.receive(SITE, event("done", "jira-assignee"));
 
         assertThat(recorded()).isEqualTo(new IssueStatusChange(PROJECT, ISSUE, true, ASSIGNEE.id(), ISSUE_TEXT));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void startsTheAiDraftOfACreatedDraftAndReplacesItWhileUnsaved_AC_005_11() throws Exception {
+        given(drafts.recordIssueStatus(any())).willReturn(true);
+        given(issues.comments(ISSUE)).willReturn(List.of("Restarted"));
+
+        service.receive(SITE, event("done", "jira-assignee"));
+
+        ArgumentCaptor<Supplier<List<String>>> comments = ArgumentCaptor.forClass(Supplier.class);
+        ArgumentCaptor<Consumer<SolutionSections>> apply = ArgumentCaptor.forClass(Consumer.class);
+        verify(formAi).startDraft(eq("VPN drops"), eq("Reconnect fails."), comments.capture(), apply.capture());
+        assertThat(comments.getValue().get()).containsExactly("Restarted");
+        SolutionSections ai = new SolutionSections("", "Old client", "Update", "", "");
+        apply.getValue().accept(ai);
+        verify(drafts).replaceUnsavedDraft(ASSIGNEE.id(), PROJECT, ISSUE, ai);
+    }
+
+    @Test
+    void startsNoAiDraftWhenNoDraftWasCreated_AC_005_11() throws Exception {
+        given(drafts.recordIssueStatus(any())).willReturn(false);
+
+        service.receive(SITE, event("done", "jira-assignee"));
+
+        verifyNoInteractions(formAi, issues);
+    }
+
+    @Test
+    void answersTheEventWhenTheAiPoolIsFull_AC_005_12() throws Exception {
+        given(drafts.recordIssueStatus(any())).willReturn(true);
+        willThrow(new RejectedExecutionException()).given(formAi).startDraft(any(), any(), any(), any());
+
+        service.receive(SITE, event("done", "jira-assignee"));
+
+        verify(drafts).recordIssueStatus(any());
     }
 
     @Test
