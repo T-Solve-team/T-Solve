@@ -85,6 +85,29 @@ async function parentChoices(user: ReturnType<typeof userEvent.setup>, dialog: H
 }
 
 describe('FolderModal', () => {
+  it('shows only the MSG07 dialog when folder creation answers 401 (BUG-124)', async () => {
+    server.use(http.post('*/api/v1/wiki/spaces/:spaceId/folders', () => problem(401)));
+    const { user, dialog: form, name, queryClient } = await openFolder();
+    await user.click(name);
+    await user.paste('Support');
+    await user.click(within(form).getByRole('button', { name: 'Save' }));
+    await screen.findAllByText(msg('MSG07'));
+    try {
+      await waitFor(() => expect(queryClient.isMutating()).toBe(0));
+      expect(
+        screen.getAllByRole('dialog').filter((el) => el.textContent?.includes(msg('MSG07'))),
+      ).toHaveLength(1);
+      expect(
+        screen.getAllByText(msg('MSG07')).filter((el) => !el.closest('[role="dialog"]')),
+      ).toHaveLength(0);
+    } finally {
+      const expired = screen
+        .queryAllByRole('dialog')
+        .find((el) => el.textContent?.includes(msg('MSG07')));
+      if (expired) await user.click(within(expired).getByRole('button', { name: 'OK' }));
+    }
+  });
+
   it('AC-003.13 opens New folder with Name and a parent tree that omits level 3', async () => {
     const { user, dialog, name } = await openFolder();
     expect(name).toHaveValue('');

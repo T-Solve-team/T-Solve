@@ -1,6 +1,6 @@
 import { Alert, Flex, Form, Input } from 'antd';
 import { useRef } from 'react';
-import type { RejectTicketsRequest } from '@/shared/api';
+import { isUnauthorizedError, type RejectTicketsRequest } from '@/shared/api';
 import { applyApiErrors, rules } from '@/shared/forms';
 import { msg, showMessage } from '@/shared/messages';
 import { FormField, FormModal } from '@/shared/ui';
@@ -44,6 +44,7 @@ export function RejectTicketModal({
           submitting.current = false;
         },
         onError: (error) => {
+          if (isUnauthorizedError(error)) return;
           if (!applyApiErrors(form, error)) showMessage(error.code, error.params);
         },
       },

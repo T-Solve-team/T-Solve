@@ -22,13 +22,13 @@ function recordRequests() {
 
 async function openPopup() {
   const user = userEvent.setup();
-  renderApp(paths.projectDetail(ITSUP_ID), { role: 'PROJECT_MANAGER' });
+  const { queryClient } = renderApp(paths.projectDetail(ITSUP_ID), { role: 'PROJECT_MANAGER' });
   await user.click(await screen.findByRole('button', { name: 'Add member' }, { timeout: 5000 }));
   const dialog = await screen.findByRole('dialog', { name: 'Add member' });
   // The popup opens on "From Jira" (AC-011.6); these tests are about the Search tab (AC-002.10).
   await user.click(within(dialog).getByRole('tab', { name: 'Search' }));
   await within(dialog).findByRole('row', { name: /Phạm Quốc Bảo/ });
-  return { user, dialog };
+  return { user, dialog, queryClient };
 }
 
 /** After a 409 the "From Jira" list is reloaded too (AC-011.11): here it no longer offers anyone. */
@@ -44,6 +44,29 @@ const addButton = (dialog: HTMLElement) => within(dialog).getByRole('button', { 
 
 describe('AddMemberModal', () => {
   afterEach(() => server.events.removeAllListeners());
+
+  it('shows only the MSG07 dialog when adding a member answers 401 (BUG-124)', async () => {
+    server.use(http.post('*/api/v1/projects/:projectId/members', () => problem(401)));
+    const { user, dialog: form, queryClient } = await openPopup();
+    await user.click(within(form).getByRole('checkbox', { name: 'Select Phạm Quốc Bảo' }));
+    await user.click(addButton(form));
+    await screen.findAllByText(msg('MSG07'));
+    try {
+      await waitFor(() => expect(queryClient.isMutating()).toBe(0));
+      expect(
+        screen.getAllByRole('dialog').filter((el) => el.textContent?.includes(msg('MSG07'))),
+      ).toHaveLength(1);
+      expect(
+        screen.getAllByText(msg('MSG07')).filter((el) => !el.closest('[role="dialog"]')),
+      ).toHaveLength(0);
+      expect(screen.queryByText(msg('MSG06'))).not.toBeInTheDocument();
+    } finally {
+      const expired = screen
+        .queryAllByRole('dialog')
+        .find((el) => el.textContent?.includes(msg('MSG07')));
+      if (expired) await user.click(within(expired).getByRole('button', { name: 'OK' }));
+    }
+  });
 
   it('AC-002.10 loads the candidates at once and searches 300 ms after the last keystroke', async () => {
     const requests = recordRequests();

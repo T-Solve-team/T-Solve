@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
@@ -12,6 +12,25 @@ import { store } from '../mocks/state';
 describe('UserDetailPage creation', () => {
   beforeAll(async () => {
     await import('./UserDetailPage');
+  });
+
+  it('CreateUserForm shows only the MSG07 dialog when creation answers 401 (BUG-124)', async () => {
+    server.use(http.post('*/api/v1/users', () => problem(401)));
+    const user = userEvent.setup();
+    const { queryClient } = renderApp('/users/new', { role: 'ADMIN' });
+    await user.click(await screen.findByRole('textbox', { name: 'Email' }, { timeout: 5000 }));
+    await user.paste('new@company.example');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    const dialog = await screen.findByRole('dialog', { name: msg('MSG07') });
+    try {
+      await waitFor(() => expect(queryClient.isMutating()).toBe(0));
+      expect(screen.getAllByRole('dialog', { name: msg('MSG07') })).toHaveLength(1);
+      expect(
+        screen.getAllByText(msg('MSG07')).filter((el) => !el.closest('[role="dialog"]')),
+      ).toHaveLength(0);
+    } finally {
+      await user.click(within(dialog).getByRole('button', { name: 'OK' }));
+    }
   });
 
   it('AC-005.1 opens creation mode from Add user', async () => {
