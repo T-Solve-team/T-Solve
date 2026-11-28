@@ -12,9 +12,13 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import vn.tsolve.chatbot.answer.repository.ChatbotAnswerRepository;
+import vn.tsolve.chatbot.conversation.service.ChatbotConversationService;
 import vn.tsolve.chatbot.conversation.service.impl.ConversationRetentionJob;
 import vn.tsolve.common.audit.AuditService;
+import vn.tsolve.common.tenant.ThreadLocalTenantContext;
+import vn.tsolve.platform.service.WorkspaceCatalog;
 
 class ConversationRetentionJobIT extends ConversationDatabaseITSupport {
     private static final Instant NOW = Instant.parse("2026-11-18T00:00:00Z");
@@ -29,9 +33,7 @@ class ConversationRetentionJobIT extends ConversationDatabaseITSupport {
         UUID rated = turn(expired, owner, "ANSWERED", "NOT_HELPFUL", 1, CUTOFF, "[]");
         UUID noSource = turn(expired, owner, "NO_SOURCE", null, 2, CUTOFF, "[]");
         UUID injection = turn(expired, owner, "INJECTION", null, 3, CUTOFF, "[]");
-        run(service -> assertThat(new ConversationRetentionJob(service, Clock.fixed(NOW, ZoneOffset.UTC), "30d")
-                        .deleteExpiredConversations())
-                .isEqualTo(1));
+        run(service -> assertThat(job(service).deleteExpiredConversations()).isEqualTo(1));
         assertThat(jdbc.queryForList("SELECT chat_session_id FROM chat_session", UUID.class))
                 .containsExactlyInAnyOrder(atBoundary, active);
         assertThat(count("chat_message")).isZero();
@@ -62,13 +64,22 @@ class ConversationRetentionJobIT extends ConversationDatabaseITSupport {
                 .when(repository)
                 .deleteDisposableByIds(argThat(ids -> ids.contains(failedAnswer)));
         run(repository, mock(AuditService.class), service -> assertThat(
-                        new ConversationRetentionJob(service, Clock.fixed(NOW, ZoneOffset.UTC), "30d")
-                                .deleteExpiredConversations())
+                        job(service).deleteExpiredConversations())
                 .isEqualTo(1));
         assertThat(jdbc.queryForList("SELECT chat_session_id FROM chat_session", UUID.class))
                 .containsExactly(failing);
         assertThat(jdbc.queryForList("SELECT chatbot_answer_id FROM chatbot_answer", UUID.class))
                 .containsExactly(failedAnswer);
         assertThat(count("chat_message")).isEqualTo(1);
+    }
+
+    /** No catalog bean: one run, unbound, in this test's own database. */
+    private static ConversationRetentionJob job(ChatbotConversationService service) {
+        return new ConversationRetentionJob(
+                service,
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                "30d",
+                new StaticListableBeanFactory().getBeanProvider(WorkspaceCatalog.class),
+                new ThreadLocalTenantContext(id -> true));
     }
 }

@@ -51,6 +51,21 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'html', 'json-summary'],
+      reportsDirectory: './coverage',
+      // An explicit include also counts source files that no test imports (Vitest 5).
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        '**/*.{test,spec}.{ts,tsx}',
+        '**/__tests__/**',
+        'src/test/**',
+        'src/shared/api/generated/**',
+        '**/*.d.ts',
+        'src/main.tsx',
+      ],
+    },
     // Tests never depend on a developer's .env.local: mock mode is off unless a test switches it on (vi.stubEnv).
     env: { VITE_API_MOCKING: 'false' },
     // Page tests render antd tables in jsdom and take 2–5 s each; 5 s (the default) fails on a busy laptop.

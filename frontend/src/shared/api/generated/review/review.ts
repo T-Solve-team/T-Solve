@@ -23,6 +23,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AiReviewResult,
   ApproveTicketsRequest,
   ExpiredTicketPage,
   GetExpiredTicketIdsParams,
@@ -201,6 +202,94 @@ export function useGetReviewTicketDetail<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getRunAiReviewUrl = (ticketId: string) => {
+  return `/api/v1/tickets/${ticketId}/ai-review`;
+};
+
+/**
+ * Project Manager of the ticket's Project only, with the decisions' scope: 401 unauthenticated, 403 MSG08 an
+ * unmanaged Project or unverified Workspace Account, 404 MSG04 a ticket missing from the signed-in Workspace,
+ * 409 MSG06 a ticket that is not a Pending review Solution Form ticket; each is refused before any AI call.
+ * The title, description and Solution go to the AI as data; at most 10 findings come back, HIGH first, with
+ * issue and suggestion trimmed to 500 characters. 503 MSG_NEW_AI_REVIEW_1 when the AI fails, times out or
+ * answers outside the findings schema. Nothing is stored or audited; the decision stays with the Project Manager.
+ * @summary Advisory AI check of a Pending review Solution (STORY-015).
+ */
+export const runAiReview = async (
+  ticketId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<AiReviewResult> => {
+  return http<AiReviewResult>(getRunAiReviewUrl(ticketId), {
+    ...options,
+    method: 'POST',
+  });
+};
+
+export const getRunAiReviewMutationKey = () => ['runAiReview'] as const;
+
+export const getRunAiReviewMutationOptions = <
+  TError = ErrorType<ProblemResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof runAiReview>>,
+    TError,
+    RunAiReviewMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof runAiReview>>,
+  TError,
+  RunAiReviewMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRunAiReviewMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof runAiReview>>,
+    RunAiReviewMutationVariables
+  > = (props) => {
+    const { ticketId } = props ?? {};
+
+    return runAiReview(ticketId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RunAiReviewMutationResult = NonNullable<Awaited<ReturnType<typeof runAiReview>>>;
+
+export type RunAiReviewMutationError = ErrorType<ProblemResponse>;
+export type RunAiReviewMutationVariables = { ticketId: string };
+
+/**
+ * @summary Advisory AI check of a Pending review Solution (STORY-015).
+ */
+export const useRunAiReview = <TError = ErrorType<ProblemResponse>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof runAiReview>>,
+      TError,
+      RunAiReviewMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof runAiReview>>,
+  TError,
+  RunAiReviewMutationVariables,
+  TContext
+> => {
+  return useMutation(getRunAiReviewMutationOptions(options), queryClient);
+};
 export const getGetReviewHistoryUrl = (params?: GetReviewHistoryParams) => {
   const normalizedParams = new URLSearchParams();
 

@@ -89,6 +89,10 @@ public class SignInConfig {
         return new IdentityClock(Clock.systemUTC());
     }
 
+    /**
+     * Checks Workspace existence through {@link WorkspaceLookup}, which reads {@code WorkspaceCatalog} outside the
+     * {@code dev} profile.
+     */
     @Bean
     public KnownWorkspaces knownWorkspaces(WorkspaceLookup lookup) {
         return id -> lookup.findById(id).isPresent();

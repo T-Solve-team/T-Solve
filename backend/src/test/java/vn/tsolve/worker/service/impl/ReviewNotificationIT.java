@@ -66,7 +66,7 @@ import vn.tsolve.worker.dto.EmailOutboxDispatchRequest;
 import vn.tsolve.worker.repository.EmailOutboxRepository;
 import vn.tsolve.worker.service.EmailOutboxService;
 import vn.tsolve.worker.service.WorkerTenantService;
-import vn.tsolve.worker.service.mock.MockWorkerTenantService;
+import vn.tsolve.worker.support.FixedWorkerTenantService;
 
 /** Committed decisions store rendered mail in the separate Jobs database (STORY-010). */
 @DataJpaTest
@@ -139,7 +139,7 @@ class ReviewNotificationIT {
     static class OutboxConfig {
         @Bean
         WorkerTenantService tenants() {
-            return new MockWorkerTenantService(Set.of(WORKSPACE), Set.of(), new ThreadLocalTenantContext(id -> true));
+            return new FixedWorkerTenantService(Set.of(WORKSPACE), Set.of(), new ThreadLocalTenantContext(id -> true));
         }
 
         @Bean
