@@ -66,6 +66,23 @@ describe('User Detail account status', () => {
     await import('./UserDetailPage');
   });
 
+  it('UserStatusActions shows only the MSG07 dialog when reactivation answers 401 (BUG-124)', async () => {
+    server.use(http.put('*/api/v1/users/:userId/status', () => problem(401)));
+    const user = userEvent.setup();
+    const { queryClient } = renderUser(11);
+    await user.click(await screen.findByRole('button', { name: 'Reactivate' }, { timeout: 5000 }));
+    const dialog = await screen.findByRole('dialog', { name: msg('MSG07') });
+    try {
+      await settleStatusMutation(queryClient);
+      expect(screen.getAllByRole('dialog', { name: msg('MSG07') })).toHaveLength(1);
+      expect(
+        screen.getAllByText(msg('MSG07')).filter((el) => !el.closest('[role="dialog"]')),
+      ).toHaveLength(0);
+    } finally {
+      await user.click(within(dialog).getByRole('button', { name: 'OK' }));
+    }
+  });
+
   it('AC-006.1 reactivates an existing account and refreshes detail', async () => {
     const user = userEvent.setup();
     const { queryClient } = renderUser(11);

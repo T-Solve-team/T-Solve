@@ -34,6 +34,11 @@ export function isApiError(error: unknown): error is ApiError {
   return error instanceof ApiError;
 }
 
+/** Unauthorized errors belong to the global session handler, never a feature toast. */
+export function isUnauthorizedError(error: unknown): boolean {
+  return isApiError(error) && error.status === 401;
+}
+
 function fallbackCode(status: number): MsgCode {
   if (status === 401) return 'MSG07';
   if (status === 403) return 'MSG08';

@@ -44,6 +44,32 @@ async function openMembers(projectId = ITSUP_ID) {
 }
 
 describe('ProjectDetailPage', () => {
+  it('shows only the MSG07 dialog when removing a member answers 401 (BUG-124)', async () => {
+    server.use(http.delete('*/api/v1/projects/:projectId/members/:userId', () => problem(401)));
+    const user = userEvent.setup();
+    const { queryClient } = renderApp(paths.projectDetail(ITSUP_ID), { role: 'PROJECT_MANAGER' });
+    const table = await screen.findByRole('table', { name: 'Members' }, { timeout: 5000 });
+    await user.click(within(table).getByRole('button', { name: 'Remove Trần Thị Lan' }));
+    const confirm = await screen.findByRole('dialog');
+    await user.click(within(confirm).getByRole('button', { name: 'Remove' }));
+    await screen.findAllByText(msg('MSG07'));
+    try {
+      await waitFor(() => expect(queryClient.isMutating()).toBe(0));
+      expect(
+        screen.getAllByRole('dialog').filter((el) => el.textContent?.includes(msg('MSG07'))),
+      ).toHaveLength(1);
+      expect(
+        screen.getAllByText(msg('MSG07')).filter((el) => !el.closest('[role="dialog"]')),
+      ).toHaveLength(0);
+      expect(screen.queryByText(msg('MSG06'))).not.toBeInTheDocument();
+    } finally {
+      const expired = screen
+        .queryAllByRole('dialog')
+        .find((el) => el.textContent?.includes(msg('MSG07')));
+      if (expired) await user.click(within(expired).getByRole('button', { name: 'OK' }));
+    }
+  });
+
   it('AC-001.5 shows the header and the Members tab with Added on as a date in the app time zone', async () => {
     const table = await openMembers();
     expect(screen.getByText('ITSUP')).toBeInTheDocument();

@@ -2,6 +2,7 @@ import { LoadingOutlined } from '@ant-design/icons';
 import { Button, Flex, Typography } from 'antd';
 import { useId, useRef, useState } from 'react';
 import {
+  isUnauthorizedError,
   UserAccountStatus,
   type ApiError,
   type UpdateUserStatusRequest,
@@ -46,7 +47,12 @@ export function UserStatusActions({ user }: UserStatusActionsProps) {
       { userId: user.id, data },
       {
         onSuccess: () => setDialog(null),
-        onError: onError ?? ((error) => showMessage(error.code, error.params)),
+        onError:
+          onError ??
+          ((error) => {
+            if (isUnauthorizedError(error)) return;
+            showMessage(error.code, error.params);
+          }),
         onSettled: () => {
           submitting.current = false;
         },
